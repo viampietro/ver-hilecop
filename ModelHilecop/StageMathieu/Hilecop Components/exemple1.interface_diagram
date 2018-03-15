@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notation:Diagram xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:notation="http://www.eclipse.org/gmf/runtime/1.0.2/notation" xmlns:root="http://root" xmi:id="_9FJNECYAEeib0NBDTDbJsw" type="Root" measurementUnit="Pixel">
+  <children xmi:type="notation:Shape" xmi:id="_-pG6MCYAEeib0NBDTDbJsw" type="2002" fontName="Segoe UI">
+    <children xmi:type="notation:DecorationNode" xmi:id="_-pG6MiYAEeib0NBDTDbJsw" type="5001"/>
+    <element xmi:type="root:HilecopComponent" href="exemple1.root#exemple1"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_-pG6MSYAEeib0NBDTDbJsw" x="408" y="246"/>
+  </children>
+  <styles xmi:type="notation:DiagramStyle" xmi:id="_9FJNESYAEeib0NBDTDbJsw"/>
+  <element xmi:type="root:HilecopRoot" href="exemple1.root#/"/>
+</notation:Diagram>

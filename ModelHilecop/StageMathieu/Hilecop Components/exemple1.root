@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root:HilecopRoot xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:petriNet="http://petriNet" xmlns:root="http://root">
+  <component name="exemple1" vhdHeader="library ieee;&#xA;use ieee.std_logic_1164.all;&#xA;use ieee.numeric_std.all;">
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.30" outputArcs="//@component/@PNStructureObjects.7 //@component/@PNStructureObjects.16" name="place_0" marking="1"/>
+    <PNStructureObjects xsi:type="petriNet:Transition" inputArcs="//@component/@PNStructureObjects.7 //@component/@PNStructureObjects.13" outputArcs="//@component/@PNStructureObjects.8 //@component/@PNStructureObjects.9 //@component/@PNStructureObjects.14" name="transition_0"/>
+    <PNStructureObjects xsi:type="petriNet:Transition" inputArcs="//@component/@PNStructureObjects.10 //@component/@PNStructureObjects.11" outputArcs="//@component/@PNStructureObjects.12" name="transition_1">
+      <time tmin="3" tmax="5" description="[3,5]"/>
+    </PNStructureObjects>
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.12 //@component/@PNStructureObjects.26" outputArcs="//@component/@PNStructureObjects.29" name="place_1"/>
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.8" outputArcs="//@component/@PNStructureObjects.10" name="place_2"/>
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.9" outputArcs="//@component/@PNStructureObjects.11" name="place_3"/>
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.14" outputArcs="//@component/@PNStructureObjects.13 //@component/@PNStructureObjects.17 //@component/@PNStructureObjects.27" name="place_4"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.0" targetNode="//@component/@PNStructureObjects.1" name="basicarc_0"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.1" targetNode="//@component/@PNStructureObjects.4" name="basicarc_1" ruleExpression="2"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.1" targetNode="//@component/@PNStructureObjects.5" name="basicarc_2"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.4" targetNode="//@component/@PNStructureObjects.2" name="basicarc_3" ruleExpression="2"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.5" targetNode="//@component/@PNStructureObjects.2" name="basicarc_4"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.2" targetNode="//@component/@PNStructureObjects.3" name="basicarc_5"/>
+    <PNStructureObjects xsi:type="petriNet:InhibitorArc" sourceNode="//@component/@PNStructureObjects.6" targetNode="//@component/@PNStructureObjects.1" name="inhibitorarc_0"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.1" targetNode="//@component/@PNStructureObjects.6" name="basicarc_6"/>
+    <PNStructureObjects xsi:type="petriNet:Transition" inputArcs="//@component/@PNStructureObjects.16 //@component/@PNStructureObjects.17" outputArcs="//@component/@PNStructureObjects.19" name="transition_2"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.0" targetNode="//@component/@PNStructureObjects.15" name="basicarc_7"/>
+    <PNStructureObjects xsi:type="petriNet:TestArc" sourceNode="//@component/@PNStructureObjects.6" targetNode="//@component/@PNStructureObjects.15" name="testarc_0"/>
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.19" outputArcs="//@component/@PNStructureObjects.21" name="place_5"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.15" targetNode="//@component/@PNStructureObjects.18" name="basicarc_8"/>
+    <PNStructureObjects xsi:type="petriNet:Transition" inputArcs="//@component/@PNStructureObjects.21" outputArcs="//@component/@PNStructureObjects.23" name="transition_3"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.18" targetNode="//@component/@PNStructureObjects.20" name="basicarc_9"/>
+    <PNStructureObjects xsi:type="petriNet:Place" inputArcs="//@component/@PNStructureObjects.23" outputArcs="//@component/@PNStructureObjects.25" name="place_6"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.20" targetNode="//@component/@PNStructureObjects.22" name="basicarc_10"/>
+    <PNStructureObjects xsi:type="petriNet:Transition" inputArcs="//@component/@PNStructureObjects.25 //@component/@PNStructureObjects.27" outputArcs="//@component/@PNStructureObjects.26" name="transition_4"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.22" targetNode="//@component/@PNStructureObjects.24" name="basicarc_11"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.24" targetNode="//@component/@PNStructureObjects.3" name="basicarc_12"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.6" targetNode="//@component/@PNStructureObjects.24" name="basicarc_13"/>
+    <PNStructureObjects xsi:type="petriNet:Transition" inputArcs="//@component/@PNStructureObjects.29" outputArcs="//@component/@PNStructureObjects.30" name="transition_5">
+      <time tmin="2" tmax="0" description="[2, +infinity]" TimeType="A_infinity"/>
+    </PNStructureObjects>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.3" targetNode="//@component/@PNStructureObjects.28" name="basicarc_14"/>
+    <PNStructureObjects xsi:type="petriNet:BasicArc" sourceNode="//@component/@PNStructureObjects.28" targetNode="//@component/@PNStructureObjects.0" name="basicarc_15"/>
+    <resetPort/>
+    <clockPort/>
+    <clockEnablePort/>
+  </component>
+</root:HilecopRoot>
