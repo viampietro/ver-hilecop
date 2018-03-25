@@ -12,14 +12,26 @@ Definition weight_type :=
 if any weight. *)
 
 Definition marking_type := place_type -> option nat.
-(* a marking is a function. How many tokens for each place ?
-Partial vs Total functions *)
+(* a marking is a partial function *)
  
 Parameter conds : Set.  (* conditions *)
 Parameter C : conds.
-Definition condition_type := transition_type -> conds -> Prop.
+Definition condition_type := transition_type ->
+                             conds ->
+                             Prop.
 (* condition_type t C = True   <=> C is associated with t *)
 (* Instead of "Prop", "bool" is possible *)
+
+Record interval_type : Set := {
+                               min : nat ;
+                               max : nat ;
+                               min_le_max : min <= max}.
+Print interval_type.
+Definition temporal_transition_type := transition_type ->
+                                       interval_type ->
+                                       Prop.
+(* temporal_transition_type t i = True   <=> C is associated with t *)
+
 
 Record itpn : Type := mk_itpn {
                           place : place_type -> Prop ;
@@ -29,12 +41,11 @@ Record itpn : Type := mk_itpn {
                           pre_inhibit : weight_type ;
                           post : weight_type ;
                           init_marking : marking_type ;
-                          cond : condition_type
-                                   (* time Petri net, TO DO *)
-                        }.
+                          cond : condition_type ;
+                          intervals : temporal_transition_type}.
 
 (*************************************************************)
-(******* example 0 (page 20 or so in Ibrahim thesis) *********)
+(******* example 0 (page 24 in Ibrahim thesis) *********)
 
 (* 3 places *)
 Definition place0 (p : place_type) :=
@@ -101,6 +112,11 @@ Definition cond0 (t : transition_type) (c : conds) := False.
 (* no conditions in this Petri Net (and no actions of functions)
  ---> reseaux de Petri generalise etendu, mais pas interprete *)
 
+Definition ints0 (t : transition_type) (i : interval_type) := False.
+(* no conditions in this Petri Net (and no actions of functions)
+ ---> reseaux de Petri generalise etendu, mais pas interprete *)
+
+
 Definition itpn0 :=  mk_itpn
                        place0
                        transition0
@@ -109,7 +125,9 @@ Definition itpn0 :=  mk_itpn
                        pre_inhibit0
                        post0
                        init_marking0
-                       cond0.
+                       cond0
+                       ints0.
+Print itpn0.
 
 
 (*****************************************************************)
@@ -207,6 +225,28 @@ Definition cond1 (t : transition_type) (c : conds) :=
   (* 1 condition donc influence de l'environnement donc
 ---> reseaux de Petri generalise etendu interprete IPN *)
 
+Example preuve3le5 : 3 <= 5. Proof. auto. Qed.
+Definition int1_35 := Build_interval_type
+                     3
+                     5
+                     preuve3le5.
+Print le.
+Example preuve2le255 : 2 <= 255. Proof. repeat (apply le_S; try apply le_n). Qed.
+Definition int1_2oo := Build_interval_type
+                     2
+                     255
+                     preuve2le255.
+
+Definition ints1 (t : transition_type) (i : interval_type) :=
+  match (t, i) with
+  | (mk_trans 3, int1_35) => True
+  | (mk_trans 6, int1_2oo) => True
+  | _ => False
+  end.
+  
+(* no conditions in this Petri Net (and no actions of functions)
+ ---> reseaux de Petri generalise etendu, mais pas interprete *)
+
 Definition itpn1 :=  mk_itpn
                        place1
                        transition1
@@ -215,4 +255,5 @@ Definition itpn1 :=  mk_itpn
                        pre_inhibit1
                        post1
                        init_marking1
-                       cond1.
+                       cond1
+                       ints1.
