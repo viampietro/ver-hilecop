@@ -1,10 +1,10 @@
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
-(* place number 0, place number 1, ... , place number 255, ... *)
+(* places indexées par les entiers naturels *)
 
 Inductive transition_type : Set :=
 | mk_trans : nat -> transition_type.
-(* transition number 0, transition number 1, ... *)
+(* transitions indexées par les entiers naturels *)
 
 Definition weight_type :=
   transition_type -> place_type -> option nat.
@@ -13,37 +13,41 @@ if any weight. *)
 
 Definition marking_type := place_type -> option nat.
 (* a marking is a partial function *)
- 
+
+Record PN : Type := {place : place_type -> Prop ;
+                     transition : transition_type -> Prop ;
+                     pre : weight_type ;
+                     post : weight_type ;
+                     init_marking : marking_type}.
+                     
 Parameter conds : Set.  (* conditions *)
-Parameter C : conds.
+Parameter c : conds.
 Definition condition_type := transition_type ->
                              conds ->
-                             Prop.
-(* condition_type t C = True   <=> C is associated with t *)
-(* Instead of "Prop", "bool" is possible *)
+                             bool.
+(* condition_type t C = true   <=> C is associated with t *)
+(* Instead of "bool", "Prop" is possible...  (binary predicate) *)
+Notation "cond [ trans ]" := (condition_type trans cond = true)  
+                               (at level 50) : type_scope. (* ? *)
 
-Record interval_type : Set := {
-                               min : nat ;
+Record IPN : Type := {pn :> PN ;
+                      pre_test : weight_type ;
+                      pre_inhibit : weight_type ;
+                      cond : condition_type}.
+Print IPN.
+
+Record interval_type : Set := {min : nat ;
                                max : nat ;
                                min_le_max : min <= max}.
-Print interval_type.
+
 Definition temporal_transition_type := transition_type ->
                                        interval_type ->
-                                       Prop.
-(* temporal_transition_type t i = True   <=> C is associated with t *)
+                                       bool.
+(* temporal_transition_type t i = true   <=> C is associated with t *)
 
-
-Record itpn : Type := mk_itpn {
-                          place : place_type -> Prop ;
-                          transition : transition_type -> Prop ;
-                          pre : weight_type ;
-                          pre_test : weight_type ;
-                          pre_inhibit : weight_type ;
-                          post : weight_type ;
-                          init_marking : marking_type ;
-                          cond : condition_type ;
-                          intervals : temporal_transition_type}.
-
+Record ITPN : Type := {ipn : IPN;
+                       intervals : temporal_transition_type}.
+Print ITPN.
 (*************************************************************)
 (******* example 0 (page 24 in Ibrahim thesis) *********)
 
@@ -75,20 +79,6 @@ Definition pre0 (t : transition_type) (p : place_type) :=
   | _ => None
   end.
 
-(* 1 arc of type "test" *)
-Definition pre_test0 (t : transition_type) (p : place_type) :=
-  match (t, p) with
-  | (mk_trans 2, mk_place 1) => Some 1
-  | _ => None
-  end.
-
-(* 1 arc of type "inhibitor"  *)
-Definition pre_inhibit0 (t : transition_type) (p : place_type) :=
-  match (t, p) with
-  | (mk_trans 1, mk_place 2) => Some 1
-  | _ => None
-  end.
-
 (* 4 arcs TP *)
 Definition post0 (t : transition_type) (p : place_type) :=
   match (t, p) with
@@ -108,26 +98,42 @@ Definition init_marking0 (p : place_type) :=
   | _ => None
   end.
 
-Definition cond0 (t : transition_type) (c : conds) := False.
+(* 1 arc of type "test" *)
+Definition pre_test0 (t : transition_type) (p : place_type) :=
+  match (t, p) with
+  | (mk_trans 2, mk_place 1) => Some 1
+  | _ => None
+  end.
+
+(* 1 arc of type "inhibitor"  *)
+Definition pre_inhibit0 (t : transition_type) (p : place_type) :=
+  match (t, p) with
+  | (mk_trans 1, mk_place 2) => Some 1
+  | _ => None
+  end.
+
+Definition cond0 (t : transition_type) (c : conds) := false.
 (* no conditions in this Petri Net (and no actions of functions)
  ---> reseaux de Petri generalise etendu, mais pas interprete *)
 
-Definition ints0 (t : transition_type) (i : interval_type) := False.
+Definition ints0 (t : transition_type) (i : interval_type) := false.
 (* no conditions in this Petri Net (and no actions of functions)
  ---> reseaux de Petri generalise etendu, mais pas interprete *)
 
-
-Definition itpn0 :=  mk_itpn
-                       place0
-                       transition0
-                       pre0
-                       pre_test0
-                       pre_inhibit0
-                       post0
-                       init_marking0
-                       cond0
+Definition itpn0 := Build_ITPN
+                       (Build_IPN
+                          (Build_PN
+                             place0
+                             transition0
+                             pre0
+                             post0
+                             init_marking0)
+                          pre_test0
+                          pre_inhibit0
+                          cond0)
                        ints0.
-Print itpn0.
+                       
+
 
 
 (*****************************************************************)
@@ -219,8 +225,8 @@ Definition init_marking1 (p : place_type) :=
 
 Definition cond1 (t : transition_type) (c : conds) :=
   match (t, c) with
-  | (mk_trans 1, C) => True
-  | _ => False
+  | (mk_trans 1, C) => true
+  | _ => false
   end.
   (* 1 condition donc influence de l'environnement donc
 ---> reseaux de Petri generalise etendu interprete IPN *)
@@ -239,21 +245,23 @@ Definition int1_2oo := Build_interval_type
 
 Definition ints1 (t : transition_type) (i : interval_type) :=
   match (t, i) with
-  | (mk_trans 3, int1_35) => True
-  | (mk_trans 6, int1_2oo) => True
-  | _ => False
+  | (mk_trans 3, int1_35) => true
+  | (mk_trans 6, int1_2oo) => true
+  | _ => false
   end.
   
 (* no conditions in this Petri Net (and no actions of functions)
  ---> reseaux de Petri generalise etendu, mais pas interprete *)
 
-Definition itpn1 :=  mk_itpn
-                       place1
-                       transition1
-                       pre1
-                       pre_test1
-                       pre_inhibit1
-                       post1
-                       init_marking1
-                       cond1
-                       ints1.
+Definition itpn1 :=  Build_ITPN
+                       (Build_IPN
+                          (Build_PN
+                             place1
+                             transition1
+                             pre1
+                             post1
+                             init_marking1)
+                          pre_test1
+                          pre_inhibit1
+                          cond1)
+                          ints1.
