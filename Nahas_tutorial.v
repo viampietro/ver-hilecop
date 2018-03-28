@@ -191,7 +191,8 @@ between "Proof." and "Qed.".  Now let's see the state at that point.
 
 In CoqIDE, there are three ways to do it
   1. From the menu bar, open the "Navigation" menu and select "go to"
-  2. In the tool bar, click on the 5th icon (a green arrow pointing at a yellow ball)
+  2. In the tool bar, click on the 5th icon 
+     (a green arrow pointing at a yellow ball)
   3. Use a keyboard combo.  On my Mac, it's control-option-rightarrow.
 
 In Proof General
@@ -312,8 +313,8 @@ now!
 IT IS VITALLY IMPORTANT THAT YOU DO NOT THINK OF A Prop AS BEING
 EITHER "TRUE" OR "FALSE".  A Prop either has a proof or it does not
 have a proof.  Godel shattered mathematics by showing that some true
-propositions can never proven.  Tarski went further and showed that
-some propositions cannot even said be to be true or false!!!  Coq deals
+propositions can never be proven.  Tarski went further and showed that
+some propositions cannot even said be to true or false!!!  Coq deals
 with these obstacles in modern mathematics by restricting Prop to
 being either proven or unproven, rather than true or false.
 
@@ -403,10 +404,10 @@ This was a forward proof.  Let's see a backward one.
 
 Theorem backward_small : (forall A B : Prop, A -> (A->B)->B).
 Proof.
- intros A B.
- intros proof_of_A A_implies_B.
- refine (A_implies_B _).
-   exact proof_of_A.
+  intros A B.
+  intros proof_of_A A_implies_B.
+  refine (A_implies_B _).
+  exact proof_of_A.
 Qed.
 
 (**
@@ -456,7 +457,7 @@ of type B and the unspecified argument - represented by the underscore
 >>
 
 In this case, the child subgoal has us trying to find a proof of A.
-Since it's a child subgoal, we indent the tactics used to solve it.
+Since it's a child subgoal, we may indent the tactics used to solve it.
 And the tactic to solve it is our well worn "exact".
 
 _RULE_: If you have subgoal "<goal_type>"
@@ -476,11 +477,11 @@ Now, let's rev this up...
 
 Theorem backward_large : (forall A B C : Prop, A -> (A->B) -> (B->C) -> C).
 Proof.
- intros A B C.
- intros proof_of_A A_implies_B B_implies_C.
- refine (B_implies_C _).
-   refine (A_implies_B _).
-     exact proof_of_A.
+  intros A B C.
+  intros proof_of_A A_implies_B B_implies_C.
+  refine (B_implies_C _).
+  refine (A_implies_B _).
+  exact proof_of_A.
 Qed.
 
 (**
@@ -510,7 +511,6 @@ Then, our subgoal is "B" and "B" is at the end of "A -> B", so "refine
 
 Then we finish with "exact proof_of_A.".  Easy as pie.
 
-
 Let's do a really big example!
 *)
 
@@ -521,10 +521,8 @@ Proof.
  intros A B C.
  intros proof_of_A A_implies_B A_imp_B_imp_C.
  refine (A_imp_B_imp_C _ _).
-   exact proof_of_A.
-
-   refine (A_implies_B _).
-     exact proof_of_A.
+ - exact proof_of_A.
+ - refine (A_implies_B _). exact proof_of_A.
 Qed.
 
 (**
@@ -590,13 +588,13 @@ see what it would look like with a forward one.
 
 Theorem forward_huge : (forall A B C : Prop, A -> (A->B) -> (A->B->C) -> C).
 Proof.
- intros A B C.
- intros proof_of_A A_implies_B A_imp_B_imp_C.
- pose (proof_of_B := A_implies_B proof_of_A).
- pose (proof_of_C := A_imp_B_imp_C proof_of_A proof_of_B).
- exact proof_of_C.
-Show Proof.
-Qed.
+  intros A B C.
+  intros proof_of_A A_implies_B A_imp_B_imp_C.
+  pose (proof_of_B := A_implies_B proof_of_A).
+  pose (proof_of_C := A_imp_B_imp_C proof_of_A proof_of_B).
+  exact proof_of_C.
+Show Proof. 
+Qed. Print forward_huge.
 
 (**
 This is the same theorem as before, except it has a forward proof
@@ -765,7 +763,7 @@ familiar with using the tactic "intros" to remove "->" at the front of
 the subgoal.  The command "intros proof_of_False" does just that.
 
 
-After that, it's goes as usual.  "intros"s at the start and "exact" at
+After that, it goes as usual.  "intros"s at the start and "exact" at
 the end.  It feels weird to have an hypothesis labeled
 "proof_of_False" doesn't it?  It's weird because we know False has no
 proofs, so that hypothesis can never exist.  Wouldn't it be better if
@@ -807,7 +805,7 @@ act like "implication" from logic.
 
 Theorem thm_true_imp_true : True -> True.
 Proof.
-  intros proof_of_True.
+  intros proof_of_True. 
   exact I.  (** "exact proof_of_True." also works. *)
 Qed.
 
@@ -828,8 +826,7 @@ proving ~(True->False). *)
 Theorem thm_true_imp_false : ~(True -> False).
 Proof.
   intros T_implies_F.
-  refine (T_implies_F _).
-    exact I.
+  refine (T_implies_F _). exact I.
 Qed.
 
 (**
@@ -857,7 +854,7 @@ Qed.
 
 This is a tricky proof.  Since our subgoal "C" doesn't appear in our
 hypotheses, we cannot end the proof with "exact something_of_type_C".
-The only other option we know (so far) is "case" on a proof of False.
+The only option we know (so far) is "case" on a proof of False.
 
 The tactic "unfold ... in" is used to interchange the definition of
 "not" in a hypothesis.  That exposes that the type "~A" is really
@@ -972,9 +969,8 @@ So, let me show you that.
 
 Theorem not_eqb_true_false: ~(Is_true (eqb true false)).
 Proof.
-  simpl.
-  exact False_cannot_be_proven.
-Qed.
+  simpl. Print False_cannot_be_proven. exact False_cannot_be_proven.
+Qed. 
 
 (**
 
@@ -984,7 +980,6 @@ We could copy-and-paste the proof _OR_ we could just say the proof
 already exists!  We gave the proof of "~False" the name
 "False_cannot_be_proven", so the tactic "exact False_cannot_be_proven"
 finishes the proof immediately!  Sweet, isn't it?
-
 
 Now, let's look at a more complex call to Is_true, where we'll get to
 see the tactic "case" show its power!
@@ -996,11 +991,10 @@ Theorem eqb_a_a : (forall a : bool, Is_true (eqb a a)).
 Proof.
   intros a.
   case a.
-    (** suppose a is true *)
+  - (** suppose a is true *)
     simpl.
     exact I.
-
-    (** suppose a is false *)
+  - (** suppose a is false *)
     simpl.
     exact I.
 Qed.
@@ -1032,20 +1026,18 @@ _RULE_: If there is a hypothesis "<name>" of a created type
      AND that hypothesis is used in the subgoal,
      Then you can try the tactic "case <name>"
 
-
 Let's do one more example.
 *)
 
-Theorem thm_eqb_a_t: (forall a:bool, (Is_true (eqb a true)) -> (Is_true a)).
+Theorem thm_eqb_a_t: forall a:bool, (Is_true (eqb a true)) -> (Is_true a).
 Proof.
   intros a.
   case a.
-    (** suppose a is true *)
+  - (** suppose a is true *)
     simpl.
     intros proof_of_True.
     exact I.
-
-    (** suppose a is false *)
+  - (** suppose a is false *)
     simpl.
     intros proof_of_False.
     case proof_of_False.
