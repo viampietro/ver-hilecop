@@ -1180,15 +1180,14 @@ Proof.
   intros A B.
   intros A_or_B.
   case A_or_B.
-    (** suppose A_or_B is (or_introl proof_of_A) *)
+  - (** suppose A_or_B is (or_introl proof_of_A) *)
     intros proof_of_A.
     refine (or_intror _).
-      exact proof_of_A.
-
-    (** suppose A_or_B is (or_intror proof_of_B) *)
+    exact proof_of_A.
+  - (** suppose A_or_B is (or_intror proof_of_B) *)
     intros proof_of_B.
     refine (or_introl _).
-      exact proof_of_B.
+    exact proof_of_B.
 Qed.
 
 (**
@@ -1209,7 +1208,6 @@ it into the context.
 
 Once the "proof_of_A" or "proof_of_B" is in the context, the proofs of
 each subgoal follow the pattern we've seen before.
-
 
 Now that we've seen how "or" works, let's take a look at "and".
 *)
@@ -1241,9 +1239,8 @@ Proof.
   intros A B.
   intros proof_of_A proof_of_B.
   refine (conj _ _).
-    exact proof_of_A.
-
-    exact proof_of_B.
+  - exact proof_of_A.
+  - exact proof_of_B.
 Qed.
 
 (**
@@ -1261,12 +1258,11 @@ Proof.
   intros A B.
   intros A_and_B.
   case A_and_B.
-    (** suppose A_and_B is (conj proof_of_A proof_of_B) *)
-    intros proof_of_A proof_of_B.
-    refine (conj _ _).
-      exact proof_of_B.
-
-      exact proof_of_A.
+  (** 1 subgoal : suppose A_and_B is (conj proof_of_A proof_of_B) *)
+  intros proof_of_A proof_of_B.
+  refine (conj _ _).
+  - exact proof_of_B.
+  - exact proof_of_A.
 Qed.
 
 (**
@@ -1313,9 +1309,8 @@ Proof.
   intros A_and_B.
   destruct A_and_B as [(**conj*) proof_of_A proof_of_B].
   refine (conj _ _).
-    exact proof_of_B.
-
-    exact proof_of_A.
+  - exact proof_of_B.
+  - exact proof_of_A.
 Qed.
 
 (**
@@ -1332,11 +1327,13 @@ with "bool"s.  Rather than inductive types, "andb" and "orb" are
 functions.
 
 To be clear, "and" and "or" are "inductive types" - that is, types we
-defined where instances can only be produced by calling opaque
+defined where instances can only be produced by calling OPAQUE?
 functions called constructors.  Those constructors are things like
-"or_introl", "or_intror", and "conj".
+"or_introl", "or_intror", and "conj". *)
 
-In fact, the type "bool" is also inductive type.  It has two
+Print or. Print and.
+
+(* In fact, the type "bool" is also inductive type.  It has two
 constructors: "true" and "false".  These constructors take no
 arguments, so they are closer to constants than "opaque functions".
 
@@ -1356,6 +1353,7 @@ Like with "eqb", the names all ended in "b" to indicate they work with
 Infix "&&" := andb : bool_scope.
 Infix "||" := orb : bool_scope.
 >>
+
 
 We'll get some good practice proving that these functions on bools are
 equivalent to our inductive types on Props.  As part of this, we'll
@@ -1377,49 +1375,41 @@ Proof.
   intros a b.
   unfold iff.
   refine (conj _ _).
-    (** orb -> \/ *)
+  - (** orb -> \/ *)
     intros H.
     case a, b.
-      (** suppose a,b is true, true *)
+    + (** suppose a,b is true, true *)
       simpl.
       refine (or_introl _).
-        exact I.
-
-      (** suppose a,b is true, false *)
+      exact I.
+    + (** suppose a,b is true, false *)
       simpl.
       exact (or_introl I).
-
-      (** suppose a,b is false, true *)
+    + (** suppose a,b is false, true *)
       exact (or_intror I).
-
-      (** suppose a,b is false, false *)
+    + (** suppose a,b is false, false *)
       simpl in H.
       case H.
-
-    (** \/ -> orb *)
+  - (** \/ -> orb *)
     intros H.
     case a, b.
-      (** suppose a,b is true, true *)
+    + (** suppose a,b is true, true *)
       simpl.
       exact I.
-
-      (** suppose a,b is true, false *)
+    + (** suppose a,b is true, false *)
       exact I.
-
-      (** suppose a,b is false, true *)
+    + (** suppose a,b is false, true *)
       exact I.
-
-      (** suppose a,b is false, false *)
+    + (** suppose a,b is false, false *)
       case H.
-         (** suppose H is (or_introl A) *)
-         intros A.
-         simpl in A.
-         case A.
-
-         (** suppose H is (or_intror B) *)
-         intros B.
-         simpl in B.
-         case B.
+      * (** suppose H is (or_introl A) *)
+        intros A.
+        simpl in A.
+        case A.
+      * (** suppose H is (or_intror B) *)
+        intros B.
+        simpl in B.
+        case B.
 Qed.
 
 (**
@@ -1457,48 +1447,42 @@ _RULE_ If a hypothesis "<name>" contain a function call with all its arguments,
 Let's try it with "andb" and "/\".
 *)
 
-Theorem andb_is_and : (forall a b, Is_true (andb a b) <-> Is_true a /\ Is_true b).
+Theorem andb_is_and : forall a b, Is_true (andb a b) <->
+                                  Is_true a /\ Is_true b.
 Proof.
   intros a b.
   unfold iff.
   refine (conj _ _).
-    (** andb -> /\ *)
+  - (** andb -> /\ *)
     intros H.
     case a, b.
-      (** suppose a,b is true,true *)
+    + (** suppose a,b is true,true *)
       simpl.
       exact (conj I I).
-
-      (** suppose a,b is true,false *)
+    + (** suppose a,b is true,false *)
       simpl in H.
       case H.
-
-      (** suppose a,b is false,true *)
+    + (** suppose a,b is false,true *)
       simpl in H.
       case H.
-
-      (** suppose a,b is false,false *)
+    + (** suppose a,b is false,false *)
       simpl in H.
       case H.
-
-    (** /\ -> andb *)
+  - (** /\ -> andb *)
     intros H.
-    case a,b.
-      (** suppose a,b is true,true *)
+    case a, b.
+    + (** suppose a,b is true,true *)
       simpl.
       exact I.
-
-      (** suppose a,b is true,false *)
+    + (** suppose a,b is true,false *)
       simpl in H.
       destruct H as [(**conj*) A B].
       case B.
-
-      (** suppose a,b is false,true *)
+    + (** suppose a,b is false,true *)
       simpl in H.
       destruct H as [(**conj*) A B].
       case A.
-
-      (** suppose a,b is false,false *)
+    + (** suppose a,b is false,false *)
       simpl in H.
       destruct H as [(**conj*) A B].
       case A.
@@ -1521,16 +1505,23 @@ of the way.  Or, if you are only part way done a proof but you want
 send someone a Coq file that parses, "admit" can be used to fill in
 your blanks.
 
-
 So, take a swing at proving this theorem.
  - HINT: Remember "~A" is "A -> False".
  - HINT: You can make use of the proof "False_cannot_be_proven"
  - HINT: When you get stuck, look at "thm_true_imp_false".
 *)
 
+Check thm_true_imp_false.
 Theorem negb_is_not : (forall a, Is_true (negb a) <-> (~(Is_true a))).
 Proof.
-  admit.  (** delete "admit" and put your proof here. *)
+  intros a.
+  split.
+  - case a.
+    + simpl. unfold not. intros fal. destruct fal. 
+    + unfold not. simpl. intros tru fal. destruct fal. 
+  - case a.
+    + simpl. unfold not. intros true_false. refine (thm_true_imp_false true_false). Check False_cannot_be_proven. 
+    + simpl. intros nfalse. exact I.
 Qed.
 
 (**
@@ -1560,15 +1551,17 @@ witness - and then prove that the statement holds for the witness.
 The definition and operator are:
 <<
 Inductive ex (A:Type) (P:A -> Prop) : Prop :=
-  ex_intro : forall x:A, P x -> ex (A:=A) P.
+  ex_intro : forall x:A, P x -> ex (A:=A) P.    ??
 
 Notation "'exists' x .. y , p" := (ex (fun x => .. (ex (fun y => p)) ..))
   (at level 200, x binder, right associativity,
    format "'[' 'exists'  '/  ' x  ..  y ,  '/  ' p ']'")
   : type_scope.
->>
+>>*)
 
-The proposition "ex P" should be read: "P is a function returning a
+Print ex. About ex.
+
+(* The proposition "ex P" should be read: "P is a function returning a
 Prop and there exists an argument to that function such that (P arg)
 has been proven".  The function "P" is known as "the predicate".  The
 constructor for "ex P" takes the predicate "P" , the witness (called
@@ -1586,14 +1579,14 @@ Let's test this out with the easy theorem I already mentioned.
 Definition basic_predicate
 :=
   (fun a => Is_true (andb a true))
-.
+. About basic_predicate.
 
 Theorem thm_exists_basics : (ex basic_predicate).
 Proof.
   pose (witness := true).
   refine (ex_intro basic_predicate witness _).
-    simpl.
-    exact I.
+  simpl.
+  exact I.
 Qed.
 
 (**
@@ -1634,21 +1627,19 @@ We often use "exists" and "forall" at the same time.  Thus, we end up
 with proofs like the following.
 *)
 
-Theorem thm_forall_exists : (forall b, (exists a, Is_true(eqb a b))).
+Theorem thm_forall_exists : forall b, exists a, Is_true (eqb a b).
 Proof.
   intros b.
   case b.
-    (** b is true *)
-    pose (witness := true).
+  - (** b is true *)
+    Print ex_intro. (* 4 arguments but first implicit *)
+    pose (witness := true). 
     refine (ex_intro _ witness _).
-      simpl.
-      exact I.
-
-    (** b is false *)
+    (* 1 subgoal *) simpl. exact I.
+  - (** b is false *)
     pose (witness := false).
     refine (ex_intro _ witness _).
-      simpl.
-      exact I.
+    (* 1 subgoal *) simpl. exact I.
 Qed.
 
 (**
@@ -1656,7 +1647,7 @@ If you look at the proof above, the witness was always equal to "b".
 So, let's try simplifying the proof.
 *)
 
-Theorem thm_forall_exists__again : (forall b, (exists a, Is_true(eqb a b))).
+Theorem thm_forall_exists__again : forall b, exists a, Is_true (eqb a b).
 Proof.
   intros b.
   refine (ex_intro _ b _). (** witness is b *)
@@ -1696,12 +1687,10 @@ Here is a classic theorem of logic, showing the relationship between
 of type "ex".
 *)
 
-Theorem forall_exists : (forall P : Set->Prop,  (forall x, ~(P x)) -> ~(exists x, P x)).
+Theorem forall_exists : forall P : Set->Prop, (forall x, ~ P x) ->
+                                              ~ exists x, P x.
 Proof.
-  intros P.
-  intros forall_x_not_Px.
-  unfold not.
-  intros exists_x_Px.
+  intros P forall_x_not_Px. unfold not. intros exists_x_Px.
   destruct exists_x_Px as [(**ex_intro P*) witness proof_of_Pwitness].
   pose (not_Pwitness := forall_x_not_Px witness).
   unfold not in not_Pwitness.
@@ -1709,11 +1698,22 @@ Proof.
   case proof_of_False.
 Qed.
 
+Section extrait_Delahaye.
+  Variables (E : Set) (P : E -> Prop).       
+  Lemma fol5 : (forall x : E, ~(P x)) -> ~(exists x : E, P x).
+  Proof.
+    intros   forall_x_not_Px    exists_x_Px.
+    elim exists_x_Px. intros x Px.
+    apply (forall_x_not_Px x). exact Px.
+  Qed.
+End extrait_Delahaye. 
+
 (**
 The proof requires some explanation.
   - we use intros and unfold until we have everything in the context.
   - we use "destruct" to extract the witness and the proof of "P witness".
-  - we call "(forall x, ~(P x))" with the witness, to generate "(P witness) -> False"
+  - we call "(forall x, ~(P x))" with the witness, to generate 
+           "(P witness) -> False"
   - we call "P witness -> False" with "P witness" to get a proof of "False".
   - we use the tactic "case" on "proof_of_False"
 
@@ -1725,17 +1725,25 @@ Another good example of "exists" is proving that the implication goes
 the other way too.
 *)
 
-Theorem exists_forall : (forall P : Set->Prop,  ~(exists x, P x) -> (forall x, ~(P x))).
+Theorem exists_forall : forall P : Set->Prop, ~ (exists x, P x) ->
+                                               forall x, ~ P x.
 Proof.
-  intros P.
-  intros not_exists_x_Px.
-  intros x.
-  unfold not.
-  intros P_x.
-  unfold not in not_exists_x_Px.
+  intros P   not_exists_x_Px   x.
+  unfold not. unfold not in not_exists_x_Px. intros P_x.
   refine (not_exists_x_Px _).
-    exact (ex_intro P x P_x).
+  (* 1 subgoal *) exact (ex_intro P x P_x).
 Qed.
+
+Section imagine_Delahaye.
+  Variables (E : Set) (P : E -> Prop).       
+
+  Lemma fol5bis : ~ (exists x, P x) -> forall x, ~ P x.
+  Proof.
+    intros not_exists_x_Px x.
+    unfold not. unfold not in not_exists_x_Px. intros Px.
+    elim not_exists_x_Px. exists x. exact Px.
+  Qed.
+End imagine_Delahaye. 
 
 (**
 Again, this isn't a very readable proof.  It goes by:
@@ -1760,7 +1768,7 @@ some examples.
 (**
 Now we come to the big prize: equality!  Equality is a derived concept
 in Coq.  It's an inductive type, just like "and", "or", and "ex"
-("exists").  When I found that out, I was shocked and fascinated!
+("exists").  When I found that out, I was shocked and fascinated ! !!!
 
 It's defined as:
 <<
@@ -1770,9 +1778,11 @@ Inductive eq (A:Type) (x:A) : A -> Prop :=
 where "x = y :> A" := (@eq A x y) : type_scope.
 
 Notation "x = y" := (x = y :>_) : type_scope.
->>
+>> *)
 
-The "Inductive" statement creates a new type "eq" which is a function
+Print eq.
+
+(* The "Inductive" statement creates a new type "eq" which is a function
 of a type A and 2 values of type A to Prop.  (NOTE: One value of type
 A is written (x:A) before the ":" and the other is written "A ->"
 after.  This is done so Coq infers the type "A" from the first
@@ -1784,16 +1794,16 @@ The only way to create a proof of type "eq" is to use the only
 constructor "eq_refl".  It takes a value of "x" of type "A" and
 returns "@eq A x x", that is, that "x" is equal to itself.  (The "@"
 prevents Coq from inferring values, like the type "A".)  The name
-"eq_refl" comes from the reflexive property of equality.
+"eq_refl" comes from the reflexive property of equality. *)
 
-Lastly, comes two operators.  The less commonly used one is "x = y :>
+(* Lastly, comes two operators.  The less commonly used one is "x = y :>
 A" which let's you say that "x" and "y" are equal and both have type
 "A".  The one you'll use most of the time, "x = y", does the same but
 let's Coq infer the type "A" instead of forcing you to type it.
 
 Now, if you we paying attention, you saw that "eq_refl" is the only
 constructor.  We can only create proofs of "x = x"!  That doesn't seem
-useful at all!
+useful at all !
 
 What you don't see is that Coq allows you to execute a function call
 and substitute the result for the function call.  For example, if we had
@@ -1802,10 +1812,10 @@ we could use "eq_refl (plus 1 1)" to create a proof of
 "eq nat (plus 1 1) (plus 1 1)".  Then, if we execute the second function
 call, we get "eq nat (plus 1 1) 2", that is, "1 + 1 = 2"!
 
-The concept of substituting a function call with its result or
-substituting the result with the function call is called
+The concept of substituting a function call WITH its result or
+substituting the result WITH the function call is called
 "convertibility".  One tactic we've seen, "simpl", replaces
-convertibile values.  We'll see more tactics in the future.
+convertible values.  We'll see more tactics in the future.
 
 
 Now that we have a concept of what "=" means in Coq, let's use it!
@@ -1813,11 +1823,10 @@ Now that we have a concept of what "=" means in Coq, let's use it!
 
 (** *** Equality is symmetric *)
 
-Theorem thm_eq_sym : (forall x y : Set, x = y -> y = x).
+Theorem thm_eq_sym : forall x y : Set, x = y -> y = x.
 Proof.
-  intros x y.
-  intros x_y.
-  destruct x_y as [(*eq_refl*)].
+  intros  x  y  xy_equal.
+  destruct xy_equal as [(*eq_refl*)].
   exact (eq_refl x).
 Qed.
 
@@ -1829,7 +1838,7 @@ Before, it is:
 <<
   x : Set
   y : Set
-  x_y : x = y
+  xy_equal : x = y
   ============================
    y = x
 >>
@@ -1844,8 +1853,8 @@ And after:
 By destructing the "eq_refl", Coq realizes that "x" and "y" are
 convertible and wherever the second name is, it can be replaced by
 the first.  So, "y" disappears and is replaced by "x".  (NOTE:
-"destruct" unlike "case", does change the context, so the hypotheses
-"y" and "x_y" also disappear.)
+"destruct" unlike "case", DOES change the context, so the hypotheses
+"y" and "xy_equal" also disappear.)
 
 After "destruct", we're left with a subgoal of "x = x", which is
 solved by calling "eq_refl".
@@ -1856,10 +1865,9 @@ equality: transitivity.
 
 (** *** Equality is transitive *)
 
-Theorem thm_eq_trans : (forall x y z: Set, x = y -> y = z -> x = z).
+Theorem thm_eq_trans : forall x y z: Set, x = y -> y = z -> x = z.
 Proof.
-  intros x y z.
-  intros x_y y_z.
+  intros x y z   x_y   y_z.
   destruct x_y as [(*eq_refl*)].
   destruct y_z as [(*eq_refl*)].
   exact (eq_refl x).
@@ -1876,10 +1884,9 @@ x_y" will go the other way, replacing "y" with "x".
 Let's see these tactics by proving transitivity again.
 *)
 
-Theorem thm_eq_trans__again : (forall x y z: Set, x = y -> y = z -> x = z).
+Theorem thm_eq_trans__again : forall x y z: Set, x = y -> y = z -> x = z.
 Proof.
-  intros x y z.
-  intros x_y y_z.
+  intros x y z   x_y   y_z.
   rewrite x_y.
   rewrite <- y_z.
   exact (eq_refl y).
@@ -1901,23 +1908,20 @@ Let's try something that explicitly relies on convertibility.  Recall,
 "&&".
 *)
 
-Theorem andb_sym : (forall a b, a && b = b && a).
+Theorem andb_sym : forall a b, a && b = b && a.
 Proof.
   intros a b.
   case a, b.
-    (** suppose a,b is true,true *)
+  -    (** suppose a,b is true,true *)
     simpl.
     exact (eq_refl true).
-
-    (** suppose a,b is true,false *)
+  -    (** suppose a,b is true,false *)
     simpl.
     exact (eq_refl false).
-
-    (** suppose a,b is false,true *)
+  -    (** suppose a,b is false,true *)
     simpl.
     exact (eq_refl false).
-
-    (** suppose a,b is false,false *)
+  -    (** suppose a,b is false,false *)
     simpl.
     exact (eq_refl false).
 Qed.
@@ -1943,17 +1947,16 @@ Notation "x <> y" := (x <> y :>_) : type_scope.
 Let's start with a simple example.  Recall that "negb" is the
 "not" operation for bools.
 *)
-Theorem neq_nega: (forall a, a <> (negb a)).
+Theorem neq_nega: forall a, a <> (negb a).
 Proof.
   intros a.
   unfold not.
   case a.
-    (**suppose a is true*)
+  -    (**suppose a is true*)
+    simpl.
     intros a_eq_neg_a.
-    simpl in a_eq_neg_a.
     discriminate a_eq_neg_a.
-
-    (**suppose a is false*)
+  -    (**suppose a is false*)
     intros a_eq_neg_a.
     simpl in a_eq_neg_a.
     discriminate a_eq_neg_a.
@@ -1976,9 +1979,7 @@ _RULE_: If you have a hypothesis
           "<name> : (<constructor1> ...) = (<constructor2> ...)
      OR "<name> : <constant1> = <constant2>
      Then use the tactic "discriminate <name>"
-
 *)
-
 
 (**
 To really show off equality, we'll need something more numerous than
@@ -1986,7 +1987,6 @@ just 2 booleans.  Next up is natural numbers - an infinite set of
 objects - and induction - which allows us to prove properties about
 infinite sets of objects!
 *)
-
 
 (** * Natural Numbers and Induction *)
 (** ** Peano Arithmetic *)

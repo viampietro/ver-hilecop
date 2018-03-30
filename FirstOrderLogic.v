@@ -2,7 +2,7 @@
 
 (* Propositional Logic *)
 
-Parameters A B C : Prop.
+Parameters A B C : Prop.  (* Variable, Parameter, Axiom, Hypothesis *)
 
 Lemma prop1 : A -> B -> A.
 Proof.
@@ -76,10 +76,10 @@ Proof.
 Qed.
 
 (****************************************************)
-(* First Order Logic    fol amour*)
+(* First Order Logic *)
 Section FOL.
-  Parameter E : Set.
-  Parameter P Q : E -> Prop.   (* 2 prédicats unaires *)  
+  Variable E : Set.
+  Variable P Q : E -> Prop.   (* 2 unary predicates *)  
   
   Lemma fol1 : forall x : E,
       (P x) -> exists y : E, (P y) \/ (Q y).
