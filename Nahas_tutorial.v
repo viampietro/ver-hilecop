@@ -2052,7 +2052,7 @@ call to "plus".
 -       (plus (S (S O)) (S (S (S O))))
 -    (S (plus    (S O)  (S (S (S O)))))
 - (S (S (plus       O   (S (S (S O))))))
-- (S (S (S (S (S O))))))
+- (S (S                 (S (S (S O))))))
 
 Each execution of "plus" strips an "S" off the front of the first
 number and puts it in front of the recursive call to "plus".  When the
@@ -2146,11 +2146,10 @@ Theorem plus_n_O : (forall n, n + O = n).
 Proof.
   intros n.
   elim n.
-    (** base case *)
+  -    (** base case *)
     simpl.
     exact (eq_refl O).
-
-    (** inductive case *)
+  -    (** inductive case *)
     intros n'.
     intros inductive_hypothesis.
     simpl.
@@ -2185,33 +2184,31 @@ Theorem plus_sym: (forall n m, n + m = m + n).
 Proof.
   intros n m.
   elim n.
-    (** base case for n *)
+  -    (** base case for n *)
     elim m.
-      (** base case for m *)
+    +      (** base case for m *)
       exact (eq_refl (O + O)).
-
-      (** inductive case for m *)
+    +      (** inductive case for m *)
       intros m'.
-      intros inductive_hyp_m.
+      intros inductive_hyp_m'.
       simpl.
-      rewrite <- inductive_hyp_m.
+      rewrite <- inductive_hyp_m'.
       simpl.
       exact (eq_refl (S m')).
-
-    (** inductive case for n *)
+  -    (** inductive case for n *)
     intros n'.
-    intros inductive_hyp_n.
+    intros inductive_hyp_n'.
     simpl.
-    rewrite inductive_hyp_n.
+    rewrite inductive_hyp_n'.
     elim m.
-      (** base case for m *)
+    +      (** base case for m *)
       simpl.
       exact (eq_refl (S n')).
-
+    +      (** inductive case for m' *)
       intros m'.
-      intros inductive_hyp_m.
+      intros inductive_hyp_m'.
       simpl.
-      rewrite inductive_hyp_m.
+      rewrite inductive_hyp_m'.
       simpl.
       exact (eq_refl (S (m' + S n'))).
 Qed.
@@ -2300,9 +2297,9 @@ Inductive list (A : Type) : Type :=
 I'll address the type "Type" in a second, but for the moment know that
 a list takes a type called "A" and is either empty - constructed using
 "nil" - or a node containing a value of type "A" and a link to another
-list.
+list. *)
 
-In a number of earlier places, I've ignored the type "Type".  It hides
+(* In a number of earlier places, I've ignored the type "Type".  It hides
 some magic in Coq.  We saw early on that "proof_of_A" was a proof
 and had type "A", which was a proposition.  "A", since it was a
 proposition, had type "Prop".  But if types can have types, what type
@@ -2338,15 +2335,15 @@ Just to get started, let's prove that adding an element to a list
 increases it's length by 1.
 *)
 Theorem cons_adds_one_to_length :
-   (forall A:Type,
-   (forall (x : A) (lst : list A),
-   length (x :: lst) = (S (length lst)))).
+  forall A:Type,
+    (forall (x : A) (lst : list A),
+        length (x :: lst) = (S (length lst))).
 Proof.
-  intros A.
-  intros x lst.
+  intros A.  intros x lst.
   simpl.
-  exact (eq_refl (S (length lst))).
+  exact (eq_refl (S (length lst))).  (* reflexivity *)
 Qed.
+
 (**
 The proof is pretty simple, but the statement of what we want to prove
 is not!  First, we need "A", which is the type stored in our lists.
@@ -2363,7 +2360,7 @@ what should we return if the list is empty?
 
 In some programming languages, you might throw an exception - either
 explicitly or through a memory violation.  In others, you might assume
-the program crashs.  But if you to prove a program correct, these
+the program crashs.  But if you want to prove a program correct, these
 aren't choices you can make.  The program needs to be predictable.
 
 There are choices you can make:
@@ -2396,9 +2393,7 @@ in.
 
 Thus, we can do:
 *)
-Definition my_hd_for_nat_lists
-:=
-  hd nat 0.
+Definition my_hd_for_nat_lists := hd nat 0. Check my_hd_for_nat_lists.
 (**
 The remaining parameter - the list - can still be passed to
 "my_hd_for_nat_lists", but the "Type" parameter has been bound to
@@ -2418,17 +2413,15 @@ Prints "= 5 : nat".
 We can also prove it correct.
 *)
 Theorem correctness_of_hd :
-   (forall A:Type,
-   (forall (default : A) (x : A) (lst : list A),
-   (hd A default nil) = default /\ (hd A default (x :: lst)) = x)).
+  forall A:Type,
+    (forall (default : A) (x : A) (lst : list A),
+        (hd A default nil) = default /\ (hd A default (x :: lst)) = x).
 Proof.
-  intros A.
-  intros default x lst.
+  intros A.  intros default x lst.
   refine (conj _ _).
-    simpl.
+  -    simpl.
     exact (eq_refl default).
-
-    simpl.
+  -    simpl.
     exact (eq_refl x).
 Qed.
 
@@ -2453,11 +2446,10 @@ branch for "Some".
 Coq includes a version of "hd" that returns an "option".  It's called
 "hd_error".
 *)
-Definition hd_error (A : Type) (l : list A)
-:=
+Definition hd_error (A : Type) (l : list A) :=
   match l with
-    | nil => None
-    | x :: _ => Some x
+  | nil => None
+  | x :: _ => Some x
   end.
 (**
 Again, using "Compute" we can examine what it returns.
@@ -2473,17 +2465,15 @@ Prints "= Some 5 : option nat".
 We can also prove it correct.
 *)
 Theorem correctness_of_hd_error :
-   (forall A:Type,
-   (forall (x : A) (lst : list A),
-   (hd_error A nil) = None /\ (hd_error A (x :: lst)) = Some x)).
+  forall A:Type,
+    (forall (x : A) (lst : list A),
+        (hd_error A nil) = None /\ (hd_error A (x :: lst)) = Some x).
 Proof.
-  intros A.
-  intros x lst.
+  intros A.  intros x lst.
   refine (conj _ _).
-    simpl.
+  -    simpl.
     exact (eq_refl None).
-
-    simpl.
+  -    simpl.
     exact (eq_refl (Some x)).
 Qed.
 
@@ -2495,16 +2485,14 @@ empty, so "hd" can never fail.
 *)
 Definition hd_never_fail (A : Type) (lst : list A) (safety_proof : lst <> nil)
   : A
-:=
-  (match lst as b return (lst = b -> A) with
-    | nil =>    (fun foo : lst = nil =>
-                   match (safety_proof foo) return A with
-                   end
-                )
-    | x :: _ => (fun foo : lst = x :: _ =>
-                   x
-                )
-  end) eq_refl.
+  :=
+    (match lst as b return (lst = b -> A) with
+     | nil =>    (fun foo : lst = nil =>
+                    match (safety_proof foo) return A with
+                    end
+                 )
+     | x :: _ => (fun foo : lst = x :: _ => x)
+     end) eq_refl.
 
 (**
 I don't expect you to understand this function, let alone write
@@ -2512,25 +2500,25 @@ it.  It took me 30 minutes to write it, mostly by copying from code
 printed using "Show Proof." from the complicated proofs above.
 
 But I do expect you to understand that it _can_ be written in Coq.
-And, I expect you to be able to read a prove that the function does
+And, I expect you to be able to read a proof that the function does
 what I said it does.
 *)
 Theorem correctness_of_hd_never_fail :
-   (forall A:Type,
-   (forall (x : A) (rest : list A),
-   (exists safety_proof : ((x :: rest) <> nil),
-      (hd_never_fail  A (x :: rest) safety_proof) = x))).
+  forall A:Type,
+    (forall (x : A) (rest : list A),
+        (exists safety_proof : ((x :: rest) <> nil),
+            (hd_never_fail  A (x :: rest) safety_proof) = x)).
 Proof.
-  intros A.
-  intros x rest.
-  assert (witness : ((x :: rest) <> nil)).
+  intros A.  intros x rest.
+  assert (witness : ((x :: rest) <> nil)). {
     unfold not.
     intros cons_eq_nil.
     discriminate cons_eq_nil.
+  }
   refine (ex_intro _ witness _).
-    simpl.
-    exact (eq_refl x).
+  (* 1 subgoal *) simpl.    exact (eq_refl x).
 Qed.
+
 (**
 The proof is pretty simple.  We create a witness for the exists.
 Since the witness involves an inequality, we end its proof with
@@ -2554,9 +2542,10 @@ the list after that first element.  In Coq, it's definition is:
 *)
 Definition tl (A : Type) (l:list A) :=
   match l with
-    | nil => nil
-    | a :: m => m
+  | nil => nil
+  | a :: m => m
   end.
+
 (**
 If you want to test your skills, it would be good practice to write
 three different versions of "tl", just like I did for "hd", and prove
@@ -2576,14 +2565,12 @@ Here's just a simple proof that the "hd" and "tl" of a non-empty list
 can be used to reconstruct the list.
 *)
 Theorem hd_tl :
-   (forall A:Type,
-   (forall (default : A) (x : A) (lst : list A),
-   (hd A default (x::lst)) :: (tl A (x::lst)) = (x :: lst))).
+  forall A:Type,
+    (forall (default : A) (x : A) (lst : list A),
+        (hd A default (x::lst)) :: (tl A (x::lst)) = (x :: lst)).
 Proof.
-  intros A.
-  intros default x lst.
-  simpl.
-  exact (eq_refl (x::lst)).
+  intros A.  intros default x lst.
+  simpl.  exact (eq_refl (x::lst)).
 Qed.
 
 (** *** Appending lists *)
@@ -2608,26 +2595,35 @@ Since append is defined recursively, many of these theorems must be
 proved with induction using the "elim" tactic.
 *)
 
-Theorem app_nil_l : (forall A:Type, (forall l:list A, nil ++ l = l)).
-  admit.  (** delete "admit" and put your proof here. *)
-Proof.
+Theorem app_nil_l :
+  forall A:Type,
+    (forall l:list A, nil ++ l = l). 
+Proof. intros A l.  simpl. reflexivity. Qed.
 
-Theorem app_nil_r : (forall A:Type, (forall l:list A, forall l:list A, l ++ nil = l)).
-  admit.  (** delete "admit" and put your proof here. *)
-Proof.
+Theorem app_nil_r :
+  forall A:Type,
+    (forall l:list A, l ++ nil = l).
+Proof. intros A l. elim l.
+       - simpl. reflexivity.
+       - intros a l0.  intros IH. simpl. rewrite IH. reflexivity.
+Qed.
 
 Theorem app_comm_cons : forall A (x y:list A) (a:A), a :: (x ++ y) = (a :: x) ++ y.
-  admit.  (** delete "admit" and put your proof here. *)
-Proof.
+Proof.  intros A x y a.  simpl. reflexivity. Qed. 
+
 
 Theorem app_assoc : forall A (l m n:list A), l ++ m ++ n = (l ++ m) ++ n.
-  admit.  (** delete "admit" and put your proof here. *)
-Proof.
+Proof. intros A l m n. elim l.  
+       - simpl. reflexivity.
+       -  intros a l0 IH0. simpl. rewrite IH0. reflexivity.
+Qed.          
 
 Theorem app_cons_not_nil : forall A (x y:list A) (a:A), nil <> x ++ a :: y.
-  admit.  (** delete "admit" and put your proof here. *)
-Proof.
-
+Proof. intros A x y a.
+       elim x.
+       -  simpl. discriminate.
+       -  intros a0 l IH. simpl.
+          unfold not. unfold not in IH. intros contrad. Admitted.
 
 (** * Conclusion *)
 (**
@@ -2720,6 +2716,7 @@ _RULE_: If you have a subgoal that you want to ignore for a while,
 
 _RULE_: If the current subgoal starts "exists <name>, ..."
      Then create a witness and use "refine (ex_intro _ witness _)"
+(or    pose/assert TRUC.   then  exists TRUC.     )   
 
 _RULE_: If you have a hypothesis "<name> : <a> = <b>"
      AND "<a>" in your current subgoal
