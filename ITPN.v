@@ -22,21 +22,22 @@ Record PN : Type := Build_PN
                         init_marking : marking_type }.
 Print PN.
 
-(* predecessor, successor ... to update the marking *)
+(* predecessor, successor ... 
+to update the markings and emulate the Petri nets *)
 Definition place_before_trans (t:transition_type) (p:place_type) : Prop :=
   False.
 
 Definition place_after_trans (t:transition_type) (p:place_type) : Prop :=
   False.
 
-Definition firable (m:marking_type) (t:transition_type) : Prop :=
+Definition trans_firable (m:marking_type) (t:transition_type) : Prop :=
   False.
 
-Definition marking_after (m:marking_type) (t:transition_type) (p : firable m t) : marking_type :=
+Definition marking_after (m:marking_type) (t:transition_type) (p : trans_firable m t) : marking_type :=
   m.  
 
 (******************************************************************)
-Parameter conds : Set.  (* conditions over transitions *)
+Parameter conds : Set.  (* conditions allowing transitions *)
 Parameter c : conds.
 Definition condition_type :=
   transition_type -> conds -> bool.
@@ -67,6 +68,10 @@ Record ITPN : Type := mk_ITPN
     intervals : temporal_transition_type }.
 Print ITPN.
 
+
+Inductive clock : Set :=
+| mk_rising | mk_falling.
+Print clock_ind.
 
 (*************************************************************)
 (******* example 0 (page 24 in Ibrahim thesis) *********)
