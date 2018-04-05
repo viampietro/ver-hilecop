@@ -62,8 +62,8 @@ Definition temporal_transition_type :=
   transition_type -> interval_type -> bool.
 (* temporal_transition_type t i = true   <=> C is associated with t *)
 
-Record ITPN : Type :=
-  { ipn : IPN;
+Record ITPN : Type := mk_ITPN
+  { ipn :> IPN;
     intervals : temporal_transition_type }.
 Print ITPN.
 
@@ -140,7 +140,7 @@ Definition ints0 (t : transition_type) (i : interval_type) := false.
 (* no conditions in this Petri Net (and no actions of functions)
  ---> reseaux de Petri generalise etendu, mais pas interprete *)
 
-Definition itpn0 := Build_ITPN
+Definition itpn0 := mk_ITPN
                        (Build_IPN
                           (Build_PN
                              place0
@@ -251,13 +251,13 @@ Definition cond1 (t : transition_type) (c : conds) :=
   (* 1 condition donc influence de l'environnement donc
 ---> reseaux de Petri generalise etendu interprete IPN *)
 
-Example preuve3le5 : 3 <= 5. Proof. auto. Qed.
+Lemma preuve3le5 : 3 <= 5. Proof. auto. Qed.
 Definition int1_35 := Build_interval_type
                      3
                      5
                      preuve3le5.
 Print le.
-Example preuve2le255 : 2 <= 255. Proof. repeat (apply le_S; try apply le_n). Qed.
+Lemma preuve2le255 : 2 <= 255. Proof. repeat (apply le_S; try apply le_n). Qed.
 Definition int1_2oo := Build_interval_type
                      2
                      255
