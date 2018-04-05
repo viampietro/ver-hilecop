@@ -14,40 +14,60 @@ if any weight. *)
 Definition marking_type := place_type -> option nat.
 (* a marking is a partial function *)
 
-Record PN : Type := {place : place_type -> Prop ;
-                     transition : transition_type -> Prop ;
-                     pre : weight_type ;
-                     post : weight_type ;
-                     init_marking : marking_type}.
-                     
-Parameter conds : Set.  (* conditions *)
+Record PN : Type := Build_PN
+                      { place : place_type -> Prop ;
+                        transition : transition_type -> Prop ;
+                        pre : weight_type ;
+                        post : weight_type ;
+                        init_marking : marking_type }.
+Print PN.
+
+(* predecessor, successor ... to update the marking *)
+Definition place_before_trans (t:transition_type) (p:place_type) : Prop :=
+  False.
+
+Definition place_after_trans (t:transition_type) (p:place_type) : Prop :=
+  False.
+
+Definition firable (m:marking_type) (t:transition_type) : Prop :=
+  False.
+
+Definition marking_after (m:marking_type) (t:transition_type) (p : firable m t) : marking_type :=
+  m.  
+
+(******************************************************************)
+Parameter conds : Set.  (* conditions over transitions *)
 Parameter c : conds.
-Definition condition_type := transition_type ->
-                             conds ->
-                             bool.
-(* condition_type t C = true   <=> C is associated with t *)
-(* Instead of "bool", "Prop" is possible...  (binary predicate) *)
+Definition condition_type :=
+  transition_type -> conds -> bool.
+(* condition_type t C = true     <=> C is associated with t *)
+(* Instead of "bool", "Prop" is possible...  (-> binary predicate) *)
 Notation "cond [ trans ]" := (condition_type trans cond = true)  
                                (at level 50) : type_scope. (* ? *)
-
-Record IPN : Type := {pn :> PN ;
-                      pre_test : weight_type ;
-                      pre_inhibit : weight_type ;
-                      cond : condition_type}.
+(* difference between Notation and Infix ? *)
+Record IPN : Type := Build_IPN
+                       { pn :> PN ;
+                         pre_test : weight_type ;
+                         pre_inhibit : weight_type ;
+                         cond : condition_type }.
 Print IPN.
 
-Record interval_type : Set := {min : nat ;
-                               max : nat ;
-                               min_le_max : min <= max}.
+Record interval_type : Set :=
+  { mini : nat ;
+    maxi : nat ;
+    min_le_max : mini <= maxi }.
+Print interval_type.
 
-Definition temporal_transition_type := transition_type ->
-                                       interval_type ->
-                                       bool.
+Definition temporal_transition_type :=
+  transition_type -> interval_type -> bool.
 (* temporal_transition_type t i = true   <=> C is associated with t *)
 
-Record ITPN : Type := {ipn : IPN;
-                       intervals : temporal_transition_type}.
+Record ITPN : Type :=
+  { ipn : IPN;
+    intervals : temporal_transition_type }.
 Print ITPN.
+
+
 (*************************************************************)
 (******* example 0 (page 24 in Ibrahim thesis) *********)
 
@@ -137,7 +157,7 @@ Definition itpn0 := Build_ITPN
 
 
 (*****************************************************************)
-(* example 1 (drawn by David Andreu, built in VHDL by Baptiste Colombani) *)
+(* example 1 (drawn by David Andreu, then built in VHDL) *)
 
 (* 7 places *)
 Definition place1 (p : place_type) :=
