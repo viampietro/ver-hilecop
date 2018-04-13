@@ -1,3 +1,17 @@
+(*    Why not simply these ?  *)
+
+Require Import Arith. (* for beq_nat  *)
+
+Definition my_place_type := nat.
+
+Definition my_marking_type := my_place_type -> nat.
+
+Definition set (m : my_marking_type) (p : my_place_type) (n : nat) : my_marking_type :=
+  fun p' => if beq_nat p p' 
+            then n
+            else m p'.
+(*************************************************)
+
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
 (* places indexées par les entiers naturels *)
