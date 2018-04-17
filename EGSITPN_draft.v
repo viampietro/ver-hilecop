@@ -256,13 +256,15 @@ Definition cond1 (t : transition_type) (c : conds) :=
   (* 1 condition donc influence de l'environnement donc
 ---> reseaux de Petri generalise etendu interprete IPN *)
 
-Lemma preuve3le5 : 3 <= 5. Proof. auto. Qed.
+Require Import Omega.
+
+Lemma preuve3le5 : 3 <= 5. Proof. omega. Qed.
 Definition int1_35 := Build_interval_type
                      3
                      5
                      preuve3le5.
 Print le.
-Lemma preuve2le255 : 2 <= 255. Proof. repeat (apply le_S; try apply le_n). Qed.
+Lemma preuve2le255 : 2 <= 255. Proof. omega. Qed.
 Definition int1_2oo := Build_interval_type
                      2
                      255

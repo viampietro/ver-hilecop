@@ -78,17 +78,25 @@ Eval compute in pred_strong8 0.
 
 Require Import Arith. (* for beq_nat  *)
 
-Definition my_place_type := nat.
+Definition placeType := nat.   (* nat or Set or Finite Set *)
+Definition transitionType := nat.
+Definition markingType := placeType -> nat.
 
-Definition my_marking_type := my_place_type -> nat.
-
-Definition set (m : my_marking_type) (p : my_place_type) (n : nat) : my_marking_type :=
+Definition set (m:markingType) (p:placeType) (j:nat) : markingType :=
   fun p' => if beq_nat p p' 
-            then n
-            else m p'.
+            then j             (* j tokens inside place p *)
+            else m p'.         (* m(p') tokens elsewhere  *)
+
+Require Import Coq.Sets.Ensembles.
+Require Import Coq.Sets.Finite_sets.  (* "finite" is harder *)
+Definition transitionPredecessors (t:transitionType) : Ensemble placeType :=
+Empty_set placeType.
+Definition transitionSuccessors (t:transitionType) :  Ensemble placeType :=
+Empty_set placeType.
 
 (*************************************************)
-
+(**************************************************)
+           
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
 (* places indexées par les entiers naturels *)
@@ -117,17 +125,12 @@ Print PN.
 
 (* predecessor, successor ... 
 to update the markings and emulate the Petri nets *)
-Definition place_before_trans (t:transition_type) (p:place_type)  : Prop :=
-  False.
+Definition place_before_trans (t:transition_type) (p:place_type)  : bool :=
+  false.
 
-Definition place_after_trans (t:transition_type) (p:place_type) : Prop :=
-  False.
+Definition place_after_trans (t:transition_type) (p:place_type) : bool :=
+  false.
 
-Definition trans_firable (m:marking_type) (t:transition_type) : Prop :=
-  False.
-
-Definition marking_after (m:marking_type) (t:transition_type) (p : trans_firable m t) : marking_type :=
-  m.
 
 (****************************************************************)
 (******************** IPN ***************************************)
@@ -151,6 +154,21 @@ Section IPN.
                            (* actions and functions ... *) }.
   Print IPN.
 End IPN.
+
+Require Import Coq.Bool.Bool.
+Definition conditionType := nat.  (* c1, c2, c3, ... *)
+Definition eval := conditionType -> bool.    (* condition true or false *)
+
+Definition trans_firable (m:marking_type) (t:transition_type) : Prop :=
+  (* (trans_enabled m t) andb forall c in t, eval c = true)  *)
+  if True
+  then True
+  else False.
+
+Definition marking_after (m:marking_type) (t:transition_type) (proofmt : trans_firable m t) : marking_type :=
+  if trans_firable m t = false
+  then m
+  else m :-: pre(t) :+: post(t).  
 
 (******************************************************************)
 (******* example of Petri net (page 24 in Ibrahim thesis) *********)
