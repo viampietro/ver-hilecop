@@ -1,4 +1,80 @@
-(*    Why not simply these ?  *)
+(***********************************)
+(********  notations  **************)
+
+
+Notation "!" := (False_rec _ _).
+Notation "[ e ]" := (exist _ e _).
+
+Print sumbool.
+
+Notation "'Yes'" := (left _ _).
+Notation "'No'" := (right _ _).
+Notation "'Reduce' x" := (if x then Yes else No) (at level 50).
+
+Definition eq_nat_dec : forall n m : nat, {n = m} + {n <> m}.
+  refine (fix f (n m : nat) : {n = m} + {n <> m} :=
+            match n, m with
+            | O, O => Yes
+            | S n', S m' => Reduce (f n' m')
+            | _, _ => No
+            end); congruence.
+Defined.
+
+Compute eq_nat_dec 2 2.
+Compute eq_nat_dec 2 3.
+
+Require Import Extraction.
+Extraction eq_nat_dec.
+
+Definition eq_nat_dec' (n m : nat) : {n = m} + {n <> m}.
+  decide equality.
+Defined.
+
+Extract Inductive sumbool => "bool" ["true" "false"].
+Extraction eq_nat_dec'.
+
+Notation "x || y" := (if x then Yes else Reduce y).
+
+Set Implicit Arguments.
+
+(* monade *)
+Inductive maybe (A : Set) (P : A -> Prop) : Set :=
+| Unknown : maybe P
+| Found : forall x : A, P x -> maybe P.
+
+Print maybe.
+
+Notation "{{ x | P }}" := (maybe (fun x => P)).
+Notation "??" := (Unknown _).
+Notation "[| x |]" := (Found _ x _).
+
+Definition pred_strong7 : forall n : nat, {{m | n = S m}}.
+  refine (fun n =>
+    match n return {{m | n = S m}} with
+      | O => ??
+      | S n' => [|n'|]
+    end); trivial.
+Defined.
+
+Eval compute in pred_strong7 2.
+Eval compute in pred_strong7 0.
+
+Print sumor.
+Notation "!!" := (inright _ _).
+Notation "[|| x ||]" := (inleft _ [x]).
+
+Definition pred_strong8 : forall n : nat, {m : nat | n = S m} + {n = 0}.
+  refine (fun n =>
+    match n with
+      | O => !!
+      | S n' => [||n'||]
+    end); trivial.
+Defined.
+
+Eval compute in pred_strong8 2.
+Eval compute in pred_strong8 0.
+
+(*************** draft *************)
 
 Require Import Arith. (* for beq_nat  *)
 
@@ -10,6 +86,7 @@ Definition set (m : my_marking_type) (p : my_place_type) (n : nat) : my_marking_
   fun p' => if beq_nat p p' 
             then n
             else m p'.
+
 (*************************************************)
 
 Inductive place_type : Set :=
@@ -50,27 +127,33 @@ Definition trans_firable (m:marking_type) (t:transition_type) : Prop :=
   False.
 
 Definition marking_after (m:marking_type) (t:transition_type) (p : trans_firable m t) : marking_type :=
-  m.  
+  m.
+
+(****************************************************************)
+(******************** IPN ***************************************)
+
+Inductive node : Set := place | transition.
+
+Section IPN.
+  Variable conds : Set.  (* conditions allowing transitions *)
+  Variable c : conds.
+
+  Definition condition_type :=
+    transition_type -> conds -> bool.
+  (* condition_type t C = true     <=> C is associated with t *)
+  (* Instead of "bool", "Prop" is possible...  (-> binary predicate) *)
+  Notation "cond [ trans ]" := (condition_type trans cond = true)  
+                                 (at level 50) : type_scope. (* ? *)
+  (* difference between Notation and Infix ? *)
+  Record IPN : Type := mk_IPN
+                         { pn :> PN ;
+                           cond : condition_type
+                           (* actions and functions ... *) }.
+  Print IPN.
+End IPN.
 
 (******************************************************************)
-Parameter conds : Set.  (* conditions allowing transitions *)
-Parameter c : conds.
-Definition condition_type :=
-  transition_type -> conds -> bool.
-(* condition_type t C = true     <=> C is associated with t *)
-(* Instead of "bool", "Prop" is possible...  (-> binary predicate) *)
-Notation "cond [ trans ]" := (condition_type trans cond = true)  
-                               (at level 50) : type_scope. (* ? *)
-(* difference between Notation and Infix ? *)
-Record IPN : Type := mk_IPN
-                       { pn :> PN ;
-                         cond : condition_type
-                         (* actions and functions ... *) }.
-Print IPN.
-
-
-(*************************************************************)
-(******* example 0 (page 24 in Ibrahim thesis) *********)
+(******* example of Petri net (page 24 in Ibrahim thesis) *********)
 
 (* 3 places *)
 Definition places (p : place_type) :=
