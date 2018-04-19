@@ -1,80 +1,3 @@
-(***********************************)
-(********  notations  **************)
-
-
-Notation "!" := (False_rec _ _).
-Notation "[ e ]" := (exist _ e _).
-
-Print sumbool.
-
-Notation "'Yes'" := (left _ _).
-Notation "'No'" := (right _ _).
-Notation "'Reduce' x" := (if x then Yes else No) (at level 50).
-
-Definition eq_nat_dec : forall n m : nat, {n = m} + {n <> m}.
-  refine (fix f (n m : nat) : {n = m} + {n <> m} :=
-            match n, m with
-            | O, O => Yes
-            | S n', S m' => Reduce (f n' m')
-            | _, _ => No
-            end); congruence.
-Defined.
-
-Compute eq_nat_dec 2 2.
-Compute eq_nat_dec 2 3.
-
-Require Import Extraction.
-Extraction eq_nat_dec.
-
-Definition eq_nat_dec' (n m : nat) : {n = m} + {n <> m}.
-  decide equality.
-Defined.
-
-Extract Inductive sumbool => "bool" ["true" "false"].
-Extraction eq_nat_dec'.
-
-Notation "x || y" := (if x then Yes else Reduce y).
-
-Set Implicit Arguments.
-
-(* monade *)
-Inductive maybe (A : Set) (P : A -> Prop) : Set :=
-| Unknown : maybe P
-| Found : forall x : A, P x -> maybe P.
-
-Print maybe.
-
-Notation "{{ x | P }}" := (maybe (fun x => P)).
-Notation "??" := (Unknown _).
-Notation "[| x |]" := (Found _ x _).
-
-Definition pred_strong7 : forall n : nat, {{m | n = S m}}.
-  refine (fun n =>
-    match n return {{m | n = S m}} with
-      | O => ??
-      | S n' => [|n'|]
-    end); trivial.
-Defined.
-
-Eval compute in pred_strong7 2.
-Eval compute in pred_strong7 0.
-
-Print sumor.
-Notation "!!" := (inright _ _).
-Notation "[|| x ||]" := (inleft _ [x]).
-
-Definition pred_strong8 : forall n : nat, {m : nat | n = S m} + {n = 0}.
-  refine (fun n =>
-    match n with
-      | O => !!
-      | S n' => [||n'||]
-    end); trivial.
-Defined.
-
-Eval compute in pred_strong8 2.
-Eval compute in pred_strong8 0.
-
-(*************** draft *************)
 
 Require Import Arith. (* for beq_nat  *)
 
@@ -93,6 +16,9 @@ Definition transitionPredecessors (t:transitionType) : Ensemble placeType :=
 Empty_set placeType.
 Definition transitionSuccessors (t:transitionType) :  Ensemble placeType :=
 Empty_set placeType.
+
+
+Inductive addmark : markingType -> markingType -> markingType -> Prop :=.
 
 (*************************************************)
 (**************************************************)
