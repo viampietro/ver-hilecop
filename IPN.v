@@ -1,24 +1,5 @@
 
-Require Import Arith. (* for beq_nat  *)
-
-Definition placeType := nat.   (* nat or Set or Finite Set *)
-Definition transitionType := nat.
-Definition markingType := placeType -> nat.
-
-Definition set (m:markingType) (p:placeType) (j:nat) : markingType :=
-  fun p' => if beq_nat p p' 
-            then j             (* j tokens inside place p *)
-            else m p'.         (* m(p') tokens elsewhere  *)
-
-Require Import Coq.Sets.Ensembles.
-Require Import Coq.Sets.Finite_sets.  (* "finite" is harder *)
-Definition transitionPredecessors (t:transitionType) : Ensemble placeType :=
-Empty_set placeType.
-Definition transitionSuccessors (t:transitionType) :  Ensemble placeType :=
-Empty_set placeType.
-
-
-Inductive addmark : markingType -> markingType -> markingType -> Prop :=.
+Require Import Arith. (* for beq_nat     maybe useful *)
 
 (*************************************************)
 (**************************************************)
@@ -37,7 +18,24 @@ Definition weight_type :=
 if any weight. *)
 
 Definition marking_type := place_type -> option nat.
-(* a marking is a partial function *)
+(* a marking is a partial function (-> Some ? and None) *)
+
+(*
+Print beq_nat. Print Nat.eqb.
+(* equality of functions ? *)
+Definition beq_places (p p' : place_type) : bool :=
+fix eq_places (p p' : place_type) : bool :=
+  match p with
+  | _ => match p' with
+      end.
+
+  
+(* given a marking m, one wants to put j tokens inside place p *)  
+Definition mark (m:marking_type) (p:place_type) (j:nat) : marking_type :=
+  fun p' => if beq_nat p p' 
+            then j             (* j tokens inside place p *)
+            else m p'.         (* m(p') tokens elsewhere  *)
+*)
 
 Record PN : Type := mk_PN
                       { place : place_type -> Prop ;
@@ -61,40 +59,38 @@ Definition place_after_trans (t:transition_type) (p:place_type) : bool :=
 (****************************************************************)
 (******************** IPN ***************************************)
 
-Inductive node : Set := place | transition.
+Variable conds : Set.  (* conditions allowing transitions *)
+Variable c : conds.
 
-Section IPN.
-  Variable conds : Set.  (* conditions allowing transitions *)
-  Variable c : conds.
+Definition condition_type :=
+  transition_type -> conds -> bool.
+(* condition_type t C = true     <=> C is associated with t *)
 
-  Definition condition_type :=
-    transition_type -> conds -> bool.
-  (* condition_type t C = true     <=> C is associated with t *)
-  (* Instead of "bool", "Prop" is possible...  (-> binary predicate) *)
-  Notation "cond [ trans ]" := (condition_type trans cond = true)  
-                                 (at level 50) : type_scope. (* ? *)
-  (* difference between Notation and Infix ? *)
-  Record IPN : Type := mk_IPN
-                         { pn :> PN ;
-                           cond : condition_type
-                           (* actions and functions ... *) }.
-  Print IPN.
-End IPN.
-
+Notation "cond [ trans ]" := (condition_type trans cond = true)  
+                               (at level 50) : type_scope. (* ? *)
+(* difference between Notation and Infix ? *)
+Record IPN : Type := mk_IPN
+                       { pn :> PN ;
+                         cond : condition_type
+                         (* actions and functions ... *) }.
+Print IPN.
+  
 Require Import Coq.Bool.Bool.
 Definition conditionType := nat.  (* c1, c2, c3, ... *)
 Definition eval := conditionType -> bool.    (* condition true or false *)
 
-Definition trans_firable (m:marking_type) (t:transition_type) : Prop :=
-  (* (trans_enabled m t) andb forall c in t, eval c = true)  *)
-  if True
-  then True
-  else False.
+Definition trans_firable (m:marking_type) (t:transition_type) : bool :=
+  (* (trans_enabled m t) andb forall c in t,   *)
+  if true
+  then true
+  else false.
 
+(*
 Definition marking_after (m:marking_type) (t:transition_type) (proofmt : trans_firable m t) : marking_type :=
   if trans_firable m t = false
   then m
   else m :-: pre(t) :+: post(t).  
+ *)
 
 (******************************************************************)
 (******* example of Petri net (page 24 in Ibrahim thesis) *********)
