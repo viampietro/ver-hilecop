@@ -1,41 +1,49 @@
+(********************** David Delahaye et Mathieu Lasjaunias *******)
+(*******************************************************************)
 
-Require Import Arith. (* for beq_nat     maybe useful *)
+Require Import Arith. Search nat.
 
 (*************************************************)
-(**************************************************)
-           
+
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
-(* places indexées par les entiers naturels *)
+(* une place pour chaque entier naturel *)
 
 Inductive transition_type : Set :=
 | mk_trans : nat -> transition_type.
-(* transitions indexées par les entiers naturels *)
+(* une transition pour chaque entier naturel *)
 
 Definition weight_type :=
   transition_type -> place_type -> option nat.
-(* weight of any "type" of arc (pred, post, pred_i, pred_t), 
-if any weight. *)
+
+(* 4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
+   along with "some" weight   (default is 1 in real). *)
 
 Definition marking_type := place_type -> option nat.
-(* a marking is a partial function (-> Some ? and None) *)
+(* again a partial function    (print option.) *)
 
 (*
 Print beq_nat. Print Nat.eqb.
-(* equality of functions ? *)
+(* égalités de fonctions ?   retrouver le nat input du constructeur mk_place ! *)
 Definition beq_places (p p' : place_type) : bool :=
 fix eq_places (p p' : place_type) : bool :=
   match p with
   | _ => match p' with
       end.
 
-  
 (* given a marking m, one wants to put j tokens inside place p *)  
 Definition mark (m:marking_type) (p:place_type) (j:nat) : marking_type :=
   fun p' => if beq_nat p p' 
             then j             (* j tokens inside place p *)
-            else m p'.         (* m(p') tokens elsewhere  *)
+            else m p'.         (* other tokens untouched  *)
 *)
+
+Definition is_enabled
+           (pre_of_t:place_type -> option nat)
+           (m:place_type -> option nat)
+  : bool := false.    (* le verre à moitié vide *)
+
+Definition enabled (pre:weight_type) (m:marking_type) : transition_type -> bool := fun t => is_enabled (pre t) m.
 
 Record PN : Type := mk_PN
                       { place : place_type -> Prop ;
