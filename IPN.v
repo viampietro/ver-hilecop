@@ -1,4 +1,4 @@
-(********************** Mathieu Lasjaunias, David Delahaye   *******)
+(******** Mathieu Lasjaunias, David Delahaye, David Andreu   *******)
 (*******************************************************************)
 
 Require Import Arith Omega List Bool. Search nat.
@@ -16,8 +16,10 @@ Inductive transition_type : Set :=
 Definition weight_type :=
   transition_type -> place_type -> option nat.
 
-(* 4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
-   along with "some" weight   (default is 1 in real). *)
+(* 
+    4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
+   along with "some" weight   (default is 1 in real). 
+*)
 
 Definition marking_type := place_type -> option nat.
 (* again a partial function    (print option.) *)
@@ -35,19 +37,18 @@ Print PN.
 
 (* predecessor, successor ... 
 to update the markings and emulate the Petri nets *)
-Definition place_before_trans (t:transition_type) (p:place_type)  : bool :=
+Definition place_before_trans (t:transition_type) (p:place_type) : bool :=
   false.
 
 Definition place_after_trans (t:transition_type) (p:place_type) : bool :=
   false.
 
-(**** Semantics ****)
+(******************* Semantics *****************)
 
-(* égalités de fonctions ?   retrouver le nat input du constructeur mk_place ! *)
+(* verify if 2 places are equal; return a boolean *)
 Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
-  | (mk_place n, mk_place n') =>
-    beq_nat n n'
+  | (mk_place n, mk_place n') => beq_nat n n'
   end.
 
 (* given a marking m, one wants to put j tokens inside place p *)  
@@ -67,15 +68,15 @@ Definition mark_add (m:marking_type) (p:place_type) (j:nat) : marking_type :=
          end
     else m p'.         (* other tokens unchanged  *)
 
-Definition is_enabled
+(*************************************************************)
+(**** TO DO : liste de places, liste de transitions .... *****)
+(*************************************************************)
+Definition pn_trans_enabled
            (pre_of_t:place_type -> option nat)
            (m:place_type -> option nat)
   : bool := false.    
 
-Definition enabled (pre:weight_type) (m:marking_type) : transition_type -> bool := fun t => is_enabled (pre t) m.
-
-
-
+Definition pn_trans_is_enabled (pre:weight_type) (m:marking_type) : transition_type -> bool := fun t => pn_trans_enabled (pre t) m.
 
 
 
