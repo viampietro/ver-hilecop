@@ -1,7 +1,7 @@
-(********************** David Delahaye et Mathieu Lasjaunias *******)
+(********************** Mathieu Lasjaunias, David Delahaye   *******)
 (*******************************************************************)
 
-Require Import Arith. Search nat.
+Require Import Arith Omega List Bool. Search nat.
 
 (*************************************************)
 
@@ -22,36 +22,14 @@ Definition weight_type :=
 Definition marking_type := place_type -> option nat.
 (* again a partial function    (print option.) *)
 
-(*
-Print beq_nat. Print Nat.eqb.
-(* égalités de fonctions ?   retrouver le nat input du constructeur mk_place ! *)
-Definition beq_places (p p' : place_type) : bool :=
-fix eq_places (p p' : place_type) : bool :=
-  match p with
-  | _ => match p' with
-      end.
-
-(* given a marking m, one wants to put j tokens inside place p *)  
-Definition mark (m:marking_type) (p:place_type) (j:nat) : marking_type :=
-  fun p' => if beq_nat p p' 
-            then j             (* j tokens inside place p *)
-            else m p'.         (* other tokens untouched  *)
-*)
-
-Definition is_enabled
-           (pre_of_t:place_type -> option nat)
-           (m:place_type -> option nat)
-  : bool := false.    (* le verre à moitié vide *)
-
-Definition enabled (pre:weight_type) (m:marking_type) : transition_type -> bool := fun t => is_enabled (pre t) m.
-
+(*************************** Petri Nets ******)
 Record PN : Type := mk_PN
-                      { place : place_type -> Prop ;
-                        transition : transition_type -> Prop ;
+                      { place : list place_type ;
+                        transition : list transition_type ;
                         pre : weight_type ;
                         post : weight_type ;
                         pre_test : weight_type ;
-                        pre_inhibit : weight_type ;
+                        pre_inhib : weight_type ;
                         init_marking : marking_type }.
 Print PN.
 
@@ -62,6 +40,43 @@ Definition place_before_trans (t:transition_type) (p:place_type)  : bool :=
 
 Definition place_after_trans (t:transition_type) (p:place_type) : bool :=
   false.
+
+(**** Semantics ****)
+
+(* égalités de fonctions ?   retrouver le nat input du constructeur mk_place ! *)
+Definition beq_places (p p' : place_type) : bool :=
+  match (p, p') with
+  | (mk_place n, mk_place n') =>
+    beq_nat n n'
+  end.
+
+(* given a marking m, one wants to put j tokens inside place p *)  
+Definition mark (m:marking_type) (p:place_type) (j:nat) : marking_type :=
+  fun p' =>
+    if beq_places p p'
+    then Some j        (* j tokens inside place p *)
+    else m p'.         (* other tokens unchanged  *)
+
+(* given a marking m, one wants to put j tokens inside place p *)  
+Definition mark_add (m:marking_type) (p:place_type) (j:nat) : marking_type :=
+  fun p' =>
+    if beq_places p p'
+    then match (m p') with
+         | None => Some j   (* j tokens inside place p *)
+         | Some i => Some (i + j)
+         end
+    else m p'.         (* other tokens unchanged  *)
+
+Definition is_enabled
+           (pre_of_t:place_type -> option nat)
+           (m:place_type -> option nat)
+  : bool := false.    
+
+Definition enabled (pre:weight_type) (m:marking_type) : transition_type -> bool := fun t => is_enabled (pre t) m.
+
+
+
+
 
 
 (****************************************************************)
@@ -83,7 +98,6 @@ Record IPN : Type := mk_IPN
                          (* actions and functions ... *) }.
 Print IPN.
   
-Require Import Coq.Bool.Bool.
 Definition conditionType := nat.  (* c1, c2, c3, ... *)
 Definition eval := conditionType -> bool.    (* condition true or false *)
 
@@ -158,7 +172,7 @@ Definition pre_test_function (t : transition_type) (p : place_type) :=
   end.
 
 (* 1 arc of type "inhibitor"  *)
-Definition pre_inhibit_function (t : transition_type) (p : place_type) :=
+Definition pre_inhib_function (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 1, mk_place 2) => Some 1
   | _ => None
@@ -175,7 +189,6 @@ Definition ipn := mk_IPN
                        pre_function
                        post_function
                        pre_test_function
-                       pre_inhibit_function                 
+                       pre_inhib_function                 
                        initial_marking)
                     conditions.
-
