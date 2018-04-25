@@ -189,8 +189,7 @@ Definition transition1 (t : transition_type) :=
   | _ => False
   end.
 
-(* 7 arcs PT (place transition) 
- "incoming" : transition pivot   ;   "outcoming" : place pivot *) 
+(* 7 arcs PT (place transition)  "incoming" *) 
 Definition pre1 (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 0) => Some 1
@@ -221,7 +220,7 @@ Definition pre_inhibit1 (t : transition_type) (p : place_type) :=
   | _ => None
   end.
 
-(* 7 arcs TP    *)
+(* 7 arcs TP      "normal outcoming"  *)
 Definition post1 (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 1) => Some 1
