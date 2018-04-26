@@ -4,7 +4,7 @@
 Require Import Arith Omega List Bool. Search nat.
 (* Require Import Nat. *)
 
-(***** Semantic of (extended generalized) Petri nets ******)
+(***** Syntax of (extended generalized) Petri nets ******)
 
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
@@ -130,6 +130,8 @@ Definition pn_is_enabled (pn:PN) : list transition_type :=
   pn_enabled pn (transitions pn).
 
 Print PN. Print weight_type. Print marking_type. Check add_mark.
+
+(*  maybe Fixpoint fire_aux ...    and Definition fire ...  *)
 Fixpoint fire (pn : PN)  (t:transition_type) : PN  :=
   mk_PN
     (places pn)
@@ -140,11 +142,11 @@ Fixpoint fire (pn : PN)  (t:transition_type) : PN  :=
     (pre_inhi pn)
     match (places pn) with
     | nil => (marking pn)
-    | cons p tail => add_mark  (sub_mark (marking pn)
-                                         p
-                                         ((pre pn) t p))
-                               p
-                               ((post pn) t p)
+    | cons p tail => add_mark (sub_mark (marking pn)
+                                        p
+                                        ((pre pn) t p))
+                              p
+                              ((post pn) t p)
     end.
 
 (*** relation de priorite pour _determiniser_ le systeme ****)
@@ -162,7 +164,8 @@ Definition condition_type := transition_type -> gards -> bool.
 (* condition_type t C = true     <=>     C is associated with t *)
 
 Notation "cond [ trans ]" := (condition_type trans cond = true)  
-                               (at level 50) : type_scope. (* ? *)
+                               (at level 50) : type_scope.
+(* juste pour un exemple de notation ... *)
 
 Record IPN : Type := mk_IPN
                        { pn : PN ;
@@ -247,25 +250,25 @@ Definition conditions (t : transition_type) (c : gards)
 
 (* reseaux de Petri generalise etendu, interprete *)
 
-Definition ex_pn := mk_PN
-                   ex_places
-                   ex_transitions
+Definition pn_ex := mk_PN
+                      ex_places
+                      ex_transitions
                    
-                   pre_function
-                   post_function
-                   pre_test_function
-                   pre_inhi_function                 
+                      pre_function
+                      post_function
+                      pre_test_function
+                      pre_inhi_function                 
+                      
+                      initial_marking.
 
-                   initial_marking.
+Definition ipn_ex := mk_IPN
+                       pn_ex
 
-Definition ipn := mk_IPN
-                    ex_pn
-
-                    conditions.
+                       conditions.
 
 (* disons   t_i prioritaire sur t_j   pour tout j >= i *) 
 Definition priority (t1 t2 : transition_type) : Prop :=
-  (* transitions squared *)
+  (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
   | (mk_trans 0, mk_trans 0) => True
   | (mk_trans 0, mk_trans 1) => True
@@ -276,10 +279,15 @@ Definition priority (t1 t2 : transition_type) : Prop :=
   | (mk_trans 2, mk_trans 0) => False
   | (mk_trans 2, mk_trans 1) => False
   | (mk_trans 2, mk_trans 2) => True
-  | (_,_) => False  (* False or True   whatever *) 
+  | (_,_) => False  (* False or True     who care ? *) 
   end.
-                                  
-Compute pn_is_enabled ex_pn.
+
+Definition animate (pn:PN) : PN := pn.
+(* what did you expect ? *)
+(* rendre le Petri net + 
+la liste des marquages du chemin parcouru ? *)
+
+Compute pn_is_enabled pn_ex.
 
 (**************** Syntax of SITPN ****************)
 
@@ -293,8 +301,9 @@ Definition temporal_transition_type :=
   transition_type -> interval_type -> bool.
 (* temporal_transition_type t i = true   <=> C is associated with t *)
 
+
 Record ITPN : Type := mk_ITPN
-  { ipn :> IPN;
+  { ipn : IPN;
     intervals : temporal_transition_type }.
 Print ITPN.
 
@@ -306,7 +315,7 @@ Print clock_ind.
 
 
 (******************************************************************)
-(************* David Andreu's example (redrawn in my Oxford) ******)
+(********* David Andreu's example (redrawn in my Oxford) **********)
 (******************************************************************)
 
 (* 7 places *)
@@ -330,7 +339,7 @@ Definition transitions' : (list transition_type) :=
     mk_trans 6 ].
 
 (* 7 arcs PT (place transition)  "incoming" *) 
-Definition pre1 (t : transition_type) (p : place_type) :=
+Definition pre_function' (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 0) => Some 1
   | (mk_trans 1, mk_place 0) => Some 1
@@ -343,7 +352,7 @@ Definition pre1 (t : transition_type) (p : place_type) :=
   end.
 
 (* 1 arc of type "test" *)
-Definition pre_test1 (t : transition_type) (p : place_type) :=
+Definition pre_test_function' (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 1, mk_place 1) => Some 1
     (* place 1 needs (at least) 1 token, 
@@ -352,7 +361,7 @@ Definition pre_test1 (t : transition_type) (p : place_type) :=
   end.
 
 (* 1 arc of type "inhibitor"  *)
-Definition pre_inhibit1 (t : transition_type) (p : place_type) :=
+Definition pre_inhi_function' (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 1) => Some 1
   (* place 1 needs less than 1 token, 
@@ -361,7 +370,7 @@ Definition pre_inhibit1 (t : transition_type) (p : place_type) :=
   end.
 
 (* 7 arcs TP      "normal outcoming"  *)
-Definition post1 (t : transition_type) (p : place_type) :=
+Definition post_function' (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 1) => Some 1
   | (mk_trans 0, mk_place 2) => Some 2
@@ -375,19 +384,19 @@ Definition post1 (t : transition_type) (p : place_type) :=
   end.
 
 (* tokens *)
-Definition init_marking1 (p : place_type) :=
+Definition init_marking' (p : place_type) :=
   match p with
-  | mk_place 0 => Some 1
-  | mk_place 1 => Some 0
-  | mk_place 2 => Some 0
-  | mk_place 3 => Some 0
-  | mk_place 4 => Some 0
-  | mk_place 5 => Some 0
-  | mk_place 6 => Some 0
-  | _ => None
+  | mk_place 0 => 1
+  | mk_place 1 => 0
+  | mk_place 2 => 0
+  | mk_place 3 => 0
+  | mk_place 4 => 0
+  | mk_place 5 => 0
+  | mk_place 6 => 0
+  | _ => 0
   end.
 
-Definition cond1 (t : transition_type) (c : conds) :=
+Definition conditions' (t : transition_type) (c : gards) :=
   match (t, c) with
   | (mk_trans 1, C) => true
   | _ => false
@@ -406,7 +415,7 @@ Definition int1_2oo := Build_interval_type
                      255
                      preuve2le255.
 
-Definition ints1 (t : transition_type) (i : interval_type) :=
+Definition ints' (t : transition_type) (i : interval_type) :=
   match (t, i) with
   | (mk_trans 3, int1_35) => true
   | (mk_trans 6, int1_2oo) => true
@@ -417,14 +426,16 @@ Definition ints1 (t : transition_type) (i : interval_type) :=
  ---> reseaux de Petri generalise etendu, mais pas interprete *)
 
 Definition itpn1 :=  mk_ITPN
-                       (Build_IPN
-                          (Build_PN
-                             place1
-                             transition1
-                             pre1
-                             post1
-                             init_marking1)
-                          pre_test1
-                          pre_inhibit1
-                          cond1)
-                       ints1.
+                       (mk_IPN
+                          (mk_PN
+                             places'
+                             transitions'
+
+                             pre_function'
+                             post_function'
+                             pre_test_function'
+                             pre_inhi_function'
+                             
+                             init_marking')
+                          conditions')
+                       ints'.
