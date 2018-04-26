@@ -1,5 +1,5 @@
-(**** made by Mathieu Lasjaunias and David Delahaye *******)
-(**********************************************************)
+(**** by Mathieu Lasjaunias and David Delahaye *******)
+(*****************************************************)
 
 Require Import Arith Omega List Bool. Search nat.
 (* Require Import Nat. *)
@@ -14,14 +14,19 @@ Inductive transition_type : Set :=
 | mk_trans : nat -> transition_type.
 (* transitions indexed by natural numbers *)
 
-Print option.   (* option type      maybe useful *)
-Definition weight_type :=
-  transition_type -> place_type -> option nat.
+Inductive arc_type : Set :=
+| mk_pt : place_type -> transition_type -> nat -> arc_type
+| mk_tp : transition_type -> place_type -> nat -> arc_type
+
+| mk_inhi : place_type -> transition_type -> nat -> arc_type
+| mk_test : place_type -> transition_type -> nat -> arc_type.
+                                                      
+Definition weight_type := transition_type -> place_type -> option nat.
 
 (*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
     along with "some" weight   (default is 1 in real).       *)
 
-Definition marking_type := place_type -> option nat.
+Definition marking_type := place_type -> nat.
 (*  "None" if no token ;   "Some j"      if j tokens     *)
 
 (************** Structure  (= Record) ********** ******)
@@ -31,10 +36,11 @@ Structure PN : Type := mk_PN
 
                         pre : weight_type ;
                         post : weight_type ;
-                        pre_test : weight_type ;
-                        pre_inhib : weight_type ;
 
-                        init_marking : marking_type }.
+                        pre_test : weight_type ;
+                        pre_inhi : weight_type ;
+
+                        marking : marking_type }.
 Print PN.
 Search list. Print list.
 
@@ -51,21 +57,35 @@ Definition beq_places (p p' : place_type) : bool :=
   | (mk_place n, mk_place n') => beq_nat n n'
   end.
 
-(* given a marking m, put j tokens inside place p *)  
-Definition mark (m:marking_type) (p:place_type) (j:nat) : marking_type :=
+(* given a marking m, set j tokens in place p *)  
+Definition set (m:marking_type) (p:place_type) (j:nat)
+  : marking_type :=
   fun p' =>  if beq_places p p'
-             then Some j        (* j tokens inside place p *)
+             then j             (* set j tokens in place p *)
              else m p'.         (* other tokens left unchanged  *)
+Definition reset (m:marking_type) (p:place_type) (j:nat)
+  : marking_type :=
+  set m p 0.
 
-(* given a marking m, one wants to put j tokens inside place p *)  
-Definition mark_add (m:marking_type) (p:place_type) (j:nat) : marking_type :=
+(* given a marking m, _add_ j tokens inside place p *)  
+Definition add_mark (m:marking_type) (p:place_type) (j:option nat)
+  : marking_type :=
   fun p' =>
     if beq_places p p'
-    then   match (m p') with
-           | None => Some j   (* j tokens inside place p *)
-           | Some i => Some (i + j)
-           end
-    else m p'.         (* other tokens left unchanged  *)
+    then match j with
+          | None => m p
+          | Some i => (m p) + i  (* j=i tokens added *)
+          end      
+    else m p'.         (* other places left unchanged  *)
+
+Definition sub_mark (m:marking_type) (p:place_type) (j:option nat) : marking_type :=
+  fun p' =>
+    if beq_places p p'
+    then match j with
+          | None => m p
+          | Some i => (m p) - i  (* j=i tokens substracted *)
+          end
+    else m p'.         (* other places left unchanged  *)
 
 (*******************************************)
 (****  Structural induction on lists  ******)
@@ -80,25 +100,9 @@ Fixpoint pn_trans_enabled
   | nil => true
   | cons h tail => match pre_t h with
                    | None => pn_trans_enabled tail pre_t m
-                   | Some n => match m h with
-                               | Some p => andb (leb n p)
-                                                (pn_trans_enabled tail pre_t m)
-                               | _ => false
-                               end
+                   | Some n => andb (leb n (m h))
+                                    (pn_trans_enabled tail pre_t m)
                    end
-  end.
-
-(*** les "option nat" complexifient inutilement ?  ***)
-Fixpoint pn_trans_enabled'
-           (places : list place_type)
-           (pre_t : place_type -> nat)
-           (m : place_type -> nat)
-  : bool :=
-  match places with
-  | nil => true
-  | cons h tail => if leb (pre_t h) (m h)
-                   then pn_trans_enabled' tail pre_t m
-                   else false 
   end.
 
 Definition pn_trans_is_enabled
@@ -109,13 +113,14 @@ Definition pn_trans_is_enabled
   fun t => pn_trans_enabled places (pre t) m.
 
 Print transitions.
-Fixpoint pn_enabled (pn:PN) (L: list transition_type) : list transition_type :=
-  match L with
+Fixpoint pn_enabled (pn:PN) (l : list transition_type) {struct l} :
+  list transition_type :=
+  match l with
   | nil => nil
   | cons t tail => if (pn_trans_is_enabled
                          (places pn)
                          (pre pn)
-                         (init_marking pn)
+                         (marking pn)
                          t)
                    then cons t (pn_enabled pn tail)
                    else pn_enabled pn tail
@@ -124,22 +129,27 @@ Fixpoint pn_enabled (pn:PN) (L: list transition_type) : list transition_type :=
 Definition pn_is_enabled (pn:PN) : list transition_type :=
   pn_enabled pn (transitions pn).
 
-Print PN. Print weight_type. Print marking_type. Check mark.
-Fixpoint fire
-         (m:marking_type)
-         (L:list place_type)
-         (t:transition_type)
-         (pre:weight_type)
-  : marking_type :=
-  match L with
-  | nil => nil
-  | cons p tail => mark m p (pre t p)
-  end.
+Print PN. Print weight_type. Print marking_type. Check add_mark.
+Fixpoint fire (pn : PN)  (t:transition_type) : PN  :=
+  mk_PN
+    (places pn)
+    (transitions pn)
+    (pre pn)
+    (post pn)
+    (pre_test pn)
+    (pre_inhi pn)
+    match (places pn) with
+    | nil => (marking pn)
+    | cons p tail => add_mark  (sub_mark (marking pn)
+                                         p
+                                         ((pre pn) t p))
+                               p
+                               ((post pn) t p)
+    end.
 
 (*** relation de priorite pour _determiniser_ le systeme ****)
-
-Require Import Relations. Print relation.
-Parameter priority : relation transition_type.
+Require Import Relations. Print relation. 
+Definition priority_type := transition_type -> transition_type -> Prop.
 
 (****************************************************************)
 (********** IPN (Interpreted Petri Net) *************************)
@@ -162,7 +172,7 @@ Record IPN : Type := mk_IPN
 Print IPN.
   
 Definition conditionType := nat.  (* c1, c2, c3, ... *)
-Definition eval := conditionType -> bool.    (* condition true or false *)
+Definition evalb := conditionType -> bool.    (* condition true or false *)
 
 
 (******************************************************************)
@@ -206,10 +216,10 @@ Definition post_function (t : transition_type) (p : place_type)
 (*** tokens of the initial marking ***)
 Definition initial_marking (p : place_type) :=
   match p with
-  | mk_place 0 => Some 2
-  | mk_place 1 => Some 0
-  | mk_place 2 => Some 0
-  | _ => None
+  | mk_place 0 =>  2
+  | mk_place 1 =>  0
+  | mk_place 2 =>  0
+  | _ => 0
   end. Print initial_marking. Check marking_type.  (* ? *)
 
 (* 1 arc of type "test" *)
@@ -253,7 +263,22 @@ Definition ipn := mk_IPN
 
                     conditions.
 
-
+(* disons   t_i prioritaire sur t_j   pour tout j >= i *) 
+Definition priority (t1 t2 : transition_type) : Prop :=
+  (* transitions squared *)
+  match (t1 , t2) with
+  | (mk_trans 0, mk_trans 0) => True
+  | (mk_trans 0, mk_trans 1) => True
+  | (mk_trans 0, mk_trans 2) => True
+  | (mk_trans 1, mk_trans 0) => False
+  | (mk_trans 1, mk_trans 1) => True
+  | (mk_trans 1, mk_trans 2) => True
+  | (mk_trans 2, mk_trans 0) => False
+  | (mk_trans 2, mk_trans 1) => False
+  | (mk_trans 2, mk_trans 2) => True
+  | (_,_) => False  (* False or True   whatever *) 
+  end.
+                                  
 Compute pn_is_enabled ex_pn.
 
 (**************** Syntax of SITPN ****************)
