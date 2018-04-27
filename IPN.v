@@ -17,7 +17,7 @@ Inductive transition_type : Set :=
 Inductive arc_type : Set :=
 | mk_pt : place_type -> transition_type -> nat -> arc_type
 | mk_tp : transition_type -> place_type -> nat -> arc_type
-
+(* extended (generalized = nat) Petri nets *)
 | mk_inhi : place_type -> transition_type -> nat -> arc_type
 | mk_test : place_type -> transition_type -> nat -> arc_type.
                                                       
@@ -29,7 +29,9 @@ Definition weight_type := transition_type -> place_type -> option nat.
 Definition marking_type := place_type -> nat.
 (*  "None" if no token ;   "Some j"      if j tokens     *)
 
-(************** Structure  (= Record) ********** ******)
+
+Search list. Print list.   (** "more operational" than functions *) 
+(*** "Structure" = "Record" **) 
 Structure PN : Type := mk_PN
                       { places : list place_type ;
                         transitions : list transition_type ;
@@ -42,11 +44,12 @@ Structure PN : Type := mk_PN
 
                         marking : marking_type }.
 Print PN.
-Search list. Print list.
 
-(************* Semantics of these Petri nets **************)
+(**********************************************************)
+(********** Semantics of these simple Petri nets **********)
 
-Definition get_index (p : place_type) : nat :=
+(** probably useless but who knows .. **)
+Definition get_place_index (p : place_type) : nat :=
   match p with
   | mk_place n  => n
   end.
@@ -64,10 +67,10 @@ Definition set (m:marking_type) (p:place_type) (j:nat)
              then j             (* set j tokens in place p *)
              else m p'.         (* other tokens left unchanged  *)
 Definition reset (m:marking_type) (p:place_type) (j:nat)
-  : marking_type :=
-  set m p 0.
+  : marking_type :=    set m p 0.
 
-(* given a marking m, _add_ j tokens inside place p *)  
+
+(* given a marking m, add j tokens inside place p *)  
 Definition add_mark (m:marking_type) (p:place_type) (j:option nat)
   : marking_type :=
   fun p' =>
@@ -78,7 +81,7 @@ Definition add_mark (m:marking_type) (p:place_type) (j:option nat)
           end      
     else m p'.         (* other places left unchanged  *)
 
-Definition sub_mark (m:marking_type) (p:place_type) (j:option nat) : marking_type :=
+Definition substract_mark (m:marking_type) (p:place_type) (j:option nat) : marking_type :=
   fun p' =>
     if beq_places p p'
     then match j with
@@ -86,9 +89,11 @@ Definition sub_mark (m:marking_type) (p:place_type) (j:option nat) : marking_typ
           | Some i => (m p) - i  (* j=i tokens substracted *)
           end
     else m p'.         (* other places left unchanged  *)
+(** one can make 1 such function instead of 2 (+-) **)
 
 (*******************************************)
 (****  Structural induction on lists  ******)
+
 Require Import Nat. (* for Nat.leb != (Bool.)leb *)
 
 Fixpoint pn_trans_enabled
@@ -129,9 +134,8 @@ Fixpoint pn_enabled (pn:PN) (l : list transition_type) {struct l} :
 Definition pn_is_enabled (pn:PN) : list transition_type :=
   pn_enabled pn (transitions pn).
 
-Print PN. Print weight_type. Print marking_type. Check add_mark.
-
-(*  maybe Fixpoint fire_aux ...    and Definition fire ...  *)
+(*  maybe "Fixpoint fire_aux ... "   
+    and then "Definition fire ..."  *)
 Fixpoint fire (pn : PN)  (t:transition_type) : PN  :=
   mk_PN
     (places pn)
@@ -142,61 +146,97 @@ Fixpoint fire (pn : PN)  (t:transition_type) : PN  :=
     (pre_inhi pn)
     match (places pn) with
     | nil => (marking pn)
-    | cons p tail => add_mark (sub_mark (marking pn)
-                                        p
-                                        ((pre pn) t p))
+    | cons p tail => add_mark (substract_mark (marking pn)
+                                              p
+                                              ((pre pn) t p))
                               p
                               ((post pn) t p)
     end.
 
 (*** relation de priorite pour _determiniser_ le systeme ****)
 Require Import Relations. Print relation. 
-Definition priority_type := transition_type -> transition_type -> Prop.
+Definition priority_type := transition_type -> transition_type -> bool.  (* bool better than Prop for if/then/else *)
+
+Import ListNotations.
+Section Insertion_sort.
+  Variable A : Type.
+  Variable leb : A -> A -> bool.
+  Notation "a <= b" := (leb a b = true).
+
+  Fixpoint insert (a:A) (l: list A) : list A :=
+    match l with
+    | nil  => [a]
+    | b::l' => if leb a b
+               then a::l
+               else b::insert a l'
+    end.
+  
+  Fixpoint sort (l: list A) : list A :=
+    match l with
+    | [ ] => [ ]
+    | a::l' => insert a (sort l')
+    end.
+End Insertion_sort.
+
+Definition my_sort (prio:priority_type) (l:list transition_type)
+  : list transition_type :=
+  sort transition_type prio l.
+
+Search list.
+Print NoDup. (* for places !!   no 2 places equal  *)
+Print last. (* default value in case the list is empty ! *)
+Definition highest_transition (prio:priority_type) (l:list transition_type)
+  : transition_type :=
+  last l (mk_trans 512).
+
 
 (****************************************************************)
-(********** IPN (Interpreted Petri Net) *************************)
-(****************************************************************)
+(********** syntax of IPN (Interpreted Petri Net) ***************)
 
-Parameter gards : Set.  (* conditions/gards  on transitions *)
-Parameter g : gards.
+(* conditions/gards  on transitions *)
+Inductive gard_type : Set :=
+| mk_gard : nat -> gard_type.
 
-Definition condition_type := transition_type -> gards -> bool.
-(* condition_type t C = true     <=>     C is associated with t *)
+Definition caracteristic_function_for_gards := transition_type -> gard_type -> bool.
+(* condition_type t g = true     <=>     g is associated with t *)
 
-Notation "cond [ trans ]" := (condition_type trans cond = true)  
+Notation "cond [ trans ]" := (caracteristic_function_for_gards
+                                trans
+                                cond
+                              = true)  
                                (at level 50) : type_scope.
-(* juste pour un exemple de notation ... *)
+(* one example of notation ...   probably useless though  *)
 
 Record IPN : Type := mk_IPN
                        { pn : PN ;
-                         conds : condition_type
+                         conditions : caracteristic_function_for_gards
                          (* actions and functions ...
                            not relevant for now *) }.
 Print IPN.
   
-Definition conditionType := nat.  (* c1, c2, c3, ... *)
-Definition evalb := conditionType -> bool.    (* condition true or false *)
+(********************************************************)
+(************** semantic for IPN ************************)
+
+
 
 
 (******************************************************************)
 (**** small example of  Petri net (page 24 in Ibrahim thesis) *****)
-(******************************************************************)
 
-Import ListNotations.
 (* 3 places *)
-Definition ex_places : (list place_type) :=
+Definition places_ex : (list place_type) :=
   [ mk_place 0 ;
     mk_place 1 ;
     mk_place 2 ].
 
 (* 3 transitions *)
-Definition ex_transitions : (list transition_type) :=
+Definition transitions_ex : (list transition_type) :=
   [ mk_trans 0 ;
     mk_trans 1 ;
     mk_trans 2 ].
 
 (* 3 arcs PT (place transition)  "incoming" *) 
-Definition pre_function (t : transition_type) (p : place_type)
+Definition pre_function_ex (t : transition_type) (p : place_type)
   :=
   match (t, p) with
   | (mk_trans 0, mk_place 0) => Some 1
@@ -206,7 +246,7 @@ Definition pre_function (t : transition_type) (p : place_type)
   end.
 
 (* 4 arcs TP                     "outcoming" *)
-Definition post_function (t : transition_type) (p : place_type)
+Definition post_function_ex (t : transition_type) (p : place_type)
   :=
   match (t, p) with
   | (mk_trans 0, mk_place 1) => Some 2
@@ -217,54 +257,53 @@ Definition post_function (t : transition_type) (p : place_type)
   end.
 
 (*** tokens of the initial marking ***)
-Definition initial_marking (p : place_type) :=
+Definition initial_marking_ex (p : place_type) :=
   match p with
   | mk_place 0 =>  2
   | mk_place 1 =>  0
   | mk_place 2 =>  0
   | _ => 0
-  end. Print initial_marking. Check marking_type.  (* ? *)
+  end. Print initial_marking_ex. Check marking_type.
+(* ? reductions, simplifications ? *)
 
 (* 1 arc of type "test" *)
-Definition pre_test_function (t : transition_type) (p : place_type) :=
+Definition pre_test_function_ex (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 2, mk_place 1) => Some 1
   | _ => None
   end.
 
 (* 1 arc of type "inhibitor"  *)
-Definition pre_inhi_function (t : transition_type) (p : place_type) :=
+Definition pre_inhi_function_ex (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 1, mk_place 2) => Some 1
   | _ => None
   end.
 
-Hypothesis c0  c1 : gards.
-Definition conditions (t : transition_type) (c : gards)
+Definition conditions_ex (t : transition_type) (c : gard_type)
   : bool
   := match (t, c) with
-  | (mk_trans 0, c0) => true
-  | (mk_trans 2, c1) => true
+  | (mk_trans 0, mk_gard 0) => true
+  | (mk_trans 2, mk_gard 1) => true
   | _ => false
   end.
 
 (* reseaux de Petri generalise etendu, interprete *)
 
 Definition pn_ex := mk_PN
-                      ex_places
-                      ex_transitions
+                      places_ex
+                      transitions_ex
                    
-                      pre_function
-                      post_function
-                      pre_test_function
-                      pre_inhi_function                 
+                      pre_function_ex
+                      post_function_ex
+                      pre_test_function_ex
+                      pre_inhi_function_ex                 
                       
-                      initial_marking.
+                      initial_marking_ex.
 
 Definition ipn_ex := mk_IPN
                        pn_ex
-
-                       conditions.
+                       conditions_ex.
 
 (* disons   t_i prioritaire sur t_j   pour tout j >= i *) 
 Definition priority (t1 t2 : transition_type) : Prop :=
@@ -282,44 +321,49 @@ Definition priority (t1 t2 : transition_type) : Prop :=
   | (_,_) => False  (* False or True     who care ? *) 
   end.
 
-Definition animate (pn:PN) : PN := pn.
-(* what did you expect ? *)
-(* rendre le Petri net + 
-la liste des marquages du chemin parcouru ? *)
+Fixpoint animate (pn:PN) (n:nat) : list marking_type := [].
+(* on ne peut faire qu'un nombre fini de pas de calcul ! *)
+
+(* retourner uniquement la liste des marquages 
+   du chemin parcouru ? *)
 
 Compute pn_is_enabled pn_ex.
 
+(*************************************************)
 (**************** Syntax of SITPN ****************)
 
-Record interval_type : Set :=
+Record interval_type : Set := mk_interval
   { mini : nat ;
     maxi : nat ;
     min_le_max : mini <= maxi }.
-Print interval_type.
 
-Definition temporal_transition_type :=
+                             
+Definition caracterictic_function_for_intervals :=
   transition_type -> interval_type -> bool.
 (* temporal_transition_type t i = true   <=> C is associated with t *)
 
 
 Record ITPN : Type := mk_ITPN
   { ipn : IPN;
-    intervals : temporal_transition_type }.
+    intervals : caracterictic_function_for_intervals }.
 Print ITPN.
 
 
-Inductive clock : Set :=
-| rising_edge | falling_edge.
-Print clock_ind.
+(* Inductive clock : Set :=
+| rising_edge | falling_edge. 
+Print clock_ind.      NOT NEEDED NOW  *)
 
+(****************************************************)
+(************** Semantic of SITPN *******************)
+
+(* TO DO : how to deal cleanly with intervals ? *)
 
 
 (******************************************************************)
-(********* David Andreu's example (redrawn in my Oxford) **********)
-(******************************************************************)
+(******* David Andreu's big example (redrawn in my Oxford) ********)
 
 (* 7 places *)
-Definition places' : (list place_type) :=
+Definition places_ex2 : (list place_type) :=
   [ mk_place 1 ;
     mk_place 2 ;
     mk_place 3 ;
@@ -329,7 +373,7 @@ Definition places' : (list place_type) :=
     mk_place 7 ].
 
 (* 6 transitions *)
-Definition transitions' : (list transition_type) :=
+Definition transitions_ex2 : (list transition_type) :=
   [ mk_trans 0 ;
     mk_trans 1 ;
     mk_trans 2 ;
@@ -339,7 +383,7 @@ Definition transitions' : (list transition_type) :=
     mk_trans 6 ].
 
 (* 7 arcs PT (place transition)  "incoming" *) 
-Definition pre_function' (t : transition_type) (p : place_type) :=
+Definition pre_function_ex2 (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 0) => Some 1
   | (mk_trans 1, mk_place 0) => Some 1
@@ -352,7 +396,7 @@ Definition pre_function' (t : transition_type) (p : place_type) :=
   end.
 
 (* 1 arc of type "test" *)
-Definition pre_test_function' (t : transition_type) (p : place_type) :=
+Definition pre_test_function_ex2 (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 1, mk_place 1) => Some 1
     (* place 1 needs (at least) 1 token, 
@@ -361,7 +405,7 @@ Definition pre_test_function' (t : transition_type) (p : place_type) :=
   end.
 
 (* 1 arc of type "inhibitor"  *)
-Definition pre_inhi_function' (t : transition_type) (p : place_type) :=
+Definition pre_inhi_function_ex2 (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 1) => Some 1
   (* place 1 needs less than 1 token, 
@@ -370,7 +414,7 @@ Definition pre_inhi_function' (t : transition_type) (p : place_type) :=
   end.
 
 (* 7 arcs TP      "normal outcoming"  *)
-Definition post_function' (t : transition_type) (p : place_type) :=
+Definition post_function_ex2 (t : transition_type) (p : place_type) :=
   match (t, p) with
   | (mk_trans 0, mk_place 1) => Some 1
   | (mk_trans 0, mk_place 2) => Some 2
@@ -384,7 +428,7 @@ Definition post_function' (t : transition_type) (p : place_type) :=
   end.
 
 (* tokens *)
-Definition init_marking' (p : place_type) :=
+Definition init_marking_ex2 (p : place_type) :=
   match p with
   | mk_place 0 => 1
   | mk_place 1 => 0
@@ -396,26 +440,26 @@ Definition init_marking' (p : place_type) :=
   | _ => 0
   end.
 
-Definition conditions' (t : transition_type) (c : gards) :=
+Definition conditions_ex2 (t : transition_type) (c : gard_type) :=
   match (t, c) with
-  | (mk_trans 1, C) => true
+  | (mk_trans 1, mk_gard 1) => true
   | _ => false
   end.
   (* 1 condition/gard  :  Petri net influenced by environnement *)
 
 Lemma preuve3le5 : 3 <= 5. Proof. omega. Qed.
-Definition int1_35 := Build_interval_type
+Definition int1_35 := mk_interval
                      3
                      5
                      preuve3le5.
 Print le.
 Lemma preuve2le255 : 2 <= 255. Proof. omega. Qed.
-Definition int1_2oo := Build_interval_type
+Definition int1_2oo := mk_interval
                      2
                      255
                      preuve2le255.
 
-Definition ints' (t : transition_type) (i : interval_type) :=
+Definition intervals_ex2 (t : transition_type) (i : interval_type) :=
   match (t, i) with
   | (mk_trans 3, int1_35) => true
   | (mk_trans 6, int1_2oo) => true
@@ -428,14 +472,14 @@ Definition ints' (t : transition_type) (i : interval_type) :=
 Definition itpn1 :=  mk_ITPN
                        (mk_IPN
                           (mk_PN
-                             places'
-                             transitions'
+                             places_ex2
+                             transitions_ex2
 
-                             pre_function'
-                             post_function'
-                             pre_test_function'
-                             pre_inhi_function'
+                             pre_function_ex2
+                             post_function_ex2
+                             pre_test_function_ex2
+                             pre_inhi_function_ex2
                              
-                             init_marking')
-                          conditions')
-                       ints'.
+                             init_marking_ex2)
+                          conditions_ex2)
+                       intervals_ex2.
