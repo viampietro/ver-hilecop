@@ -35,14 +35,17 @@ Search list. Print list.   (** "more operational" than functions *)
 Structure PN : Type := mk_PN
                       { places : list place_type ;
                         transitions : list transition_type ;
-
+                        attention_places : NoDup places ;
+                        attention_transitions : NoDup transitions ; 
+                        
                         pre : weight_type ;
                         post : weight_type ;
 
                         pre_test : weight_type ;
                         pre_inhi : weight_type ;
 
-                        marking : marking_type }.
+                        marking : marking_type
+                        (* marking : list nat *)}.
 Print PN.
 
 (**********************************************************)
@@ -53,11 +56,21 @@ Definition get_place_index (p : place_type) : nat :=
   match p with
   | mk_place n  => n
   end.
+(** probably useless but who knows .. **)
+Definition get_transition_index (t : transition_type) : nat :=
+  match t with
+  | mk_trans n  => n
+  end.
 
-(* verify if 2 places are equal, return a boolean *)
+(* verify if 2 places have same index, return a boolean *)
 Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
   | (mk_place n, mk_place n') => beq_nat n n'
+  end.
+(* verify if 2 transitions have same index, return a bool *)
+Definition beq_transitions (t t' : transition_type) : bool :=
+  match (t, t') with
+  | (mk_trans n, mk_trans n') => beq_nat n n'
   end.
 
 (* given a marking m, set j tokens in place p *)  
@@ -89,10 +102,10 @@ Definition substract_mark (m:marking_type) (p:place_type) (j:option nat) : marki
           | Some i => (m p) - i  (* j=i tokens substracted *)
           end
     else m p'.         (* other places left unchanged  *)
-(** one can make 1 such function instead of 2 (+-) **)
+(** one can make 1 such function instead of 2 (+ -) **)
 
-(*******************************************)
-(****  Structural induction on lists  ******)
+(******************************************************)
+(****  Structural induction on lists  (Fixpoint) ******)
 
 Require Import Nat. (* for Nat.leb != (Bool.)leb *)
 
@@ -117,8 +130,7 @@ Definition pn_trans_is_enabled
   : transition_type -> bool :=  
   fun t => pn_trans_enabled places (pre t) m.
 
-Print transitions.
-Fixpoint pn_enabled (pn:PN) (l : list transition_type) {struct l} :
+Fixpoint pn_is_enabled_because (pn:PN) (l : list transition_type) {struct l} :
   list transition_type :=
   match l with
   | nil => nil
@@ -127,19 +139,21 @@ Fixpoint pn_enabled (pn:PN) (l : list transition_type) {struct l} :
                          (pre pn)
                          (marking pn)
                          t)
-                   then cons t (pn_enabled pn tail)
-                   else pn_enabled pn tail
+                   then cons t (pn_is_enabled_because pn tail)
+                   else pn_is_enabled_because pn tail
   end.
 
-Definition pn_is_enabled (pn:PN) : list transition_type :=
-  pn_enabled pn (transitions pn).
+Definition pn_is_enabled_because_howtosay (pn:PN) : list transition_type :=
+  pn_is_enabled_because pn (transitions pn).
 
 (*  maybe "Fixpoint fire_aux ... "   
     and then "Definition fire ..."  *)
-Fixpoint fire (pn : PN)  (t:transition_type) : PN  :=
+Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
   mk_PN
     (places pn)
     (transitions pn)
+    (attention_places pn)
+    (attention_transitions pn)
     (pre pn)
     (post pn)
     (pre_test pn)
@@ -178,17 +192,34 @@ Section Insertion_sort.
     end.
 End Insertion_sort.
 
-Definition my_sort (prio:priority_type) (l:list transition_type)
+Definition sort_trans (prio:priority_type) (l:list transition_type)
   : list transition_type :=
   sort transition_type prio l.
 
 Search list.
-Print NoDup. (* for places !!   no 2 places equal  *)
 Print last. (* default value in case the list is empty ! *)
 Definition highest_transition (prio:priority_type) (l:list transition_type)
   : transition_type :=
-  last l (mk_trans 512).
+  last (sort_trans prio l) (mk_trans 512).
 
+Variable priori : priority_type.  (* plus tard on veut un exemple *)
+Definition fire_pn (pn:PN) : PN :=
+  match pn_is_enabled_because_howtosay pn with
+  | nil => pn
+  | t::tail => fire_trans pn
+                          (highest_transition priori
+                                              (pn_is_enabled_because_howtosay pn))
+  end.
+
+Fixpoint animate_pn (pn:PN) (n:nat) : list marking_type :=
+  (* on ne fait que n pas de calcul 
+    (qui peut ne pas terminer sinon) 
+    et on retourne le chemin des marquages *)
+  match n with
+  | O => [ marking pn ]
+  | S n' => (marking pn) :: (animate_pn (fire_pn pn)
+                                     n')
+  end.  
 
 (****************************************************************)
 (********** syntax of IPN (Interpreted Petri Net) ***************)
@@ -218,7 +249,7 @@ Print IPN.
 (************** semantic for IPN ************************)
 
 
-
+(* TO DO *)
 
 (******************************************************************)
 (**** small example of  Petri net (page 24 in Ibrahim thesis) *****)
@@ -280,6 +311,21 @@ Definition pre_inhi_function_ex (t : transition_type) (p : place_type) :=
   | _ => None
   end.
 
+
+Definition pn_ex := mk_PN
+                      places_ex
+                      transitions_ex
+
+                      (* proof of no duplicatas  places_ex*)
+                      (* proof of no duplicatas  transitions_ex*)
+                      
+                      pre_function_ex
+                      post_function_ex
+                      pre_test_function_ex
+                      pre_inhi_function_ex                 
+                      
+                      initial_marking_ex.
+
 Definition conditions_ex (t : transition_type) (c : gard_type)
   : bool
   := match (t, c) with
@@ -290,44 +336,29 @@ Definition conditions_ex (t : transition_type) (c : gard_type)
 
 (* reseaux de Petri generalise etendu, interprete *)
 
-Definition pn_ex := mk_PN
-                      places_ex
-                      transitions_ex
-                   
-                      pre_function_ex
-                      post_function_ex
-                      pre_test_function_ex
-                      pre_inhi_function_ex                 
-                      
-                      initial_marking_ex.
-
 Definition ipn_ex := mk_IPN
                        pn_ex
                        conditions_ex.
 
 (* disons   t_i prioritaire sur t_j   pour tout j >= i *) 
-Definition priority (t1 t2 : transition_type) : Prop :=
+Definition priority (t1 t2 : transition_type) : bool :=
   (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
-  | (mk_trans 0, mk_trans 0) => True
-  | (mk_trans 0, mk_trans 1) => True
-  | (mk_trans 0, mk_trans 2) => True
-  | (mk_trans 1, mk_trans 0) => False
-  | (mk_trans 1, mk_trans 1) => True
-  | (mk_trans 1, mk_trans 2) => True
-  | (mk_trans 2, mk_trans 0) => False
-  | (mk_trans 2, mk_trans 1) => False
-  | (mk_trans 2, mk_trans 2) => True
-  | (_,_) => False  (* False or True     who care ? *) 
+  | (mk_trans 0, mk_trans 0) => true
+  | (mk_trans 0, mk_trans 1) => true
+  | (mk_trans 0, mk_trans 2) => true
+  | (mk_trans 1, mk_trans 0) => false
+  | (mk_trans 1, mk_trans 1) => true
+  | (mk_trans 1, mk_trans 2) => true
+  | (mk_trans 2, mk_trans 0) => false
+  | (mk_trans 2, mk_trans 1) => false
+  | (mk_trans 2, mk_trans 2) => true
+  | (_,_) => false  (* False or True     who care ? *) 
   end.
 
-Fixpoint animate (pn:PN) (n:nat) : list marking_type := [].
-(* on ne peut faire qu'un nombre fini de pas de calcul ! *)
 
-(* retourner uniquement la liste des marquages 
-   du chemin parcouru ? *)
 
-Compute pn_is_enabled pn_ex.
+Eval simpl in (animate_pn pn_ex 10). Print caca.
 
 (*************************************************)
 (**************** Syntax of SITPN ****************)
