@@ -1,7 +1,7 @@
 (**** by Mathieu Lasjaunias and David Delahaye *******)
 (*****************************************************)
 
-Require Import Arith Omega List Bool. Search nat.
+Require Import Arith Omega List Bool. Search nat. Search list.
 (* Require Import Nat. *)
 
 (***** Syntax of (extended generalized) Petri nets ******)
@@ -15,28 +15,26 @@ Inductive transition_type : Set :=
 (* transitions indexed by natural numbers *)
 
 Inductive arc_type : Set :=
-| mk_pt : place_type -> transition_type -> nat -> arc_type
-| mk_tp : transition_type -> place_type -> nat -> arc_type
+| mk_arc_pt : place_type -> transition_type -> nat -> arc_type
+| mk_arc_tp : transition_type -> place_type -> nat -> arc_type
 (* extended (generalized = nat) Petri nets *)
-| mk_inhi : place_type -> transition_type -> nat -> arc_type
-| mk_test : place_type -> transition_type -> nat -> arc_type.
+| mk_arc_inhi : place_type -> transition_type -> nat -> arc_type
+| mk_arc_test : place_type -> transition_type -> nat -> arc_type.
                                                       
-Definition weight_type := transition_type -> place_type -> option nat.
-
 (*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
     along with "some" weight   (default is 1 in real).       *)
 
+Definition weight_type := transition_type -> place_type -> option nat.
+(* partial function :   Some x / None   *)
 Definition marking_type := place_type -> nat.
-(*  "None" if no token ;   "Some j"      if j tokens     *)
 
-
-Search list. Print list.   (** "more operational" than functions *) 
+Print list.    
 (*** "Structure" = "Record" **) 
 Structure PN : Type := mk_PN
                       { places : list place_type ;
                         transitions : list transition_type ;
-                        attention_places : NoDup places ;
-                        attention_transitions : NoDup transitions ; 
+                        no_dup_places : NoDup places ;
+                        no_dup_transitions : NoDup transitions ; 
                         
                         pre : weight_type ;
                         post : weight_type ;
@@ -47,9 +45,14 @@ Structure PN : Type := mk_PN
                         marking : marking_type
                         (* marking : list nat *)}.
 Print PN.
+Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
+Print find_some.  (* big but probably usefull *)
+
+(* split  / combine   ... *)
+
 
 (**********************************************************)
-(********** Semantics of these simple Petri nets **********)
+(************ Semantics of these Petri nets  **************)
 
 (** probably useless but who knows .. **)
 Definition get_place_index (p : place_type) : nat :=
@@ -102,14 +105,15 @@ Definition substract_mark (m:marking_type) (p:place_type) (j:option nat) : marki
           | Some i => (m p) - i  (* j=i tokens substracted *)
           end
     else m p'.         (* other places left unchanged  *)
-(** one can make 1 such function instead of 2 (+ -) **)
+(** one can make 1 such function instead of 2 (+ -) 
+but aiaiai **)
 
-(******************************************************)
-(****  Structural induction on lists  (Fixpoint) ******)
+(* Require Import Nat. (* for Nat.leb != (Bool.)leb *) 
+   library "Nat" is included into "Arith"  but ... *)
 
-Require Import Nat. (* for Nat.leb != (Bool.)leb *)
+Locate "<?". Print Nat.ltb.
 
-Fixpoint pn_trans_enabled
+Fixpoint pn_trans_enabled_PT
          (places : list place_type)
          (pre_t : place_type -> option nat)
          (m : marking_type)
@@ -117,18 +121,56 @@ Fixpoint pn_trans_enabled
   match places with
   | nil => true
   | cons h tail => match pre_t h with
-                   | None => pn_trans_enabled tail pre_t m
-                   | Some n => andb (leb n (m h))
-                                    (pn_trans_enabled tail pre_t m)
+                   | None => pn_trans_enabled_PT tail pre_t m
+                   | Some n => (n <=? (m h))
+                                 &&
+                                 (pn_trans_enabled_PT tail pre_t m)
+                   end
+  end.
+
+Fixpoint pn_trans_enabled_TEST
+         (places : list place_type)
+         (pre_test_t : place_type -> option nat)
+         (m : marking_type)
+  : bool :=
+  match places with
+  | nil => true
+  | cons h tail => match pre_test_t h with
+                   | None => pn_trans_enabled_TEST tail pre_test_t m
+                   | Some n => (n <=? (m h))
+                                 &&
+                                 (pn_trans_enabled_TEST tail pre_test_t m)
+                   end
+  end.
+
+Fixpoint pn_trans_enabled_INHI
+         (places : list place_type)
+         (pre_inhi_t : place_type -> option nat)
+         (m : marking_type)
+  : bool :=
+  match places with
+  | nil => true
+  | cons h tail => match pre_inhi_t h with
+                   | None => pn_trans_enabled_INHI tail pre_inhi_t m
+                   | Some n => ((m h) <? n)
+                                 &&
+                                 (pn_trans_enabled_INHI tail pre_inhi_t m)
                    end
   end.
 
 Definition pn_trans_is_enabled
            (places : list place_type)
            (pre : weight_type)
+           (pre_test : weight_type)
+           (pre_inhi : weight_type)
            (m : marking_type)
   : transition_type -> bool :=  
-  fun t => pn_trans_enabled places (pre t) m.
+  fun t => (pn_trans_enabled_PT places (pre t) m)
+             &&
+             (pn_trans_enabled_TEST places (pre_test t) m)
+             &&
+             (pn_trans_enabled_INHI places (pre_inhi t) m). 
+
 
 Fixpoint pn_is_enabled_because (pn:PN) (l : list transition_type) {struct l} :
   list transition_type :=
@@ -137,6 +179,8 @@ Fixpoint pn_is_enabled_because (pn:PN) (l : list transition_type) {struct l} :
   | cons t tail => if (pn_trans_is_enabled
                          (places pn)
                          (pre pn)
+                         (pre_test pn)
+                         (pre_inhi pn)  
                          (marking pn)
                          t)
                    then cons t (pn_is_enabled_because pn tail)
@@ -152,8 +196,8 @@ Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
   mk_PN
     (places pn)
     (transitions pn)
-    (attention_places pn)
-    (attention_transitions pn)
+    (no_dup_places pn)
+    (no_dup_transitions pn)
     (pre pn)
     (post pn)
     (pre_test pn)
@@ -168,15 +212,22 @@ Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
     end.
 
 (*** relation de priorite pour _determiniser_ le systeme ****)
-Require Import Relations. Print relation. 
-Definition priority_type := transition_type -> transition_type -> bool.  (* bool better than Prop for if/then/else *)
+Require Import Relations. Print relation. (* standard library *)
+Definition priority_type := transition_type -> transition_type -> bool.  (* bool better than Prop    for     if/then/else *)
 
 Import ListNotations.
+Require Import Coq.Sorting.Sorted. Check sort.
 Section Insertion_sort.
   Variable A : Type.
+  
   Variable leb : A -> A -> bool.
   Notation "a <= b" := (leb a b = true).
 
+  (* Fixpoint extract_higher (l : list A) (nonil : l <> nil) : A := 
+
+   no need to sort the list of transition
+only the highest priority transition is looked for *)
+        
   Fixpoint insert (a:A) (l: list A) : list A :=
     match l with
     | nil  => [a]
@@ -198,6 +249,7 @@ Definition sort_trans (prio:priority_type) (l:list transition_type)
 
 Search list.
 Print last. (* default value in case the list is empty ! *)
+Print exists_last. (* bizarement complicated mais peut-être utile *)
 Definition highest_transition (prio:priority_type) (l:list transition_type)
   : transition_type :=
   last (sort_trans prio l) (mk_trans 512).
