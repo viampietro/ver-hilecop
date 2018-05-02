@@ -75,7 +75,10 @@ Search nat. Require Import Decidable. Print Decidable.
 SearchPattern (forall x y : _, {x = y} + {x <> y}).
 Print N.eq_dec.
 Definition dec_places : forall x y : place_type, {x = y} + {x <> y}.
-Proof. intros x y. Admitted.  (*** warning ***)
+Proof.
+  decide equality.
+  decide equality.
+Qed.
 
 (* verify if 2 places have same index, return a boolean *)
 Definition beq_places (p p' : place_type) : bool :=
@@ -114,7 +117,10 @@ Definition incr_mark (m:marking_type) (p:place_type)
 (* Require Import Nat. (* for Nat.leb != (Bool.)leb *) 
    library "Nat" is included into "Arith"   ? ... *)
 
-Locate "<?". Print Nat.ltb.
+(***** this complex function is maybe bugged ! ***)
+
+
+Locate "<?". Print Nat.ltb. Print Nat.leb.
 Print pre. Print weight_type.
 Fixpoint pn_trans_enabled_PT (places : list place_type)
          (pre_t : place_type -> option nat)
@@ -174,7 +180,7 @@ Definition pn_trans_is_enabled (places : list place_type)
              (pn_trans_enabled_INHI places (pre_inhi t) m). 
 
 (* for a given marking, return the list of "enabled transitions" *)
-Fixpoint pn_is_enabled_because (pn:PN) (l : list transition_type) {struct l} (* structural induction over list l *) :
+Fixpoint pn_trans_is_enabled_because (pn:PN) (l : list transition_type) {struct l} (* structural induction over list of transitions *) :
   list transition_type :=
   match l with
   | nil => nil
@@ -185,17 +191,41 @@ Fixpoint pn_is_enabled_because (pn:PN) (l : list transition_type) {struct l} (* 
                          (pre_inhi pn)  
                          (marking pn)
                          t)
-                   then cons t (pn_is_enabled_because pn tail)
-                   else pn_is_enabled_because pn tail
+                   then cons t (pn_trans_is_enabled_because pn tail)
+                   else pn_trans_is_enabled_because pn tail
   end.
 
 Definition pn_is_enabled_because_look (pn:PN) : list transition_type :=
-  pn_is_enabled_because pn (transitions pn).
+  pn_trans_is_enabled_because pn (transitions pn).
 
 (*  maybe first   "Fixpoint fire_aux ... "   
     and then      "Definition fire ..."  *)
 Print Nat.sub. Print Nat.add.
-Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
+
+Fixpoint update_marking
+         (pn:PN)
+         (l: list place_type)
+         (t:transition_type)
+         (m:marking_type)
+         {struct l}
+  (* structural induction over list of places *)
+  : marking_type :=
+  match l with
+  | nil => (marking pn)
+  | cons p tail => update_marking pn
+                                  tail
+                                  t
+                                  (incr_mark (incr_mark (marking pn)
+                                                        p
+                                                        ((pre pn) t p)
+                                                        Nat.sub)
+                                             p
+                                             ((post pn) t p)
+                                             Nat.add)
+  end.
+ 
+(* fire transition t, updating the marking accordingly *)
+Definition fire_trans (pn : PN)  (t:transition_type) : PN  :=
   mk_PN
     (places pn)
     (transitions pn)
@@ -205,16 +235,10 @@ Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
     (post pn)
     (pre_test pn)
     (pre_inhi pn)
-    match (places pn) with
-    | nil => (marking pn)
-    | cons p tail => incr_mark (incr_mark (marking pn)
-                                          p
-                                          ((pre pn) t p)
-                                          Nat.sub)
-                               p
-                               ((post pn) t p)
-                               Nat.add
-    end
+    (update_marking pn
+                    (places pn)
+                    t
+                    (marking pn))
     (priority pn).
 
 Import ListNotations.  (* very handful notations *)
@@ -229,7 +253,11 @@ Section Insertion_sort.
   (* Fixpoint extract_higher (l : list A) (nonil : l <> nil) : A := 
 
    no need to sort the list of transition
-only the highest priority transition is looked for *)
+only the highest priority transition is looked for 
+
+OR MAYBE NOT : we need to fire ALL enabled transitions
+ as much as possible, getting across "conflicts" between transitions 
+*)
         
   Fixpoint insert (a:A) (l: list A) : list A :=
     match l with
@@ -265,6 +293,7 @@ Definition highest_transition (prio:priority_type) (l:list transition_type)
   : transition_type :=
   last (sort_trans prio l) (mk_trans 512).
 
+(*****************************************************)
 Variable priori : priority_type.  (*  ?????????  *)
 Definition fire_pn (pn:PN) : PN :=
   match pn_is_enabled_because_look pn with
@@ -283,6 +312,7 @@ Fixpoint animate_pn (pn:PN) (n:nat) : list marking_type :=
                                         n')
   end.  
 
+Search list.
 Fixpoint function2list (places:list place_type) (m:marking_type)
   : list (place_type * nat) :=
   match places with
@@ -392,7 +422,8 @@ Definition pre_inhi_function_ex (t : transition_type) (p : place_type) :=
   | _ => None
   end.
 
-(* disons   t_i prioritaire sur t_j   pour tout j >= i *) 
+(* disons   t_i prioritaire sur t_j   pour tout j >= i *)
+(* faut-il un ordre strict ou large ?? *)
 Definition priority_ex (t1 t2 : transition_type) : bool :=
   (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
@@ -422,7 +453,37 @@ Definition pn_ex := mk_PN
                       
                       initial_marking_ex
                       priority_ex.
-Check pn_ex.
+Check pn_ex. Compute (marking pn_ex).
+
+Compute (animate_pn_list
+           pn_ex
+           10).
+Compute (pn_is_enabled_because_look pn_ex). Print pn_ex.
+Compute fire_pn pn_ex.
+(*** ne marche pas bordel ! rien n'est changé ***)
+Print fire_pn.
+Compute (highest_transition priority_ex
+                                           (pn_is_enabled_because_look pn_ex)).  (* highest priority  works well *)
+Compute (fire_trans pn_ex
+                    (highest_transition priority_ex
+                                        (pn_is_enabled_because_look pn_ex))).  (*** c'est fire_trans qui marche pas !!! *)
+Print fire_trans. (*** donc c'est update_marking qui foire !!! *)
+Print update_marking.  (*** ou plus exactement incr_mark ! *)
+Print incr_mark.
+
+
+
+
+(**********************************************************)
+(* should I print the list of transitions 
+   labelling this path of markings ?
+
+should I print the list of enabled transitions at each step ?
+
+     If "yes", how to do so without getting mad at Coq ? *)
+(**********************************************************)
+
+
 
 (*** interpreted Petri net ***)
 Definition conditions_ex (t : transition_type) (c : gard_type)
@@ -440,13 +501,6 @@ Definition ipn_ex := mk_IPN
 
 
 
-Compute (animate_pn_list pn_ex 10). Print initial_marking_ex.
-(* should I print the list of transitions 
-   labelling this path of markings ?
-
-should I print the list of enabled transitions at each step ?
-
-     If "yes", how to do so without getting mad at Coq ? *)
 
 (*************************************************)
 (**************** Syntax of SITPN ****************)
