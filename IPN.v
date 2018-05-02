@@ -3,11 +3,11 @@
 (*****************************************************)
 
 Require Import Arith Omega List Bool.
-Search nat. (* Require Import Nat. *)
+Search nat. (* Require Import Nat.    needed ? older than Arith ? *)
 Search list.
 
 (********************************************************)
-(***** Syntax of (extended generalized) Petri nets ******)
+(***** Syntax of (extended, generalized) Petri nets ******)
 
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
@@ -33,12 +33,16 @@ Definition weight_type := transition_type -> place_type -> option nat.
 (* partial function :   Some x / None   *)
 Definition marking_type := place_type -> nat.
 
+(***  priority relation     to DETERMINE the Petri net ***)
+Require Import Relations. Print relation. (* standard library *)
+Definition priority_type := transition_type -> transition_type -> bool.  (* "bool" better than "Prop"     for     if/then/else *)
+
 (** "Structure" = "Record" **) 
 Structure PN : Type := mk_PN
                       { places : list place_type ;
                         transitions : list transition_type ;
-                        no_dup_places : NoDup places ;
-                        no_dup_transitions : NoDup transitions ; 
+                        (* no_dup_places : NoDup places ;
+                        no_dup_transitions : NoDup transitions ; *) 
                         
                         pre : weight_type ;
                         post : weight_type ;
@@ -46,11 +50,13 @@ Structure PN : Type := mk_PN
                         pre_test : weight_type ;
                         pre_inhi : weight_type ;
 
-                        marking : marking_type
-                        (*marking : list (place_type * nat)*) }.
+                        marking : marking_type ;
+                        (*marking : list (place_type * nat)*)
+                        priority : priority_type }.
 Print PN.
+
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
-Print find_some.  (* big,  but probably usefull *)
+Print find_some.  (* big,  but probably useful function *)
 (* split  / combine   ... *)
 
 (**********************************************************)
@@ -69,7 +75,7 @@ Search nat. Require Import Decidable. Print Decidable.
 SearchPattern (forall x y : _, {x = y} + {x <> y}).
 Print N.eq_dec.
 Definition dec_places : forall x y : place_type, {x = y} + {x <> y}.
-Proof. intros x y. case.
+Proof. intros x y. Admitted.  (*** warning ***)
 
 (* verify if 2 places have same index, return a boolean *)
 Definition beq_places (p p' : place_type) : bool :=
@@ -123,7 +129,6 @@ Fixpoint pn_trans_enabled_PT (places : list place_type)
                                  (pn_trans_enabled_PT tail pre_t m)
                    end
   end.
-
 Fixpoint pn_trans_enabled_TEST (places : list place_type)
          (pre_test_t : place_type -> option nat)
          (m : marking_type)
@@ -137,6 +142,8 @@ Fixpoint pn_trans_enabled_TEST (places : list place_type)
                                  (pn_trans_enabled_TEST tail pre_test_t m)
                    end
   end.
+(*** TO DO : only 1 such function "pn_trans_enabled_ptORtest"
+      instead of 2 ***)
 
 Fixpoint pn_trans_enabled_INHI (places : list place_type)
          (pre_inhi_t : place_type -> option nat)
@@ -192,8 +199,8 @@ Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
   mk_PN
     (places pn)
     (transitions pn)
-    (no_dup_places pn)
-    (no_dup_transitions pn)
+    (* (no_dup_places pn)
+    (no_dup_transitions pn) *)
     (pre pn)
     (post pn)
     (pre_test pn)
@@ -207,14 +214,12 @@ Fixpoint fire_trans (pn : PN)  (t:transition_type) : PN  :=
                                p
                                ((post pn) t p)
                                Nat.add
-    end.
-
-(***  priority relation     to determine the Petri net ***)
-Require Import Relations. Print relation. (* standard library *)
-Definition priority_type := transition_type -> transition_type -> bool.  (* "bool" better than "Prop"     for     if/then/else *)
+    end
+    (priority pn).
 
 Import ListNotations.  (* very handful notations *)
 Require Import Coq.Sorting.Sorted. Search sort.
+(* to get the priority transition, and determine the system *)
 Section Insertion_sort.
   Variable A : Type.
   
@@ -254,9 +259,8 @@ Definition sort_trans (prio:priority_type) (l:list transition_type)
   : list transition_type :=
   sort transition_type prio l.
 
-Search list.
-Print last. (* default value in case the list is empty ! *)
-Print exists_last. (* maybe useful ? *)
+Search list. Print last. (* default value in case the list is empty ! *)
+Print exists_last. (* full of sumbools but maybe useful ? *)
 Definition highest_transition (prio:priority_type) (l:list transition_type)
   : transition_type :=
   last (sort_trans prio l) (mk_trans 512).
@@ -311,7 +315,7 @@ Notation "cond [ trans ]" := (caracteristic_function_for_gards
                                 cond
                               = true)  
                                (at level 50) : type_scope.
-(* one example of notation ...   probably useless though  *)
+(* a (probably useless example of notation ... *)
 
 Record IPN : Type := mk_IPN
                        { pn : PN ;
@@ -324,7 +328,7 @@ Print IPN.
 (************** semantic for IPN ************************)
 
 
-(* TO DO *)
+(* TO DO. But not today *)
 
 (******************************************************************)
 (**** small example of  Petri net (page 24 in Ibrahim thesis) *****)
@@ -332,7 +336,7 @@ Print IPN.
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
 (* 3 places *)
 Definition places_ex : (list place_type) :=
-  nodup [ mk_place 0 ;
+ (* nodup *) [ mk_place 0 ;
     mk_place 1 ;
     mk_place 2 ].
 
@@ -388,37 +392,8 @@ Definition pre_inhi_function_ex (t : transition_type) (p : place_type) :=
   | _ => None
   end.
 
-
-Definition pn_ex := mk_PN
-                      places_ex
-                      transitions_ex
-
-                      (* proof of no duplicatas  places_ex*)
-                      (* proof of no duplicatas  transitions_ex*)
-                      
-                      pre_function_ex
-                      post_function_ex
-                      pre_test_function_ex
-                      pre_inhi_function_ex                 
-                      
-                      initial_marking_ex.
-
-Definition conditions_ex (t : transition_type) (c : gard_type)
-  : bool
-  := match (t, c) with
-  | (mk_trans 0, mk_gard 0) => true
-  | (mk_trans 2, mk_gard 1) => true
-  | _ => false
-  end.
-
-(* reseaux de Petri generalise etendu, interprete *)
-
-Definition ipn_ex := mk_IPN
-                       pn_ex
-                       conditions_ex.
-
 (* disons   t_i prioritaire sur t_j   pour tout j >= i *) 
-Definition priority (t1 t2 : transition_type) : bool :=
+Definition priority_ex (t1 t2 : transition_type) : bool :=
   (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
   | (mk_trans 0, mk_trans 0) => true
@@ -433,13 +408,50 @@ Definition priority (t1 t2 : transition_type) : bool :=
   | (_,_) => false  (* False or True     who care ? *) 
   end.
 
+Definition pn_ex := mk_PN
+                      places_ex
+                      transitions_ex
+
+                      (* proof of no duplicatas  places_ex*)
+                      (* proof of no duplicatas  transitions_ex*)
+                      
+                      pre_function_ex
+                      post_function_ex
+                      pre_test_function_ex
+                      pre_inhi_function_ex                 
+                      
+                      initial_marking_ex
+                      priority_ex.
+Check pn_ex.
+
+(*** interpreted Petri net ***)
+Definition conditions_ex (t : transition_type) (c : gard_type)
+  : bool
+  := match (t, c) with
+  | (mk_trans 0, mk_gard 0) => true
+  | (mk_trans 2, mk_gard 1) => true
+  | _ => false
+  end.
+
+Definition ipn_ex := mk_IPN
+                       pn_ex
+                       conditions_ex.
 
 
-Eval simpl in (animate_pn pn_ex 10). Print caca.
+
+
+Compute (animate_pn_list pn_ex 10). Print initial_marking_ex.
+(* should I print the list of transitions 
+   labelling this path of markings ?
+
+should I print the list of enabled transitions at each step ?
+
+     If "yes", how to do so without getting mad at Coq ? *)
 
 (*************************************************)
 (**************** Syntax of SITPN ****************)
 
+Print Between.  (** seems cool ! and cooler than what I can do **)
 Record interval_type : Set := mk_interval
   { mini : nat ;
     maxi : nat ;
@@ -459,12 +471,14 @@ Print ITPN.
 
 (* Inductive clock : Set :=
 | rising_edge | falling_edge. 
-Print clock_ind.      NOT NEEDED NOW  *)
+Print clock_ind.      
+
+Not needed now.     Will it ever be needed ?  *)
 
 (****************************************************)
 (************** Semantic of SITPN *******************)
 
-(* TO DO : how to deal cleanly with intervals ? *)
+(* TO DO  *)
 
 
 (******************************************************************)
