@@ -103,8 +103,11 @@ Definition reset (m:marking_type) (p:place_type) (j:nat)
 
 
 (* given a marking m, add j tokens inside place p *)  
-Definition incr_mark (m:marking_type) (p:place_type)
-           (j:option nat) (op:nat->nat->nat)
+Definition modif_mark
+           (m:marking_type)
+           (p:place_type)
+           (j:option nat)
+           (op:nat->nat->nat)
   : marking_type :=
   fun p' =>
     if beq_places p p'
@@ -215,13 +218,13 @@ Fixpoint update_marking
   | cons p tail => update_marking pn
                                   tail
                                   t
-                                  (incr_mark (incr_mark (marking pn)
-                                                        p
-                                                        ((pre pn) t p)
-                                                        Nat.sub)
-                                             p
-                                             ((post pn) t p)
-                                             Nat.add)
+                                  (modif_mark (modif_mark (marking pn)
+                                                          p
+                                                          ((pre pn) t p)
+                                                          Nat.sub)
+                                              p
+                                              ((post pn) t p)
+                                              Nat.add)
   end.
  
 (* fire transition t, updating the marking accordingly *)
@@ -293,13 +296,12 @@ Definition highest_transition (prio:priority_type) (l:list transition_type)
   : transition_type :=
   last (sort_trans prio l) (mk_trans 512).
 
-(*****************************************************)
-Variable priori : priority_type.  (*  ?????????  *)
+(****************************************************)
 Definition fire_pn (pn:PN) : PN :=
   match pn_is_enabled_because_look pn with
   | nil => pn  (* fire no transition *)
   | t::tail => fire_trans pn
-                          (highest_transition priori
+                          (highest_transition (priority pn)
                                               (pn_is_enabled_because_look pn))
   end.
 
@@ -311,7 +313,7 @@ Fixpoint animate_pn (pn:PN) (n:nat) : list marking_type :=
   | S n' => (marking pn) :: (animate_pn (fire_pn pn)
                                         n')
   end.  
-
+Print marking_type.
 Search list.
 Fixpoint function2list (places:list place_type) (m:marking_type)
   : list (place_type * nat) :=
@@ -427,18 +429,19 @@ Definition pre_inhi_function_ex (t : transition_type) (p : place_type) :=
 Definition priority_ex (t1 t2 : transition_type) : bool :=
   (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
-  | (mk_trans 0, mk_trans 0) => true
+  | (mk_trans 0, mk_trans 0) => false
   | (mk_trans 0, mk_trans 1) => true
   | (mk_trans 0, mk_trans 2) => true
   | (mk_trans 1, mk_trans 0) => false
-  | (mk_trans 1, mk_trans 1) => true
+  | (mk_trans 1, mk_trans 1) => false
   | (mk_trans 1, mk_trans 2) => true
   | (mk_trans 2, mk_trans 0) => false
   | (mk_trans 2, mk_trans 1) => false
-  | (mk_trans 2, mk_trans 2) => true
+  | (mk_trans 2, mk_trans 2) => false
   | (_,_) => false  (* False or True     who care ? *) 
   end.
 
+Print pre. Print weight_type.
 Definition pn_ex := mk_PN
                       places_ex
                       transitions_ex
@@ -453,6 +456,7 @@ Definition pn_ex := mk_PN
                       
                       initial_marking_ex
                       priority_ex.
+_
 Check pn_ex. Compute (marking pn_ex).
 
 Compute (animate_pn_list
@@ -463,7 +467,7 @@ Compute fire_pn pn_ex.
 (*** ne marche pas bordel ! rien n'est changé ***)
 Print fire_pn.
 Compute (highest_transition priority_ex
-                                           (pn_is_enabled_because_look pn_ex)).  (* highest priority  works well *)
+                            (pn_is_enabled_because_look pn_ex)).  (* highest priority  works well *)
 Compute (fire_trans pn_ex
                     (highest_transition priority_ex
                                         (pn_is_enabled_because_look pn_ex))).  (*** c'est fire_trans qui marche pas !!! *)
