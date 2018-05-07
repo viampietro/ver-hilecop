@@ -35,11 +35,16 @@ Definition marking_type := place_type -> nat.
 
 (***  priority relation     to DETERMINE the Petri net ***)
 Require Import Relations. Print relation. (* standard library *)
+Search relation. Print transitive.
 Inductive prior_type : Set :=
   mk_prior_type :  forall (rel : trans_type -> trans_type -> bool),
-    (forall x : trans_type, (rel x x) = false) ->
-    () ->
-    () -> prior_type.
+    (forall (x : trans_type), (rel x x) = false) -> (* irreflexive *)
+    (forall (x y : trans_type), (rel x y) = true -> (* asymetric *)
+                                (rel y x = false)) ->
+    (forall (x y z : trans_type), (rel x y) = true -> (* transitive *)
+                                  (rel y z) = true ->
+                                  (rel x z) = true) ->
+    prior_type.
 
 
 (** "Structure" = "Record" **) 
@@ -278,41 +283,37 @@ Definition fire_trans (pn : PN)  (t:trans_type) : PN  :=
 Import ListNotations.  (* very handful notations *)
 Require Import Coq.Sorting.Sorted. Search sort.
 (* to get the priority transition, and determine the system *)
-Section Insertion_sort.
-  Variable A : Type.
-  
-  Variable leb : A -> A -> bool.
-  Notation "a <= b" := (leb a b = true).
 
-  (* Fixpoint extract_higher (l : list A) (nonil : l <> nil) : A := 
 
-   we need to fire ALL enabled transitions
- as much as possible, getting across "conflicts" between transitions 
-*)
-        
-  Fixpoint insert (a:A) (l: list A) : list A :=
-    match l with
-    | nil  => [a]
-    | b::l' => if leb a b
-               then a::l
-               else b::insert a l'
-    end.
-  
-  Fixpoint sort (l: list A) : list A :=
-    match l with
-    | [ ] => [ ]
-    | a::l' => insert a (sort l')
-    end.
+Print prior_type.
+Notation "a <= b" := (prior_type a b = true).
 
-  Variable a : A.
-  (* Fixpoint find_highest (A:Type) (l:list A) : (A * list A) :=
+(*
+Fixpoint insert
+         (a:trans_type)
+         (l: list trans_type)
+  : list trans_type :=
+  match l with
+  | nil  => [a]
+  | b::l' => if (prior_type a b)
+             then a::l
+             else b::insert a l'
+  end.
+
+Fixpoint sort (l: list A) : list A :=
+  match l with
+  | [ ] => [ ]
+  | a::l' => insert a (sort l')
+  end.
+
+Variable a : A.
+(* Fixpoint find_highest (A:Type) (l:list A) : (A * list A) :=
     match l with
     | nil => (a, nil)
     | b::l' => if leb a b
                then find_highest b l'
                else find_highest a l'
     end.*)
-End Insertion_sort.
 
 Definition sort_transs
            (prior : prior_type)
@@ -322,6 +323,7 @@ Definition sort_transs
     trans_type
     prior
     l.
+*)
 
 Print PN. Print weight_type.
 Fixpoint common_pre
@@ -350,8 +352,8 @@ Definition confl_with
              t t'
              pre
              places)
-          
-          (prior t t') 
+         
+          (match prior t t') 
   then true
   else false.
 Notation "t1 'confl' t2" := (confl_with
