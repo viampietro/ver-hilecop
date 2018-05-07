@@ -35,14 +35,14 @@ Definition marking_type := place_type -> nat.
 
 (***  priority relation     to DETERMINE the Petri net ***)
 Require Import Relations. Print relation. (* standard library *)
-Definition priority_type := trans_type -> trans_type -> bool.  (* "bool" better than "Prop"     for     if/then/else *)
+Definition prior_type := trans_type -> trans_type -> bool.  (* "bool" better than "Prop"     for     if/then/else *)
 
 (** "Structure" = "Record" **) 
 Structure PN : Type := mk_PN
                       { places : list place_type ;
                         transs : list trans_type ;
-                        no_dup_places : NoDup places ;
-                        no_dup_transitions : NoDup transs ;
+                        nodup_places : NoDup places ;
+                        nodup_transitions : NoDup transs ;
                         
                         pre : weight_type ;
                         post : weight_type ;
@@ -52,7 +52,7 @@ Structure PN : Type := mk_PN
 
                         marking : marking_type ;
                         (*marking : list (place_type * nat)*)
-                        priority : priority_type }.
+                        priority : prior_type }.
 Print PN.
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
@@ -257,8 +257,8 @@ Definition fire_trans (pn : PN)  (t:trans_type) : PN  :=
   mk_PN
     (places pn)
     (transs pn)
-    (no_dup_places pn)
-    (no_dup_transitions pn)
+    (nodup_places pn)
+    (nodup_transitions pn)
     (pre pn)
     (post pn)
     (pre_test pn)
@@ -281,10 +281,7 @@ Section Insertion_sort.
 
   (* Fixpoint extract_higher (l : list A) (nonil : l <> nil) : A := 
 
-   no need to sort the list of transition
-only the highest priority transition is looked for 
-
-OR MAYBE NOT : we need to fire ALL enabled transitions
+   we need to fire ALL enabled transitions
  as much as possible, getting across "conflicts" between transitions 
 *)
         
@@ -312,19 +309,72 @@ OR MAYBE NOT : we need to fire ALL enabled transitions
     end.*)
 End Insertion_sort.
 
-Definition sort_trans (prio:priority_type) (l:list trans_type)
+Definition sort_transs
+           (prior : prior_type)
+           (l : list trans_type)
   : list trans_type :=
   sort
     trans_type
-    prio
+    prior
     l.
+
+Print PN. Print weight_type.
+Fixpoint common_pre
+           (t t' : trans_type)
+           (pre : weight_type)
+           (places : list place_type)
+  : bool :=
+  match places with
+  | [ ] => false
+  | p :: places' => match ((pre t p), (pre t' p)) with
+                    | (Some _, Some _) => true
+                    | (_, _) => common_pre
+                                  t t'
+                                  pre
+                                  places'
+                    end
+  end.
+
+Definition confl_with
+         (t t' : trans_type)
+         (prior : prior_type)
+         (pre : weight_type)
+         (places : list place_type)
+  : bool :=
+  if andb (common_pre
+             t t'
+             pre
+             places)
+          
+          (prior t t') 
+  then true
+  else false.
+Notation "t1 'confl' t2" := (confl_with
+                               t1
+                               t2
+                             = true)  
+                              (at level 50) : type_scope.
+
+(*** list of lists    ...   c'est chaud bouillant ca ... *)
+Fixpoint struct_conflicts
+           (prior : prior_type)
+           (l : list trans_type)
+  : list (list trans_type) :=
+  match l with
+  | [ ] => [ [ ]]
+  | t :: l' => [ l' ]
+  end.
 
 Search list. Print last. (* default value in case the list is empty ! *)
 Print exists_last. (* full of sumbools but maybe useful ? *)
-Definition highest_transition (prio:priority_type) (l:list trans_type)
+Definition highest_transition
+           (prior : prior_type)
+           (l : list trans_type)
   : trans_type :=
   last
-    (sort_trans prio l)
+    (sort_transs
+       prior
+       l)
     (mk_trans 512).
 
 (********************* MAIN FUNCTION ************************)
@@ -372,10 +422,10 @@ Fixpoint animate_pn_list (pn:PN) (n:nat) : list (list (place_type * nat)) :=
 Inductive gard_type : Set :=
 | mk_gard : nat -> gard_type.
 
-Definition caracteristic_function_for_gards := trans_type -> gard_type -> bool.
+Definition caract_funct_gards := trans_type -> gard_type -> bool.
 (* condition_type t g = true     <=>     g is associated with t *)
 
-Notation "cond [ trans ]" := (caracteristic_function_for_gards
+Notation "cond [ trans ]" := (caract_funct_gards
                                 trans
                                 cond
                               = true)  
@@ -384,7 +434,7 @@ Notation "cond [ trans ]" := (caracteristic_function_for_gards
 
 Record IPN : Type := mk_IPN
                        { pn : PN ;
-                         conditions : caracteristic_function_for_gards
+                         conditions : caract_funct_gards
                          (* actions and functions ...
                            not relevant for now *) }.
 Print IPN.
