@@ -35,7 +35,12 @@ Definition marking_type := place_type -> nat.
 
 (***  priority relation     to DETERMINE the Petri net ***)
 Require Import Relations. Print relation. (* standard library *)
-Definition prior_type := trans_type -> trans_type -> bool.  (* "bool" better than "Prop"     for     if/then/else *)
+Inductive prior_type : Set :=
+  mk_prior_type :  forall (rel : trans_type -> trans_type -> bool),
+    (forall x : trans_type, (rel x x) = false) ->
+    () ->
+    () -> prior_type.
+
 
 (** "Structure" = "Record" **) 
 Structure PN : Type := mk_PN
@@ -354,16 +359,24 @@ Notation "t1 'confl' t2" := (confl_with
                                t2
                              = true)  
                               (at level 50) : type_scope.
+Print PN.
+Print prior_type.
+(*Definition confl_with
+         (prior : prior_type)
+         (pre : weight_type)
+         ( : list place_type)
+  : bool :=*)
+
 
 (*** list of lists    ...   c'est chaud bouillant ca ... *)
-Fixpoint struct_conflicts
+(*Fixpoint struct_conflicts
            (prior : prior_type)
            (l : list trans_type)
   : list (list trans_type) :=
   match l with
   | [ ] => [ [ ]]
-  | t :: l' => [ l' ]
-  end.
+  | t :: l' => match [ l' ]
+  end.*)
 
 Search list. Print last. (* default value in case the list is empty ! *)
 Print exists_last. (* full of sumbools but maybe useful ? *)
