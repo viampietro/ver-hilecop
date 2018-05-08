@@ -21,7 +21,7 @@ Inductive trans_type : Set :=
 (*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
     along with "some" weight   (default is 1 in real).       *)
 Definition weight_type := trans_type -> place_type -> option nat.
-(*  Why not "have fun" also with 4 new constructors ????
+(*  Why not these inductive definition with 4 constructors ????
 Inductive arc_type : Set :=
 | mk_arc_pt : place_type -> transition_type -> nat -> arc_type
 | mk_arc_tp : transition_type -> place_type -> nat -> arc_type
@@ -30,21 +30,40 @@ Inductive arc_type : Set :=
 | mk_arc_test : place_type -> transition_type -> nat -> arc_type.
  *)
 
-(* partial function :   Some x / None   *)
 Definition marking_type := place_type -> nat.
 
-(***  priority relation     to DETERMINE the Petri net ***)
-Require Import Relations. Print relation. (* standard library *)
+(***  priority relation     
+  to DETERMINE the Petri net 
+  (along with imperative semantic) ***)
+Require Import Relations. Print relation. 
 Search relation. Print transitive.
 Inductive prior_type : Set :=
   mk_prior_type :  forall (rel : trans_type -> trans_type -> bool),
     (forall (x : trans_type), (rel x x) = false) -> (* irreflexive *)
-    (forall (x y : trans_type), (rel x y) = true -> (* asymetric *)
+    (forall (x y : trans_type), (rel x y) = true -> (* asymmetric *)
                                 (rel y x = false)) ->
     (forall (x y z : trans_type), (rel x y) = true -> (* transitive *)
                                   (rel y z) = true ->
                                   (rel x z) = true) ->
     prior_type.
+
+Print prior_type. (* 1 big constructor *)
+Definition prio_over
+           (t1 t2 : trans_type)
+           (prior : prior_type)
+  : bool :=
+  match prior with
+  | mk_prior_type
+      rel
+      asymm
+      irref
+      trans => if rel t1 t2
+               then true
+               else false
+  end.
+Notation "t1 >>= t2" := (prio_over t1 t2 _)
+                          (at level 50) : type_scope.
+(*** but for wich prior ? ***)
 
 
 (** "Structure" = "Record" **) 
@@ -228,12 +247,12 @@ conflit structurel / conflit effectif
 ( t0 est en conflit effectif avec t1 ne signifie pas que 
   t1 est en conflit effectif avec t0)
 
-desensibilisation, de façon transitoire, 
+desensibilisation, de facon transitoire, 
 resensibilisation (quasi-immediate)
 
-NewEnabled est-il important ?  pas sûr..
+NewEnabled est-il important ?  pour les intervalles de temps ? ...
 
-----> quelles structures de donnée et quelles fonctions ? <---
+----> quelles structures de donnee et quelles fonctions ? <---
 
 *********************************************************)
 
@@ -283,10 +302,6 @@ Definition fire_trans (pn : PN)  (t:trans_type) : PN  :=
 Import ListNotations.  (* very handful notations *)
 Require Import Coq.Sorting.Sorted. Search sort.
 (* to get the priority transition, and determine the system *)
-
-
-Print prior_type.
-Notation "a <= b" := (prior_type a b = true).
 
 (*
 Fixpoint insert
@@ -342,43 +357,88 @@ Fixpoint common_pre
                     end
   end.
 
-Definition confl_with
-         (t t' : trans_type)
+Print prior_type.
+Definition conflict_with
+         (t1 t2 : trans_type)
          (prior : prior_type)
          (pre : weight_type)
          (places : list place_type)
   : bool :=
-  if andb (common_pre
-             t t'
-             pre
-             places)
-         
-          (match prior t t') 
+  if (common_pre
+        t1 t2
+        pre
+        places)
+       &&    (match prior with
+              | mk_prior_type
+                  rel
+                  irreflexive
+                  asymmetric
+                  transitive => if rel t1 t2
+                                then true
+                                else false
+              end) 
   then true
   else false.
-Notation "t1 'confl' t2" := (confl_with
-                               t1
-                               t2
-                             = true)  
+Notation "t1 'confl' t2" := (conflict_with
+                               t1 t2
+                               _
+                               _
+                               _ )  
                               (at level 50) : type_scope.
+(*** but for wich priori, pre and places ??? ***)
+
 Print PN.
-Print prior_type.
-(*Definition confl_with
-         (prior : prior_type)
-         (pre : weight_type)
-         ( : list place_type)
-  : bool :=*)
-
-
-(*** list of lists    ...   c'est chaud bouillant ca ... *)
-(*Fixpoint struct_conflicts
+Fixpoint conflict_with_list
+           (t : trans_type)
            (prior : prior_type)
-           (l : list trans_type)
-  : list (list trans_type) :=
-  match l with
-  | [ ] => [ [ ]]
-  | t :: l' => match [ l' ]
-  end.*)
+           (pre : weight_type)
+           (places : list place_type)
+           (sometranss : list trans_type)
+  : list (trans_type * trans_type)
+  := match sometranss with
+     | [] => []
+     | h :: tail => if conflict_with t h prior pre places 
+                    then (t,h) :: (conflict_with_list
+                                     t
+                                     prior
+                                     pre
+                                     places
+                                     tail)
+                    else (conflict_with_list
+                            t
+                            prior
+                            pre
+                            places
+                            tail)    
+     end.
+
+Fixpoint struct_conflict
+           (prior : prior_type)
+           (pre : weight_type)
+           (places : list place_type)
+           (sometranss : list trans_type) {struct sometranss}
+  : list (trans_type * trans_type)
+  := match sometranss with
+     | [] => []
+     | t :: tail => (conflict_with_list
+                      t
+                      prior
+                      pre
+                      places
+                      tail) ++ (struct_conflict
+                                       prior
+                                       pre
+                                       places
+                                       tail)
+     end.
+
+(*** conflict structurel puis conflits effectif ...
+ ecremage progressif mais inexorable ***)
+Definition to_be_fired (sometranss : list trans_type)
+  : list trans_type
+  := []. 
+
+
 
 Search list. Print last. (* default value in case the list is empty ! *)
 Print exists_last. (* full of sumbools but maybe useful ? *)
