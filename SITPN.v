@@ -61,7 +61,7 @@ Definition prio_over
                then true
                else false
   end.
-Notation "t1 >>= t2" := (prio_over t1 t2 _)
+Notation "t1 >> t2" := (prio_over t1 t2 _)
                           (at level 50) : type_scope.
 (*** but for wich prior ?   is this notation correct ? ***)
 
@@ -81,7 +81,7 @@ Structure PN : Type := mk_PN
 
                         marking : marking_type ;
                         (*marking : list (place_type * nat)*)
-                        priority : prior_type }.
+                        priority : prior_type  }.
 Print PN.
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
