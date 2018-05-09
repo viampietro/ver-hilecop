@@ -313,31 +313,64 @@ Fixpoint firable_transs
   end.
 
 (************************************)
-Fixpoint update_marking
+Fixpoint update_marking_pre
          (l : list place_type)
          (t : trans_type)
-         (pre post : weight_type)
+         (pre : weight_type)
          (m : marking_type)
          {struct l}
   (* structural induction over list of places *)
   : marking_type :=
   match l with
   | nil => m
-  | cons p tail => update_marking
+  | cons p tail => update_marking_pre
                      tail
                      t
-                     pre post
+                     pre
                      (modif_mark
-                        (modif_mark
                            m
                            p
                            (pre t p)
                            Nat.sub)
-                        p
-                        (post t p)
-                        Nat.add)
   end.
- 
+
+Fixpoint update_marking_post
+         (l : list place_type) 
+         (t : trans_type)
+         (post : weight_type)
+         (m : marking_type)         
+  (* structural induction over list of places *)
+  : marking_type :=
+  match l with
+  | nil => m
+  | cons p tail => update_marking_post
+                     tail
+                     t
+                     post
+                     (modif_mark
+                           m
+                           p
+                           (post t p)
+                           Nat.add)
+  end.
+
+Definition update_marking
+           (P : list place_type) 
+           (t : trans_type)
+           (pre post : weight_type)
+           (m : marking_type)         
+  (* structural induction over list of places *)
+  : marking_type :=
+  update_marking_post
+    P  
+    t
+    post
+    (update_marking_pre
+       P 
+       t
+       pre
+       m).
+
 (* fire transition t, only updating the marking of the Petri net ! *)
 Definition fire_one_trans
            (sitpn : SITPN)
@@ -485,15 +518,39 @@ Section effective_conflicts.
   Variable struct_conflicts : list (list trans_type).
   Variable firable_transs : list trans_type.
 
-  Fixpoint conforming
+  Fixpoint conforming_data_pruning
            (struct_conflicts : list (list trans_type))
            (firable_transs : list trans_type)
-    : list (list trans_type)
-    := [].
+    : list (list trans_type) :=
+    [].
   (* il suffit de garder de struct_conflicts
   en supprimant toutes les transitions n'apparaissant pas dans firable_transs *)
+
+  Print SITPN.
+  Fixpoint conforming_data_ordering
+           (firable_transs : list (list trans_type)) (* better *)
+           (priority : prior_type)
+    : list (list trans_type) :=
+    [].
+  (* il suffit d'ordonner chacune des listes *)
+
+
+  Definition to_be_fired
+             (conformed_firable : list (list trans_type))
+             (sitpn : SITPN)
+    : SITPN :=
+    sitpn.
+  (* on peut tirer les transitions autant que possible 
+ il suffit de tirer les premières de listes (updating le marking)
+en retirant les transitions suivantes qui ne sont plus tirables
+ 
+et en recommançant avec la liste de listes restante
+qui n'est pas forcement plus courte (bordel !) *)
+
   
 End effective_conflicts.
+
+
 
 
 
