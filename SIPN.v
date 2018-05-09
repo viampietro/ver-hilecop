@@ -2,7 +2,7 @@
 (**** by Mathieu Lasjaunias, David Delahaye, David Andreu ****)
 (*************************************************************)
 
-Require Import Arith Omega List Bool. (* libraries *) 
+Require Import Arith Omega List Bool. (* best libraries ever *) 
 Search nat.
 (* Require Import Nat.  needed ? older than (called by ?) Arith ? *)
 Search list.
@@ -21,7 +21,7 @@ Inductive trans_type : Set :=
 (*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
     along with "some" weight   (default is 1 in real).       *)
 Definition weight_type := trans_type -> place_type -> option nat.
-(*  Why not these inductive definition with 4 constructors ????
+(*  Why not this inductive definition with 4 constructors ????
 Inductive arc_type : Set :=
 | mk_arc_pt : place_type -> transition_type -> nat -> arc_type
 | mk_arc_tp : transition_type -> place_type -> nat -> arc_type
@@ -63,7 +63,7 @@ Definition prio_over
   end.
 Notation "t1 >>= t2" := (prio_over t1 t2 _)
                           (at level 50) : type_scope.
-(*** but for wich prior ? ***)
+(*** but for wich prior ?   is this notation correct ? ***)
 
 
 (** "Structure" = "Record" **) 
@@ -85,7 +85,7 @@ Structure PN : Type := mk_PN
 Print PN.
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
-Print find_some.  (* big,  but probably useful function *)
+Print find_some.  (* maybe useful *)
 (* split  / combine   ... *)
 
 (**********************************************************)
@@ -153,13 +153,11 @@ Definition modif_mark
 
 Print Nat.sub. Print Nat.add.   (** the 2 op(erators) to use ... **)
 (* Require Import Nat. (* for Nat.leb != (Bool.)leb *) 
-   library "Nat" is included into "Arith" ?   not clear ... *)
-
-(***** this "modif_mark" function is bugged ??????????????? *****)
+   library "Nat" is included into "Arith" ...   not clear but ... *)
 
 Locate "<?". Print Nat.ltb. Print Nat.leb.
 Print pre. Print weight_type.
-(**** uphill / downhill *)
+(**** uphill (input set, preset) ***)
 Fixpoint enough_tokens_uphill
          (places : list place_type)
          (pre_classic_or_test_t : place_type -> option nat)
@@ -181,6 +179,7 @@ Fixpoint enough_tokens_uphill
                                     m)
                    end
   end.
+(**** downhill (output set, postset) ***)
 Fixpoint not_too_many_tokens_uphill
          (places : list place_type)
          (pre_inhi_t : place_type -> option nat) (* inhibitor arcs *)
@@ -202,8 +201,8 @@ Fixpoint not_too_many_tokens_uphill
                    end
   end.
 
-(* enabled = arcs_classic + arcs_test + arcs_inhi     satisfied ! *)
-(*** decidable, of course : ***)
+(*************  "enabled" iff 
+"arcs_classic" + "arcs_test" + "arcs_inhi" satisfied *************)
 Definition pn_trans_is_enabled (places : list place_type)
            (pre : weight_type)
            (pre_test : weight_type)
@@ -239,21 +238,20 @@ Definition pn_is_enabled_because_look (pn:PN) : list trans_type :=
   pn_trans_is_enabled_because pn (transs pn).
 
 (****************************************************
-marquage intermediaire (in english ?)  
+intermediate marking 
+enabled transition 
+firable transition 
 
-transition enabled/firable (sensibilise/tirable)
+"firable" transitions may not be "firable at the same time" !!!!!!   
+structural conflict            (not a transitive relation !)
+effective conflict             (not a symmetric relation !)
 
-conflit structurel / conflit effectif
-( t0 est en conflit effectif avec t1 ne signifie pas que 
-  t1 est en conflit effectif avec t0)
+desensibilisation, de facon transitoire,  (de-enabled ?)
+resensibilisation (quasi-immediate)       (re-enabled ?)
 
-desensibilisation, de facon transitoire, 
-resensibilisation (quasi-immediate)
+is NewEnabled important ?  for what ? time intervals ?
 
-NewEnabled est-il important ?  pour les intervalles de temps ? ...
-
-----> quelles structures de donnee et quelles fonctions ? <---
-
+----> quelles structures de donnee et quelles fonctions ? <----
 *********************************************************)
 
 Fixpoint update_marking
@@ -281,7 +279,7 @@ Fixpoint update_marking
                         Nat.add)
   end.
  
-(* fire transition t, updating the marking of the Petri net ! *)
+(* fire transition t, only updating the marking of the Petri net ! *)
 Definition fire_trans (pn : PN)  (t:trans_type) : PN  :=
   mk_PN
     (places pn)
@@ -303,7 +301,7 @@ Import ListNotations.  (* very handful notations *)
 Require Import Coq.Sorting.Sorted. Search sort.
 (* to get the priority transition, and determine the system *)
 
-(*
+
 Fixpoint insert
          (a:trans_type)
          (l: list trans_type)
@@ -341,6 +339,8 @@ Definition sort_transs
 *)
 
 Print PN. Print weight_type.
+(** 2 transitions do they share a common place uphill ? 
+    do their input set (preset) intersect each other ? **)
 Fixpoint common_pre
            (t t' : trans_type)
            (pre : weight_type)
@@ -358,6 +358,7 @@ Fixpoint common_pre
   end.
 
 Print prior_type.
+(** do we need to look at the priority relation that soon here ?? *)
 Definition conflict_with
          (t1 t2 : trans_type)
          (prior : prior_type)
@@ -388,6 +389,9 @@ Notation "t1 'confl' t2" := (conflict_with
 (*** but for wich priori, pre and places ??? ***)
 
 Print PN.
+(* build couples of structural conflicts 
+involving some transition t and a list of transitions 
+ with the prioritary transition in first component of each couple *)
 Fixpoint conflict_with_list
            (t : trans_type)
            (prior : prior_type)
@@ -411,7 +415,8 @@ Fixpoint conflict_with_list
                             places
                             tail)    
      end.
-
+(*** list the couples of structural conflicts, 
+  with the prioritary transition in first component of each couple  ***)
 Fixpoint struct_conflict
            (prior : prior_type)
            (pre : weight_type)
@@ -432,11 +437,17 @@ Fixpoint struct_conflict
                                        tail)
      end.
 
-(*** conflict structurel puis conflits effectif ...
- ecremage progressif mais inexorable ***)
-Definition to_be_fired (sometranss : list trans_type)
+(*** structural conflicts given, 
+  effective conflicts must be solved ...   
+  looking if presets are filled enough ? 
+                                           ***)
+Definition to_be_fired (sometranss_conflict : list (trans_type * trans_type))
   : list trans_type
   := []. 
+
+(********************************************************************)
+(***************  the algorithm is not clear for me *****************)
+(********************************************************************)
 
 
 
@@ -517,11 +528,12 @@ Print IPN.
 (********************************************************)
 (************** semantic for IPN ************************)
 
-
-(* TO DO. But not today *)
+(* TO DO *)
 
 (******************************************************************)
-(**** small example of  Petri net (page 24 in Ibrahim thesis) *****)
+(******************************************************************)
+(**** small example of Petri net (page 24 in Ibrahim thesis) ******)
+(******************************************************************)
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
 (* 3 places *)
