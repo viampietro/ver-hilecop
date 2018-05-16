@@ -20,7 +20,11 @@ Inductive trans_type : Set :=
 
 (*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
     along with "some" weight   (default is 1 in real).       *)
-Definition weight_type := trans_type -> place_type -> option nat.
+
+Structure nat_star : Set := mk_nat_star
+                              { int : nat ;
+                                careful : int > 0 }.
+Definition weight_type := trans_type -> place_type -> option nat_star.
 (*  Why not this inductive definition with 4 constructors ????
 Inductive arc_type : Set :=
 | mk_arc_pt : place_type -> transition_type -> nat -> arc_type
@@ -36,24 +40,46 @@ Definition marking_type := place_type -> nat.
   to DETERMINE the Petri net 
   (along with imperative semantic) ***)
 Require Import Relations. Print relation. 
-Search relation. Print transitive.
-Inductive prior_type : Set :=
-  mk_prior_type :  forall (rel : trans_type -> trans_type -> bool),
-    (forall (x : trans_type), (rel x x) = false) -> (* irreflexive *)
-    (forall (x y : trans_type), (rel x y) = true -> (* asymmetric *)
-                                (rel y x = false)) ->
-    (forall (x y z : trans_type), (rel x y) = true -> (* transitive *)
-                                  (rel y z) = true ->
-                                  (rel x z) = true) ->
-    prior_type.
+Search relation. Print transitive. 
+Require Import RelationClasses. Print RelationClasses.
+Print Asymmetric.
 
-Print prior_type. (* 1 big constructor *)
-Definition prio_over
+Inductive prior_type1 : Set :=
+  mk_prior_type1 :
+    forall (rel : trans_type -> trans_type -> bool),
+      (forall (x : trans_type), (rel x x) = false) -> (* irreflexive *)
+      (forall (x y : trans_type), (rel x y) = true -> (* asymmetric *)
+                                  (rel y x = false)) ->
+      (forall (x y z : trans_type), (rel x y) = true -> (* transitive *)
+                                    (rel y z) = true ->
+                                    (rel x z) = true) ->
+      prior_type1.
+
+Search list.
+Print Equivalence. (* here it's different, just no cycle *)
+Inductive prior_type2 : Set :=
+  mk_prior_type2
+    { list_lists : list (list trans_type) ;
+      no_inter :
+        forall (l1 l2 : list trans_type),
+        forall (x : trans_type),
+          (In l1 list_lists) -> (In l2 list_lists) ->
+          (In x l1) -> (In x l2) ->
+          (l1 = l2) ;  }.
+(*  cover :
+       forall (x : trans_type),
+         (In x transs) ->
+         exists (l : list trans_type),
+           (In x l) -> (In l list_lists) }. *)
+
+Print prior_type2.
+
+Definition prio_over1
            (t1 t2 : trans_type)
-           (prior : prior_type)
+           (prior : prior_type1)
   : bool :=
   match prior with
-  | mk_prior_type
+  | mk_prior_type1
       rel
       asymm
       irref
@@ -61,49 +87,68 @@ Definition prio_over
                then true
                else false
   end.
-Notation "t1 >> t2" := (prio_over t1 t2 _)
+Notation "t1 >> t2" := (prio_over1 t1 t2 _)
                           (at level 50) : type_scope.
-(*** but for wich prior ?   is this notation correct ? ***)
+(*** ??????????????????????????????? ***)
+Definition prio_over2
+           (t1 t2 : trans_type)
+           (prior : prior_type2)
+  : bool :=
+  match prior with
+  | mk_prior_type2
+      L
+      no_kidding => false  (* complicated here ... *)
+  end.
+Notation "t1 >> t2" := (prio_over1 t1 t2 _)
+                          (at level 50) : type_scope.
+
 
 (* conditions  on transitions *)
 Inductive cond_type : Set :=
 | mk_cond : nat -> cond_type.
 
 Definition caract_funct_gards := trans_type -> cond_type -> bool.
-(* condition_type t g = true     <=>     g is associated with t *)
 
 Notation "cond [ trans ]" := (caract_funct_gards
                                 trans
                                 cond)  
                                (at level 50) : type_scope.
-(* a (probably useless example of notation ... *)
-Print Between.
+Print Between. (* maybe useful, maybe not at all ... *)
 
-(** "Structure" = "Record" **) 
-Structure SITPN : Type := mk_SITPN
-                      { places : list place_type ;
-                        transs : list trans_type ;
-                        nodup_places : NoDup places ;
-                        nodup_transitions : NoDup transs ;
-                        
-                        pre : weight_type ;
-                        post : weight_type ;
+Structure interval : Set :=
+  mk_inter
+    { mini : nat_star ;
+      maxi : nat_star ;
+   (*   min_le_max : mini <= maxi  *) }.
+ 
 
-                        pre_test : weight_type ;
-                        pre_inhi : weight_type ;
-
-                        marking : marking_type ;
-                        (*marking : list (place_type * nat)*)
-                        
-                        priority : prior_type ;
-                        
-                        conds : trans_type -> list cond_type ;
-
-                        local_clocks : trans_type -> option nat ;
-                        intervals : trans_type -> option (nat * nat)
-                      (* between don't works ! why ? *)}.
+Structure SITPN : Set := mk_SITPN
+                            { places : list place_type ;
+                              transs : list trans_type ;
+                              nodup_places : NoDup places ;
+                              nodup_transitions : NoDup transs ;
+                              
+                              pre : weight_type ;
+                              post : weight_type ;
+                              
+                              pre_test : weight_type ;
+                              pre_inhi : weight_type ;
+                              
+                              marking : marking_type ;
+                              (*marking : list (place_type * nat)*)
+                              
+                              priority : prior_type2 ;
+                              
+                              conds : trans_type -> list cond_type ;
+                              
+                              local_clocks : trans_type ->
+                                             option nat ;
+                              intervals : trans_type ->
+                                          option interval
+                            }.
 Print SITPN.
 
+Print beq_nat. Print Nat.eqb.
 (* verify if 2 places have same index, return a boolean *)
 Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
@@ -115,6 +160,22 @@ Definition beq_transs (t t' : trans_type) : bool :=
   | (mk_trans n, mk_trans n') => beq_nat n n'
   end.
 
+Definition option_eq (A: Type) (eqA: forall (x y: A), {x=y} + {x<>y}):
+  forall (x y: option A), {x=y} + {x<>y}.
+Proof.
+  decide equality.
+Defined.
+Global Opaque option_eq.  (*** ???????????????????? ***)
+
+(* Lifting a relation to an option type. *)
+Inductive option_rel {A B: Type} (R: A -> B -> Prop) : option A -> option B -> Prop :=
+| option_rel_none: option_rel R None None
+| option_rel_some: forall x y, R x y -> option_rel R (Some x) (Some y).
+
+Class StrictOrder {A : Type} (R : relation A) : Prop
+  := {
+      StrictOrder_Irreflexive :> Irreflexive R ;
+      StrictOrder_Transitive :> Transitive R }.
 
 (********** given a marking m, set j tokens in place p **********)
 Print marking_type. Print place_type.
@@ -128,17 +189,22 @@ Definition reset (m:marking_type) (p:place_type) (j:nat)
 
 (* given a marking m, add/remove j tokens inside place p *)  
 Definition modif_mark
-           (m:marking_type)
-           (p:place_type)
-           (j:option nat)  (** option nat because of weight_type **)
-           (op:nat->nat->nat)
+           (m : marking_type)
+           (p : place_type)
+           (j : option nat_star)  (** option nat because of weight_type **)
+           (op : nat -> nat -> nat)
   : marking_type :=
   fun p' =>
     if beq_places p p'
     then match j with
           | None => m p              (* no change *)
-          | Some i => op (m p) i     (* j=i tokens added/removed *)
-          end      
+          | Some i => match i with
+                      | mk_nat_star
+                          inti
+                          carei => op (m p) inti     (* j=i tokens added/removed *)
+                      end
+         end
+           
     else m p'.         (* other places left unchanged  *)
 
 Print Nat.sub. Print Nat.add.   (** the 2 op(erators) to use ... **)
@@ -150,7 +216,7 @@ Print pre. Print weight_type.
 (**** uphill (input set, preset) ***)
 Fixpoint enough_tokens_uphill
          (places : list place_type)
-         (pre_classic_or_test_t : place_type -> option nat)
+         (pre_classic_or_test_t : place_type -> option nat_star)
          (** "classic" and "test" arcs **)
          (m : marking_type)
   : bool :=
@@ -161,18 +227,23 @@ Fixpoint enough_tokens_uphill
                                tail
                                pre_classic_or_test_t
                                m
-                   | Some n => (n <=? (m h))
-                                 &&
-                                 (enough_tokens_uphill
-                                    tail
-                                    pre_classic_or_test_t
-                                    m)
+                   | Some n => match n with
+                               | mk_nat_star
+                                   int 
+                                   careful =>
+                                 (int <=? (m h))
+                                   &&
+                                   (enough_tokens_uphill
+                                      tail
+                                      pre_classic_or_test_t
+                                      m)
+                               end
                    end
   end.
 (**** downhill (output set, postset) ***)
 Fixpoint not_too_many_tokens_uphill
          (places : list place_type)
-         (pre_inhi_t : place_type -> option nat) (* inhibitor arcs *)
+         (pre_inhi_t : place_type -> option nat_star) (* inhibitor arcs *)
          (m : marking_type)
   : bool :=
   match places with
@@ -182,18 +253,24 @@ Fixpoint not_too_many_tokens_uphill
                                tail
                                pre_inhi_t
                                m
-                   | Some n => ((m h) <? n)
-                                 &&
-                                 (not_too_many_tokens_uphill
-                                    tail
-                                    pre_inhi_t
-                                    m)
+                   | Some n => match n with
+                               | mk_nat_star
+                                   int 
+                                   careful =>
+                                 ((m h) <? int)
+                                   &&
+                                   (not_too_many_tokens_uphill
+                                      tail
+                                      pre_inhi_t
+                                      m)
+                               end
                    end
   end.
 
 (*************  "enabled" iff 
 "arcs_classic" + "arcs_test" + "arcs_inhi" satisfied *************)
-Definition pn_trans_is_enabled (places : list place_type)
+Definition trans_is_enabled
+           (places : list place_type)
            (pre : weight_type)
            (pre_test : weight_type)
            (pre_inhi : weight_type)
@@ -213,7 +290,7 @@ Fixpoint enabled_transs_aux
   list trans_type :=
   match l with
   | nil => nil
-  | cons t tail => if (pn_trans_is_enabled
+  | cons t tail => if (trans_is_enabled
                          (places    sitpn)
                          (pre       sitpn)
                          (pre_test  sitpn)
@@ -234,7 +311,7 @@ Definition enabled_transs (sitpn : SITPN)
     sitpn
     (transs sitpn).
 
-(**************** enabled is no firable *************************)
+(**************** "firable" is stronger than "enabled0 " *********)
 Import ListNotations.
 Definition eval_cond (c : cond_type) : bool := true.
 
@@ -258,21 +335,32 @@ Definition conds_firable_trans
     t 
     (conds t). 
 
-Print SITPN.
+Print SITPN. Print interval. Print nat_star.
 Definition inter_firable_trans
            (t : trans_type)
            (local_clocks : trans_type -> option nat)
-           (intervals : trans_type -> option (nat * nat))
+           (intervals : trans_type -> option interval)
   : bool :=
   match (intervals t) with
   | None  => true
-  | Some (a,b) => match (local_clocks t) with
-                  | None => (* impossible pardi *) false
-                  | Some x => if (a <=? x)
-                                   &&
-                                   (x <=? b)
-                              then true
-                              else false
+  | Some inter => match inter with
+                  | mk_inter
+                      mini
+                      maxi => match (local_clocks t) with
+                              | None => (* pas concevable *) false
+                              | Some x => match (mini, maxi) with
+                                          | (mk_nat_star
+                                               inta
+                                               carea,
+                                             mk_nat_star
+                                               intb
+                                               careb) => if (inta <=? x)
+                                                              &&
+                                                              (x <=? intb)
+                                                         then true
+                                                         else false
+                                          end
+                              end
                   end
   end.
 
@@ -280,7 +368,7 @@ Definition firable_trans
            (t : trans_type)
            (conds : trans_type -> list cond_type)
            (local_clocks : trans_type -> option nat)
-           (intervals : trans_type -> option (nat * nat))
+           (intervals : trans_type -> option interval)
             : bool :=
   (conds_firable_trans
      t
@@ -529,7 +617,7 @@ Section effective_conflicts.
   Print SITPN.
   Fixpoint conforming_data_ordering
            (firable_transs : list (list trans_type)) (* better *)
-           (priority : prior_type)
+           (priority : prior_type2)
     : list (list trans_type) :=
     [].
   (* il suffit d'ordonner chacune des listes *)
