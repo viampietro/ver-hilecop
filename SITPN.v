@@ -23,7 +23,7 @@ Inductive trans_type : Set :=
 
 Structure nat_star : Set := mk_nat_star
                               { int : nat ;
-                                careful : int > 0 }.
+                                care : int > 0 }.
 Definition weight_type := trans_type -> place_type -> option nat_star.
 (*  Why not this inductive definition with 4 constructors ????
 Inductive arc_type : Set :=
@@ -100,56 +100,63 @@ Definition prio_over2
       no_kidding => false  (* complicated here ... *)
   end.
 Notation "t1 >> t2" := (prio_over1 t1 t2 _)
-                          (at level 50) : type_scope.
+                         (at level 50) : type_scope.
 
+Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
+Print find_some.  (* maybe useful *)
+(* split  / combine   ... *)
 
-(* conditions  on transitions *)
+Structure SPN : Set := mk_SPN
+                         {  places : list place_type ;
+                            transs : list trans_type ;
+                            nodup_places : NoDup places ;
+                            nodup_transitions : NoDup transs ;
+                            
+                            pre : weight_type ;
+                            post : weight_type ;
+                            
+                            pre_test : weight_type ;
+                            pre_inhi : weight_type ;
+                            
+                            marking : marking_type ;
+                            (*marking : list (place_type * nat)*)
+                            
+                            priority : prior_type2 ;}.
+                            
+
+(* conditions  on transitions...   for  SIPN  (interpreted) *)
 Inductive cond_type : Set :=
 | mk_cond : nat -> cond_type.
 
+(*  inutile
 Definition caract_funct_gards := trans_type -> cond_type -> bool.
 
 Notation "cond [ trans ]" := (caract_funct_gards
                                 trans
                                 cond)  
-                               (at level 50) : type_scope.
+                               (at level 50) : type_scope. *)
+
+Structure SIPN : Set := mk_SIPN
+                          { spn : SPN ;
+                            conds : trans_type -> list cond_type ;}.
+
+(* intervals of time...   for SITPN   (time)  *) 
 Print Between. (* maybe useful, maybe not at all ... *)
 
-Structure interval : Set :=
+Structure time_interval_type : Set :=
   mk_inter
     { mini : nat_star ;
       maxi : nat_star ;
-   (*   min_le_max : mini <= maxi  *) }.
+      cpt  : nat ;
+      (* yes  : mini <= cpt <= maxi ;
+      min_le_max : mini <= maxi  *) }.
  
-Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
-Print find_some.  (* maybe useful *)
-(* split  / combine   ... *)
 Structure SITPN : Set := mk_SITPN
-                            { places : list place_type ;
-                              transs : list trans_type ;
-                              nodup_places : NoDup places ;
-                              nodup_transitions : NoDup transs ;
-                              
-                              pre : weight_type ;
-                              post : weight_type ;
-                              
-                              pre_test : weight_type ;
-                              pre_inhi : weight_type ;
-                              
-                              marking : marking_type ;
-                              (*marking : list (place_type * nat)*)
-                              
-                              priority : prior_type2 ;
-                              
-                              conds : trans_type -> list cond_type ;
-                              
-                              local_clocks : trans_type ->
-                                             option nat ;
+                            { sipn : SIPN ;
                               intervals : trans_type ->
-                                          option interval
-                            }.
-Print SITPN.
+                                          option time_interval_type ;}.
 
+(************ are 2 nat/places/transitions equal ? ************)
 Print beq_nat. Print Nat.eqb.
 SearchPattern (forall x y : _, {x = y} + {x <> y}).
 Print N.eq_dec.   (* awful but useful *) 
@@ -305,34 +312,37 @@ Definition trans_is_enabled
 
 (* for a given marking, return the list of "enabled transitions" *)
 Fixpoint enabled_transs_aux
-         (sitpn : SITPN)
+         (spn : SPN)
          (l : list trans_type) {struct l}
          (* structural induction over list of transitions *) :
   list trans_type :=
   match l with
   | nil => nil
   | cons t tail => if (trans_is_enabled
-                         (places    sitpn)
-                         (pre       sitpn)
-                         (pre_test  sitpn)
-                         (pre_inhi  sitpn)  
-                         (marking   sitpn)
+                         (places    spn)
+                         (pre       spn)
+                         (pre_test  spn)
+                         (pre_inhi  spn)  
+                         (marking   spn)
                          t)
                    then cons t (enabled_transs_aux
-                                  sitpn
+                                  spn
                                   tail)
                    else enabled_transs_aux
-                          sitpn
+                          spn
                           tail
   end.
 (*** for a Petri net, return the list of enabled transitions ***)
-Definition enabled_transs (sitpn : SITPN)
+Definition enabled_transs (spn : SPN)
   : list trans_type :=
   enabled_transs_aux
-    sitpn
-    (transs sitpn).
+    spn
+    (transs spn).
 
+(***************************************************************)
 (**************** "firable" is stronger than "enabled" *********)
+(********************** conditions & intervals *****************)
+
 Import ListNotations.
 Definition eval_cond (c : cond_type) : bool := true.
 
@@ -356,40 +366,37 @@ Definition conds_firable_trans
     t 
     (conds t). 
 
-Print SITPN. Print interval. Print nat_star.
+Print SITPN. Print time_interval_type. Print nat_star.
 Definition inter_firable_trans
            (t : trans_type)
-           (local_clocks : trans_type -> option nat)
-           (intervals : trans_type -> option interval)
+           (intervals : trans_type -> option time_interval_type)
   : bool :=
   match (intervals t) with
   | None  => true
   | Some inter => match inter with
                   | mk_inter
                       mini
-                      maxi => match (local_clocks t) with
-                              | None => (* pas concevable *) false
-                              | Some x => match (mini, maxi) with
-                                          | (mk_nat_star
-                                               inta
-                                               carea,
-                                             mk_nat_star
-                                               intb
-                                               careb) => if (inta <=? x)
-                                                              &&
-                                                              (x <=? intb)
-                                                         then true
-                                                         else false
-                                          end
-                              end
+                      maxi
+                      cpt => match (mini, maxi) with
+                             | (mk_nat_star
+                                  inta
+                                  carea,
+                                mk_nat_star
+                                  intb
+                                  careb) => if (inta <=? cpt)
+                                                 &&
+                                                 (cpt <=? intb)
+                                            then true
+                                            else false
+                             end
                   end
+                    
   end.
 
 Definition firable_trans
            (t : trans_type)
            (conds : trans_type -> list cond_type)
-           (local_clocks : trans_type -> option nat)
-           (intervals : trans_type -> option interval)
+           (intervals : trans_type -> option time_interval_type)
             : bool :=
   (conds_firable_trans
      t
@@ -397,11 +404,11 @@ Definition firable_trans
     &&
     (inter_firable_trans
        t
-       local_clocks 
        intervals).
 
 (*** for a Petri net, return the list of enabled transitions ***)
 (***** just throwing away transitions not "enabled" *)
+Print SITPN.
 Fixpoint firable_transs
          (sitpn : SITPN)
          (enabled_trans : list trans_type)
@@ -410,8 +417,7 @@ Fixpoint firable_transs
   | [] => []
   | t :: tail => if firable_trans
                       t
-                      (conds sitpn)
-                      (local_clocks sitpn)
+                      (conds (sipn sitpn))
                       (intervals sitpn)
                  then t :: (firable_transs
                               sitpn
@@ -486,22 +492,25 @@ Definition fire_one_trans
            (t:trans_type)
   : SITPN  :=
   mk_SITPN
-    (places sitpn)
-    (transs sitpn)
-    (nodup_places sitpn)
-    (nodup_transitions sitpn)
-    (pre sitpn)
-    (post sitpn)
-    (pre_test sitpn)
-    (pre_inhi sitpn)
-    (update_marking
-       (places sitpn)
-       t
-       (pre sitpn) (post sitpn)
-       (marking sitpn))
-    (priority sitpn)
-    (conds sitpn)
-    (local_clocks sitpn)
+    (mk_SIPN
+       (mk_SPN
+          (places (spn (sipn sitpn)))
+          (transs (spn (sipn sitpn)))
+          (nodup_places (spn (sipn sitpn)))
+          (nodup_transitions (spn (sipn sitpn)))
+          (pre (spn (sipn sitpn)))
+          (post (spn (sipn sitpn)))
+          (pre_test (spn (sipn sitpn)))
+          (pre_inhi (spn (sipn sitpn)))
+          (update_marking 
+             (places (spn (sipn sitpn)))
+             t
+             (pre (spn (sipn sitpn))) (post (spn (sipn sitpn)))
+             (marking (spn (sipn sitpn))))
+          (priority (spn (sipn sitpn)))
+       )
+       (conds (sipn sitpn))
+    )
     (intervals sitpn).
 
 Fixpoint fire_many_transs
@@ -522,27 +531,41 @@ Fixpoint fire_many_transs
 Import ListNotations.  (* very handful *)
 Require Import Coq.Sorting.Sorted. Search sort.
 
-Section insertion_sort.
-  
+(************************ sorting ********************)
 
+Section insertion_sort.
+
+
+  Print prior_type1. Print prior_type2.
   Fixpoint insert
-           (a:trans_type)
-           (l: list trans_type)
+           (a : trans_type)
+           (l : list trans_type)
+           (prior1 : prior_type1)
   : list trans_type :=
     match l with
     | nil  => [a]
-    | b::l' => if (prior_type a b)
-               then a::l
-               else b::insert a l'
+    | b::l' => match prior1 with
+               | mk_prior_type1
+                   rel
+                   irre
+                   assym
+                   trans => if (rel a b)
+                            then a :: l
+                            else b :: (insert
+                                         a l' prior1)
+               end
     end.
   
-  Fixpoint sort (l: list A) : list A :=
+  Fixpoint sort
+           (l: list trans_type)
+           (prior1 : prior_type1)
+    : list trans_type :=
     match l with
     | [ ] => [ ]
-    | a::l' => insert a (sort l')
+    | a::l' => insert
+                 a (sort l' prior1) prior1
     end.
   
-  Variable a : A.
   (* Fixpoint find_highest (A:Type) (l:list A) : (A * list A) :=
     match l with
     | nil => (a, nil)
@@ -552,18 +575,16 @@ Section insertion_sort.
     end.*)
 
   Definition sort_transs
-             (prior : prior_type)
+             (prior1 : prior_type1)
              (l : list trans_type)
     : list trans_type :=
     sort
-      trans_type
-      prior
-      l.
+      l
+      prior1.
   
-End lists.
+End insertion_sort.
 
-
-
+(********************************************************)
 
 Section structural_conflicts.
   Variable pre : weight_type.
@@ -707,24 +728,32 @@ End effective_conflicts.
 
 
 (********************* MAIN FUNCTION ************************)
-Definition fire_pn (pn:PN) : PN :=
-  match pn_is_enabled_because_look pn with
-  | nil => pn  (* fire no transition *)
-  | t::tail => fire_trans
-                 pn
+Search SPN. Search SIPN. Search SITPN.
+
+(*
+Definition fire_pn (sitpn : SITPN) : SITPN :=
+  match enabled_transs sitpn with
+  | nil => sitpn  (* fire no transition *)
+  | t::tail => fire_one_trans
+                 sitpn
                  (highest_transition
-                    (priority pn)
-                    (pn_is_enabled_because_look pn))
-  end.
+                    (priority (sipn sitpn))
+                    (enabled_transs (sipn sitpn)))
+  end.  ****************** has been ? **************************)
 
 (**** for the 3 following functions the goal is to have lists ! ****)
-Fixpoint animate_pn (pn:PN) (n:nat) : list marking_type :=
+Fixpoint animate_pn
+         (sitpn : SITPN)
+         (n : nat)
+  : list marking_type :=
   (*  run "fire_pn" for n steps, 
       return a path of length n  *)
   match n with
-  | O => [ marking pn ]
-  | S n' => (marking pn) :: (animate_pn (fire_pn pn)
-                                        n')
+  | O => [ marking (spn (sipn sitpn )) ]
+  | S n' => (marking (spn (sipn sitpn)))
+              ::
+              (animate_pn (fire_pn sitpn)
+                          n')
   end.  
 Print marking_type.
 Search list.
