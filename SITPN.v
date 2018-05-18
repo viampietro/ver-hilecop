@@ -59,14 +59,15 @@ Search list.
 Print Equivalence. (* here it's different, just no cycle *)
 Inductive prior_type2 : Set :=
   mk_prior_type2
-    { list_lists : list (list trans_type) ;
+    { list_lists : list (list trans_type) ; }.
+    (*
       no_inter :
         forall (l1 l2 : list trans_type),
         forall (x : trans_type),
           (In l1 list_lists) -> (In l2 list_lists) ->
           (In x l1) -> (In x l2) ->
           (l1 = l2) ;  }.
-(*  cover :
+  cover :
        forall (x : trans_type),
          (In x transs) ->
          exists (l : list trans_type),
@@ -97,7 +98,8 @@ Definition prio_over2
   match prior with
   | mk_prior_type2
       L
-      no_kidding => false  (* complicated here ... *)
+     (* no_inter
+       cover *) => false  (* complicated here ... *)
   end.
 Notation "t1 >> t2" := (prio_over1 t1 t2 _)
                          (at level 50) : type_scope.
@@ -138,10 +140,11 @@ Notation "cond [ trans ]" := (caract_funct_gards
 
 Structure SIPN : Set := mk_SIPN
                           { spn : SPN ;
-                            conds : trans_type -> list cond_type ;}.
+                            conds : trans_type -> list cond_type
+                            (** good to have list of conditions ??? **) ;}.
 
 (* intervals of time...   for SITPN   (time)  *) 
-Print Between. (* maybe useful, maybe not at all ... *)
+Print Between. (* maybe useful or maybe not at all *)
 
 Structure time_interval_type : Set :=
   mk_inter
@@ -159,7 +162,7 @@ Structure SITPN : Set := mk_SITPN
 (************ are 2 nat/places/transitions equal ? ************)
 Print beq_nat. Print Nat.eqb.
 SearchPattern (forall x y : _, {x = y} + {x <> y}).
-Print N.eq_dec.   (* awful but useful *) 
+Print N.eq_dec.   (* awful but useful ! *) 
 (* verify if 2 places have same index, return a boolean *)
 Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
@@ -730,9 +733,9 @@ End effective_conflicts.
 (********************* MAIN FUNCTION ************************)
 Search SPN. Search SIPN. Search SITPN.
 
-(*
-Definition fire_pn (sitpn : SITPN) : SITPN :=
-  match enabled_transs sitpn with
+
+Definition fire_pn (sitpn : SITPN) : SITPN := sitpn.
+(*  match enabled_transs sitpn with
   | nil => sitpn  (* fire no transition *)
   | t::tail => fire_one_trans
                  sitpn
@@ -745,7 +748,8 @@ Definition fire_pn (sitpn : SITPN) : SITPN :=
 Fixpoint animate_pn
          (sitpn : SITPN)
          (n : nat)
-  : list marking_type :=
+  : list marking_type := [].
+(*
   (*  run "fire_pn" for n steps, 
       return a path of length n  *)
   match n with
@@ -754,7 +758,7 @@ Fixpoint animate_pn
               ::
               (animate_pn (fire_pn sitpn)
                           n')
-  end.  
+  end.  *)
 Print marking_type.
 Search list.
 Fixpoint function2list (places:list place_type) (m:marking_type)
@@ -764,24 +768,17 @@ Fixpoint function2list (places:list place_type) (m:marking_type)
   | p :: tail => (p, m p) :: function2list tail m
   end.
 
-Fixpoint animate_pn_list (pn:PN) (n:nat) : list (list (place_type * nat)) :=
+
+Fixpoint animate_pn_list (spn:SPN) (n:nat) : list (list (place_type * nat)) := [[]].
+(*
   (* on fait n pas de calcul  
     et on retourne le chemin des marquages *)
   match n with  
-  | O => [ function2list (places pn) (marking pn) ]
-  | S n' => (function2list (places pn) (marking pn))
-              :: (animate_pn_list (fire_pn pn) n')
-  end.  
+  | O => [ function2list (places spn) (marking spn) ]
+  | S n' => (function2list (places spn) (marking spn))
+              :: (animate_pn_list (fire_pn spn) n')
+  end.  *)
 
-
-(****************** structures are nice ****************************)
-
-Record IPN : Type := mk_IPN
-                       { pn : PN ;
-                         conditions : caract_funct_gards
-                         (* actions and functions ...
-                           not relevant for now *) }.
-Print IPN.
 
 
 (******************************************************************)
@@ -797,7 +794,6 @@ Definition ex_places : (list place_type) :=
     [ mk_place 0 ;
       mk_place 1 ;
       mk_place 2 ].
-Print PN.
 Definition ex_nodup_places : NoDup ex_places :=
   NoDup_nodup
     places_eq_dec
@@ -813,11 +809,19 @@ Definition ex_nodup_transs : NoDup ex_transs :=
     transs_eq_dec
     ex_transs. 
 
+(**********************************************)
+Print nat_star. Print weight_type.
+Lemma onegtzero_proof : 1 > 0. Proof. omega. Qed.
 (* 3 arcs PT (place transition)  "incoming" *) 
 Definition ex_pre_function (t : trans_type) (p : place_type)
-  :=
-  match (t, p) with
-  | (mk_trans 0, mk_place 0) => Some 1
+  : weight_type :=
+  match t with
+  | mk_trans 0 => match p with
+                    mk_place 0 => Some (mk_nat_star
+                                        1
+                                        onegtzero_proof)         
+                  end
+                    
   | (mk_trans 1, mk_place 1) => Some 2
   | (mk_trans 2, mk_place 2) => Some 1
   | _ => None
@@ -861,7 +865,7 @@ Definition ex_pre_inhi_function (t : trans_type) (p : place_type) :=
 (* disons   t_j prioritaire sur t_i   pour tout j >= i 
    " plus l'indice est grand, plus c'est prioritaire "  *)
 (* faut-il un ordre strict ou large ? *)
-Definition ex_priority (t1 t2 : trans_type) : bool :=
+Definition ex_prior1 (t1 t2 : trans_type) : bool :=
   (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
   | (mk_trans 0, mk_trans 0) => false
@@ -873,11 +877,11 @@ Definition ex_priority (t1 t2 : trans_type) : bool :=
   | (mk_trans 2, mk_trans 0) => false
   | (mk_trans 2, mk_trans 1) => false
   | (mk_trans 2, mk_trans 2) => false
-  | (_,_) => false  (* False or True     who care ? *) 
-  end.
-
+  | (_,_) => false  (* False or True     who care ? -> option bool?*) 
+  end.    
+    
 Print pre. Print weight_type.
-Definition ex_pn := mk_PN
+Definition ex_pn := mk_SPN
                       ex_places
                       ex_transs
                       ex_nodup_places
@@ -889,7 +893,7 @@ Definition ex_pn := mk_PN
                       ex_pre_inhi_function                 
                       
                       ex_initial_marking
-                      ex_priority.
+                      ex_prior1.
 
 Check ex_pn. Compute (marking ex_pn). (* initial marking good *)
 
@@ -926,18 +930,22 @@ Compute (fire_trans
                  ex_pn))). 
 
 (**********************************************************)
-(* should I print the list of transitions 
+(* should I also print the list of transitions 
    labelling this path of markings ?
 
-should I print the list of enabled transitions at each step ?
+should I print the list of all enabled transitions at each step ?
 
 (**** transitions can be _partitioned_ :
-structural conflicts are _classes_ of transitions ***)
-
-Some functions need to be done to have "nice" priorities  *)
+structural conflicts are _classes_ of transitions 
+  if an order is given ,  great  ***)  *)
 
 
 (**********************************************************)
+
+Print SPN. Print prior_type2.
+Definition ex_prior2 : prior_type2 :=
+  mk_prior_type2
+    [[mk_trans 1 ; mk_trans 12] ; [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ; [mk_trans 3 ; mk_trans 8 ; mk_trans 16] ; [mk_trans 4 ; mk_trans 9 ; mk_trans 13 ; mk_trans 14] ; [mk_trans 6]].
 
 
 
