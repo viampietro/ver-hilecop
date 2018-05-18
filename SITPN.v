@@ -245,7 +245,7 @@ Print Nat.sub. Print Nat.add.   (** the 2 op(erators) to use ... **)
 Locate "<?". Print Nat.ltb. Print Nat.leb.
 Print pre. Print weight_type.
 (**** uphill (input set, preset) ***)
-Fixpoint enough_tokens_uphill
+Fixpoint pre_or_test_check
          (places : list place_type)
          (pre_classic_or_test_t : place_type -> option nat_star)
          (** "classic" and "test" arcs **)
@@ -254,7 +254,7 @@ Fixpoint enough_tokens_uphill
   match places with
   | nil => true
   | cons h tail => match pre_classic_or_test_t h with
-                   | None => enough_tokens_uphill
+                   | None => pre_or_test_check
                                tail
                                pre_classic_or_test_t
                                m
@@ -264,7 +264,7 @@ Fixpoint enough_tokens_uphill
                                    careful =>
                                  (int <=? (m h))
                                    &&
-                                   (enough_tokens_uphill
+                                   (pre_or_test_check
                                       tail
                                       pre_classic_or_test_t
                                       m)
@@ -272,7 +272,7 @@ Fixpoint enough_tokens_uphill
                    end
   end.
 (**** downhill (output set, postset) ***)
-Fixpoint not_too_many_tokens_uphill
+Fixpoint inhib_check
          (places : list place_type)
          (pre_inhi_t : place_type -> option nat_star) (* inhibitor arcs *)
          (m : marking_type)
@@ -280,7 +280,7 @@ Fixpoint not_too_many_tokens_uphill
   match places with
   | nil => true
   | cons h tail => match pre_inhi_t h with
-                   | None => not_too_many_tokens_uphill
+                   | None => inhib_check
                                tail
                                pre_inhi_t
                                m
@@ -290,7 +290,7 @@ Fixpoint not_too_many_tokens_uphill
                                    careful =>
                                  ((m h) <? int)
                                    &&
-                                   (not_too_many_tokens_uphill
+                                   (inhib_check
                                       tail
                                       pre_inhi_t
                                       m)
@@ -307,12 +307,197 @@ Definition trans_is_enabled
            (pre_inhi : weight_type)
            (m : marking_type)
   : trans_type -> bool :=  
-  fun t => (enough_tokens_uphill places (pre t) m)
+  fun t => (pre_or_test_check places (pre t) m)
              &&
-             (enough_tokens_uphill places (pre_test t) m)
+             (pre_or_test_check places (pre_test t) m)
              &&
-             (not_too_many_tokens_uphill places (pre_inhi t) m). 
+             (inhib_check places (pre_inhi t) m). 
+(*** cette belle fonction ne sert en fait probablement pas ***)
 
+
+(*************   update marking   *********************)
+Fixpoint update_marking_pre
+         (l : list place_type)
+         (t : trans_type)
+         (pre : weight_type)
+         (m : marking_type)
+         {struct l}
+  (* structural induction over list of places *)
+  : marking_type :=
+  match l with
+  | nil => m
+  | cons p tail => update_marking_pre
+                     tail
+                     t
+                     pre
+                     (modif_mark
+                           m
+                           p
+                           (pre t p)
+                           Nat.sub)
+  end.
+
+Fixpoint update_marking_post
+         (l : list place_type) 
+         (t : trans_type)
+         (post : weight_type)
+         (m : marking_type)         
+  (* structural induction over list of places *)
+  : marking_type :=
+  match l with
+  | nil => m
+  | cons p tail => update_marking_post
+                     tail
+                     t
+                     post
+                     (modif_mark
+                           m
+                           p
+                           (post t p)
+                           Nat.add)
+  end.
+
+Definition update_marking
+           (P : list place_type) 
+           (t : trans_type)
+           (pre post : weight_type)
+           (m : marking_type)         
+  (* structural induction over list of places *)
+  : marking_type :=
+  update_marking_post
+    P  
+    t
+    post
+    (update_marking_pre
+       P 
+       t
+       pre
+       m).
+(***** cette fonction ne sert a rien non plus ... ***)
+
+Import ListNotations. Check update_marking_pre.
+Fixpoint fire_aux_pre
+         (places : list place_type) (pre test inhib : weight_type)
+         (m_init m_intermediate : marking_type)
+         (l_firable l_fired : list trans_type)
+  : (marking_type * list trans_type) :=
+  match l_firable with
+  | t :: tail => if (pre_or_test_check
+                      places
+                      (pre t)
+                      m_intermediate)
+                      && (pre_or_test_check
+                            places
+                            (test t)
+                            m_init)
+                      && (inhib_check
+                            places
+                            (inhib t)
+                            m_init)
+                 then fire_aux_pre
+                        places pre test inhib
+                        m_init (update_marking_pre
+                                  places t pre m_intermediate)
+                        tail (l_fired ++ [t])
+                        (* concatener devant ou derriere ? *)
+                 else fire_aux_pre
+                        places pre test inhib
+                        m_init m_intermediate
+                        tail l_fired
+  | []  => (m_intermediate, l_fired)
+  end.
+
+Fixpoint fire_aux_post
+         (places : list place_type) (post : weight_type)
+         (m_init : marking_type)
+         (l_fired : list trans_type)
+  : marking_type := 
+  match l_fired with
+  | []  => m_init
+  | t :: tail  => fire_aux_post
+                    places post
+                    (update_marking_post
+                       places t post m_init)
+                    tail
+  end.
+
+Definition fire_aux
+           (places : list place_type)
+           (pre test inhib post : weight_type)
+           (m_init m_intermediate : marking_type)
+           (l_firable l_fired : list trans_type)
+  : marking_type :=
+  fire aux_post
+       places post
+       (fst (fire_aux_pre
+            )
+       (snd (fire_aux_pre
+            )
+
+
+    
+  match l_fired with
+  | []  => m_init
+  | t :: tail  => fire_aux_post
+                    places post
+                    (update_marking_post
+                       places t post m_init)
+                    tail
+  end.
+
+                       
+
+
+Fixpoint fire
+         (places : list place_type) (pre test inhib : weight_type)
+         (m_init m_intermediate : marking_type)
+         (L_firable L_fired : list (list trans_type))
+  : (marking_type * list trans_type) := 
+  match L_firable with
+  | []  => m
+
+(* fire transition t, only updating the marking of the Petri net ! *)
+Definition fire_one_trans
+           (sitpn : SITPN)
+           (t:trans_type)
+  : SITPN  :=
+  mk_SITPN
+    (mk_SIPN
+       (mk_SPN
+          (places (spn (sipn sitpn)))
+          (transs (spn (sipn sitpn)))
+          (nodup_places (spn (sipn sitpn)))
+          (nodup_transitions (spn (sipn sitpn)))
+          (pre (spn (sipn sitpn)))
+          (post (spn (sipn sitpn)))
+          (pre_test (spn (sipn sitpn)))
+          (pre_inhi (spn (sipn sitpn)))
+          (update_marking 
+             (places (spn (sipn sitpn)))
+             t
+             (pre (spn (sipn sitpn))) (post (spn (sipn sitpn)))
+             (marking (spn (sipn sitpn))))
+          (priority (spn (sipn sitpn)))
+       )
+       (conds (sipn sitpn))
+    )
+    (intervals sitpn).
+
+Fixpoint fire_many_transs
+           (sitpn : SITPN)
+           (to_fire : list trans_type)
+  : SITPN :=
+  match to_fire with
+  | nil => sitpn
+  | t :: tail  => fire_many_transs
+                    (fire_one_trans
+                       sitpn
+                       t)
+                    tail
+  end.
+
+
+                      
 (* for a given marking, return the list of "enabled transitions" *)
 Fixpoint enabled_transs_aux
          (spn : SPN)
@@ -346,7 +531,7 @@ Definition enabled_transs (spn : SPN)
 (**************** "firable" is stronger than "enabled" *********)
 (********************** conditions & intervals *****************)
 
-Import ListNotations.
+
 Definition eval_cond (c : cond_type) : bool := true.
 
 Fixpoint conds_firable_trans_aux
@@ -428,105 +613,6 @@ Fixpoint firable_transs
                  else (firable_transs
                          sitpn
                          tail)
-  end.
-
-(************************************)
-Fixpoint update_marking_pre
-         (l : list place_type)
-         (t : trans_type)
-         (pre : weight_type)
-         (m : marking_type)
-         {struct l}
-  (* structural induction over list of places *)
-  : marking_type :=
-  match l with
-  | nil => m
-  | cons p tail => update_marking_pre
-                     tail
-                     t
-                     pre
-                     (modif_mark
-                           m
-                           p
-                           (pre t p)
-                           Nat.sub)
-  end.
-
-Fixpoint update_marking_post
-         (l : list place_type) 
-         (t : trans_type)
-         (post : weight_type)
-         (m : marking_type)         
-  (* structural induction over list of places *)
-  : marking_type :=
-  match l with
-  | nil => m
-  | cons p tail => update_marking_post
-                     tail
-                     t
-                     post
-                     (modif_mark
-                           m
-                           p
-                           (post t p)
-                           Nat.add)
-  end.
-
-Definition update_marking
-           (P : list place_type) 
-           (t : trans_type)
-           (pre post : weight_type)
-           (m : marking_type)         
-  (* structural induction over list of places *)
-  : marking_type :=
-  update_marking_post
-    P  
-    t
-    post
-    (update_marking_pre
-       P 
-       t
-       pre
-       m).
-
-(* fire transition t, only updating the marking of the Petri net ! *)
-Definition fire_one_trans
-           (sitpn : SITPN)
-           (t:trans_type)
-  : SITPN  :=
-  mk_SITPN
-    (mk_SIPN
-       (mk_SPN
-          (places (spn (sipn sitpn)))
-          (transs (spn (sipn sitpn)))
-          (nodup_places (spn (sipn sitpn)))
-          (nodup_transitions (spn (sipn sitpn)))
-          (pre (spn (sipn sitpn)))
-          (post (spn (sipn sitpn)))
-          (pre_test (spn (sipn sitpn)))
-          (pre_inhi (spn (sipn sitpn)))
-          (update_marking 
-             (places (spn (sipn sitpn)))
-             t
-             (pre (spn (sipn sitpn))) (post (spn (sipn sitpn)))
-             (marking (spn (sipn sitpn))))
-          (priority (spn (sipn sitpn)))
-       )
-       (conds (sipn sitpn))
-    )
-    (intervals sitpn).
-
-Fixpoint fire_many_transs
-           (sitpn : SITPN)
-           (to_fire : list trans_type)
-  : SITPN :=
-  match to_fire with
-  | nil => sitpn
-  | t :: tail  => fire_many_transs
-                    (fire_one_trans
-                       sitpn
-                       t)
-                    tail
   end.
 
 (************* sections *******************************)
