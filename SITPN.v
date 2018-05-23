@@ -532,9 +532,9 @@ Definition fire_aux_pre_listing (spn : SPN)
 Fixpoint fire_aux_post
          (places : list place_type) (post : weight_type)
          (marking_half : marking_type)
-         (L_fired : list (list trans_type))
+         (subclasses_half_fired : list (list trans_type))
   : marking_type := 
-  match L_fired with
+  match subclasses_half_fired with
   | []  => marking_half
   | l :: Ltail  => fire_aux_post
                      places post
@@ -552,13 +552,15 @@ Definition fire
            (m_init : marking_type)
            (classes_transs : list (list trans_type))
   : marking_type :=
+  let res := fire_aux_pre
+               places  pre test inhib 
+               m_init
+               classes_transs []
+  in
   fire_aux_post
     places post
-    m_init
-    (fst (fire_aux_pre
-            places  pre test inhib 
-            m_init
-            classes_transs [] )).
+    (snd res)
+    (fst res).
 
 (*******************************************************************)
 (************* to animate a SPN (only the marking evolves)  ********)
@@ -916,12 +918,12 @@ Compute (animate_pn_list
 
 Compute (fire_spn_listing
            ex_spn).
-Compute (fire_aux_pre_listing ex_spn). (* cool ! *)
+Compute (fire_aux_pre_listing ex_spn). (* cool ! fire_aux_pre OK  *)
 
 Print ex_prior2_aux. Print ex_places.
 Search marking_type.
 
-Print fire_aux_pre. Print sub_fire_aux_pre. Print fire.
+Print fire_aux_post. Print sub_fire_aux_post. Print fire.
 
 Compute (sub_fire_aux_pre 
            (places ex_spn)
@@ -937,33 +939,6 @@ Compute (fire_aux_pre
            (ex_prior2_aux)
            []). 
 
-
-
-Compute (pn_is_enabled_because_look
-           (fire_pn
-              ex_pn)).
-Compute (pn_is_enabled_because_look
-           (fire_pn
-              (fire_pn
-                 ex_pn))).   (* ... *)
-
-
-Compute (highest_transition
-           ex_priority
-           (pn_is_enabled_because_look
-              ex_pn)).
-Compute (highest_transition
-           ex_priority
-           (pn_is_enabled_because_look
-              (fire_pn
-                 ex_pn))).   (*  t_2 est prio sur t_0   *) 
-
-Compute (fire_trans
-           ex_pn
-           (highest_transition
-              ex_priority
-              (pn_is_enabled_because_look
-                 ex_pn))). 
 
 (**********************************************************)
 (* should I also print the list of transitions 
