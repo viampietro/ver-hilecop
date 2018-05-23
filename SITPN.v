@@ -1,5 +1,5 @@
 (*************************************************************)
-(**** by Mathieu Lasjaunias, David Delahaye, David Andreu ****)
+(**** by ML, DD, DA ****)
 (*************************************************************)
 
 Require Import Arith Omega List Bool.
@@ -880,7 +880,7 @@ Definition ex_prior1 (t1 t2 : trans_type) : bool :=
   end.    *)
 
 Print prior_type2.
-Definition ex_prior2_aux :=
+Definition ex_prior_aux :=
   [
     [mk_trans 1 ; mk_trans 12] ;
     [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ;
@@ -888,9 +888,8 @@ Definition ex_prior2_aux :=
     [mk_trans 4 ; mk_trans 9 ; mk_trans 13 ; mk_trans 14] ;
     [mk_trans 6]
   ].
-  
-Definition ex_prior2 :=
-  mk_prior_type2 ex_prior2_aux.    
+Definition ex_prior :=
+  mk_prior_type2 ex_prior_aux.    
     
 Print pre. Print weight_type.
 Definition ex_spn := mk_SPN
@@ -905,7 +904,7 @@ Definition ex_spn := mk_SPN
                       ex_inhib                 
                       
                       ex_marking
-                      ex_prior2.
+                      ex_prior.
 
 Check ex_spn. Compute (marking ex_spn). (* initial marking *)
 
@@ -914,30 +913,72 @@ Compute (animate_pn_list
            ex_spn
            10).  (* 11 markings *)
 
+Definition ex_prior_aux2 :=
+  [
+    [mk_trans 1 ; mk_trans 12] ;
+    [mk_trans 2 ; mk_trans 0 ; mk_trans 5] ;
+    [mk_trans 16 ; mk_trans 8 ; mk_trans 3] ;
+    [mk_trans 9 ; mk_trans 4 ; mk_trans 14 ; mk_trans 13] ;
+    [mk_trans 6]
+  ].
+Definition ex_prior2 :=
+  mk_prior_type2 ex_prior_aux2.    
+Definition ex_spn2 := mk_SPN
+                        ex_places
+                        ex_transs
+                        ex_nodup_places
+                        ex_nodup_transs
+                        
+                        ex_pre
+                        ex_post
+                        ex_test
+                        ex_inhib                 
+                        
+                        ex_marking
+                        ex_prior2.
+Compute (animate_pn_list
+           ex_spn2
+           10).  (* 11 markings *)
+(************************************  SPN 3 ******)
+Definition ex_prior_aux3 :=
+  [
+    [mk_trans 12 ; mk_trans 1] ;
+    [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ;
+    [mk_trans 16 ; mk_trans 3 ; mk_trans 8] ;
+    [mk_trans 9 ; mk_trans 14 ; mk_trans 4 ; mk_trans 13] ;
+    [mk_trans 6]
+  ].
+Definition ex_prior3 :=
+  mk_prior_type2 ex_prior_aux3.    
+Definition ex_spn3 := mk_SPN
+                        ex_places
+                        ex_transs
+                        ex_nodup_places
+                        ex_nodup_transs
+                        
+                        ex_pre
+                        ex_post
+                        ex_test
+                        ex_inhib                 
+                        
+                        ex_marking
+                        ex_prior3.
+Compute (animate_pn_list
+           ex_spn3
+           10).  (* 11 markings *)
+
+
 (********   debuggage   ******)
 
 Compute (fire_spn_listing
            ex_spn).
 Compute (fire_aux_pre_listing ex_spn). (* cool ! fire_aux_pre OK  *)
 
-Print ex_prior2_aux. Print ex_places.
+Print ex_prior_aux. Print ex_places.
 Search marking_type.
 
 Print fire_aux_post. Print sub_fire_aux_post. Print fire.
 
-Compute (sub_fire_aux_pre 
-           (places ex_spn)
-           (pre ex_spn) (test ex_spn) (inhib ex_spn)
-           (marking ex_spn) (marking ex_spn)
-           [mk_trans 1; mk_trans 12]
-           []).
-
-Compute (fire_aux_pre
-           (places ex_spn)
-           (pre ex_spn) (test ex_spn) (inhib ex_spn)
-           (marking ex_spn)
-           (ex_prior2_aux)
-           []). 
 
 
 (**********************************************************)
