@@ -327,7 +327,7 @@ Definition update_marking
        m).
 (***** useless... because one has to decompose step by step. ***)
 
-(**********   for debugging ***********************)
+(**********   to print the markings  ***********************)
 (*** list the tokens !!!! ***)
 Fixpoint function2list
          (places : list place_type)
@@ -506,39 +506,26 @@ Fixpoint fire_pre
                     ((fst (sub_fire_aux_pre
                              places  pre test inhib
                              marking marking
-                             l [])) :: classes_half_fired)
-                                    
-               (*   ((fst (sub_fire_aux_pre
-                          places  pre test inhib
-                          marking marking
-                          l [])) ::
-                                 (fst (fire_aux_pre
-                                         places
-                                         pre test inhib 
-                                         m
-                                         Ltail classes_half_fired)),
-                   m) *)
+                             l [])) :: classes_half_fired)         
   end.
 
-Print SPN.  (*** for debug only **)
-Definition fire_pre_listing (spn : SPN)
+Print SPN.  (*** for nice prints  only  !  **)
+Definition fire_pre_print
+           (places : list place_type) (pre test inhib : weight_type)
+           (marking : marking_type)
+           (classes_transs classes_half_fired : list (list trans_type))
   : (list (list trans_type)) * list (place_type * nat) :=
   let res := (fire_pre
-                (places spn)
-                (pre spn)
-                (test spn)
-                (inhib spn)
-                (marking spn)
-                match (priority spn) with
-                | mk_prior_type2
-                    Lol => Lol
-                end
-                [])
+                places 
+                pre
+                test 
+                inhib 
+                marking
+                classes_transs [] )
   in
-  (fst res, function2list
-              (places spn)
-              (snd (res))
-  ).
+  ((fst res), function2list
+                places 
+                (snd res) ).
 
 
 
@@ -562,77 +549,111 @@ Fixpoint fire_post
   end. 
 
 Print SPN. Print prior_type2.
-Definition fire
+Definition fire  (* returns  [transitions fired + final marking] *)
            (places : list place_type)
            (pre test inhib post : weight_type)
            (m_init : marking_type)
            (classes_transs : list (list trans_type))
-  : marking_type :=
+  : (list (list trans_type)) * marking_type :=
   let res := fire_pre
                places  pre test inhib 
                m_init
                classes_transs []
   in
-  fire_post
-    places post
-    (snd res)
-    (fst res).
+  ((fst res),
+   fire_post
+     places post
+     (snd res)
+     (fst res)).
+   
 
-(* for debug only : to list the fired transitions *)
-Definition fire_debug
-           (places : list place_type)
-           (pre test inhib post : weight_type)
-           (m_init : marking_type)
-           (classes_transs : list (list trans_type))
-  : list (list trans_type) :=
-  let res := fire_pre
-               places  pre test inhib 
-               m_init
-               classes_transs []
-  in
-  (fst res).
 
 (*****************************************************************)
 (************* to animate a SPN (only the marking evolves)  ******)
 
 Print SPN. Print prior_type2.
-Definition fire_spn (spn : SPN) :=
-  mk_SPN
-    (places spn)
-    (transs spn)
-    (nodup_places spn)
-    (nodup_transitions spn)
-    (pre spn)
-    (post spn)
-    (test spn)
-    (inhib spn)
-    (* marking *)
-    (fire
-       (places spn)
-       (pre spn)
-       (test spn)
-       (inhib spn)
-       (post spn)
-       (marking spn)
-       match (priority spn) with
-       | mk_prior_type2
-           (* partition *)
-           Lol => Lol
-       end
-    )
-    (priority spn).
-
-
+Definition fire_spn (spn : SPN)
+   : (list (list trans_type)) * SPN :=
+  ((fst
+      (fire
+         (places spn)
+         (pre spn)
+         (test spn)
+         (inhib spn)
+         (post spn)
+         (marking spn)
+         match (priority spn) with
+         | mk_prior_type2
+             (* partition *)
+             Lol => Lol
+         end
+      )
+   ) ,
+   (mk_SPN
+      (places spn)
+      (transs spn)
+      (nodup_places spn)
+      (nodup_transitions spn)
+      (pre spn)
+      (post spn)
+      (test spn)
+      (inhib spn)
+      (* marking *)
+      (snd
+         (fire
+            (places spn)
+            (pre spn)
+            (test spn)
+            (inhib spn)
+            (post spn)
+            (marking spn)
+            match (priority spn) with
+            | mk_prior_type2
+                (* partition *)
+                Lol => Lol
+            end
+      ))
+      (priority spn))
+  ).
+   
+   
 Fixpoint animate_spn
          (spn : SPN)
          (n : nat)
-  : list marking_type := 
+  : list
+      (list (list trans_type)  * marking_type) :=
+  (* on fait n pas de calcul  ...  *)
   match n with
-  | O => [ marking spn ]
-  | S n' => (marking spn 
-                     ::
-                     (animate_spn (fire_spn spn) n'))
+  | O => [ ( [] , (marking spn) ) ]
+  | S n' =>  let res := (fire_spn spn) in
+             ( (fst res) ,
+               (marking spn) ) 
+               ::
+               (animate_spn
+                  (snd res)
+                  n')
   end.
+Definition animate_spn_print (* split / combine ... *)
+           (spn:SPN)
+           (n:nat)
+  : list
+      (list (trans_type) * list (place_type * nat)) := 
+  
+  let res := animate_spn
+               spn
+               n
+  in
+  (
+  | O => [ ( [ ] ,
+             function2list
+               (places spn)
+               (marking spn) )
+             (* initial SPN *)
+         ]
+  | S n' => (function2list (places spn) (marking spn))
+              :: (animate_spn_print (fire_spn spn) n')
+  end.  
+
 
 (****************************************************************)
 (******************** to print and test with the eye ************)
@@ -643,24 +664,10 @@ Search list.
 Definition fire_spn_listing (spn : SPN) :=
   function2list
     (places spn)
-    (marking (fire_spn spn)).
+    (marking (snd (fire_spn spn))).
 
 
-Fixpoint animate_spn_print (spn:SPN) (n:nat) :
-  list (list (trans_type) *
-        list (place_type * nat)) := 
-  (* on fait n pas de calcul  
-    et on retourne le chemin des marquages *)
-  match n with  
-  | O => [ ( [ ] ,
-             function2list
-               (places spn)
-               (marking spn) )
-             (* initial SPN *)
-         ]
-  | S n' => (function2list (places spn) (marking spn))
-              :: (animate_spn_print (fire_spn spn) n')
-  end.  
+
 
 
 (******************************************************************)
