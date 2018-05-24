@@ -1,11 +1,10 @@
-(*************************************************************)
+(***********************)
 (**** by ML, DD, DA ****)
-(*************************************************************)
+(***********************)
 
 Require Import Arith Omega List Bool.
-Search nat.
 (* Require Import Nat. *)
-Search list.
+Search nat. Search list.
 
 (*********************************************************)
 (***** Syntax of (generalized, extended) Petri nets ******)
@@ -23,7 +22,7 @@ Inductive trans_type : Set :=
 
 Structure nat_star : Set := mk_nat_star
                               { int : nat ;
-                                care : int > 0 }.
+                                posi : int > 0 }.
 (* a given arc has some weight >= 1 *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
 (*  Why not this inductive definition with 4 constructors ????
@@ -137,16 +136,31 @@ Structure SPN : Set := mk_SPN
 (****************************************************)
 (********* intervals of time...   for S(I)TPN   *******) 
 
+Print le. About "<=". Print nat_star.
+Definition lebo (n m : nat_star) : Prop :=
+  match (n, m) with
+  | (mk_nat_star
+       intn
+       posin ,
+     mk_nat_star
+       intm
+       posim) => intn <= intm
+  end.
+Notation "n o<= m" := (lebo n m)
+                        (at level 50) : type_scope.
+
 Structure time_interval_type : Set :=
   mk_inter
     {
-      mini : nat ;  (* nat_star ?    <= ... *)
-      maxi : nat ;
-      min_le_max : mini <= maxi  ;
+      mini : nat_star ; (* no [0, in synchronous time Petri nets *) 
+      maxi : nat_star ;
+      min_le_max : mini o<= maxi  ;
       cpt  : nat ;   (* nat_star ? *)
-      (* yes  : mini <= cpt <= maxi ; *)
+      (* in_range  : bool      mini <= cpt <= maxi ; *)
     }.
- 
+
+
+
 Structure STPN : Set := mk_STPN
                            {
                              spn : SPN ;
@@ -316,12 +330,13 @@ Definition update_marking
 (**********   for debugging ***********************)
 (*** list the tokens !!!! ***)
 Fixpoint function2list
-         (places:list place_type)
-         (m:marking_type)
+         (places : list place_type)
+         (m : marking_type)
   : list (place_type * nat) :=
   match places with
   | nil => nil
-  | p :: tail => (p, m p) :: function2list tail m
+  | p :: tail => (p, m p) :: (function2list
+                                tail m)
   end.
 (******************************************************)
 
@@ -455,14 +470,14 @@ and one has to keep both marking to check correctly ... **)
 (got after a subclass of transs has been half fired) 
 and the list of transitions "subclass_half_fired", 
  return the marking where post arcs have been fired too **)
-Fixpoint sub_fire_aux_post
+Fixpoint sub_fire_post
          (places : list place_type) (post : weight_type)
          (m_intermediate : marking_type)
          (subclass_half_fired : list trans_type)  
   : marking_type := 
   match subclass_half_fired with
   | []  => m_intermediate
-  | t :: tail  => sub_fire_aux_post
+  | t :: tail  => sub_fire_post
                     places post
                     (update_marking_post
                        places t post m_intermediate)
@@ -472,7 +487,7 @@ Fixpoint sub_fire_aux_post
 (** apply sub_fire_aux_pre over all subclasses of transitions 
  begin with initial marking, end with half fired marking  **)
 (*  "classes_half_fired" is empty at first ... *)
-Fixpoint fire_aux_pre
+Fixpoint fire_pre
          (places : list place_type) (pre test inhib : weight_type)
          (marking : marking_type)
          (classes_transs classes_half_fired : list (list trans_type))
@@ -484,7 +499,7 @@ Fixpoint fire_aux_pre
                                   marking marking
                                   l []))
                   in
-                  fire_aux_pre
+                  fire_pre
                     places  pre test inhib
                     m
                     Ltail
@@ -505,10 +520,10 @@ Fixpoint fire_aux_pre
                    m) *)
   end.
 
-Print SPN.
-Definition fire_aux_pre_listing (spn : SPN)
+Print SPN.  (*** for debug only **)
+Definition fire_pre_listing (spn : SPN)
   : (list (list trans_type)) * list (place_type * nat) :=
-  let res := (fire_aux_pre
+  let res := (fire_pre
                 (places spn)
                 (pre spn)
                 (test spn)
@@ -524,21 +539,22 @@ Definition fire_aux_pre_listing (spn : SPN)
               (places spn)
               (snd (res))
   ).
-                      
+
+
 
 (*** begin with intermediate marking
 (after half firing ALL the (pre arcs) transitions choosen),
  end with the _final_ marking  ****)
-Fixpoint fire_aux_post
+Fixpoint fire_post
          (places : list place_type) (post : weight_type)
          (marking_half : marking_type)
          (subclasses_half_fired : list (list trans_type))
   : marking_type := 
   match subclasses_half_fired with
   | []  => marking_half
-  | l :: Ltail  => fire_aux_post
+  | l :: Ltail  => fire_post
                      places post
-                     (sub_fire_aux_post
+                     (sub_fire_post
                         places post
                         marking_half
                         l)
@@ -552,18 +568,32 @@ Definition fire
            (m_init : marking_type)
            (classes_transs : list (list trans_type))
   : marking_type :=
-  let res := fire_aux_pre
+  let res := fire_pre
                places  pre test inhib 
                m_init
                classes_transs []
   in
-  fire_aux_post
+  fire_post
     places post
     (snd res)
     (fst res).
 
-(*******************************************************************)
-(************* to animate a SPN (only the marking evolves)  ********)
+(* for debug only : to list the fired transitions *)
+Definition fire_debug
+           (places : list place_type)
+           (pre test inhib post : weight_type)
+           (m_init : marking_type)
+           (classes_transs : list (list trans_type))
+  : list (list trans_type) :=
+  let res := fire_pre
+               places  pre test inhib 
+               m_init
+               classes_transs []
+  in
+  (fst res).
+
+(*****************************************************************)
+(************* to animate a SPN (only the marking evolves)  ******)
 
 Print SPN. Print prior_type2.
 Definition fire_spn (spn : SPN) :=
@@ -592,6 +622,7 @@ Definition fire_spn (spn : SPN) :=
     )
     (priority spn).
 
+
 Fixpoint animate_spn
          (spn : SPN)
          (n : nat)
@@ -603,6 +634,7 @@ Fixpoint animate_spn
                      (animate_spn (fire_spn spn) n'))
   end.
 
+(****************************************************************)
 (******************** to print and test with the eye ************)
 Print marking_type.
 Search list.
@@ -614,14 +646,20 @@ Definition fire_spn_listing (spn : SPN) :=
     (marking (fire_spn spn)).
 
 
-Fixpoint animate_pn_list (spn:SPN) (n:nat) :
-  list (list (place_type * nat)) := 
+Fixpoint animate_spn_print (spn:SPN) (n:nat) :
+  list (list (trans_type) *
+        list (place_type * nat)) := 
   (* on fait n pas de calcul  
     et on retourne le chemin des marquages *)
   match n with  
-  | O => [ function2list (places spn) (marking spn) ]
+  | O => [ ( [ ] ,
+             function2list
+               (places spn)
+               (marking spn) )
+             (* initial SPN *)
+         ]
   | S n' => (function2list (places spn) (marking spn))
-              :: (animate_pn_list (fire_spn spn) n')
+              :: (animate_spn_print (fire_spn spn) n')
   end.  
 
 
