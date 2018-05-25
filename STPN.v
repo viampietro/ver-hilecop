@@ -396,19 +396,32 @@ Fixpoint in_list_enabled
 
 
 (************************************ TIME clocks, counters ***)
+(****** need to increment only _enabled_ transitions ??? ****)
+
+(* Fixpoint list_enabled
+         (places : list place_type)
+         (pre test inhib : weight_type)
+         (m : marking_type)   (* the marking got at the end !!! *)
+         (transs enabled_transs : list trans_type) (*input/output*)
+  : list trans_type :=
+*)
 Print STPN. Print interval_type.
-Definition increment_time (inter : interval_type) : interval_type :=
-  match inter with
-  | mk_inter
-      mini
-      maxi
-      min_le_max
-      cpt => mk_inter
-               mini
-               maxi
-               min_le_max
-               (cpt + 1)
-  end.
+Definition increment_time
+           (intervals : trans_type -> option interval_type)
+  : trans_type -> option interval_type :=
+  fun trans =>
+    match (intervals trans) with
+    | Some (mk_inter        (* immutable ... *)
+              mini
+              maxi
+              min_le_max
+              cpt ) => Some (mk_inter
+                               mini
+                               maxi
+                               min_le_max
+                               (cpt + 1))
+    | None => None
+    end.
 
 Definition reset_time
            (intervals : trans_type -> option interval_type)
@@ -545,6 +558,22 @@ Fixpoint fire_pre
                     Ltail
                     (sub_l :: classes_half_fired)         
   end.
+
+(***************************************** warning :  
+
+il faut _checker_ que les transitions sont bien in_range
+
+et il faut incrémenter TOUTES les transitions 
+(avec des clocks & intervalles) juste après le tir (0 -> 1 -> ...)
+
+************************************************************)
+
+
+
+
+
+
+
 
 (*
 Print SPN.  (*** for nice prints  only  ! debugging ..  **)
@@ -684,6 +713,10 @@ Definition stpn_fired (stpn : STPN)
       (priority stpn)
       i)
   ).
+
+Check increment_time.  (************* not to forget 
+but of all the transitions or of just the new enabled transitions
+********)
 
 Check stpn_fired.
 (* n steps calculus  *)   
