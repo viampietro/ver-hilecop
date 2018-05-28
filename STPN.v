@@ -40,8 +40,7 @@ Definition marking_type := place_type -> nat.
 (***  priority relation  ..................................   
   to DETERMINE the Petri net (along with imperative semantic) ***)
 
-Inductive prior_type : Set :=
-  mk_prior_type { Lol : list (list trans_type) ; }.
+Definition prior_type := list (list trans_type).
     (*
       no_inter :
         forall (l1 l2 : list trans_type),
@@ -59,6 +58,7 @@ Print prior_type.
 
 
 (*** fonctions en cours de construction, peut-etre utile ...   ***)
+(* 
 Definition prio_over
            (t1 t2 : trans_type)
            (prior : prior_type)
@@ -67,9 +67,10 @@ Definition prio_over
   | mk_prior_type
       L
      (* no_inter
-       cover *) => (* t1 devant t2 dans 1 même sous-liste 
+       cover *) => (* t1 devant t2 dans 1 même sous-liste ...
                        Fixpoint ...  *)  false
   end.
+ *)
 
 (****************************************************************)
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
@@ -82,27 +83,60 @@ Print find_some.  (* maybe useful *)
 (********* intervals of time...   for S(I)TPN   *******) 
 
 Print le. About "<=". Print nat_star.
-Definition lebo (n m : nat_star) : Prop :=
+Definition lebi (n m : nat_star) : Prop :=
   match (n, m) with
   | (mk_nat_star
        intn
        posin ,
      mk_nat_star
        intm
-       posim) => intn <= intm
+       posim) => (intn <= intm)
   end.
-Notation "n o<= m" := (lebo n m)
+Notation "n <=i m" := (lebi n m)
                         (at level 50) : type_scope.
 
 Structure interval_type : Set :=
   mk_inter
     {
-      mini : nat_star ; (* no [0, in synchronous time Petri nets !*) 
-      maxi : nat_star ;
-      min_le_max : mini o<= maxi  ;
+      mini : nat  ; (* no [0, . ] in STPN ! .. at least if .. *)
+      maxi : nat ;
+      min_lebi_max : mini <= maxi  ;
       cpt  : nat ;   (* nat_star ? *)
       (* in_range  : bool      mini <= cpt <= maxi ; *)
     }.
+
+Print "<=?".
+(*
+Definition good_time (i : option interval_type) : bool :=
+  match i with
+  | None => true
+  | Some (mk_inter
+            mini
+            maxi
+            min_lebi_max
+            cpt ) =>  match (mini, maxi) with
+                      | (mk_nat_star
+                           intmini
+                           posmini ,
+                         mk_nat_star
+                           intmaxi
+                           pomaxi) => ((intmini <=? cpt)
+                                         &&
+                                         (cpt <=? intmaxi))
+                      end
+  end. *)
+Definition good_time (i : option interval_type) : bool :=
+  match i with
+  | None => true
+  | Some (mk_inter
+            mini
+            maxi
+            min_lebi_max
+            cpt ) =>  ((mini <=? cpt)
+                         &&
+                         (cpt <=? maxi))
+  end.
+
 
 Structure STPN : Set := mk_STPN
                            { 
@@ -164,7 +198,7 @@ Definition option_eq {A: Type} (eqA: forall (x y: A), {x=y} + {x<>y}):
 Proof.
   decide equality.
 Defined.
-Global Opaque option_eq.  (*** ??? Defined/Qed  Opaque  Global  ***)
+Global Opaque option_eq.  (*** ??? Defined/Qed Opaque? Global? ***)
 
 
 (**********************************************************)
@@ -179,7 +213,7 @@ Definition set_mark (m:marking_type) (p:place_type) (j:nat)
              else m p'.         (* other tokens left unchanged  *)
 Definition reset (m:marking_type) (p:place_type) (j:nat)
   : marking_type := set_mark m p 0.     (*** reset a place ***)
-(* useless for now...     
+(* useless !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!     
 unlike reseting the local clocks... *)
 
 (* given a marking m, add/remove j tokens inside place p *)  
@@ -207,6 +241,8 @@ Print Nat.sub. Print Nat.add.   (** the 2 op(erators) to use ... **)
    library "Nat" is included into "Arith"  ? *)
 
 (*************   update marking   *********************)
+
+(**** uphill   (input set, preset)  ***)
 Fixpoint update_marking_pre
          (places : list place_type)
          (t : trans_type)
@@ -264,9 +300,9 @@ Definition update_marking
        t
        pre
        m).
-(***** useless function !!!!
+(***** useless function !!!!!!!!!!!!!!!!!
     because one has to decompose step by step 
- and fire several transitions in 1 step  ***)
+ and fire several transitions in the "same" step  ***)
 
 (**********   TO PRINT the markings  ***********************)
 (*** list the tokens !!!! ***)
@@ -279,6 +315,31 @@ Fixpoint marking2list
   | p :: tail => (p, m p) :: (marking2list
                                 tail m)
   end.
+
+Print interval_type.
+Fixpoint intervals2list
+         (transs : list trans_type)
+         (intervals : trans_type -> option interval_type)
+  : list (trans_type * option (nat * nat * nat) ) :=
+  match transs with
+  | nil => nil
+  | t :: tail => match (intervals t) with
+                 | None  => (t, None) ::
+                                      (intervals2list
+                                         tail
+                                         intervals)
+                 | Some (mk_inter
+                           mini
+                           maxi
+                           _
+                           cpt) =>
+                   (t, Some (mini, cpt, maxi)) ::
+                                               (intervals2list
+                                                  tail
+                                                  intervals)
+                 end
+  end.
+
 
 
 (****************************************************************)
@@ -351,11 +412,14 @@ Definition trans_is_enabled
              (pre_or_test_check places (test t) m)
              &&
              (inhib_check places (inhib t) m). 
-(**   useless fonction ?  (unless for STPN and SITPN ...)
- because 
- firing a bunch of transitions synchronously implies
-   checking arcs with different markings ... 
- --->    useful only for _asynchronous_ Petri nets **)
+(**   useless fonction ?  
+needed to list the enabled transitions :
+
+1) to increment time, at the beginning of the cycle
+
+2) to reset disabled transitions during "fire_pre"
+*)
+
 
 Import ListNotations.
 Fixpoint list_enabled
@@ -406,45 +470,56 @@ Fixpoint in_list_enabled
   : list trans_type :=
 *)
 Print STPN. Print interval_type.
-Definition increment_time
-           (intervals : trans_type -> option interval_type)
+Fixpoint increment_time
+         (intervals : trans_type -> option interval_type)
+         (enabled_transs : list trans_type)
   : trans_type -> option interval_type :=
-  fun trans =>
-    match (intervals trans) with
-    | Some (mk_inter        (* immutable ... *)
-              mini
-              maxi
-              min_le_max
-              cpt ) => Some (mk_inter
-                               mini
-                               maxi
-                               min_le_max
-                               (cpt + 1))
-    | None => None
-    end.
+  
+  match enabled_transs with
+  | [] => intervals
+  | t :: tail =>   match (intervals t) with
+                   | None => intervals  (* increment nothing ... *)
+                   | Some (mk_inter        (* immutable ... *)
+                             mini
+                             maxi
+                             min_le_max
+                             cpt ) =>  increment_time
+                                         (fun trans =>
+                                            if beq_transs
+                                                 trans t
+                                            then Some (mk_inter
+                                                         mini
+                                                         maxi
+                                                         min_le_max
+                                                         (cpt + 1)
+                                                      (* !!! *) )
+                                            else (intervals trans)
+                                         )
+                                         tail
+                   end 
+  end.
 
 Definition reset_time
            (intervals : trans_type -> option interval_type)
            (t : trans_type)
   : trans_type -> option interval_type :=
+
   match (intervals t) with
-  | None  => intervals
-  | Some inter => match inter with
-                  | mk_inter
-                      mini
-                      maxi
-                      min_le_max
-                      cpt => (fun trans =>
+  | None  => intervals   (* reset nothing ... *)
+  | Some (mk_inter
+            mini
+            maxi
+            min_le_max
+            cpt ) => (fun trans =>
                                 if beq_transs
                                      trans t
                                 then Some (mk_inter
                                              mini
                                              maxi
                                              min_le_max
-                                             0   (* 1 ? *) )
+                                             0   (* !!! *) )
                                 else (intervals trans)
-                             )             
-                  end
+                     )             
   end.
 
 
@@ -484,6 +559,8 @@ Fixpoint sub_fire_pre
                             places
                             (inhib t)
                             m_init)
+                      && (good_time (intervals t))                    
+                      
                  then sub_fire_pre
                         places pre test inhib
                         m_init (update_marking_pre
@@ -491,24 +568,26 @@ Fixpoint sub_fire_pre
                         enabled_transs  intervals
                         tail (subclass_half_fired ++ [t])
                         (* concatener derriere pour garder ordre *)
-                 else if in_list_enabled
-                           enabled_transs
-                           t
-                      then (* reset the local counter *)
-                        sub_fire_pre
-                          places pre test inhib
-                          m_init m_intermediate
-                          enabled_transs
-                          (reset_time
-                             intervals
-                             t )
-                          tail subclass_half_fired
-                      else
-                        sub_fire_pre
-                          places  pre  test  inhib
-                          m_init  m_intermediate
-                          enabled_transs  intervals
-                          tail subclass_half_fired
+                 else (if
+                          in_list_enabled
+                            enabled_transs
+                            t
+                        then (* reset the local counter of
+                            this (momentarily) disabled trans *)
+                          sub_fire_pre
+                            places pre test inhib
+                            m_init m_intermediate
+                            enabled_transs
+                            (reset_time
+                               intervals
+                               t )
+                            tail subclass_half_fired
+                        else
+                          sub_fire_pre
+                            places  pre  test  inhib
+                            m_init  m_intermediate
+                            enabled_transs  intervals
+                            tail subclass_half_fired )
                         
   | []  => (subclass_half_fired, m_intermediate, intervals)
   end.
@@ -650,9 +729,11 @@ Definition fire
            (intervals : trans_type -> option interval_type)
            (* .......... to reset clocks ................. *)
            (classes_transs : list (list trans_type))
+
   : (list (list trans_type)) *
     marking_type *
     (trans_type -> option interval_type)  :=
+
   let '(L, m, i) := fire_pre
                       places  pre test inhib 
                       m_init
@@ -666,76 +747,81 @@ Definition fire
       L ,
     i  ).
 
+(* The marking and the "intervals" (their counter) 
+   are evolving !!  
+but we want to see also the fired transitions ! *)
+(******************************* CYCLE **********************)
+Print list_enabled. Print STPN.
+Definition cycle (stpn : STPN)
+           
+  : (list (list trans_type)) * STPN  :=
+           
+  let enabled := (list_enabled
+                    (places stpn) 
+                    (pre stpn) (test stpn) (inhib stpn)
+                    (marking stpn)
+                    (transs stpn) [])
+  in let new_intervals := increment_time
+                            (intervals stpn)
+                            enabled
+     in let '(fired, new_m, new_int) := fire  
+                                          (places stpn)
+                                          (pre stpn)
+                                          (test stpn)
+                                          (inhib stpn) (post stpn)
+                                          (marking stpn)
+                                          enabled       (* ! *)  
+                                          new_intervals (* ! *)
+                                          (priority stpn)
+        in  (fired ,  (* ! *)
+             (mk_STPN
+                (places stpn)
+                (transs stpn)
+                (nodup_places stpn)
+                (nodup_transitions stpn)
+                (pre stpn)
+                (post stpn)
+                (test stpn)
+                (inhib stpn)
+                (* marking *)
+                new_m       (* ! *)
+                (priority stpn)
+                new_int)     (* ! *)
+            ).
+             
+                         
 
 (**************************************************)
 (************* to animate a SPN   *****************)
 
-
-Print STPN. Print prior_type. Print list_enabled. Print fire.
-(* Only the marking is evolving ! 
-but we want to keep trace of the fired transitions ! *)
-Definition stpn_fired (stpn : STPN)
-   : (list (list trans_type)) * STPN :=
-
-  let '(L,m,i) := fire
-                    (places stpn)
-                    (pre stpn) (test stpn) (inhib stpn)
-                    (post stpn)
-                    (marking stpn)
-                    (list_enabled
-                       (places stpn)
-                       (pre stpn)
-                       (test stpn)
-                       (inhib stpn)
-                       (marking stpn)
-                       (transs stpn)
-                       [])
-                    (intervals stpn)
-                    match (priority stpn) with
-                    | mk_prior_type
-                        (* partition *)
-                        Lol => Lol
-                    end
-                    
-  in
-  (L ,
-   (mk_STPN
-      (places stpn)
-      (transs stpn)
-      (nodup_places stpn)
-      (nodup_transitions stpn)
-      (pre stpn)
-      (post stpn)
-      (test stpn)
-      (inhib stpn)
-      (* marking *)
-      m
-      (priority stpn)
-      i)
-  ).
-
-Check increment_time.  (************* not to forget 
-but of all the transitions or of just the new enabled transitions
-********)
-
-Check stpn_fired.
-(* n steps calculus  *)   
+(* n steps calculus  *)
+Print STPN. Check intervals2list.
 Fixpoint animate_stpn
          (stpn : STPN)
          (n : nat)
   : list
       (list (list trans_type)  *
-       list (place_type * nat) ) :=
+       list (place_type * nat) *
+       (list (trans_type * option (nat * nat * nat)))) :=
   match n with
-  | O => [ ( [] , marking2list
+  | O => [ ( [] ,
+             marking2list
                     (places stpn)
-                    (marking stpn) ) ]
-  | S n' =>  let (L, next_stpn) := (stpn_fired stpn)
+                    (marking stpn) ,
+             (intervals2list
+                (transs stpn)
+                (intervals stpn))
+         ) ]
+  | S n' =>  let (fired, next_stpn) := (cycle stpn)
              in
-             ( L ,
+             ( fired ,
                (marking2list
                   (places next_stpn)
-                  (marking next_stpn)) ) 
+                  (marking next_stpn)) ,
+               (intervals2list
+                  (transs next_stpn)
+                  (intervals next_stpn))
+             ) 
                ::
                (animate_stpn
                   next_stpn
@@ -784,124 +870,192 @@ Definition ex_transs : (list trans_type) :=
 Definition ex_nodup_transs : NoDup ex_transs :=
   NoDup_nodup
     transs_eq_dec
-    ex_transs. 
+    ex_transs.
+
+
+
+Lemma one_positive : 1 > 0. Proof. omega. Qed.
+Lemma two_positive : 2 > 0. Proof. omega. Qed.
+(* one lemma for each arc weight ... *)
 
 (* 7 arcs PT (place transition)  "incoming" *) 
-Definition ex2_pre_function (t : trans_type) (p : place_type) :=
-  match (t, p) with
-  | (mk_trans 0, mk_place 0) => Some 1
-  | (mk_trans 1, mk_place 0) => Some 1
-  | (mk_trans 2, mk_place 2) => Some 2
-  | (mk_trans 2, mk_place 3) => Some 1
-  | (mk_trans 3, mk_place 4) => Some 1
-  | (mk_trans 4, mk_place 5) => Some 1
-  | (mk_trans 5, mk_place 6) => Some 1
+Definition ex_pre (t : trans_type) (p : place_type)
+  : option nat_star :=
+  match (t,p) with
+  | (mk_trans 1, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 2, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 3, mk_place 3) => Some (mk_nat_star
+                                        2
+                                        two_positive)
+  | (mk_trans 3, mk_place 4) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 4, mk_place 5) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 5, mk_place 6) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 6, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
   | _ => None
   end.
 
-(* 1 arc of type "test" *)
-Definition ex2_pre_test_function (t : trans_type) (p : place_type) :=
+Definition ex_test (t : trans_type) (p : place_type) :=
+  (* 1 arc of type "test" *)
   match (t, p) with
-  | (mk_trans 1, mk_place 1) => Some 1
-    (* place 1 needs (at least) 1 token, 
-       which won't be taken by transition 1 *)
+  | (mk_trans 2, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
   | _ => None
   end.
 
-(* 1 arc of type "inhibitor"  *)
-Definition ex2_pre_inhi_function (t : trans_type) (p : place_type) :=
+Definition ex_inhib (t : trans_type) (p : place_type) :=
+  (* 1 arc of type "inhibitor"  *)
   match (t, p) with
-  | (mk_trans 0, mk_place 1) => Some 1
-  (* place 1 needs less than 1 token, 
-     which won't be taken by transition 1 *)
+  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
   | _ => None
   end.
 
-(* 7 arcs TP      "normal outcoming"  *)
-Definition ex2_post_function (t : trans_type) (p : place_type) :=
+(* 7 arcs TP      "outcoming"  *)
+Definition ex_post (t : trans_type) (p : place_type)
+  : option nat_star :=
   match (t, p) with
-  | (mk_trans 0, mk_place 1) => Some 1
-  | (mk_trans 0, mk_place 2) => Some 2
-  | (mk_trans 0, mk_place 3) => Some 1
-  | (mk_trans 1, mk_place 4) => Some 1
-  | (mk_trans 2, mk_place 6) => Some 1
-  | (mk_trans 3, mk_place 5) => Some 1
-  | (mk_trans 4, mk_place 6) => Some 1
-  | (mk_trans 5, mk_place 1) => Some 1
+  (* trans 1 *)
+  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | (mk_trans 1, mk_place 3) => Some (mk_nat_star
+                                        2
+                                        two_positive)               
+  | (mk_trans 1, mk_place 4) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 2 *)
+  | (mk_trans 2, mk_place 5) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 3 *)
+  | (mk_trans 3, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 4 *)
+  | (mk_trans 4, mk_place 6) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 5 *)
+  | (mk_trans 5, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 6 *)
+  | (mk_trans 6, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
   | _ => None
   end.
 
 (* tokens *)
-Definition ex2_init_marking (p : place_type) :=
+Definition ex_marking (p : place_type) :=
   match p with
-  | mk_place 0 => 1
-  | mk_place 1 => 0
+  | mk_place 1 => 1
   | mk_place 2 => 0
   | mk_place 3 => 0
   | mk_place 4 => 0
   | mk_place 5 => 0
   | mk_place 6 => 0
+  | mk_place 7 => 0
   | _ => 0
   end.
 
+Print STPN. Print interval_type. Print nat_star.
+(****  intervals need lemmas and structures .... ****) 
+Lemma three_positive : 3 > 0. Proof. omega. Qed.
+Lemma five_positive : 5 > 0. Proof. omega. Qed.
+Lemma twototheeight_positive : 256 > 0. Proof. omega. Qed.
 
-Definition ex2_conditions (t : trans_type) (c : gard_type) :=
-  match (t, c) with
-  | (mk_trans 1, mk_gard 1) => true
-  | _ => false
-  end.
-  (* 1 condition/gard  :  Petri net influenced by environnement *)
+(*
+Definition three_star := mk_nat_star
+                           3
+                           three_positive.
+Definition five_star := mk_nat_star
+                           5
+                           five_positive.
+Definition two_star := mk_nat_star
+                           2
+                           two_positive.
+Definition twototheeight_star := mk_nat_star
+                           256
+                           twototheeight_positive.
+ 
+Lemma preuve3le5 : three_star <=i five_star. 
+Proof. unfold lebi. Admitted.
+Lemma preuve2le256 : two_star <=i twototheeight_star.
+Proof. unfold lebi. Admitted.
+ *)
 
-Lemma preuve3le5 : 3 <= 5. Proof. omega. Qed.
-Definition int1_35 := mk_inter
+Lemma preuve3le5 : 3 <= 5. 
+Proof. omega. Qed.
+Lemma preuve2le256 : 2 <= 256.
+Proof. omega. Qed.
+
+Definition int_3_5 := mk_inter
                         3
                         5
-                        preuve3le5.
-Print le.
-Lemma preuve2le255 : 2 <= 255. Proof. omega. Qed.
-Definition int1_2oo := mk_inter
-                         2
-                         255
-                         preuve2le255.
+                        preuve3le5
+                        0.
+Definition int_2_256 := mk_inter
+                          2
+                          256
+                          preuve2le256
+                          0.
 
-Definition ex2_inters (t : trans_type) (i : inter_type) :=
-  match (t, i) with
-  | (mk_trans 3, int1_35) => true
-  | (mk_trans 6, int1_2oo) => true
-  | _ => false
-  end.
+Definition ex_intervals :
+  trans_type -> option interval_type :=
+  fun trans => 
+    match trans with
+    | mk_trans 3  =>  Some int_3_5
+    | mk_trans 6  =>  Some int_2_256
+    | _ => None
+    end.
 
-Definition ex2_priority (t1 t2 : trans_type) : bool :=
-  (* se restreindre aux conflits structurels !!!!!!!  *)
-  match (t1 , t2) with
-  | (mk_trans 0, mk_trans 0) => false
-  | (mk_trans 0, mk_trans 1) => true
-  | (mk_trans 0, mk_trans 2) => true
-  | (mk_trans 1, mk_trans 0) => false
-  | (mk_trans 1, mk_trans 1) => false
-  | (mk_trans 1, mk_trans 2) => true
-  | (mk_trans 2, mk_trans 0) => false
-  | (mk_trans 2, mk_trans 1) => false
-  | (mk_trans 2, mk_trans 2) => false
-  | (_,_) => false  (* False or True     who care ? *) 
-  end.
-  
-Definition itpn1 :=  mk_ITPN
-                       (mk_IPN
-                          (mk_PN
-                              ex2_places
-                              ex2_transs
-                              ex2_nodup_places
-                              ex2_nodup_transs
-                              
-                              ex2_pre_function
-                              ex2_post_function
-                              ex2_pre_test_function
-                              ex2_pre_inhi_function
-                              
-                              ex2_init_marking
-                              ex2_priority
-                          )
-                          ex2_conditions
-                       )
-                       ex2_inters.
+Print prior_type.
+Definition ex_prior : list (list trans_type) :=
+  (* se restreindre aux conflits structurels ! *)
+  [
+    [mk_trans 1 ; mk_trans 2 ; mk_trans 5] ;
+    [mk_trans 3] ;
+    [mk_trans 4] ;
+    [mk_trans 6]
+  ].
+ 
+    
+Print pre. Print weight_type. Print STPN.
+Definition ex_stpn := mk_STPN
+                        ex_places
+                        ex_transs
+                        ex_nodup_places
+                        ex_nodup_transs
+                        
+                        ex_pre
+                        ex_post
+                        ex_test
+                        ex_inhib                 
+                      
+                        ex_marking
+                        ex_prior
+                        ex_intervals.
+
+Check ex_stpn. Compute (marking ex_stpn). (* initial marking *)
+
+Search STPN.
+Compute (animate_stpn
+           ex_stpn
+           10).  (* 11 markings *)
+
