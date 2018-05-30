@@ -98,11 +98,12 @@ Notation "n <=i m" := (lebi n m)
 Structure interval_type : Set :=
   mk_inter
     {
-      mini : nat  ; (* no [0, . ] in STPN ! .. at least if .. *)
+      mini : nat  ; (* no [0, . ] in _S_TPN ! *)
       maxi : nat ;
       min_lebi_max : mini <= maxi  ;
-      cpt  : nat ;   (* nat_star ? *)
-      (* in_range  : bool      mini <= cpt <= maxi ; *)
+      cpt  : nat ;   (* possibly 0   /!\  *)
+      (* in_range  : bool      mini <= cpt <= maxi 
+sumbool ? ; *)
     }.
 
 Print "<=?".
@@ -138,6 +139,7 @@ Definition good_time (i : option interval_type) : bool :=
   end.
 
 
+
 Structure STPN : Set := mk_STPN
                            { 
                              places : list place_type ;
@@ -157,7 +159,8 @@ Structure STPN : Set := mk_STPN
                              priority : prior_type ;
                              intervals :
                                trans_type ->
-                               option interval_type ;}.
+                               option interval_type ;
+                           }.
 
 (* there is an interval iff there is a local clock *)
 (*** but if conditions are meant to evolve through time .... *)
@@ -422,7 +425,7 @@ needed to list the enabled transitions :
 
 
 Import ListNotations.
-Fixpoint list_enabled
+Fixpoint list_enabled_aux
          (places : list place_type)
          (pre test inhib : weight_type)
          (m : marking_type)
@@ -434,19 +437,31 @@ Fixpoint list_enabled
                       places
                       pre test inhib
                       m t
-                 then list_enabled
+                 then list_enabled_aux
                         places
                         pre test inhib
                         m
                         tail (t::enabled_transs)
-                 else list_enabled
+                 else list_enabled_aux
                         places
                         pre test inhib
                         m
                         tail enabled_transs
   end.
 
-Search trans_type.
+Definition list_enabled
+           (places : list place_type)
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (transs : list trans_type) (*input/output*)
+  : list trans_type :=
+  list_enabled_aux
+    places
+    pre test inhib
+    m
+    transs [].
+
+Search trans_type. (* must exist in library List *)
 Fixpoint in_list_enabled
          (enabled_transs : list trans_type)
          (trans : trans_type)
@@ -456,7 +471,7 @@ Fixpoint in_list_enabled
   | t :: tail => if (beq_transs trans t)
                  then true
                  else false
-  end.
+  end.  (* must exist in library List *)
 
 
 (************************************ TIME clocks, counters ***)
@@ -498,6 +513,9 @@ Fixpoint increment_time
                                          tail
                    end 
   end.
+(* on incremente en debut de cycle. Avec un marquage stable 
+donc on se sert d'une liste de transitions enabled, 
+facilement calculable *)
 
 Definition reset_time
            (intervals : trans_type -> option interval_type)
@@ -521,6 +539,26 @@ Definition reset_time
                                 else (intervals trans)
                      )             
   end.
+(* le rest de compteur est plus subtile : 
+ 1) quand faut-il le faire ?
+ 2) pour quelles transitions faut-il le faire ?
+ *)
+
+(* reset time counters of several transitions ... *)
+Fixpoint reset_time_list
+           (intervals : trans_type -> option interval_type)
+           (subclass : list trans_type)
+  : trans_type -> option interval_type :=
+
+  match subclass with
+  | [] => intervals
+  | t :: tail => reset_time_list
+                   (reset_time
+                      intervals
+                      t)
+                   tail
+  end.
+
 
 
 
@@ -548,9 +586,9 @@ Fixpoint sub_fire_pre
     (trans_type -> option interval_type) :=
   match class_transs with
   | t :: tail => if (pre_or_test_check
-                      places
-                      (pre t)
-                      m_intermediate)
+                       places
+                       (pre t)
+                       m_intermediate)
                       && (pre_or_test_check
                             places
                             (test t)
@@ -558,17 +596,50 @@ Fixpoint sub_fire_pre
                       && (inhib_check
                             places
                             (inhib t)
-                            m_init)
-                      && (good_time (intervals t))                    
-                      
-                 then sub_fire_pre
-                        places pre test inhib
-                        m_init (update_marking_pre
-                                  places t pre m_intermediate)
-                        enabled_transs  intervals
-                        tail (subclass_half_fired ++ [t])
-                        (* concatener derriere pour garder ordre *)
-                 else (if
+                            m_init)                    
+                 then
+                   if
+                     (good_time (intervals t))
+        (* si transition a une condition alors regarder la condition
+sinon faire ce qui est dans le "then"  
+
+si condition vrai alors faire ce qui est dans le "then"
+sinon elle n'est pas tirable
+
+         *)      
+                   then
+                     let new_m :=
+                         (update_marking_pre
+                            places t pre m_intermediate)
+                     in
+                     sub_fire_pre
+                       places pre test inhib
+                       m_init new_m 
+                       
+                       enabled_transs
+                       (* updating the intervals in case ... *)
+                       (reset_time_list
+                          intervals
+                          (list_enabled
+                             places
+                             pre test inhib
+                             new_m
+                             class_transs))
+                       
+                       tail (subclass_half_fired ++ [t])
+                       (* concatenate t behind, to keep order *)
+                   else
+                     sub_fire_pre
+                            places pre test inhib
+                            m_init m_intermediate
+                            enabled_transs  intervals
+                            tail subclass_half_fired 
+                        (* t not fired, let's continue with tail *)
+                 else
+
+
+(*
+                   (if
                           in_list_enabled
                             enabled_transs
                             t
@@ -582,12 +653,12 @@ Fixpoint sub_fire_pre
                                intervals
                                t )
                             tail subclass_half_fired
-                        else
-                          sub_fire_pre
-                            places  pre  test  inhib
-                            m_init  m_intermediate
-                            enabled_transs  intervals
-                            tail subclass_half_fired )
+                        else   *)
+                   sub_fire_pre
+                     places  pre  test  inhib
+                     m_init  m_intermediate
+                     enabled_transs  intervals
+                     tail subclass_half_fired 
                         
   | []  => (subclass_half_fired, m_intermediate, intervals)
   end.
@@ -617,7 +688,7 @@ Fixpoint fire_pre
          (* ......... to reset clocks .................. *)
          (enabled_transs : list trans_type)
          (intervals : trans_type -> option interval_type)
-         (* .......... to reset clocks ................. *)
+         (* ......... to reset clocks .................. *)
          (classes_transs classes_half_fired : list (list trans_type))
   : (list (list trans_type)) *
     marking_type *
@@ -637,22 +708,6 @@ Fixpoint fire_pre
                     Ltail
                     (sub_l :: classes_half_fired)         
   end.
-
-(***************************************** warning :  
-
-il faut _checker_ que les transitions sont bien in_range
-
-et il faut incrémenter TOUTES les transitions 
-(avec des clocks & intervalles) juste après le tir (0 -> 1 -> ...)
-
-************************************************************)
-
-
-
-
-
-
-
 
 (*
 Print SPN.  (*** for nice prints  only  ! debugging ..  **)
@@ -760,7 +815,8 @@ Definition cycle (stpn : STPN)
                     (places stpn) 
                     (pre stpn) (test stpn) (inhib stpn)
                     (marking stpn)
-                    (transs stpn) [])
+                    (transs stpn)
+                 )
   in let new_intervals := increment_time
                             (intervals stpn)
                             enabled
@@ -897,6 +953,9 @@ Definition ex_pre (t : trans_type) (p : place_type)
   | (mk_trans 4, mk_place 5) => Some (mk_nat_star
                                         1
                                         one_positive)
+  | (mk_trans 5, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)  
   | (mk_trans 5, mk_place 6) => Some (mk_nat_star
                                         1
                                         one_positive)
@@ -1021,7 +1080,7 @@ Definition ex_intervals :
   fun trans => 
     match trans with
     | mk_trans 3  =>  Some int_3_5
-    | mk_trans 6  =>  Some int_2_256
+    | mk_trans 5  =>  Some int_2_256
     | _ => None
     end.
 

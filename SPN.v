@@ -814,7 +814,7 @@ Definition ex_post (t : trans_type) (p : place_type)
 Definition ex_marking (p : place_type) :=
   match p with
   | mk_place 0 => 2
-  | mk_place 1 => 1
+  | mk_place 1 => 2
   | mk_place 7 => 1
   | mk_place 12 => 1
   | _ => 0
