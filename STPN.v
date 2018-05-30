@@ -585,18 +585,20 @@ Fixpoint sub_fire_pre
     marking_type *
     (trans_type -> option interval_type) :=
   match class_transs with
-  | t :: tail => if (pre_or_test_check
-                       places
-                       (pre t)
-                       m_intermediate)
-                      && (pre_or_test_check
-                            places
-                            (test t)
-                            m_init)
-                      && (inhib_check
-                            places
-                            (inhib t)
-                            m_init)                    
+  | t :: tail => if (
+                     (pre_or_test_check
+                        places
+                        (pre t)
+                        m_intermediate)
+                       && (pre_or_test_check
+                             places
+                             (test t)
+                             m_init)
+                       && (inhib_check
+                             places
+                             (inhib t)
+                             m_init)
+                   )
                  then
                    if
                      (good_time (intervals t))
@@ -624,7 +626,8 @@ sinon elle n'est pas tirable
                              places
                              pre test inhib
                              new_m
-                             class_transs))
+                             class_transs)
+                       )
                        
                        tail (subclass_half_fired ++ [t])
                        (* concatenate t behind, to keep order *)
@@ -695,14 +698,16 @@ Fixpoint fire_pre
     (trans_type -> option interval_type)  :=
   match classes_transs with
   | [] => (classes_half_fired , marking, intervals)
-  | l :: Ltail => let '(sub_l, m, i) := sub_fire_pre
-                                          places  pre test inhib
-                                          marking marking
-                                          enabled_transs intervals
-                                          l []
+  | l :: Ltail => let '(sub_l, new_m, new_i) := sub_fire_pre
+                                                  places
+                                                  pre test inhib
+                                                  marking marking
+                                                  enabled_transs intervals
+                                                  l []
                   in
                   fire_pre
-                    places  pre  test  inhib
+                    places
+                    pre  test  inhib
                     m
                     enabled_transs  i
                     Ltail
