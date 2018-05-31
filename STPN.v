@@ -95,12 +95,12 @@ Definition lebi (n m : nat_star) : Prop :=
 Notation "n <=i m" := (lebi n m)
                         (at level 50) : type_scope.
 
-Structure interval_type : Set :=
-  mk_inter
+Structure chrono_type : Set :=
+  mk_chrono
     {
       mini : nat  ; (* no [0, . ] in _S_TPN ! *)
       maxi : nat ;
-      min_lebi_max : mini <= maxi  ;
+      min_leb_max : mini <= maxi  ;
       cpt  : nat ;   (* possibly 0   /!\  *)
       (* in_range  : bool      mini <= cpt <= maxi 
 sumbool ? ; *)
@@ -126,19 +126,20 @@ Definition good_time (i : option interval_type) : bool :=
                                          (cpt <=? intmaxi))
                       end
   end. *)
-Definition good_time (i : option interval_type) : bool :=
+Definition good_time (i : option chrono_type) : bool :=
   match i with
   | None => true
-  | Some (mk_inter
+  | Some (mk_chrono
             mini
             maxi
-            min_lebi_max
+            _
             cpt ) =>  ((mini <=? cpt)
                          &&
                          (cpt <=? maxi))
   end.
 
 
+Definition eval_chronos_type := trans_type -> option chrono_type.
 
 Structure STPN : Set := mk_STPN
                            { 
@@ -157,9 +158,8 @@ Structure STPN : Set := mk_STPN
                              (* marking : list (place_type * nat)   
                               *)
                              priority : prior_type ;
-                             intervals :
-                               trans_type ->
-                               option interval_type ;
+
+                             chronos : eval_chronos_type
                            }.
 
 (* there is an interval iff there is a local clock *)
