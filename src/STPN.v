@@ -2,7 +2,10 @@
 (**** by ML, DD, DA ****)
 (***********************)
 
-Require Import Arith Omega List Bool.
+Print LoadPath.
+
+Require Export Arith Omega List Bool.
+(*Require Export SPN. *)
 (* Require Import Nat. *)
 Search nat. Search list.
 
@@ -319,19 +322,19 @@ Fixpoint marking2list
                                 tail m)
   end.
 
-Print interval_type.
+Print chrono_type. Print STPN. Print eval_chronos_type.
 Fixpoint intervals2list
          (transs : list trans_type)
-         (intervals : trans_type -> option interval_type)
+         (eval_chronos : eval_chronos_type)
   : list (trans_type * option (nat * nat * nat) ) :=
   match transs with
   | nil => nil
-  | t :: tail => match (intervals t) with
+  | t :: tail => match (eval_chronos t) with
                  | None  => (t, None) ::
                                       (intervals2list
                                          tail
-                                         intervals)
-                 | Some (mk_inter
+                                         eval_chronos)
+                 | Some (mk_chrono
                            mini
                            maxi
                            _
@@ -339,7 +342,7 @@ Fixpoint intervals2list
                    (t, Some (mini, cpt, maxi)) ::
                                                (intervals2list
                                                   tail
-                                                  intervals)
+                                                  eval_chronos)
                  end
   end.
 
