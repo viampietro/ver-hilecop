@@ -105,7 +105,7 @@ Definition prio_over
   | mk_prior
       L
      (* no_inter
-       cover *) => (* t1 devant t2 dans 1 même sous-liste 
+       cover *) => (* t1 devant t2 dans 1 meme sous-liste 
                        Fixpoint ...  *)  false
   end.
 
@@ -445,22 +445,23 @@ Fixpoint spn_fire_pre
   end.
 
 Print SPN.  (*** for nice prints  only  !  **)
-Definition fire_pre_print
+Definition spn_fire_pre_print
            (places : list place_type) (pre test inhib : weight_type)
            (marking : marking_type)
            (classes_transs classes_half_fired : list (list trans_type))
   : (list (list trans_type)) * list (place_type * nat) :=
-  let res := (spn_fire_pre
-                places 
-                pre
-                test 
-                inhib 
-                marking
-                classes_transs [] )
+  let (a, b) := (spn_fire_pre
+                   places 
+                   pre
+                   test 
+                   inhib 
+                   marking
+                   classes_transs []
+                )
   in
-  ((fst res), marking2list
-                places 
-                (snd res) ).
+  (a, marking2list
+        places 
+        b ).
 
 
 
@@ -494,15 +495,15 @@ Definition spn_fire
            (m_init : marking_type)
            (classes_transs : list (list trans_type))
   : (list (list trans_type)) * marking_type :=
-  let res := spn_fire_pre
-               places  pre test inhib 
-               m_init
-               classes_transs []
+  let (a, b) := spn_fire_pre
+                  places  pre test inhib 
+                  m_init
+                  classes_transs []
   in
-  ( (fst res) , fire_post
-                  places post
-                  (snd res)
-                  (fst res) ).
+  (a, fire_post
+        places post
+        b
+        a ).
 
 
 (**************************************************)
@@ -513,48 +514,35 @@ Print SPN. Print prior_type.
 (* Only the marking is evolving ! 
 but we want to keep trace of the fired transitions ! *)
 Definition spn_fired (spn : SPN)
-   : (list (list trans_type)) * SPN :=
-  ((fst
-      (spn_fire
-         (places spn)
-         (pre spn)
-         (test spn)
-         (inhib spn)
-         (post spn)
-         (marking spn)
-         match (priority spn) with
-         | mk_prior
-             (* partition *)
-             Lol => Lol
-         end
-      )
-   ) ,
-   (mk_SPN
-      (places spn)
-      (transs spn)
-      (nodup_places spn)
-      (nodup_transitions spn)
-      (pre spn)
-      (post spn)
-      (test spn)
-      (inhib spn)
-      (* marking *)
-      (snd
-         (spn_fire
-            (places spn)
-            (pre spn)
-            (test spn)
-            (inhib spn)
-            (post spn)
-            (marking spn)
-            match (priority spn) with
-            | mk_prior
-                (* partition *)
-                Lol => Lol
-            end
-      ))
-      (priority spn))
-  ).
+  : (list (list trans_type)) * SPN :=
+  match spn with
+  | mk_SPN
+      places
+      transs
+      nodup_p
+      nodup_t
+      pre  post test inhib
+      m
+      (mk_prior
+         Lol) =>
+    let (a,b) := (spn_fire
+                    places 
+                    pre  test  inhib  post
+                    m
+                    Lol
+                 )
+    in (a,
+        mk_SPN
+          places
+          transs
+          nodup_p
+          nodup_t
+          pre  post test inhib
+          b
+          (mk_prior
+             Lol)
+       )
+  end.
 
 Check spn_fired.
 (* n steps calculus  *)   
@@ -568,24 +556,25 @@ Fixpoint animate_spn
   | O => [ ( [] , marking2list
                     (places spn)
                     (marking spn) ) ]
-  | S n' =>  let next_spn := (spn_fired spn) in
-             ( (fst next_spn) ,
+  | S n' =>  let (a, next_spn) := (spn_fired spn)
+             in
+             ( a ,
                (marking2list
-                  (places (snd next_spn))
-                  (marking (snd next_spn))) ) 
+                  (places next_spn)
+                  (marking next_spn)
+               )
+             ) 
                ::
                (animate_spn
-                  (snd next_spn)
+                  next_spn
                   n')
   end.    (* split / combine ... *)
            
 
 (****************************************************************)
 (******************** to print and test with the eye ************)
-Print marking_type.
-Search list.
 
-
+(* donne juste le marquage en tirant 1 fois *)
 Definition fire_spn_listing (spn : SPN) :=
   marking2list
     (places spn)
@@ -882,7 +871,7 @@ Compute (animate_spn
            ex_spn
            10).  (* 11 markings *)
 
-(******** deuxième exemple (permutation des sous-listes)  **********)
+(******** second  example (permutation des sous-listes)  **********)
 
 Definition ex_prior_aux2 :=
   [
@@ -945,7 +934,7 @@ Compute (animate_spn
 (********   debuggage   ******)
 
 Compute (fire_spn_listing
-           ex_spn).  (* donne juste le marquage final *)
+           ex_spn).  (* donne juste le marquage en tirant 1 fois *)
 
 
 (*************************************************************
