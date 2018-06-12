@@ -434,19 +434,20 @@ Fixpoint sub_fire_post
 Fixpoint spn_fire_pre
          (places : list place_type)
          (pre test inhib : weight_type)
-         (marking : marking_type)
+         (marking decreasing_m : marking_type)
          (classes_transs classes_half_fired : list (list trans_type))
-  : (list (list trans_type))   * marking_type :=
+  : (list (list trans_type)) *
+    marking_type :=
   match classes_transs with
-  | [] => (classes_half_fired , marking)
+  | [] => (classes_half_fired , decreasing_m)
   | l :: Ltail => let (sub_l, new_m) := (spn_sub_fire_pre
                                            places  pre test inhib
-                                           marking marking
+                                           marking decreasing_m
                                            l [])
                   in
                   spn_fire_pre
                     places  pre test inhib
-                    new_m
+                    marking new_m
                     Ltail
                     (sub_l :: classes_half_fired)         
   end.
@@ -487,7 +488,7 @@ Definition spn_fire
   : (list (list trans_type)) * marking_type :=
   let (sub_Lol, m_decreased) := spn_fire_pre
                                   places  pre test inhib 
-                                  m_init
+                                  m_init   m_init
                                   classes_transs []
   in
   (sub_Lol, fire_post
@@ -507,10 +508,8 @@ Definition spn_fire_pre_print
   : (list (list trans_type)) * list (place_type * nat) :=
   let (sub_Lol, m) := (spn_fire_pre
                          places 
-                         pre
-                         test 
-                         inhib 
-                         marking
+                         pre  test  inhib 
+                         marking   marking
                          classes_transs []
                       )
   in
@@ -518,6 +517,7 @@ Definition spn_fire_pre_print
               places 
               m ).    (* go with snp_debug_pre *)
 Definition spn_debug_pre (spn : SPN)
+           (* gives transitions fired  +  marking_pre  *)
   : (list (list trans_type)) * list (place_type * nat) :=
   match spn with
   | mk_SPN
@@ -883,11 +883,13 @@ Compute
   (
     spn_debug_pre
       (
-        snd
-          (spn_fired (snd (spn_fired ex_spn)))
+      (*  snd (spn_fired
+               (snd (spn_fired  *) 
+                       ex_spn
       )
   ).
-
+Print spn_debug_pre. Print spn_fire_pre_print.
+Print spn_fire_pre.
 
 (******** second  example (permutation des sous-listes)  **********)
 
@@ -1282,14 +1284,14 @@ Fixpoint stpn_sub_fire_pre
                        new_chronos
                        tail (subclass_half_fired ++ [t])
                        (* concatenate t behind, keep order *)
-                   else
+                   else (* not goog time *)
                      stpn_sub_fire_pre
                        places pre test inhib
                        m_init m_decreasing
                        enabled_transs   chronos
                        tail subclass_half_fired 
                         (* t not fired, let's continue with tail *)
-                 else
+                 else  (* not enabled   w.r.t. ... *)
                    stpn_sub_fire_pre
                      places  pre  test  inhib
                      m_init  m_decreasing
@@ -1336,14 +1338,13 @@ Fixpoint stpn_fire_pre
                                                      enabled_transs
                                                      chronos
                                                      l []
-                  in
-                  stpn_fire_pre
-                    places
-                    pre  test  inhib
-                    new_m
-                    enabled_transs  new_chrs
-                    Ltail
-                    (sub_l :: classes_half_fired)         
+                  in  stpn_fire_pre
+                        places
+                        pre  test  inhib
+                        new_m
+                        enabled_transs  new_chrs
+                        Ltail
+                        (sub_l :: classes_half_fired)         
   end.
 
 
@@ -1739,10 +1740,12 @@ Compute
   (
     stpn_debug_pre
       (
-        snd (stpn_cycle
+     (*   snd (stpn_cycle
                (snd (stpn_cycle
-                       ex_stpn)))
-      )
+                       (snd (stpn_cycle
+                               (snd (stpn_cycle  *)
+                                      ex_stpn)
+      
   ).
 
 
