@@ -1480,7 +1480,7 @@ Definition stpn_cycle (stpn : STPN)
 (************* to animate a STPN   *****************)
 
 (* n steps calculus  *)
-Print STPN. Check intervals2list.
+Print STPN. Check intervals2list. Print animate_spn.
 Fixpoint animate_stpn
          (stpn : STPN)
          (n : nat)
@@ -1491,26 +1491,21 @@ Fixpoint animate_stpn
   match n with
   | O => [ ( [] ,
              marking2list
-                    (places (spn stpn))
-                    (marking (spn stpn)) ,
+                    (places   (spn stpn))
+                    (marking  (spn stpn)) ,
              (intervals2list
                 (transs (spn stpn))
-                (chronos stpn))
+                (chronos     stpn))
          ) ]
-  | S n' =>  let (fired, next_stpn) := (stpn_cycle stpn)
+  | S n' =>  let (Lol_fired, next_stpn) := (stpn_cycle stpn)
              in
-             ( fired ,
+             ( Lol_fired ,
                (marking2list
-                  (places (spn
-                             next_stpn))
-                  (marking (spn
-                              next_stpn))) ,
+                  (places (spn   next_stpn))
+                  (marking (spn  next_stpn))) ,
                (intervals2list
-                  (transs (spn
-                             next_stpn))
-                  (chronos
-                     next_stpn))
-             ) 
+                  (transs (spn   next_stpn))
+                  (chronos       next_stpn)) ) 
                ::
                (animate_stpn
                   next_stpn
@@ -1731,13 +1726,25 @@ Definition ex_stpn := mk_STPN
                         )
                         ex_chronos'.
 
-Check ex_stpn. Compute (marking (spn
-                                   ex_stpn)). (* initial marking *)
+Check ex_stpn. Compute (marking
+                          (spn
+                             ex_stpn)). (* initial marking *)
 
-Search STPN.
+Search STPN.  (* stpn_cycle     stpn_debug_pre    animate_stpn *)
 Compute (animate_stpn
            ex_stpn
            10).  (* 11 markings *)
+
+Compute
+  (
+    stpn_debug_pre
+      (
+        snd (stpn_cycle
+               (snd (stpn_cycle
+                       ex_stpn)))
+      )
+  ).
+
 
 (********************************************************
 *********************************************************
