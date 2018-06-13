@@ -979,7 +979,7 @@ Inductive step : SPN -> SPN -> Prop :=
 
                              
 Definition is_the_algorithm (f : SPN -> SPN) :=
-  forall spn, (* Permutation al (f al) /\ sorted (f al) *) . 
+  forall (spn:SPN), True (* Permutation al (f al) /\ sorted (f al) *) . 
 
 
 

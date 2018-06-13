@@ -1,3 +1,5 @@
+-R . Top
+
 CpdtTactics.v
 DepList.v
 MoreSpecif.v
