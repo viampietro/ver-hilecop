@@ -347,17 +347,45 @@ Fixpoint inhib_check
 (*****************************************************************)
 (*********   FIRING ALGORITHM    for SPN      ********************)
 
+
+
+
 Export ListNotations.
-Check update_marking_pre.
+
+(*Inductive step : SPN -> SPN -> Prop := 
+| trans_sync: forall (x y : SPN),
+    (y = snd (spn_fired x))  ->  (step x y).  
+                             
+Definition is_the_algorithm (f : SPN -> SPN) :=
+  forall (spn:SPN), True (* Permutation al (f al) /\ sorted (f al) *) .*) 
+
+Inductive spn_sub_fire_pre_spec
+          (places : list place_type)
+          (pre test inhib : weight_type)  
+          (m_init m_intermediate_decreasing : marking_type)
+          (subclass_half_fired : list trans_type) 
+          :
+  (list trans_type) -> (list trans_type) -> marking_type -> Prop :=
+| class_transs_empty :
+    spn_sub_fire_pre_spec places pre test inhib m_init
+                          m_intermediate_decreasing
+                          subclass_half_fired []
+                          subclass_half_fired
+                          m_intermediate_decreasing.
+                       
+
+
+  
+  
 (** given 1 ordered class of transitions 
 in structural conflict (a list class_of_transs), 
 return 1 list of transitions "subclass_half_fired" 
 and marking "m_intermediate" accordingly ...   *)
 Fixpoint spn_sub_fire_pre
          (places : list place_type)
-         (pre test inhib : weight_type)  (* 3 *)
-         (m_init m_intermediate_decreasing : marking_type)    (* 2 *)
-         (class_transs subclass_half_fired : list trans_type) (* 2 *)
+         (pre test inhib : weight_type)  
+         (m_init m_intermediate_decreasing : marking_type)   
+         (class_transs subclass_half_fired : list trans_type) 
          (* "subclass_half_fired"  is meant to be empty at first *) 
   : (list trans_type) * marking_type :=
   match class_transs with
@@ -968,18 +996,11 @@ Compute
       )
   ).
 
+Search SPN. Print SPN.
 
 
-Inductive step : SPN -> SPN -> Prop := 
-| trans_sync: forall (x y : SPN),
-    (y = snd (spn_fired x))  ->  (step x y)
-
-.  
 
 
-                             
-Definition is_the_algorithm (f : SPN -> SPN) :=
-  forall (spn:SPN), True (* Permutation al (f al) /\ sorted (f al) *) . 
 
 
 
