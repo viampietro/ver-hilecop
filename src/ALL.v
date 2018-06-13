@@ -100,13 +100,13 @@ Print prior_type.
 Definition prio_over
            (t1 t2 : trans_type)
            (prior : prior_type)
-  : bool :=
+  : option bool :=
   match prior with
   | mk_prior
       L
      (* no_inter
-       cover *) => (* t1 devant t2 dans 1 même sous-liste 
-                       Fixpoint ...  *)  false
+       cover *) => (* t1 devant t2 dans 1 meme sous-liste 
+                       Fixpoint ...  *)  Some false
   end.
 
 (****************************************************************)
@@ -166,8 +166,8 @@ Definition option_eq {A: Type} (eqA: forall (x y: A), {x=y} + {x<>y}):
   forall (x y: option A), {x=y} + {x<>y}.
 Proof.
   decide equality.
-Defined.
-Global Opaque option_eq.  (*** ??? Defined/Qed  Opaque  Global  ***)
+Defined.  (* the proof is important when "Defined." *)
+Global Opaque option_eq.  (*** ??? Opaque  Global  ***)
 
 
 (**********************************************************
@@ -187,7 +187,8 @@ Definition set_mark (m:marking_type) (p:place_type) (j:nat)
 Definition modif_mark
            (m : marking_type)
            (p : place_type)
-           (j : option nat_star)  (** option nat because of weight_type **)
+           (j : option nat_star)
+           (** option nat_star     because of weight_type ? **)
            (op : nat -> nat -> nat)
   : marking_type :=
   fun p' =>
@@ -355,7 +356,7 @@ and marking "m_intermediate" accordingly ...   *)
 Fixpoint spn_sub_fire_pre
          (places : list place_type)
          (pre test inhib : weight_type)  (* 3 *)
-         (m_init m_intermediate : marking_type)    (* 2 *)
+         (m_init m_intermediate_decreasing : marking_type)    (* 2 *)
          (class_transs subclass_half_fired : list trans_type) (* 2 *)
          (* "subclass_half_fired"  is meant to be empty at first *) 
   : (list trans_type) * marking_type :=
@@ -363,30 +364,39 @@ Fixpoint spn_sub_fire_pre
   | t :: tail => if (pre_or_test_check
                       places
                       (pre t)
-                      m_intermediate)
-                      && (pre_or_test_check
-                            places
-                            (test t)
-                            m_init)
-                      && (inhib_check
-                            places
-                            (inhib t)
-                            m_init)
-                 then spn_sub_fire_pre
-                        places pre test inhib
-                        m_init (update_marking_pre
-                                  places t pre m_intermediate)
-                        tail (subclass_half_fired ++ [t])
-                        (* concatener derriere pour garder ordre *)
-                 else spn_sub_fire_pre
-                        places pre test inhib
-                        m_init m_intermediate
-                        tail subclass_half_fired
-  | []  => (subclass_half_fired, m_intermediate)
+                      m_intermediate_decreasing)
+                      &&
+                      (pre_or_test_check
+                         places
+                         (test t)
+                         m_init)
+                      &&
+                      (inhib_check
+                         places
+                         (inhib t)
+                         m_init)
+                 then
+                   let
+                     (m_again_decreasing, subclass_half_fired') :=
+                     ((update_marking_pre
+                         places t pre m_intermediate_decreasing),
+                      subclass_half_fired ++ [t]
+                     (* concatener derriere pour garder ordre *))
+                   in
+                   spn_sub_fire_pre
+                     places pre test inhib
+                     m_init m_again_decreasing 
+                     tail subclass_half_fired'
+                 else (* no change, but inductive progress *)
+                   spn_sub_fire_pre
+                     places pre test inhib
+                     m_init m_intermediate_decreasing
+                     tail subclass_half_fired
+  | []  => (subclass_half_fired, m_intermediate_decreasing)
   end.
 (* 
 there are 2 parallel calculus in this function : 
-1) pumping tokens to get "m_intermediate"  (half fired)
+1) pumping tokens to get "m_intermediate_decreasing"  (half fired)
 2) returning subclass of transitions (half fired)
 and 2 markings are recorded : 
 1) the initial one to check with inhib and test arcs
@@ -424,140 +434,138 @@ Fixpoint sub_fire_post
 Fixpoint spn_fire_pre
          (places : list place_type)
          (pre test inhib : weight_type)
-         (marking : marking_type)
+         (marking decreasing_m : marking_type)
          (classes_transs classes_half_fired : list (list trans_type))
-  : (list (list trans_type))   * marking_type :=
+  : (list (list trans_type)) *
+    marking_type :=
   match classes_transs with
-  | [] => (classes_half_fired , marking)
-  | l :: Ltail => let m := (snd (spn_sub_fire_pre
-                                  places  pre test inhib
-                                  marking marking
-                                  l []))
+  | [] => (classes_half_fired , decreasing_m)
+  | l :: Ltail => let (sub_l, new_m) := (spn_sub_fire_pre
+                                           places  pre test inhib
+                                           marking decreasing_m
+                                           l [])
                   in
                   spn_fire_pre
                     places  pre test inhib
-                    m
+                    marking new_m
                     Ltail
-                    ((fst (spn_sub_fire_pre
-                             places  pre test inhib
-                             marking marking
-                             l [])) :: classes_half_fired)         
+                    (sub_l :: classes_half_fired)         
   end.
-
-Print SPN.  (*** for nice prints  only  !  **)
-Definition fire_pre_print
-           (places : list place_type) (pre test inhib : weight_type)
-           (marking : marking_type)
-           (classes_transs classes_half_fired : list (list trans_type))
-  : (list (list trans_type)) * list (place_type * nat) :=
-  let res := (spn_fire_pre
-                places 
-                pre
-                test 
-                inhib 
-                marking
-                classes_transs [] )
-  in
-  ((fst res), marking2list
-                places 
-                (snd res) ).
-
 
 
 (* 
- Begin with intermediate marking
- (computed above by "fire_pre" ,
- after half (pre arcs) firing ALL the transitions choosen),
- End with the _final_ marking !   Houra ! *)
+ intended to begin with intermediate marking computed by "fire_pre",
+ after half (pre arcs) firing of ALL the chosen transitions.
+ End with the FINAL marking of the cycle !  *)
 Fixpoint fire_post
          (places : list place_type)
          (post : weight_type)
-         (marking_half : marking_type)
+         (marking_increasing : marking_type)
          (subclasses_half_fired : list (list trans_type))
   : marking_type := 
   match subclasses_half_fired with
-  | []  => marking_half
-  | l :: Ltail  => fire_post
+  | []  => marking_increasing
+  | l :: Ltail  => let new_m := sub_fire_post
+                                  places post
+                                  marking_increasing
+                                  l
+                   in
+                   fire_post
                      places post
-                     (sub_fire_post
-                        places post
-                        marking_half
-                        l)
+                     new_m
                      Ltail                     
   end. 
 
 
-(* Returns  [transitions fired + final marking] *)
+(* (almost) main function, 
+  returning  "transitions fired (Lol)" + "final marking" ,
+   branching spn_fire_post with spn_fire_pre   *)
 Definition spn_fire  
            (places : list place_type)
            (pre test inhib post : weight_type)
            (m_init : marking_type)
            (classes_transs : list (list trans_type))
   : (list (list trans_type)) * marking_type :=
-  let res := spn_fire_pre
-               places  pre test inhib 
-               m_init
-               classes_transs []
+  let (sub_Lol, m_decreased) := spn_fire_pre
+                                  places  pre test inhib 
+                                  m_init   m_init
+                                  classes_transs []
   in
-  ( (fst res) , fire_post
-                  places post
-                  (snd res)
-                  (fst res) ).
+  (sub_Lol, fire_post
+              places post
+              m_decreased
+              sub_Lol).
 
+(*******************************************************)
+(************* to animate a SPN  (and debug)  **********)
 
-(**************************************************)
-(************* to animate a SPN   *****************)
+Print SPN.  (*** for nice and easy    prints   ***)
+(*** list of transitions fired +   INTERMEDIATE   marking  ***)
+Definition spn_fire_pre_print
+           (places : list place_type) (pre test inhib : weight_type)
+           (marking : marking_type)
+           (classes_transs  : list (list trans_type))
+  : (list (list trans_type)) * list (place_type * nat) :=
+  let (sub_Lol, m) := (spn_fire_pre
+                         places 
+                         pre  test  inhib 
+                         marking   marking
+                         classes_transs []
+                      )
+  in
+  (sub_Lol, marking2list
+              places 
+              m ).    (* go with snp_debug_pre *)
+Definition spn_debug_pre (spn : SPN)
+           (* gives transitions fired  +  marking_pre  *)
+  : (list (list trans_type)) * list (place_type * nat) :=
+  match spn with
+  | mk_SPN
+      places
+      transs
+      nodup_p
+      nodup_t
+      pre  post test inhib
+      m
+      (mk_prior
+         Lol)
+    =>  spn_fire_pre_print
+          places
+          pre test inhib
+          m
+          Lol
+  end.
 
 
 Print SPN. Print prior_type.
 (* Only the marking is evolving ! 
-but we want to keep trace of the fired transitions ! *)
+but we want also to record the fired transitions ! *)
 Definition spn_fired (spn : SPN)
-   : (list (list trans_type)) * SPN :=
-  ((fst
-      (spn_fire
-         (places spn)
-         (pre spn)
-         (test spn)
-         (inhib spn)
-         (post spn)
-         (marking spn)
-         match (priority spn) with
-         | mk_prior
-             (* partition *)
-             Lol => Lol
-         end
-      )
-   ) ,
-   (mk_SPN
-      (places spn)
-      (transs spn)
-      (nodup_places spn)
-      (nodup_transitions spn)
-      (pre spn)
-      (post spn)
-      (test spn)
-      (inhib spn)
-      (* marking *)
-      (snd
-         (spn_fire
-            (places spn)
-            (pre spn)
-            (test spn)
-            (inhib spn)
-            (post spn)
-            (marking spn)
-            match (priority spn) with
-            | mk_prior
-                (* partition *)
-                Lol => Lol
-            end
-      ))
-      (priority spn))
-  ).
+  : (list (list trans_type)) * SPN :=
+  match spn with
+  | mk_SPN
+      places  transs  nodup_p  nodup_t
+      pre  post test inhib
+      m
+      (mk_prior
+         Lol)
+    =>  let (sub_Lol, final_m) := (spn_fire
+                                     places 
+                                     pre  test  inhib  post
+                                     m
+                                     Lol)
+        in (sub_Lol,
+            mk_SPN
+              places  transs  nodup_p  nodup_t
+              pre  post test inhib
+              final_m
+              (mk_prior
+                 Lol))
+  end.
 
 Check spn_fired.
-(* n steps calculus  *)   
+(* n steps calculus, n "cycles" with both markings and transs *)
+(*  maybe bugged  but hopefully  no ! *)
 Fixpoint animate_spn
          (spn : SPN)
          (n : nat)
@@ -568,29 +576,18 @@ Fixpoint animate_spn
   | O => [ ( [] , marking2list
                     (places spn)
                     (marking spn) ) ]
-  | S n' =>  let next_spn := (spn_fired spn) in
-             ( (fst next_spn) ,
+  | S n' =>  let (Lol_fired, next_spn) := (spn_fired spn)
+             in
+             ( Lol_fired ,
                (marking2list
-                  (places (snd next_spn))
-                  (marking (snd next_spn))) ) 
+                  (places next_spn)
+                  (marking next_spn))) 
                ::
                (animate_spn
-                  (snd next_spn)
+                  next_spn
                   n')
   end.    (* split / combine ... *)
            
-
-(****************************************************************)
-(******************** to print and test with the eye ************)
-Print marking_type.
-Search list.
-
-
-Definition fire_spn_listing (spn : SPN) :=
-  marking2list
-    (places spn)
-    (marking (snd (spn_fired spn))).
-
 
 (******************************************************************)
 (******************************************************************)
@@ -793,7 +790,7 @@ Definition ex_post (t : trans_type) (p : place_type)
 Definition ex_marking (p : place_type) :=
   match p with
   | mk_place 0 => 2
-  | mk_place 1 => 2
+  | mk_place 1 => 1
   | mk_place 7 => 1
   | mk_place 12 => 1
   | _ => 0
@@ -876,13 +873,25 @@ Definition ex_spn := mk_SPN
                       ex_prior.
 
 Check ex_spn. Compute (marking ex_spn). (* initial marking *)
+(* functions / lists *)
 
-Search SPN.
+Search SPN. (* spn_fired    spn_debug_pre  animate_spn  *)
 Compute (animate_spn
            ex_spn
            10).  (* 11 markings *)
+Compute
+  (
+    spn_debug_pre
+      (
+      (*  snd (spn_fired
+               (snd (spn_fired  *) 
+                       ex_spn
+      )
+  ).
+Print spn_debug_pre. Print spn_fire_pre_print.
+Print spn_fire_pre.
 
-(******** deuxième exemple (permutation des sous-listes)  **********)
+(******** second  example (permutation des sous-listes)  **********)
 
 Definition ex_prior_aux2 :=
   [
@@ -911,6 +920,15 @@ Definition ex_spn2 := mk_SPN
 Compute (animate_spn
            ex_spn2
            10).  (* 11 markings *)
+
+Compute
+  (
+    spn_debug_pre
+      (
+        snd
+          (spn_fired (snd (spn_fired ex_spn)))
+      )
+  ).
 
 (********  SPN numero 3  (apres permuation des sous-listes)  ******)
 Definition ex_prior_aux3 :=
@@ -941,12 +959,14 @@ Compute (animate_spn
            ex_spn3
            10).  (* 11 markings *)
 
-
-(********   debuggage   ******)
-
-Compute (fire_spn_listing
-           ex_spn).  (* donne juste le marquage final *)
-
+Compute
+  (
+    spn_debug_pre
+      (
+        snd
+          (spn_fired (snd (spn_fired ex_spn)))
+      )
+  ).
 
 (*************************************************************
 **************************************************************
@@ -1009,7 +1029,7 @@ Fixpoint intervals2list
                                                   eval_chronos)
                  end
   end.
-(***************** to print beautiful things ******************)
+(***************** to print ******************)
 
 
 (** "enabled" <=> "arcs_classic" + "arcs_test" + "arcs_inhi" OK **)
@@ -1063,7 +1083,6 @@ Fixpoint list_enabled_aux
                         m
                         tail enabled_transs
   end.
-
 Definition list_enabled
            (places : list place_type)
            (pre test inhib : weight_type)
@@ -1076,56 +1095,83 @@ Definition list_enabled
     m
     transs [].
 
+Fixpoint list_disabled_aux
+         (places : list place_type)
+         (pre test inhib : weight_type)
+         (m : marking_type)
+         (enabled_transs  disabled_transs : list trans_type)
+  : list trans_type :=
+  match enabled_transs with
+  | [] => disabled_transs
+  | t :: tail => if trans_is_enabled
+                      places
+                      pre test inhib
+                      m t
+                 then list_disabled_aux
+                        places
+                        pre test inhib
+                        m
+                        tail   disabled_transs
+                 else list_disabled_aux
+                        places
+                        pre test inhib
+                        m
+                        tail   (t::disabled_transs)
+  end.
+Definition list_disabled
+           (places : list place_type)
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (enabled_transs : list trans_type) (*input/output*)
+  : list trans_type :=
+  list_disabled_aux
+    places
+    pre test inhib
+    m
+    enabled_transs [].
+
 Search trans_type. 
-Fixpoint in_list_enabled    (* must exist in library List *)
-         (enabled_transs : list trans_type)
+Fixpoint in_list    (* must exist in library List *)
+         (some_transs : list trans_type)
          (trans : trans_type)
   : bool :=
-  match enabled_transs with
+  match some_transs with
   | [] => false
-  | t :: tail => if (beq_transs trans t)
+  | t :: tail => if (beq_transs trans t)  (* t =? trans *)
                  then true
                  else false
   end.  
 
-(************************************ TIME clocks, counters ***)
-(****** need to increment only _enabled_ transitions ??? ****)
+(********************* TIME intervals  ---> chronos  ***********)
 
-(* Fixpoint list_enabled
-         (places : list place_type)
-         (pre test inhib : weight_type)
-         (m : marking_type)   (* the marking got at the end !!! *)
-         (transs enabled_transs : list trans_type) (*input/output*)
-  : list trans_type :=
-*)
 Print STPN. Print chronos.
+(* increment time, for a given list of enabled transitions *)
 Fixpoint increment_time
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
   : trans_type -> option chrono_type :=
-  
   match enabled_transs with
   | [] => chronos
-  | t :: tail =>   match (chronos t) with
-                   | None => chronos  (* increment nothing ... *)
-                   | Some (mk_chrono        (* immutable ... *)
-                             mini
-                             maxi
-                             min_le_max
-                             cpt ) =>  increment_time
-                                         (fun trans =>
-                                            if beq_transs
-                                                 trans t
-                                            then Some (mk_chrono
-                                                         mini
-                                                         maxi
-                                                         min_le_max
-                                                         (cpt + 1)
-                                                      (* !!! *) )
-                                            else (chronos trans)
-                                         )
-                                         tail
-                   end 
+  | t :: tail => match (chronos t) with
+                 | None => chronos  (* increment nothing ... *)
+                 | Some (mk_chrono        (* immutable ... *)
+                           mini
+                           maxi
+                           min_le_max
+                           cpt ) =>  increment_time
+                                       (fun trans =>
+                                          if beq_transs
+                                               trans t
+                                          then Some (mk_chrono
+                                                       mini
+                                                       maxi
+                                                       min_le_max
+                                                       (cpt + 1)
+                                                    (* !!! *) )
+                                          else (chronos trans)
+                                       )
+                                       tail
+                 end 
   end.
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
@@ -1135,7 +1181,6 @@ Definition reset_time
            (chronos : trans_type -> option chrono_type)
            (t : trans_type)
   : trans_type -> option chrono_type :=
-
   match (chronos t) with
   | None  => chronos   (* reset nothing ... *)
   | Some (mk_chrono
@@ -1154,17 +1199,18 @@ Definition reset_time
                      )             
   end.
 (* le rest de compteur est plus subtile : 
- 1) quand faut-il le faire ?
+ 1) quand faut-il le faire ?  
+   ----> a la fin du cycle ou plutot dans stpn_sub_fire_pre !
  2) pour quelles transitions faut-il le faire ?
- *)
+   ----> celles desensibilisees durant le cycle. meme transitoirement
+*)
 
 (* reset time counters of several transitions ... *)
 Fixpoint reset_time_list
            (chronos : trans_type -> option chrono_type)
-           (subclass : list trans_type)
+           (list_to_reset : list trans_type)
   : trans_type -> option chrono_type :=
-
-  match subclass with
+  match list_to_reset with
   | [] => chronos
   | t :: tail => reset_time_list
                    (reset_time
@@ -1187,10 +1233,10 @@ and marking "m_intermediate" accordingly ...   *)
 Fixpoint stpn_sub_fire_pre
          (places : list place_type)
          (pre test inhib : weight_type)  (* 3 *)
-         (m_init m_intermediate : marking_type)    (* 2 *)
+         (m_init m_decreasing : marking_type)    (* 2 *)
          (* to reset clocks .. *)
          (enabled_transs : list trans_type)
-         (intervals : trans_type -> option chrono_type)
+         (chronos : trans_type -> option chrono_type)
          (* to reset clocks .. *)
          (class_transs subclass_half_fired : list trans_type) (* 2 *)
          (* "subclass_half_fired"  is meant to be empty at first *) 
@@ -1198,11 +1244,11 @@ Fixpoint stpn_sub_fire_pre
     marking_type *
     (trans_type -> option chrono_type) :=
   match class_transs with
-  | t :: tail => if (
+  | t :: tail => if(
                      (pre_or_test_check
                         places
                         (pre t)
-                        m_intermediate)
+                        m_decreasing)
                        && (pre_or_test_check
                              places
                              (test t)
@@ -1211,72 +1257,47 @@ Fixpoint stpn_sub_fire_pre
                              places
                              (inhib t)
                              m_init)
-                   )
+                   ) (* t is enabled, even w.r.t. to the others *)
                  then
-                   if
-                     (good_time (intervals t))
-        (* si transition a une condition alors regarder la condition
-sinon faire ce qui est dans le "then"  
-
-si condition vrai alors faire ce qui est dans le "then"
-sinon elle n'est pas tirable
-
-         *)      
+                   if    (good_time (chronos  t))
                    then
-                     let new_m :=
+                     let new_decreasing :=
                          (update_marking_pre
-                            places t pre m_intermediate)
+                            places t pre
+                            m_decreasing)
+                     in
+                     let new_chronos :=
+                         (reset_time_list
+                            chronos
+                  (* disabled = enabled_before - enabled_now *) 
+                            (list_disabled
+                               places
+                               pre test inhib
+                               new_decreasing
+                               enabled_transs))
                      in
                      stpn_sub_fire_pre
                        places pre test inhib
-                       m_init new_m 
-                       
+                       m_init new_decreasing 
                        enabled_transs
                        (* updating the intervals in case ... *)
-                       (reset_time_list
-                          intervals
-                          (list_enabled
-                             places
-                             pre test inhib
-                             new_m
-                             class_transs)
-                       )
-                       
+                       new_chronos
                        tail (subclass_half_fired ++ [t])
-                       (* concatenate t behind, to keep order *)
-                   else
+                       (* concatenate t behind, keep order *)
+                   else (* not goog time *)
                      stpn_sub_fire_pre
-                            places pre test inhib
-                            m_init m_intermediate
-                            enabled_transs  intervals
-                            tail subclass_half_fired 
+                       places pre test inhib
+                       m_init m_decreasing
+                       enabled_transs   chronos
+                       tail subclass_half_fired 
                         (* t not fired, let's continue with tail *)
-                 else
-
-
-(*
-                   (if
-                          in_list_enabled
-                            enabled_transs
-                            t
-                        then (* reset the local counter of
-                            this (momentarily) disabled trans *)
-                          sub_fire_pre
-                            places pre test inhib
-                            m_init m_intermediate
-                            enabled_transs
-                            (reset_time
-                               intervals
-                               t )
-                            tail subclass_half_fired
-                        else   *)
+                 else  (* not enabled   w.r.t. ... *)
                    stpn_sub_fire_pre
                      places  pre  test  inhib
-                     m_init  m_intermediate
-                     enabled_transs  intervals
+                     m_init  m_decreasing
+                     enabled_transs    chronos
                      tail subclass_half_fired 
-                        
-  | []  => (subclass_half_fired, m_intermediate, intervals)
+  | []  => (subclass_half_fired, m_decreasing, chronos)
   end.
 (* 
 there are 3 parallel calculus in this function : 
@@ -1310,43 +1331,81 @@ Fixpoint stpn_fire_pre
     (trans_type -> option chrono_type)  :=
   match classes_transs with
   | [] => (classes_half_fired , marking, chronos)
-  | l :: Ltail => let '(sub_l, new_m, new_i) := stpn_sub_fire_pre
-                                                  places
-                                                  pre test inhib
-                                                  marking marking
-                                                  enabled_transs
-                                                  chronos
-                                                  l []
-                  in
-                  stpn_fire_pre
-                    places
-                    pre  test  inhib
-                    new_m
-                    enabled_transs  new_i
-                    Ltail
-                    (sub_l :: classes_half_fired)         
+  | l :: Ltail => let '(sub_l, new_m, new_chrs) := stpn_sub_fire_pre
+                                                     places
+                                                     pre test inhib
+                                                     marking marking
+                                                     enabled_transs
+                                                     chronos
+                                                     l []
+                  in  stpn_fire_pre
+                        places
+                        pre  test  inhib
+                        new_m
+                        enabled_transs  new_chrs
+                        Ltail
+                        (sub_l :: classes_half_fired)         
   end.
 
-(*
-Print SPN.  (*** for nice prints  only  ! debugging ..  **)
-Definition fire_pre_print
+
+(*** for nice prints  only  ! debugging ..  **)
+Search SPN.
+Print spn_fire_pre_print. 
+Print stpn_fire_pre.
+Definition stpn_fire_pre_print
            (places : list place_type) (pre test inhib : weight_type)
            (marking : marking_type)
-           (classes_transs classes_half_fired : list (list trans_type))
-  : (list (list trans_type)) * list (place_type * nat) :=
-  let res := (fire_pre
-                places 
-                pre
-                test 
-                inhib 
-                marking
-                classes_transs [] )
+           (* ......... to reset clocks .................. *)
+           (enabled_transs : list trans_type)
+           (chronos : trans_type -> option chrono_type)
+           (* ......... to reset clocks .................. *)
+           (classes_transs : list (list trans_type))
+  : (list (list trans_type)) *
+    list (place_type * nat)  *
+    (* chronos added, compared with SPN *)
+    list (trans_type * option (nat * nat * nat)) :=
+  let '(sub_Lol, m_pre, new_chronos ) := (stpn_fire_pre
+                                            places 
+                                            pre   test  inhib 
+                                            marking
+                                            enabled_transs
+                                            chronos
+                                            classes_transs [] )
   in
-  ((fst res), marking2list
-                places 
-                (snd res) ).
+  (sub_Lol, marking2list
+              places 
+              m_pre ,
+  intervals2list
+    enabled_transs
+    new_chronos).
 
-*)
+Print spn_debug_pre.
+Definition stpn_debug_pre (stpn : STPN)
+  : (list (list trans_type)) *
+    list (place_type * nat)  *
+    list (trans_type * option (nat * nat * nat))  :=
+  match stpn with
+  | mk_STPN
+      (mk_SPN
+         places  transs  nodup_places nodup_transitions           
+         pre     test    inhib        post
+         marking
+         (mk_prior
+            Lol) )
+      chronos
+    =>
+    stpn_fire_pre_print
+      places
+      pre test inhib
+      marking
+      (list_enabled
+         places 
+         pre  test  inhib 
+         marking
+         transs )
+      chronos
+      Lol
+  end.
 
 (* Returns  [transitions fired + final marking] *)
 Definition stpn_fire  
@@ -1358,96 +1417,71 @@ Definition stpn_fire
            (chronos : trans_type -> option chrono_type)
            (* .......... to reset clocks ................. *)
            (classes_transs : list (list trans_type))
-
   : (list (list trans_type)) *
-    marking_type *
+    marking_type             *
     (trans_type -> option chrono_type)  :=
+  let '(sub_Lol, m_inter, new_chronos) := stpn_fire_pre
+                                            places  pre test inhib 
+                                            m_init
+                                            enabled_transs  chronos
+                                            classes_transs []
+  in  (sub_Lol ,
+       fire_post
+         places post
+         m_inter
+         sub_Lol ,
+       chronos ).
 
-  let '(L, m, i) := stpn_fire_pre
-                      places  pre test inhib 
-                      m_init
-                      enabled_transs  chronos
-                      classes_transs []
-  in
-  ( L ,
-    fire_post
-      places post
-      m
-      L ,
-    i  ).
-
-(* The marking and the "intervals" (their counter) 
-   are evolving !!  
-but we want to see also the fired transitions ! *)
+(* The marking and the chronos are evolving,  
+but we want to see also the      fired transitions    *)
 (******************************* CYCLE **********************)
 Print list_enabled. Print STPN. Print SPN.
-Definition stpn_cycle (stpn : STPN)
-           
+Definition stpn_cycle (stpn : STPN)           
   : (list (list trans_type)) * STPN  :=
-
   match stpn with
   | mk_STPN
       (mk_SPN
-         places
-         transs
-         nodup_places 
-         nodup_transitions           
-         pre
-         test
-         inhib
-         post
+         places  transs  nodup_places  nodup_transitions           
+         pre     post    test          inhib         
          marking
          (mk_prior
-            Lol)
-      )
+            Lol) )
       chronos
-    => let enabled := (list_enabled
-                       places 
-                       pre  test  inhib 
-                       marking
-                       transs
-                    )
-     in let chronos_incr := increment_time
-                              chronos 
-                              enabled
-        in let '(fired, new_m, new_chronos) := stpn_fire  
-                                                 places
-                                                 pre 
-                                                 test
-                                                 inhib  post
-                                                 marking
-                                                 enabled (* ! *)  
-                                                 chronos_incr (* ! *)
-                                                 Lol
-           in  (fired ,  (* ! *)
-                (mk_STPN
-                   (mk_SPN
-                      places
-                      transs 
-                      nodup_places 
-                      nodup_transitions 
-                      pre
-                      post
-                      test
-                      inhib
-                      new_m       (* ! *)
-                      (mk_prior
-                         Lol)
-                   )
-                   new_chronos  (* ! *)
-                )     
-               )
+    =>
+    let enabled := (list_enabled
+                      places 
+                      pre  test  inhib 
+                      marking
+                      transs )
+    in
+    let chronos_incr := increment_time
+                          chronos 
+                          enabled
+    in
+    let '(fired, new_m, new_chronos) := stpn_fire  
+                                          places
+                                          pre  test  inhib  post
+                                          marking
+                                          enabled (* ! *)  
+                                          chronos_incr (* ! *)
+                                          Lol
+    in (fired ,  (* ! *)
+        (mk_STPN
+           (mk_SPN
+              places  transs   nodup_places  nodup_transitions 
+              pre     post     test          inhib
+              new_m       (* ! *)
+              (mk_prior
+                 Lol) )
+           new_chronos  (* ! *) )  )
   end.
 
-
-
-                         
 
 (**************************************************)
 (************* to animate a STPN   *****************)
 
 (* n steps calculus  *)
-Print STPN. Check intervals2list.
+Print STPN. Check intervals2list. Print animate_spn.
 Fixpoint animate_stpn
          (stpn : STPN)
          (n : nat)
@@ -1458,26 +1492,21 @@ Fixpoint animate_stpn
   match n with
   | O => [ ( [] ,
              marking2list
-                    (places (spn stpn))
-                    (marking (spn stpn)) ,
+                    (places   (spn stpn))
+                    (marking  (spn stpn)) ,
              (intervals2list
                 (transs (spn stpn))
-                (chronos stpn))
+                (chronos     stpn))
          ) ]
-  | S n' =>  let (fired, next_stpn) := (stpn_cycle stpn)
+  | S n' =>  let (Lol_fired, next_stpn) := (stpn_cycle stpn)
              in
-             ( fired ,
+             ( Lol_fired ,
                (marking2list
-                  (places (spn
-                             next_stpn))
-                  (marking (spn
-                              next_stpn))) ,
+                  (places (spn   next_stpn))
+                  (marking (spn  next_stpn))) ,
                (intervals2list
-                  (transs (spn
-                             next_stpn))
-                  (chronos
-                     next_stpn))
-             ) 
+                  (transs (spn   next_stpn))
+                  (chronos       next_stpn)) ) 
                ::
                (animate_stpn
                   next_stpn
@@ -1698,13 +1727,27 @@ Definition ex_stpn := mk_STPN
                         )
                         ex_chronos'.
 
-Check ex_stpn. Compute (marking (spn
-                                   ex_stpn)). (* initial marking *)
+Check ex_stpn. Compute (marking
+                          (spn
+                             ex_stpn)). (* initial marking *)
 
-Search STPN.
+Search STPN.  (* stpn_cycle     stpn_debug_pre    animate_stpn *)
 Compute (animate_stpn
            ex_stpn
            10).  (* 11 markings *)
+
+Compute
+  (
+    stpn_debug_pre
+      (
+     (*   snd (stpn_cycle
+               (snd (stpn_cycle
+                       (snd (stpn_cycle
+                               (snd (stpn_cycle  *)
+                                      ex_stpn)
+      
+  ).
+
 
 (********************************************************
 *********************************************************

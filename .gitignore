@@ -38,8 +38,6 @@ CoqMakefile*
 # OS generated files #
 ######################
 
-.*.aux      # hidden file
-
 .DS_Store
 .DS_Store?
 ._*

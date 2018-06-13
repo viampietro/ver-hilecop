@@ -1,4 +1,1 @@
--R src   myCode
-src/SPN.v
-src/STPN.v
-src/SITPN.v
+-R src myCode
