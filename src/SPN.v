@@ -36,8 +36,9 @@ Inductive arc_type : Set :=
 Definition marking_type := place_type -> nat.
 
 (*****************************************************************)
-(***  priority relation  ..................................   
-  to DETERMINE the Petri net (along with imperative semantic) ***)
+(***  priority relation  .................
+  to DETERMINE the Petri net (along with the imperative semantic) 
+***)
 
 (*
 Require Import Relations. Print relation. 
@@ -78,6 +79,7 @@ Notation "t1 >> t2" := (prio_over1 t1 t2 _)
                           (at level 50) : type_scope.
 *)
 
+(* Inductive or Definition *) 
 Inductive prior_type : Set :=
   mk_prior { Lol : list (list trans_type) ; }.
     (*
@@ -95,8 +97,7 @@ Inductive prior_type : Set :=
 
 Print prior_type.
 
-
-(*** fonction en construction ...  peut-etre utile ...   ***)
+(*** fonction en construction ...  peut-etre utile ...  
 Definition prio_over
            (t1 t2 : trans_type)
            (prior : prior_type)
@@ -107,7 +108,7 @@ Definition prio_over
      (* no_inter
        cover *) => (* t1 devant t2 dans 1 meme sous-liste 
                        Fixpoint ...  *)  Some false
-  end.
+  end.   *)
 
 (****************************************************************)
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
@@ -118,9 +119,7 @@ Structure SPN : Set := mk_SPN
                          {
                            places : list place_type ;
                            transs : list trans_type ;
-                           nodup_places : NoDup places ;
-                           nodup_transitions : NoDup transs ;
-                           
+                                                      
                            pre : weight_type ;
                            post : weight_type ;
                            
@@ -132,6 +131,20 @@ Structure SPN : Set := mk_SPN
                             *)
                            priority : prior_type ; }.
 
+(* on suppose que 
+1) les places sont toutes differentes
+2) les transs sont toutes differentes
+
+3) priority/prior_type  
+forme une partition des transitions, partition correspondante
+aux classes de "conflits structurels" (arcs amonts en commum)
+*) 
+
+(*
+Inductive is_SPN_valid : SPN -> Prop :=
+| hypothesis3 : is_SPN_valid
+                  [] [] ... 
+*)
 
 (**************************************************************)
 (************ are 2 nat/places/transitions equal ? ************)
@@ -167,7 +180,7 @@ Definition option_eq {A: Type} (eqA: forall (x y: A), {x=y} + {x<>y}):
 Proof.
   decide equality.
 Defined.  (* the proof is important when "Defined." *)
-Global Opaque option_eq.  (*** ??? Opaque  Global  ***)
+(* Global Opaque option_eq.     ???   ***)
 
 
 (**********************************************************
@@ -182,7 +195,7 @@ Definition set_mark (m:marking_type) (p:place_type) (j:nat)
   fun p' =>  if beq_places p p'
              then j             (* set j tokens in place p *)
              else m p'.         (* other tokens left unchanged  *)
-(* function not used for now *)
+(* function not used yet *)
 
 Inductive modif_mark_spec
           (m : marking_type)
@@ -252,6 +265,10 @@ Fixpoint update_marking_pre
                            Nat.sub)
   end.
 
+Require FunInd.
+Functional Scheme update_marking_pre_ind :=
+  Induction for update_marking_pre Sort Prop.
+
 (**** downhill (output set, postset) ***)
 Inductive update_marking_post_spec
           (places : list place_type)
@@ -282,6 +299,9 @@ Fixpoint update_marking_post
                            (post t p)
                            Nat.add)
   end.
+
+Functional Scheme update_marking_post_ind :=
+  Induction for update_marking_post Sort Prop.
 
 (***** below a useless function !!!!
     because one has to decompose step by step 
@@ -318,8 +338,10 @@ Definition update_marking
 Inductive marking2list_spec
           (m : marking_type)
   : list place_type -> list (place_type * nat) -> Prop :=
-| marking2list_spec_nil : marking2list_spec
-                            m [] [].  
+| places_nil : marking2list_spec
+                 m [] []
+| places_cons : marking2list_spec
+                  m [] [].
           
 Fixpoint marking2list
          (places : list place_type)
@@ -377,18 +399,35 @@ Fixpoint pre_or_test_check
                    end
   end.
 
+(* soundness   / correctness *)
+Theorem pre_or_test_check_sound :
+  forall (places : list place_type)
+         (pre_or_test_arcs_t : place_type -> option nat_star)
+         (* pre or test arcs going to trans t *)
+         (m : marking_type),
+    pre_or_test_check
+      places
+      pre_or_test_arcs_t
+      (** "pre" or "test" arcs going to trans t **)
+      m = true 
+    ->
+    pre_or_test_check_spec
+      pre_or_test_arcs_t
+      m
+      places.
+Proof.
+  Admitted.
+      
 Inductive inhib_check_spec
-          (m : marking_type)
           (inhib_arcs_t : place_type -> option nat_star)
+          (m : marking_type)
   : list place_type -> Prop :=
 | inhib_check_nil : inhib_check_spec
-                      m
                       inhib_arcs_t
-                      []
+                      m  []
 | inhib_check_cons : inhib_check_spec
-                       m
                        inhib_arcs_t
-                       [].
+                       m  [].
   
 Fixpoint inhib_check
          (places : list place_type)
@@ -416,6 +455,24 @@ Fixpoint inhib_check
                                end
                    end
   end.
+
+Theorem inhib_check_sound :
+  forall (places : list place_type)
+         (inhib_arcs_t : place_type -> option nat_star)
+         (* pre or test arcs going to trans t *)
+         (m : marking_type),
+    inhib_check
+      places
+      inhib_arcs_t
+      (** "pre" or "test" arcs going to trans t **)
+      m = true 
+    ->
+    inhib_check_spec
+      inhib_arcs_t
+      m
+      places.
+Proof.
+  Admitted.
 
 
 (*****************************************************************)
@@ -499,7 +556,11 @@ there are 2 parallel calculus in this function :
 and 2 markings are recorded : 
 1) the initial one to check with inhib and test arcs
 2) a floating (decreasing) intermediate marking to check classic arcs
-*)
+ *)
+
+(* needed *)
+Functional Scheme spn_sub_fire_pre_ind :=
+  Induction for spn_sub_fire_pre   Sort Prop.
 
 (*
  given a marking "m_intermediate" got by above,
@@ -697,8 +758,6 @@ Definition spn_debug_pre (spn : SPN)
   | mk_SPN
       places
       transs
-      nodup_p
-      nodup_t
       pre  post test inhib
       m
       (mk_prior
@@ -725,7 +784,7 @@ Definition spn_fired (spn : SPN)
   : (list (list trans_type)) * SPN :=
   match spn with
   | mk_SPN
-      places  transs  nodup_p  nodup_t
+      places  transs  
       pre  post test inhib
       m
       (mk_prior
@@ -737,7 +796,7 @@ Definition spn_fired (spn : SPN)
                                      Lol)
         in (sub_Lol,
             mk_SPN
-              places  transs  nodup_p  nodup_t
+              places  transs  
               pre  post test inhib
               final_m
               (mk_prior
