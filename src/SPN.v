@@ -182,6 +182,16 @@ Definition set_mark (m:marking_type) (p:place_type) (j:nat)
   fun p' =>  if beq_places p p'
              then j             (* set j tokens in place p *)
              else m p'.         (* other tokens left unchanged  *)
+(* function not used for now *)
+
+Inductive modif_mark_spec
+          (m : marking_type)
+          (p : place_type)
+          (j : option nat_star)
+          (** option nat_star     because of weight_type ? **)
+          (op : nat -> nat -> nat)
+  : marking_type -> Prop :=
+| modif_mark_spec_constr : modif_mark_spec m p j op m.
 
 (* given a marking m, add/remove j tokens inside place p *)  
 Definition modif_mark
@@ -209,7 +219,19 @@ Check Nat.sub. Check Nat.add.   (** the 2 op(erators) to use ... **)
 (* Require Import Nat. (* for Nat.leb != (Bool.)leb *) 
    library "Nat" is included into "Arith"  ? *)
 
+Export ListNotations.
+
 (*************   update marking   *********************)
+Inductive update_marking_pre_spec
+          (places : list place_type)
+          (t : trans_type)
+          (pre : weight_type)
+          (m : marking_type)
+  (* structural induction over list of places *)
+  : marking_type -> Prop :=
+| update_marking_pre_constr : update_marking_pre_spec
+                                places t pre m m.
+  
 Fixpoint update_marking_pre
          (places : list place_type)
          (t : trans_type)
@@ -218,7 +240,7 @@ Fixpoint update_marking_pre
   (* structural induction over list of places *)
   : marking_type :=
   match places with
-  | nil => m
+  | [] => m
   | cons p tail => update_marking_pre
                      tail
                      t
@@ -231,6 +253,16 @@ Fixpoint update_marking_pre
   end.
 
 (**** downhill (output set, postset) ***)
+Inductive update_marking_post_spec
+          (places : list place_type)
+          (t : trans_type)
+          (post : weight_type)
+          (m : marking_type)
+  (* structural induction over list of places *)
+  : marking_type -> Prop :=
+| update_marking_post_constr : update_marking_post_spec
+                                 places t post m m.
+
 Fixpoint update_marking_post
          (places : list place_type) 
          (t : trans_type)
@@ -239,7 +271,7 @@ Fixpoint update_marking_post
   (* structural induction over list of places *)
   : marking_type :=
   match places with
-  | nil => m
+  | [] => m
   | cons p tail => update_marking_post
                      tail
                      t
@@ -254,6 +286,16 @@ Fixpoint update_marking_post
 (***** below a useless function !!!!
     because one has to decompose step by step 
  and fire several transitions in 1 step  ***)
+Inductive update_marking_spec
+          (places : list place_type)
+          (t : trans_type)
+          (pre : weight_type)
+          (m : marking_type)
+  (* structural induction over list of places *)
+  : marking_type -> Prop :=
+| update_marking_constr : update_marking_spec
+                            places t pre m m.
+
 Definition update_marking
            (places : list place_type) 
            (t : trans_type)
@@ -273,6 +315,12 @@ Definition update_marking
 
 (**********   to print the markings  ***********************)
 (*** list the tokens !!!! ***)
+Inductive marking2list_spec
+          (m : marking_type)
+  : list place_type -> list (place_type * nat) -> Prop :=
+| marking2list_spec_nil : marking2list_spec
+                            m [] [].  
+          
 Fixpoint marking2list
          (places : list place_type)
          (m : marking_type)
@@ -290,18 +338,30 @@ Fixpoint marking2list
 Locate "<?". Print Nat.ltb. Print Nat.leb.
 Print pre. Print weight_type.
 (**** uphill (input set, preset) ***)
+Inductive pre_or_test_check_spec
+          (pre_or_test_arcs_t : place_type -> option nat_star)
+          (** "classic" and "test" arcs **)
+          (m : marking_type)
+  : list place_type -> Prop :=
+| pre_or_test_check_nil : pre_or_test_check_spec
+                            pre_or_test_arcs_t
+                            m []
+| pre_or_test_check_cons : pre_or_test_check_spec
+                            pre_or_test_arcs_t
+                            m [].
+      
 Fixpoint pre_or_test_check
          (places : list place_type)
-         (pre_classic_or_test_t : place_type -> option nat_star)
+         (pre_or_test_arcs_t : place_type -> option nat_star)
          (** "classic" and "test" arcs **)
          (m : marking_type)
   : bool :=
   match places with
   | nil => true
-  | cons h tail => match pre_classic_or_test_t h with
+  | cons h tail => match pre_or_test_arcs_t h with
                    | None => pre_or_test_check
                                tail
-                               pre_classic_or_test_t
+                               pre_or_test_arcs_t
                                m
                    | Some n => match n with
                                | mk_nat_star
@@ -311,23 +371,37 @@ Fixpoint pre_or_test_check
                                    &&
                                    (pre_or_test_check
                                       tail
-                                      pre_classic_or_test_t
+                                      pre_or_test_arcs_t
                                       m)
                                end
                    end
   end.
 
+Inductive inhib_check_spec
+          (m : marking_type)
+          (inhib_arcs_t : place_type -> option nat_star)
+  : list place_type -> Prop :=
+| inhib_check_nil : inhib_check_spec
+                      m
+                      inhib_arcs_t
+                      []
+| inhib_check_cons : inhib_check_spec
+                       m
+                       inhib_arcs_t
+                       [].
+  
 Fixpoint inhib_check
          (places : list place_type)
-         (pre_inhi_t : place_type -> option nat_star) (* inhibitor arcs *)
+         (inhib_arcs_t : place_type -> option nat_star)
+         (* inhibitor arcs *)
          (m : marking_type)
   : bool :=
   match places with
   | nil => true
-  | cons h tail => match pre_inhi_t h with
+  | cons h tail => match inhib_arcs_t h with
                    | None => inhib_check
                                tail
-                               pre_inhi_t
+                               inhib_arcs_t
                                m
                    | Some n => match n with
                                | mk_nat_star
@@ -337,7 +411,7 @@ Fixpoint inhib_check
                                    &&
                                    (inhib_check
                                       tail
-                                      pre_inhi_t
+                                      inhib_arcs_t
                                       m)
                                end
                    end
@@ -347,36 +421,32 @@ Fixpoint inhib_check
 (*****************************************************************)
 (*********   FIRING ALGORITHM    for SPN      ********************)
 
-
-
-
-Export ListNotations.
-
-(*Inductive step : SPN -> SPN -> Prop := 
-| trans_sync: forall (x y : SPN),
-    (y = snd (spn_fired x))  ->  (step x y).  
-                             
-Definition is_the_algorithm (f : SPN -> SPN) :=
-  forall (spn:SPN), True (* Permutation al (f al) /\ sorted (f al) *) .*) 
-
 Inductive spn_sub_fire_pre_spec
           (places : list place_type)
           (pre test inhib : weight_type)  
-          (m_init m_intermediate_decreasing : marking_type)
+          (m_init m_decreasing : marking_type)
           (subclass_half_fired : list trans_type) 
-          :
-  (list trans_type) -> (list trans_type) -> marking_type -> Prop :=
-| class_transs_empty :
-    spn_sub_fire_pre_spec places pre test inhib m_init
-                          m_intermediate_decreasing
-                          subclass_half_fired []
-                          subclass_half_fired
-                          m_intermediate_decreasing.
-                       
-
-
-  
-  
+  : (list trans_type) -> (list trans_type) -> marking_type -> Prop :=
+| class_transs_nil :
+    spn_sub_fire_pre_spec
+      places  pre  test  inhib
+      m_init  m_decreasing
+      subclass_half_fired
+      []  subclass_half_fired  m_decreasing
+| class_transs_cons : (* if 
+pre_or_test_check_spec
+places  (pre t) m_decreasing   /\
+pre_or_test_check_spec 
+places (test t) m_init   /\
+inhib_check
+places (inhib t) m_init 
+                       *)
+    spn_sub_fire_pre_spec
+      places  pre  test  inhib
+      m_init  m_decreasing
+      subclass_half_fired
+      []  subclass_half_fired  m_decreasing
+.
 (** given 1 ordered class of transitions 
 in structural conflict (a list class_of_transs), 
 return 1 list of transitions "subclass_half_fired" 
@@ -384,7 +454,7 @@ and marking "m_intermediate" accordingly ...   *)
 Fixpoint spn_sub_fire_pre
          (places : list place_type)
          (pre test inhib : weight_type)  
-         (m_init m_intermediate_decreasing : marking_type)   
+         (m_init m_decreasing : marking_type)   
          (class_transs subclass_half_fired : list trans_type) 
          (* "subclass_half_fired"  is meant to be empty at first *) 
   : (list trans_type) * marking_type :=
@@ -392,7 +462,7 @@ Fixpoint spn_sub_fire_pre
   | t :: tail => if (pre_or_test_check
                       places
                       (pre t)
-                      m_intermediate_decreasing)
+                      m_decreasing)
                       &&
                       (pre_or_test_check
                          places
@@ -407,7 +477,7 @@ Fixpoint spn_sub_fire_pre
                    let
                      (m_again_decreasing, subclass_half_fired') :=
                      ((update_marking_pre
-                         places t pre m_intermediate_decreasing),
+                         places t pre m_decreasing),
                       subclass_half_fired ++ [t]
                      (* concatener derriere pour garder ordre *))
                    in
@@ -418,9 +488,9 @@ Fixpoint spn_sub_fire_pre
                  else (* no change, but inductive progress *)
                    spn_sub_fire_pre
                      places pre test inhib
-                     m_init m_intermediate_decreasing
+                     m_init m_decreasing
                      tail subclass_half_fired
-  | []  => (subclass_half_fired, m_intermediate_decreasing)
+  | []  => (subclass_half_fired, m_decreasing)
   end.
 (* 
 there are 2 parallel calculus in this function : 
@@ -437,6 +507,29 @@ after a given subclass of transs has been half fired,
 and this list of transitions "subclass_half_fired", 
  returns the marking increased by the post arcs  
 *)
+Inductive sub_fire_post_spec 
+          (places : list place_type)
+          (post : weight_type)  
+          (m_intermediate : marking_type)
+  : list trans_type -> marking_type -> Prop :=
+| subclass_half_fired_nil :
+    sub_fire_post_spec
+      places  post
+      m_intermediate
+      []  m_intermediate
+| subclass_half_fired_cons : (* if 
+pre_or_test_check_spec
+places  (pre t) m_decreasing   /\
+pre_or_test_check_spec 
+places (test t) m_init   /\
+inhib_check
+places (inhib t) m_init 
+                       *)
+    sub_fire_post_spec
+      places  post
+      m_intermediate
+      []  m_intermediate.
+
 Fixpoint sub_fire_post
          (places : list place_type)
          (post : weight_type)
@@ -451,6 +544,27 @@ Fixpoint sub_fire_post
                        places t post m_intermediate)
                     tail
   end.
+
+Inductive spn_fire_pre_spec
+          (places : list place_type)
+          (pre test inhib : weight_type)
+          (m_init m_decreasing : marking_type)
+          (classes_half_fired : list (list trans_type))
+  : list (list trans_type) ->
+    list (list trans_type) -> 
+    marking_type -> Prop :=
+| classes_transs_nil : spn_fire_pre_spec
+                         places
+                         pre test inhib
+                         m_init m_decreasing
+                         classes_half_fired
+                         [] classes_half_fired m_decreasing
+| classes_transs_cons : spn_fire_pre_spec
+                          places
+                          pre test inhib
+                          m_init m_decreasing
+                          classes_half_fired
+                          [] classes_half_fired m_decreasing.
 
 (*
  Apply sub_fire_pre over ALL classes of transitions. 
@@ -469,17 +583,35 @@ Fixpoint spn_fire_pre
   match classes_transs with
   | [] => (classes_half_fired , decreasing_m)
   | l :: Ltail => let (sub_l, new_m) := (spn_sub_fire_pre
-                                           places  pre test inhib
+                                           places
+                                           pre test inhib
                                            marking decreasing_m
                                            l [])
                   in
                   spn_fire_pre
-                    places  pre test inhib
+                    places
+                    pre test inhib
                     marking new_m
                     Ltail
                     (sub_l :: classes_half_fired)         
   end.
 
+
+Inductive fire_post_spec
+          (places : list place_type)
+          (post : weight_type)
+          (marking_increasing : marking_type)
+  : list (list trans_type)  ->  marking_type -> Prop  := 
+| subclasses_fired_uphill_nil : fire_post_spec
+                                  places
+                                  post
+                                  marking_increasing
+                                  []  marking_increasing
+| subclasses_fired_uphill_cons : fire_post_spec
+                                   places
+                                   post
+                                   marking_increasing
+                                   []  marking_increasing.
 
 (* 
  intended to begin with intermediate marking computed by "fire_pre",
@@ -489,9 +621,9 @@ Fixpoint fire_post
          (places : list place_type)
          (post : weight_type)
          (marking_increasing : marking_type)
-         (subclasses_half_fired : list (list trans_type))
+         (subclasses_fired_uphill : list (list trans_type))
   : marking_type := 
-  match subclasses_half_fired with
+  match subclasses_fired_uphill with
   | []  => marking_increasing
   | l :: Ltail  => let new_m := sub_fire_post
                                   places post
@@ -503,6 +635,20 @@ Fixpoint fire_post
                      new_m
                      Ltail                     
   end. 
+
+Inductive spn_fire_spec   
+          (places : list place_type)
+          (pre test inhib post : weight_type)
+          (m_init : marking_type)
+          (classes_transs : list (list trans_type))
+  : (list (list trans_type)) -> marking_type -> Prop :=
+| spn_fire_constr : spn_fire_spec   
+                      places
+                      pre test inhib post
+                      m_init 
+                      classes_transs
+                      (*  calcul   *)
+                      classes_transs m_init.
 
 
 (* (almost) main function, 
@@ -566,6 +712,13 @@ Definition spn_debug_pre (spn : SPN)
 
 
 Print SPN. Print prior_type.
+Check spn_fire_spec. (* != spn_fire_spec *)
+Inductive spn_fired_spec
+          (spn : SPN) :
+  list (list trans_type) -> SPN -> Prop :=
+| spn_fired_mk : spn_fired_spec
+                   spn [] spn.
+
 (* Only the marking is evolving ! 
 but we want also to record the fired transitions ! *)
 Definition spn_fired (spn : SPN)
@@ -591,9 +744,23 @@ Definition spn_fired (spn : SPN)
                  Lol))
   end.
 
-Check spn_fired.
+Check spn_fired. Check spn_fired_spec.
+Inductive animate_spn_spec
+          (spn : SPN)
+  : nat ->
+    list
+      (list (list trans_type)  *
+       list (place_type * nat) ) -> Prop :=
+| animate_spn_O : animate_spn_spec
+                    spn
+                    O
+                    []
+| animate_spn_S : animate_spn_spec
+                    spn
+                    O
+                    [].
+
 (* n steps calculus, n "cycles" with both markings and transs *)
-(*  maybe bugged  but hopefully  no ! *)
 Fixpoint animate_spn
          (spn : SPN)
          (n : nat)
@@ -616,387 +783,6 @@ Fixpoint animate_spn
                   n')
   end.    (* split / combine ... *)
            
-
-(******************************************************************)
-(******************************************************************)
-(****   example of David Andreu       written within TINA    ******)
-(******************************************************************)
-
-Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
-(* 3 places *)
-Definition ex_places : (list place_type) :=
-  nodup
-    places_eq_dec
-    [ mk_place 0 ;
-      mk_place 1 ;
-      mk_place 2 ;
-      mk_place 3 ;
-      mk_place 4 ;
-      mk_place 5 ; (* 6 is missing *)
-      mk_place 7 ; 
-      mk_place 8 ;
-      mk_place 9 ;
-      mk_place 10 ;
-      mk_place 11 ;
-      mk_place 12 ].
-Definition ex_nodup_places : NoDup ex_places :=
-  NoDup_nodup
-    places_eq_dec
-    ex_places. 
-
-(* 3 transitions *)
-Definition ex_transs : (list trans_type) :=
-  [ mk_trans 0 ;
-    mk_trans 1 ;
-    mk_trans 2 ;
-    mk_trans 3 ;
-    mk_trans 4 ;
-    mk_trans 5 ;
-    mk_trans 6 ;  (* 7 is missing *)
-    mk_trans 8 ;
-    mk_trans 9 ;  (* 10, 11 are missing *)
-    mk_trans 12 ;
-    mk_trans 13 ;
-    mk_trans 14 ; (* 15 is missing *)
-    mk_trans 16 ].
-Definition ex_nodup_transs : NoDup ex_transs :=
-  NoDup_nodup
-    transs_eq_dec
-    ex_transs. 
-
-(**********************************************)
-Print nat_star. Print weight_type.
-Lemma one_positive : 1 > 0. Proof. omega. Qed.
-Lemma two_positive : 2 > 0. Proof. omega. Qed.
-(* one lemma for each arc weight ... *)
-
-(* many arcs PT (place transition)  "incoming" *) 
-Definition ex_pre (t : trans_type) (p : place_type)
-  : option nat_star :=
-  (* transitions 7, 10, 11, 15  missing *)
-  (* place 6 missing *)
-  match (t,p) with
-  (* trans 0 *)
-  | (mk_trans 0, mk_place 0) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 0, mk_place 7) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 0, mk_place 12) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 1 *)
-  | (mk_trans 1, mk_place 1) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 2 *)
-  | (mk_trans 2, mk_place 2) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 3 *)
-  | (mk_trans 3, mk_place 3) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 4 *)
-  | (mk_trans 4, mk_place 4) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 5 *)
-  | (mk_trans 5, mk_place 5) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 6 *)
-  | (mk_trans 6, mk_place 8) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  | (mk_trans 6, mk_place 9) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 8 *)
-  | (mk_trans 8, mk_place 10) => Some (mk_nat_star
-                                        2
-                                        two_positive)
-  (* trans 9 *)
-  | (mk_trans 9, mk_place 11) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 12 *)
-  | (mk_trans 12, mk_place 1) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 13 *)
-  | (mk_trans 13, mk_place 11) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 14 *)
-  | (mk_trans 14, mk_place 11) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 16 *)
-  | (mk_trans 16, mk_place 3) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  | (mk_trans 16, mk_place 10) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  | _ => None
-  end.
-
-(* many  arcs TP       "outcoming" *)
-Definition ex_post (t : trans_type) (p : place_type)
-  : option nat_star :=
-  (* transitions 7, 10, 11, 15  missing *)
-  (* place 6 missing *)
-  match (t, p) with
-  (* trans 0 *)
-  | (mk_trans 0, mk_place 4) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 0, mk_place 5) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 0, mk_place 12) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 1 *)
-  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 2 *)
-  | (mk_trans 2, mk_place 3) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 3 *)
-  | (mk_trans 3, mk_place 1) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 4 *)
-  | (mk_trans 4, mk_place 8) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 5 *)
-  | (mk_trans 5, mk_place 9) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 6 *)
-  | (mk_trans 6, mk_place 10) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 8 *)
-  | (mk_trans 8, mk_place 11) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 9 *)
-  | (mk_trans 9, mk_place 0) => Some (mk_nat_star
-                                        2
-                                        two_positive)
-  (* trans 12 *)
-  | (mk_trans 12, mk_place 2) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  (* trans 13 *)
-  | (mk_trans 13, mk_place 0) => Some (mk_nat_star
-                                         2
-                                         two_positive)
-  (* trans 14 *)
-  | (mk_trans 14, mk_place 0) => Some (mk_nat_star
-                                         2
-                                         two_positive)
-  (* trans 16 *)
-  | (mk_trans 16, mk_place 3) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  | (mk_trans 16, mk_place 10) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  | _ => None
-  end.
-
-(*************************************)
-(*** tokens of the initial marking ***)
-Definition ex_marking (p : place_type) :=
-  match p with
-  | mk_place 0 => 2
-  | mk_place 1 => 1
-  | mk_place 7 => 1
-  | mk_place 12 => 1
-  | _ => 0
-  end. Print ex_marking. Check marking_type.
-(* ? reductions, simplifications ? *)
-
-Print SPN.
-Definition ex_test (t : trans_type) (p : place_type) :=
-  (* transitions 7, 10, 11, 15  missing *)
-  (* place 6 missing *)
-  match (t, p) with
-  (* trans 5 *)
-  | (mk_trans 5, mk_place 2) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 5, mk_place 12) => Some (mk_nat_star
-                                        1
-                                        one_positive)
-  | _ => None
-  end.
-
-(* many  arc of type "inhibitor"  *)
-Definition ex_inhib (t : trans_type) (p : place_type) :=
-  (* transitions 7, 10, 11, 15  missing *)
-  (* place 6 missing *)
-  match (t, p) with
-  (* trans 2 *)
-  | (mk_trans 2, mk_place 5) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  (* trans 4 *)
-  | (mk_trans 4, mk_place 11) => Some (mk_nat_star
-                                         1
-                                         one_positive)               
-  | _ => None
-  end.
-
-(*
-Definition ex_prior1 (t1 t2 : trans_type) : bool :=
-  (* transitions squared  ---> lot's of match branches ... *)
-  match (t1 , t2) with
-  | (mk_trans 0, mk_trans 0) => false
-  | (mk_trans 0, mk_trans 1) => true
-  | (mk_trans 0, mk_trans 2) => true
-  | (mk_trans 1, mk_trans 0) => false
-  | (mk_trans 1, mk_trans 1) => false
-  | (mk_trans 1, mk_trans 2) => true
-  | (mk_trans 2, mk_trans 0) => false
-  | (mk_trans 2, mk_trans 1) => false
-  | (mk_trans 2, mk_trans 2) => false
-  | (_,_) => false  (* False or True     who care ? -> option bool?*) 
-  end.    *)
-
-Print prior_type.
-Definition ex_prior_aux :=
-  [
-    [mk_trans 1 ; mk_trans 12] ;
-    [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ;
-    [mk_trans 3 ; mk_trans 8 ; mk_trans 16] ;
-    [mk_trans 4 ; mk_trans 9 ; mk_trans 13 ; mk_trans 14] ;
-    [mk_trans 6]
-  ].
-Definition ex_prior :=
-  mk_prior
-    ex_prior_aux.    
-    
-Print pre. Print weight_type.
-Definition ex_spn := mk_SPN
-                      ex_places
-                      ex_transs
-                      ex_nodup_places
-                      ex_nodup_transs
-                      
-                      ex_pre
-                      ex_post
-                      ex_test
-                      ex_inhib                 
-                      
-                      ex_marking
-                      ex_prior.
-
-Check ex_spn. Compute (marking ex_spn). (* initial marking *)
-(* functions / lists *)
-
-Search SPN. (* spn_fired    spn_debug_pre  animate_spn  *)
-Compute (animate_spn
-           ex_spn
-           10).  (* 11 markings *)
-Compute
-  (
-    spn_debug_pre
-      (
-      (*  snd (spn_fired
-               (snd (spn_fired  *) 
-                       ex_spn
-      )
-  ).
-Print spn_debug_pre. Print spn_fire_pre_print.
-Print spn_fire_pre.
-
-(******** second  example (permutation des sous-listes)  **********)
-
-Definition ex_prior_aux2 :=
-  [
-    [mk_trans 1 ; mk_trans 12] ;
-    [mk_trans 2 ; mk_trans 0 ; mk_trans 5] ;
-    [mk_trans 16 ; mk_trans 8 ; mk_trans 3] ;
-    [mk_trans 9 ; mk_trans 4 ; mk_trans 14 ; mk_trans 13] ;
-    [mk_trans 6]
-  ].
-Definition ex_prior2 :=
-  mk_prior
-    ex_prior_aux2.    
-Definition ex_spn2 := mk_SPN
-                        ex_places
-                        ex_transs
-                        ex_nodup_places
-                        ex_nodup_transs
-                        
-                        ex_pre
-                        ex_post
-                        ex_test
-                        ex_inhib                 
-                        
-                        ex_marking
-                        ex_prior2.
-Compute (animate_spn
-           ex_spn2
-           10).  (* 11 markings *)
-
-Compute
-  (
-    spn_debug_pre
-      (
-        snd
-          (spn_fired (snd (spn_fired ex_spn)))
-      )
-  ).
-
-(********  SPN numero 3  (apres permuation des sous-listes)  ******)
-Definition ex_prior_aux3 :=
-  [
-    [mk_trans 12 ; mk_trans 1] ;
-    [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ;
-    [mk_trans 16 ; mk_trans 3 ; mk_trans 8] ;
-    [mk_trans 9 ; mk_trans 14 ; mk_trans 4 ; mk_trans 13] ;
-    [mk_trans 6]
-  ].
-Definition ex_prior3 :=
-  mk_prior
-    ex_prior_aux3.    
-Definition ex_spn3 := mk_SPN
-                        ex_places
-                        ex_transs
-                        ex_nodup_places
-                        ex_nodup_transs
-                        
-                        ex_pre
-                        ex_post
-                        ex_test
-                        ex_inhib                 
-                        
-                        ex_marking
-                        ex_prior3.
-Compute (animate_spn
-           ex_spn3
-           10).  (* 11 markings *)
-
-Compute
-  (
-    spn_debug_pre
-      (
-        snd
-          (spn_fired (snd (spn_fired ex_spn)))
-      )
-  ).
-
-Search SPN. Print SPN.
 
 
 
