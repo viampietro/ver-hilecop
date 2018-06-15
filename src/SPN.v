@@ -79,7 +79,7 @@ Notation "t1 >> t2" := (prio_over1 t1 t2 _)
                           (at level 50) : type_scope.
 *)
 
-(* Inductive or Definition *) 
+(* Inductive or Definition  ?? *) 
 Inductive prior_type : Set :=
   mk_prior { Lol : list (list trans_type) ; }.
     (*
@@ -127,8 +127,7 @@ Structure SPN : Set := mk_SPN
                            inhib : weight_type ;
                            
                            marking : marking_type ;
-                           (* marking : list (place_type * nat)   
-                            *)
+                           
                            priority : prior_type ; }.
 
 (* on suppose que 
@@ -139,12 +138,6 @@ Structure SPN : Set := mk_SPN
 forme une partition des transitions, partition correspondante
 aux classes de "conflits structurels" (arcs amonts en commum)
 *) 
-
-(*
-Inductive is_SPN_valid : SPN -> Prop :=
-| hypothesis3 : is_SPN_valid
-                  [] [] ... 
-*)
 
 (**************************************************************)
 (************ are 2 nat/places/transitions equal ? ************)
@@ -201,10 +194,20 @@ Inductive modif_mark_spec
           (m : marking_type)
           (p : place_type)
           (j : option nat_star)
-          (** option nat_star     because of weight_type ? **)
           (op : nat -> nat -> nat)
-  : marking_type -> Prop :=
-| modif_mark_spec_constr : modif_mark_spec m p j op m.
+  : place_type -> nat -> Prop :=
+| modif_mark_p_eq_p'_none :
+    forall (p' : place_type),
+      (beq_places p p') = true -> j = None ->
+      modif_mark_spec m p j op p' (m p)
+| modif_mark_p_eq_p'_some :
+    forall (p' : place_type) (i : nat_star) (n : nat) (pf : n > 0),
+      (beq_places p p') = true -> j = (Some i) ->
+      i = (mk_nat_star n pf) ->
+      modif_mark_spec m p j op p' (op (m p) n)
+| modif_mark_p_neq_p' :
+    forall (p' : place_type), (beq_places p p') = false ->
+      modif_mark_spec m p j op p' (m p').
 
 (* given a marking m, add/remove j tokens inside place p *)  
 Definition modif_mark
@@ -213,20 +216,40 @@ Definition modif_mark
            (j : option nat_star)
            (** option nat_star     because of weight_type ? **)
            (op : nat -> nat -> nat)
-  : marking_type :=
-  fun p' =>
+           (p' : place_type) : nat :=
     if beq_places p p'
     then match j with
           | None => m p              (* no change *)
           | Some i => match i with
                       | mk_nat_star
                           inti
-                          carei => op (m p) inti
+                          _ => op (m p) inti
                                       (* j=i tokens added/removed *)
                       end
          end
-           
     else m p'.         (* other places left unchanged  *)
+
+Require Import FunInd.
+
+Functional Scheme modif_mark_ind :=
+  Induction for modif_mark Sort Prop.
+
+Theorem modif_mark_sound :
+  forall (m : marking_type) (p : place_type) (j : option nat_star)
+         (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
+    modif_mark m p j op p' = mp -> modif_mark_spec m p j op p' mp.
+Proof.
+  do 6 intro.
+  functional induction (modif_mark m p j op p') using modif_mark_ind.
+  Focus 3.  
+
+
+  intro; rewrite <- H; apply modif_mark_p_neq_p'; assumption.
+Admitted.
+
+
+Check modif_mark.
+Print marking_type.
 
 Check Nat.sub. Check Nat.add.   (** the 2 op(erators) to use ... **)
 (* Require Import Nat. (* for Nat.leb != (Bool.)leb *) 
@@ -236,15 +259,24 @@ Export ListNotations.
 
 (*************   update marking   *********************)
 Inductive update_marking_pre_spec
-          (places : list place_type)
           (t : trans_type)
           (pre : weight_type)
-          (m : marking_type)
-  (* structural induction over list of places *)
-  : marking_type -> Prop :=
-| update_marking_pre_constr : update_marking_pre_spec
-                                places t pre m m.
-  
+  : list place_type ->
+    marking_type ->
+    marking_type -> Prop :=
+| update_marking_pre_nil :
+    forall (m : marking_type),
+      update_marking_pre_spec
+        t pre [] m m 
+| update_marking_pre_cons :
+    forall (p p' : place_type) (tail : list place_type)
+           (m : marking_type) (n : nat),
+      update_marking_pre_spec
+        t pre
+        tail m (modif_mark
+                  m p (pre t p) Nat.sub)
+.
+
 Fixpoint update_marking_pre
          (places : list place_type)
          (t : trans_type)
@@ -265,7 +297,6 @@ Fixpoint update_marking_pre
                            Nat.sub)
   end.
 
-Require FunInd.
 Functional Scheme update_marking_pre_ind :=
   Induction for update_marking_pre Sort Prop.
 
