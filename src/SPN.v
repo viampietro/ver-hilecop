@@ -490,7 +490,7 @@ Fixpoint inhib_check
 Theorem inhib_check_sound :
   forall (places : list place_type)
          (inhib_arcs_t : place_type -> option nat_star)
-         (* pre or test arcs going to trans t *)
+         (* inhib arcs going to trans t *)
          (m : marking_type),
     inhib_check
       places
@@ -503,7 +503,76 @@ Theorem inhib_check_sound :
       m
       places.
 Proof.
-  Admitted.
+Admitted.
+
+Inductive synchro_check_arcs_spec
+          (pre_arcs_t : place_type -> option nat_star)
+          (test_arcs_t : place_type -> option nat_star)
+          (inhib_arcs_t : place_type -> option nat_star)
+          (m_decreasing   m_steady : marking_type)
+  : list place_type -> Prop :=
+| synchro_check_arcs_nil : synchro_check_arcs_spec
+                             pre_arcs_t
+                             test_arcs_t
+                             inhib_arcs_t
+                             m_decreasing   m_steady  []
+| synchro_check_arcs_cons : synchro_check_arcs_spec
+                              pre_arcs_t
+                              test_arcs_t
+                              inhib_arcs_t
+                              m_decreasing   m_steady  [].
+  
+Fixpoint synchro_check_arcs
+         (places : list place_type)
+         (pre_arcs_t : place_type -> option nat_star)
+         (test_arcs_t : place_type -> option nat_star)
+         (inhib_arcs_t : place_type -> option nat_star)
+         (m_decreasing   m_steady : marking_type)
+  : bool :=
+  if (pre_or_test_check
+        places
+        pre_arcs_t
+        m_decreasing)
+       &&
+       (pre_or_test_check
+          places
+          test_arcs_t
+          m_steady)
+       &&
+       (inhib_check
+          places
+          inhib_arcs_t
+          m_steady)
+  then true
+  else false.
+
+Theorem synchro_check_arcs_sound :
+  forall (places : list place_type)
+         (pre_arcs_t : place_type -> option nat_star)
+         (test_arcs_t : place_type -> option nat_star)
+         (inhib_arcs_t : place_type -> option nat_star)
+         (m_decreasing   m_steady : marking_type),
+    synchro_check_arcs
+      places
+      pre_arcs_t
+      test_arcs_t
+      inhib_arcs_t
+      m_decreasing   m_steady 
+    = true 
+    ->
+    synchro_check_arcs_spec
+      pre_arcs_t
+      test_arcs_t
+      inhib_arcs_t
+      m_decreasing   m_steady
+      places.
+Proof.
+Admitted.
+
+
+
+
+
 
 
 (*****************************************************************)
@@ -511,14 +580,14 @@ Proof.
 
 Inductive spn_sub_fire_pre_spec
           (places : list place_type)
-          (pre test inhib : weight_type)  
-          (m_init m_decreasing : marking_type)
+          (pre   test   inhib : weight_type)  
+          (m_decreasing    m_steady  : marking_type)
           (subclass_half_fired : list trans_type) 
   : (list trans_type) -> (list trans_type) -> marking_type -> Prop :=
 | class_transs_nil :
     spn_sub_fire_pre_spec
       places  pre  test  inhib
-      m_init  m_decreasing
+      m_decreasing   m_steady  
       subclass_half_fired
       []  subclass_half_fired  m_decreasing
 | class_transs_cons : (* if 
@@ -531,7 +600,7 @@ places (inhib t) m_init
                        *)
     spn_sub_fire_pre_spec
       places  pre  test  inhib
-      m_init  m_decreasing
+      m_decreasing   m_steady  
       subclass_half_fired
       []  subclass_half_fired  m_decreasing
 .
@@ -542,28 +611,18 @@ and marking "m_intermediate" accordingly ...   *)
 Fixpoint spn_sub_fire_pre
          (places : list place_type)
          (pre test inhib : weight_type)  
-         (m_init m_decreasing : marking_type)   
+         (m_decreasing    m_steady  : marking_type)   
          (class_transs subclass_half_fired : list trans_type) 
          (* "subclass_half_fired"  is meant to be empty at first *) 
   : (list trans_type) * marking_type :=
   match class_transs with
-  | t :: tail => if (pre_or_test_check
-                      places
-                      (pre t)
-                      m_decreasing)
-                      &&
-                      (pre_or_test_check
-                         places
-                         (test t)
-                         m_init)
-                      &&
-                      (inhib_check
-                         places
-                         (inhib t)
-                         m_init)
+  | t :: tail => if (synchro_check_arcs
+                       places
+                       (pre t) (test t) (inhib t)
+                       m_decreasing  m_steady)
                  then
                    let
-                     (m_again_decreasing, subclass_half_fired') :=
+                     (m_decreasing_again, subclass_half_fired_plus) :=
                      ((update_marking_pre
                          places t pre m_decreasing),
                       subclass_half_fired ++ [t]
@@ -571,12 +630,12 @@ Fixpoint spn_sub_fire_pre
                    in
                    spn_sub_fire_pre
                      places pre test inhib
-                     m_init m_again_decreasing 
-                     tail subclass_half_fired'
+                     m_steady m_decreasing_again 
+                     tail subclass_half_fired_plus
                  else (* no change, but inductive progress *)
                    spn_sub_fire_pre
                      places pre test inhib
-                     m_init m_decreasing
+                     m_steady m_decreasing
                      tail subclass_half_fired
   | []  => (subclass_half_fired, m_decreasing)
   end.
@@ -625,15 +684,15 @@ places (inhib t) m_init
 Fixpoint sub_fire_post
          (places : list place_type)
          (post : weight_type)
-         (m_intermediate : marking_type)
+         (m_increasing : marking_type)
          (subclass_half_fired : list trans_type)  
   : marking_type := 
   match subclass_half_fired with
-  | []  => m_intermediate
+  | []  => m_increasing
   | t :: tail  => sub_fire_post
                     places post
                     (update_marking_post
-                       places t post m_intermediate)
+                       places t post m_increasing)
                     tail
   end.
 

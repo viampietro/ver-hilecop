@@ -271,8 +271,8 @@ Print pre. Print weight_type.
 Definition ex_spn := mk_SPN
                       ex_places
                       ex_transs
-                      ex_nodup_places
-                      ex_nodup_transs
+                     (* ex_nodup_places
+                      ex_nodup_transs *)
                       
                       ex_pre
                       ex_post
@@ -317,8 +317,8 @@ Definition ex_prior2 :=
 Definition ex_spn2 := mk_SPN
                         ex_places
                         ex_transs
-                        ex_nodup_places
-                        ex_nodup_transs
+                      (*  ex_nodup_places
+                        ex_nodup_transs *)
                         
                         ex_pre
                         ex_post
@@ -355,8 +355,8 @@ Definition ex_prior3 :=
 Definition ex_spn3 := mk_SPN
                         ex_places
                         ex_transs
-                        ex_nodup_places
-                        ex_nodup_transs
+                      (*  ex_nodup_places
+                        ex_nodup_transs  *)
                         
                         ex_pre
                         ex_post
