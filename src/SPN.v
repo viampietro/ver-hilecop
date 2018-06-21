@@ -24,7 +24,7 @@ Structure nat_star : Set := mk_nat_star
 (* a given arc has some weight > 0 *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
 
-(*  Why not this inductive definition with 4 constructors ????
+(*  Why not this inductive definition as well ????
 Inductive arc_type : Set :=
 | mk_arc_pt : place_type -> transition_type -> nat -> arc_type
 | mk_arc_tp : transition_type -> place_type -> nat -> arc_type
@@ -243,6 +243,12 @@ Proof.
   functional induction (modif_mark m p j op p') using modif_mark_ind.
   Focus 3.  
   intro; rewrite <- H; apply modif_mark_p_neq_p'; assumption.
+  Focus 2.
+  intro. rewrite <- H. apply modif_mark_p_eq_p'_none. assumption.
+  reflexivity.
+  intro. rewrite <- H.
+  (* apply modif_mark_p_eq_p'_some with . assumption.
+  reflexivity.  *)
 Admitted.
 
 Theorem modif_mark_complete :
@@ -250,7 +256,8 @@ Theorem modif_mark_complete :
          (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
     modif_mark_spec m p j op p' mp -> modif_mark m p j op p' = mp. 
 Proof.
-Admitted.
+  intros. elim H.
+  - Admitted.
 
 Check modif_mark.
 Print marking_type.
