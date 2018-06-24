@@ -4,8 +4,9 @@ Require Export STPN.
 (***** David Andreu's first example (redrawn in my Oxford) ********)
 
 (* Reset all. *)
-Require Import spn_examples.
-Print ex_places.
+Require Export spn_examples.
+Print one_positive.
+
 (* 7 places *)
 Definition ex_places' : (list place_type) :=
   [ mk_place 1 ;

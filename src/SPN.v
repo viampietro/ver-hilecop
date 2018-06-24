@@ -299,7 +299,6 @@ Fixpoint update_marking_pre
 
 Functional Scheme update_marking_pre_ind :=
   Induction for update_marking_pre Sort Prop.
-
 Theorem update_marking_pre_sound :
   forall (places : list place_type)
          (t : trans_type)
@@ -323,8 +322,8 @@ Theorem update_marking_pre_complete :
     update_marking_pre places t pre m = m'.
 Proof.
   intros places t pre m m' H. elim H.
-  - 
-    
+  - simpl. reflexivity.
+  - intros.
 Admitted.
 
 (************************************************************)
@@ -381,7 +380,7 @@ Proof.
   functional induction (update_marking_post places t post m)
              using update_marking_post_ind.
   - intro. rewrite <- H. apply update_marking_post_nil.
-  - intro. rewrite <- H. try apply update_marking_post_cons.
+  - intro. rewrite <- H. try apply update_marking_post_cons. simpl.
 Admitted.
 Theorem update_marking_post_complete :
   forall (places : list place_type)
@@ -392,6 +391,7 @@ Theorem update_marking_post_complete :
     update_marking_post places t post m = m'.
 Proof.
   intros places t post m m' H. elim H.
+  - simpl. reflexivity.
   - 
 Admitted.
 
@@ -441,7 +441,12 @@ Theorem update_marking_sound :
     update_marking_spec
       places t pre post m m'.
 Proof.
-Admitted.
+  intros places t pre post m m'.
+  functional induction (update_marking
+                          places t pre post m)
+             using update_marking_ind.
+  intro H. rewrite <- H. apply update_marking_cst.
+Qed.
 Theorem update_marking_complete :
 forall (places : list place_type)
          (t : trans_type)
@@ -452,6 +457,7 @@ forall (places : list place_type)
     update_marking
       places t pre post m = m'.
 Proof.
+  intros places t pre post m m' H. simpl.
 Admitted.
 
 (**********   to print the markings  ***********************)
@@ -507,13 +513,42 @@ Theorem marking2list_complete :
       places m = truc.
 Proof.
   intros places m truc H. elim H.
-  -
+  - simpl. reflexivity.
+  - intros p tail listc c H0.
+    simpl. rewrite H0. 
     
 Admitted.
 
 
 (****************************************************************)
 (*** CHECKING IF there are enough tokens in predecessor places **)
+Search bool.
+
+
+Theorem andb_commutative'' :
+  forall b c, andb b c = andb c b.
+Proof.
+  intros [] [].
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+Qed.
+Theorem andb_true_elim2 : forall b c : bool,
+  andb b c = true -> c = true.
+Proof.
+  intros b c H.
+  destruct c.
+  - reflexivity.
+  - destruct b.
+    + inversion H.
+    + inversion H.
+Qed.
+
+(* andb b c = true -> c = true /\ b = true. *)
+
+
+
 
 Locate "<?". Print Nat.ltb. Print Nat.leb.
 Print pre. Print weight_type. Print modif_mark_spec.
@@ -588,8 +623,19 @@ Proof.
                           places   pre_or_test_arcs_t   m)
              using pre_or_test_check_ind.
   - intro. apply pre_or_test_check_nil.
-  - intro. (* apply marking2list_cons. reflexivity. *)
+  - intro H. (* apply marking2list_cons. reflexivity. *)
+    SearchPattern ( ?b = true /\ ?c = true ).
+    assert (H' : int0 <=? m h = true  /\
+                 pre_or_test_check tail pre_or_test_arcs_t m = true).
+    { apply andb_prop. apply H. }    
+    assert (Hright :
+              pre_or_test_check tail pre_or_test_arcs_t m = true).
 
+    Print proj2.
+    { apply (proj2 H'). }
+    
+    
+    
 Admitted.
 Theorem pre_or_test_check_complete :
   forall (places : list place_type)
@@ -789,9 +835,9 @@ Proof.
                           pre_arcs_t   test_arcs_t   inhib_arcs_t
                           m_decreasing   m_steady)
              using synchro_check_arcs_ind. *)
-  apply synchro_check_arcs_cst.
+ (*  apply synchro_check_arcs_cst.
   - intro. apply inhib_check_nil.
-  - intro. (* apply inhib_check_cons_some. reflexivity. *)
+  - intro. (* apply inhib_check_cons_some. reflexivity. *) *)
     
 Admitted.
 Theorem synchro_check_arcs_complete :
@@ -1468,7 +1514,7 @@ Proof.
 (*****************************************************************)
 (**** HOW TO get the classes of transitions...    from what ? ****)
 (*************** sections sorting ********************************)
-
+(*
 Require Import Coq.Sorting.Sorted. Search sort.
 
 Section insertion_sort.

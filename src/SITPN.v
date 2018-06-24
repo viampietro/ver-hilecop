@@ -1,4 +1,4 @@
-Require Import STPN.
+Require Export STPN.
 
 (********************************************************
 *********************************************************
@@ -254,8 +254,8 @@ Definition sitpn_cycle (stpn : STPN)
       (mk_SPN
          places
          transs
-         nodup_places 
-         nodup_transitions           
+       (*  nodup_places 
+           nodup_transitions *)          
          pre
          test
          inhib
@@ -288,8 +288,8 @@ Definition sitpn_cycle (stpn : STPN)
                    (mk_SPN
                       places
                       transs 
-                      nodup_places 
-                      nodup_transitions 
+                   (*   nodup_places 
+                        nodup_transitions *) 
                       pre
                       post
                       test

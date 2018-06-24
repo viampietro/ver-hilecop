@@ -257,7 +257,7 @@ Fixpoint reset_time_list
 **********   FIRING ALGORITHM    for STPN      *******************
 ******************************************************************)
 
-Print STPN.
+Print STPN. Print spn_sub_fire_pre.
 Check update_marking_pre.
 (** given 1 ordered class of transitions 
 in structural conflict (a list class_of_transs), 
@@ -265,71 +265,64 @@ return 1 list of transitions "subclass_half_fired"
 and marking "m_intermediate" accordingly ...   *)
 Fixpoint stpn_sub_fire_pre
          (places : list place_type)
-         (pre test inhib : weight_type)  (* 3 *)
-         (m_init m_decreasing : marking_type)    (* 2 *)
+         (pre    test    inhib : weight_type) 
+         (m_steady    m_decreasing : marking_type) 
          (* to reset clocks .. *)
          (enabled_transs : list trans_type)
          (chronos : trans_type -> option chrono_type)
          (* to reset clocks .. *)
-         (class_transs subclass_half_fired : list trans_type) (* 2 *)
+         (class_transs   subclass_half_fired : list trans_type) 
          (* "subclass_half_fired"  is meant to be empty at first *) 
   : (list trans_type) *
     marking_type *
     (trans_type -> option chrono_type) :=
   match class_transs with
-  | t :: tail => if(
-                     (pre_or_test_check
-                        places
-                        (pre t)
-                        m_decreasing)
-                       && (pre_or_test_check
-                             places
-                             (test t)
-                             m_init)
-                       && (inhib_check
-                             places
-                             (inhib t)
-                             m_init)
-                   ) (* t is enabled, even w.r.t. to the others *)
-                 then
-                   if    (good_time (chronos  t))
-                   then
-                     let new_decreasing :=
-                         (update_marking_pre
-                            places t pre
-                            m_decreasing)
-                     in
-                     let new_chronos :=
-                         (reset_time_list
-                            chronos
-                  (* disabled = enabled_before - enabled_now *) 
-                            (list_disabled
-                               places
-                               pre test inhib
-                               new_decreasing
-                               enabled_transs))
-                     in
-                     stpn_sub_fire_pre
-                       places pre test inhib
-                       m_init new_decreasing 
-                       enabled_transs
-                       (* updating the intervals in case ... *)
-                       new_chronos
-                       tail (subclass_half_fired ++ [t])
-                       (* concatenate t behind, keep order *)
-                   else (* not goog time *)
-                     stpn_sub_fire_pre
-                       places pre test inhib
-                       m_init m_decreasing
-                       enabled_transs   chronos
-                       tail subclass_half_fired 
-                        (* t not fired, let's continue with tail *)
-                 else  (* not enabled   w.r.t. ... *)
-                   stpn_sub_fire_pre
-                     places  pre  test  inhib
-                     m_init  m_decreasing
-                     enabled_transs    chronos
-                     tail subclass_half_fired 
+  | t :: tail =>
+    if
+      synchro_check_arcs
+        places (pre t) (test t) 
+        (inhib t) m_decreasing m_steady
+        (* t is enabled, even w.r.t. to the others *)
+    then
+      if (good_time (chronos  t))
+      then
+        let new_decreasing :=
+            (update_marking_pre
+               places t pre
+               m_decreasing)
+        in
+        (* updating the intervals in case ... *)
+        (* bugged *)
+        let new_chronos :=
+            (reset_time_list
+               chronos
+               (* disabled = enabled_before - enabled_now *) 
+               (list_disabled
+                  places
+                  pre test inhib
+                  new_decreasing
+                  enabled_transs))
+        in
+        stpn_sub_fire_pre
+          places    pre    test   inhib
+          m_steady    new_decreasing 
+          enabled_transs
+          new_chronos
+          tail (subclass_half_fired ++ [t])
+          (* concatenate t behind, keep order *)
+      else (* not goog time *)
+        stpn_sub_fire_pre
+          places    pre    test   inhib
+          m_steady    m_decreasing
+          enabled_transs   chronos
+          tail subclass_half_fired 
+          (* t not fired, let's continue with tail *)
+    else  (* not enabled   w.r.t. ...    same as previous else *)
+      stpn_sub_fire_pre
+        places    pre    test    inhib
+        m_steady    m_decreasing
+        enabled_transs    chronos
+        tail subclass_half_fired 
   | []  => (subclass_half_fired, m_decreasing, chronos)
   end.
 (* 
@@ -364,13 +357,14 @@ Fixpoint stpn_fire_pre
     (trans_type -> option chrono_type)  :=
   match classes_transs with
   | [] => (classes_half_fired , marking, chronos)
-  | l :: Ltail => let '(sub_l, new_m, new_chrs) := stpn_sub_fire_pre
-                                                     places
-                                                     pre test inhib
-                                                     marking marking
-                                                     enabled_transs
-                                                     chronos
-                                                     l []
+  | l :: Ltail => let '(sub_l, new_m, new_chrs) :=
+                      stpn_sub_fire_pre
+                        places
+                        pre test inhib
+                        marking marking
+                        enabled_transs
+                        chronos
+                        l []
                   in  stpn_fire_pre
                         places
                         pre  test  inhib
@@ -412,7 +406,7 @@ Definition stpn_fire_pre_print
     enabled_transs
     new_chronos).
 
-Print spn_debug_pre.
+Print spn_debug_pre. Print SPN.
 Definition stpn_debug_pre (stpn : STPN)
   : (list (list trans_type)) *
     list (place_type * nat)  *
@@ -453,11 +447,12 @@ Definition stpn_fire
   : (list (list trans_type)) *
     marking_type             *
     (trans_type -> option chrono_type)  :=
-  let '(sub_Lol, m_inter, new_chronos) := stpn_fire_pre
-                                            places  pre test inhib 
-                                            m_init
-                                            enabled_transs  chronos
-                                            classes_transs []
+  let '(sub_Lol, m_inter, new_chronos) :=
+      stpn_fire_pre
+        places  pre test inhib 
+        m_init
+        enabled_transs  chronos
+        classes_transs []
   in  (sub_Lol ,
        fire_post
          places post
@@ -547,4 +542,236 @@ Fixpoint animate_stpn
   end.    (* split / combine ... *)
 
 
+(***************************************************)
+(*************** example to remove *****************) 
 
+Require Export spn_examples.
+(* 7 places *)
+Definition ex_places' : (list place_type) :=
+  [ mk_place 1 ;
+    mk_place 2 ;
+    mk_place 3 ;
+    mk_place 4 ;
+    mk_place 5 ;
+    mk_place 6 ;
+    mk_place 7 ].
+Definition ex_nodup_places' : NoDup ex_places' :=
+  NoDup_nodup
+    places_eq_dec
+    ex_places'. 
+
+(* 6 transitions *)
+Definition ex_transs' : (list trans_type) :=
+  [ mk_trans 1 ;
+    mk_trans 2 ;
+    mk_trans 3 ;
+    mk_trans 4 ;
+    mk_trans 5 ;
+    mk_trans 6 ].
+Definition ex_nodup_transs' : NoDup ex_transs' :=
+  NoDup_nodup
+    transs_eq_dec
+    ex_transs'.
+
+(* one lemma for each arc weight ...  already done*)
+
+(* 7 arcs PT (place transition)  "incoming" *) 
+Definition ex_pre' (t : trans_type) (p : place_type)
+  : option nat_star :=
+  match (t,p) with
+  | (mk_trans 1, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 2, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 3, mk_place 3) => Some (mk_nat_star
+                                        2
+                                        two_positive)
+  | (mk_trans 3, mk_place 4) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 4, mk_place 5) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 5, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)  
+  | (mk_trans 5, mk_place 6) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 6, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | _ => None
+  end.
+
+Definition ex_test' (t : trans_type) (p : place_type) :=
+  (* 1 arc of type "test" *)
+  match (t, p) with
+  | (mk_trans 2, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | _ => None
+  end.
+
+Definition ex_inhib' (t : trans_type) (p : place_type) :=
+  (* 1 arc of type "inhibitor"  *)
+  match (t, p) with
+  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | _ => None
+  end.
+
+(* 7 arcs TP      "outcoming"  *)
+Definition ex_post' (t : trans_type) (p : place_type)
+  : option nat_star :=
+  match (t, p) with
+  (* trans 1 *)
+  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | (mk_trans 1, mk_place 3) => Some (mk_nat_star
+                                        2
+                                        two_positive)               
+  | (mk_trans 1, mk_place 4) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 2 *)
+  | (mk_trans 2, mk_place 5) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 3 *)
+  | (mk_trans 3, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 4 *)
+  | (mk_trans 4, mk_place 6) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 5 *)
+  | (mk_trans 5, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 6 *)
+  | (mk_trans 6, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | _ => None
+  end.
+
+(* tokens *)
+Definition ex_marking' (p : place_type) :=
+  match p with
+  | mk_place 1 => 1
+  | mk_place 2 => 0
+  | mk_place 3 => 0
+  | mk_place 4 => 0
+  | mk_place 5 => 0
+  | mk_place 6 => 0
+  | mk_place 7 => 0
+  | _ => 0
+  end.
+
+Print STPN. Print chrono_type. Print nat_star.
+(****  intervals need lemmas and structures .... ****) 
+Lemma three_positive : 3 > 0. Proof. omega. Qed.
+Lemma five_positive : 5 > 0. Proof. omega. Qed.
+Lemma twototheeight_positive : 256 > 0. Proof. omega. Qed.
+
+(*
+Definition three_star := mk_nat_star
+                           3
+                           three_positive.
+Definition five_star := mk_nat_star
+                           5
+                           five_positive.
+Definition two_star := mk_nat_star
+                           2
+                           two_positive.
+Definition twototheeight_star := mk_nat_star
+                           256
+                           twototheeight_positive.
+ 
+Lemma preuve3le5 : three_star <=i five_star. 
+Proof. unfold lebi. Admitted.
+Lemma preuve2le256 : two_star <=i twototheeight_star.
+Proof. unfold lebi. Admitted.
+ *)
+
+Lemma preuve3le5 : 3 <= 5. 
+Proof. omega. Qed.
+Lemma preuve2le256 : 2 <= 256.
+Proof. omega. Qed.
+
+Definition int_3_5 := mk_chrono
+                        3
+                        5
+                        preuve3le5
+                        0.
+Definition int_2_256 := mk_chrono
+                          2
+                          256
+                          preuve2le256
+                          0.
+
+Definition ex_chronos' :
+  trans_type -> option chrono_type :=
+  fun trans => 
+    match trans with
+    | mk_trans 3  =>  Some int_3_5
+    | mk_trans 5  =>  Some int_2_256
+    | _ => None
+    end.
+
+Print prior_type.
+Definition ex_prior' : prior_type :=
+  (* se restreindre aux conflits structurels ! *)
+  mk_prior
+    [
+      [mk_trans 1 ; mk_trans 2 ; mk_trans 5] ;
+      [mk_trans 3] ;
+      [mk_trans 4] ;
+      [mk_trans 6]
+    ].
+ 
+    
+Print pre. Print weight_type. Print STPN.
+Definition ex_stpn := mk_STPN
+                        (mk_SPN
+                           ex_places'
+                           ex_transs'
+                         (*  ex_nodup_places'
+                           ex_nodup_transs' *)
+                           
+                           ex_pre'
+                           ex_post'
+                           ex_test'
+                           ex_inhib'                 
+                      
+                           ex_marking'
+                           ex_prior'
+                        )
+                        ex_chronos'.
+
+Check ex_stpn. Compute (marking
+                          (spn
+                             ex_stpn)). (* initial marking *)
+
+Search STPN.  (* stpn_cycle     stpn_debug_pre    animate_stpn *)
+Compute (animate_stpn
+           ex_stpn
+           10).  (* 11 markings *)
+
+Compute
+  (
+    stpn_debug_pre
+      (
+     (*   snd (stpn_cycle
+               (snd (stpn_cycle
+                       (snd (stpn_cycle
+                               (snd (stpn_cycle  *)
+                                      ex_stpn)
+      
+  ).

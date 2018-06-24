@@ -1,4 +1,4 @@
-Require Import STPN stpn_examples.
+Require Import SITPN stpn_examples.
 
 
 
