@@ -311,7 +311,10 @@ Proof.
   functional induction (update_marking_pre places t pre m)
              using update_marking_pre_ind.
   - intro. rewrite <- H. apply update_marking_pre_nil.
-  - intro. rewrite <- H. try apply update_marking_pre_cons.
+  - intro.
+
+
+    try apply update_marking_pre_cons.
 Admitted.
 Theorem update_marking_pre_complete :
   forall (places : list place_type)
@@ -323,7 +326,7 @@ Theorem update_marking_pre_complete :
 Proof.
   intros places t pre m m' H. elim H.
   - simpl. reflexivity.
-  - intros.
+  - intros. simpl.
 Admitted.
 
 (************************************************************)
@@ -392,7 +395,7 @@ Theorem update_marking_post_complete :
 Proof.
   intros places t post m m' H. elim H.
   - simpl. reflexivity.
-  - 
+  - intros. simpl.
 Admitted.
 
 (**********************************************************)
@@ -457,7 +460,7 @@ forall (places : list place_type)
     update_marking
       places t pre post m = m'.
 Proof.
-  intros places t pre post m m' H. simpl.
+  intros places t pre post m m' H. elim H. simpl.
 Admitted.
 
 (**********   to print the markings  ***********************)
@@ -525,14 +528,10 @@ Admitted.
 Search bool.
 
 
-Theorem andb_commutative'' :
+Theorem andb_commutative :
   forall b c, andb b c = andb c b.
 Proof.
-  intros [] [].
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
+  intros [] [] ; reflexivity.
 Qed.
 Theorem andb_true_elim2 : forall b c : bool,
   andb b c = true -> c = true.
@@ -544,13 +543,39 @@ Proof.
     + inversion H.
     + inversion H.
 Qed.
-
-(* andb b c = true -> c = true /\ b = true. *)
-
-
-
+Theorem andb_true_elim1 : forall b c : bool,
+  andb b c = true -> b = true.
+Proof.
+  intros b c H.
+  rewrite andb_commutative in H.
+  apply andb_true_elim2 with (b:=c). assumption.
+Qed.
 
 Locate "<?". Print Nat.ltb. Print Nat.leb.
+Theorem theo_le : forall n p : nat,
+    (n <=? p) = true  ->   n <= p.
+Proof.
+  double induction n p.
+  - simpl. intros. auto.
+  - intros.
+    auto with arith.
+  - intros. inversion H0.
+  - intros. Search N.
+Admitted.
+Theorem theo_lt : forall n p : nat,
+  n < p <-> (n <? p) = true.
+Proof.
+  intros n p. split.
+  - intro H.
+Admitted.
+Theorem theo_eq : forall n p : nat,
+  n = p <-> (n =? p) = true.
+Proof.
+  intros n p. split.
+  - intro H.
+Admitted.
+
+
 Print pre. Print weight_type. Print modif_mark_spec.
 (**** uphill (input set, preset) ***)
 Inductive pre_or_test_check_spec
@@ -560,21 +585,30 @@ Inductive pre_or_test_check_spec
 | pre_or_test_check_nil : pre_or_test_check_spec
                             pre_or_test_arcs_t
                             m []
+| pre_or_test_check_cons_none : forall (p:place_type)
+                                       (tail:list place_type),
+    pre_or_test_arcs_t p = None
+    ->
+    pre_or_test_check_spec
+      pre_or_test_arcs_t       m   tail
+    ->
+    pre_or_test_check_spec
+      pre_or_test_arcs_t       m   (p::tail)
 | pre_or_test_check_cons_some : forall (p:place_type)
                                        (tail:list place_type)
                                        (pos:nat_star)
                                        (n:nat) (pf:n>0),
-    pre_or_test_arcs_t p = Some pos ->
-    pos = {| int := n; posi := pf |} ->
+    pre_or_test_arcs_t p = Some pos
+    ->
+    pos = {| int := n; posi := pf |}
+    ->
+    (n <= (m p))   (* marquage suffisant en place p*)
+    ->
     pre_or_test_check_spec
-      pre_or_test_arcs_t
-      m (p::tail)
-| pre_or_test_check_cons_none : forall (p:place_type)
-                                       (tail:list place_type),
-    pre_or_test_arcs_t p = None ->
+      pre_or_test_arcs_t       m    tail
+    ->
     pre_or_test_check_spec
-      pre_or_test_arcs_t
-      m (p::tail).      
+      pre_or_test_arcs_t       m    (p::tail).      
 Fixpoint pre_or_test_check
          (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
@@ -623,7 +657,7 @@ Proof.
                           places   pre_or_test_arcs_t   m)
              using pre_or_test_check_ind.
   - intro. apply pre_or_test_check_nil.
-  - intro H. (* apply marking2list_cons. reflexivity. *)
+  - intro H. (* apply  pre_or_test_check_cons_some. reflexivity. *)
     SearchPattern ( ?b = true /\ ?c = true ).
     assert (H' : int0 <=? m h = true  /\
                  pre_or_test_check tail pre_or_test_arcs_t m = true).
@@ -633,14 +667,19 @@ Proof.
 
     Print proj2.
     { apply (proj2 H'). }
-    
-    
+    assert (Hleft :  (int0 <=? m h) = true).
+    Print proj1.
+    { apply (proj1 H'). }
+    apply pre_or_test_check_cons_some with
+        (pos:={| int := int0; posi := _x |}) (n:=int0) (pf:=_x).
+    + assumption.
+    + reflexivity.
+    + Print "<=?". SearchPattern ( leb ).   
     
 Admitted.
 Theorem pre_or_test_check_complete :
   forall (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
-         (* pre or test arcs going to trans t *)
          (m : marking_type),
     pre_or_test_check_spec
       pre_or_test_arcs_t
@@ -654,7 +693,15 @@ Theorem pre_or_test_check_complete :
       m = true.
 Proof.
   intros places  pre_or_test_arcs_t  m  H. elim H.
-  - 
+  - simpl. reflexivity.
+  - intros. simpl. rewrite H0. assumption.
+
+  - intros. simpl. rewrite H0. rewrite H1.
+    SearchPattern ( ?a && ?b = true ).
+    apply andb_true_intro. split.
+    + Search nat. Print leb_iff_conv.
+      Print leb_correct. Print leb_complete.
+      Print leb_correct_conv. Print leb_complete_conv.
 
 Admitted.
 

@@ -65,18 +65,16 @@ Fixpoint intervals2list
 
 
 (** "enabled" <=> "arcs_classic" + "arcs_test" + "arcs_inhi" OK **)
-Definition trans_is_enabled
+Definition is_enabled
            (places : list place_type)
-           (pre : weight_type)
-           (pre_test : weight_type)
-           (pre_inhi : weight_type)
-           (m : marking_type)
-  : trans_type -> bool :=  
-  fun t => (pre_or_test_check places (pre t) m)
-             &&
-             (pre_or_test_check places (pre_test t) m)
-             &&
-             (inhib_check places (pre_inhi t) m). 
+           (pre   test  inhib : weight_type)
+           (m : marking_type) (t : trans_type)
+  : bool :=
+  (pre_or_test_check places (pre t) m)
+    &&
+    (pre_or_test_check places (test t) m)
+    &&
+    (inhib_check places (inhib t) m). 
 (**   useless fonction ?  (unless for STPN and SITPN ...)
  because 
  firing a bunch of transitions synchronously implies
@@ -90,45 +88,70 @@ at the beginning of the cycle
 
 2) to reset disabled transitions ? during "fire_pre" ? or after ?
 no because   m_steady   &  ! m_decreasing !
-*)
+ *)
 
-
-Fixpoint list_enabled_aux
+Fixpoint list_enabled_aux 
+         (sometranss : list trans_type)
          (places : list place_type)
-         (pre test inhib : weight_type)
-         (m : marking_type)
-         (transs  enabled_transs : list trans_type) (*input/output*)
+         (pre    test    inhib : weight_type) 
+         (m_steady   : marking_type)
+         (enabled_transs : list trans_type)
   : list trans_type :=
-  match transs with
-  | [] => enabled_transs
-  | t :: tail => if trans_is_enabled
-                      places
-                      pre test inhib
-                      m t
-                 then list_enabled_aux
-                        places
-                        pre test inhib
-                        m
-                        tail (t::enabled_transs) (* added *)
-                 else list_enabled_aux
-                        places
-                        pre test inhib
-                        m
-                        tail enabled_transs   (* not added *)
+  match sometranss with
+  | [] => enabled_transs 
+  | t :: tail
+    =>
+    if is_enabled
+         places    pre    test   inhib    m_steady   t
+    then list_enabled_aux 
+           tail   places   pre   test   inhib  
+           m_steady    (t::enabled_transs)
+    else list_enabled_aux 
+           tail   places   pre   test   inhib  
+           m_steady    (t::enabled_transs)
   end.
-Definition list_enabled
-           (places : list place_type)
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs : list trans_type) (*input/output*)
-  : list trans_type :=
-  list_enabled_aux
-    places
-    pre test inhib
-    m
-    transs [].
 
-Definition list_enabled_spn (spn : SPN) : list trans_type :=
+
+
+(***********************  SPN  to joke *******************)
+Print synchro_check_arcs.
+Fixpoint synchro_check_list_aux 
+         (sometranss : list trans_type)
+         (places : list place_type)
+         (pre    test    inhib : weight_type) 
+         (m_steady    m_decreasing : marking_type)
+         (enabled_transs : list trans_type)
+  : list trans_type :=
+  match sometranss with
+  | [] => enabled_transs 
+  | t :: tail
+    =>
+    if synchro_check_arcs
+         places  (pre t) (test t) (inhib t) m_decreasing m_steady
+    then synchro_check_list_aux 
+           tail  places  pre   test  inhib  
+           m_steady    m_decreasing   (t::enabled_transs)
+    else synchro_check_list_aux 
+           tail  places  pre   test  inhib  
+           m_steady    m_decreasing   enabled_transs
+  end.
+
+Definition synchro_check_list 
+         (sometranss : list trans_type)
+         (places : list place_type)
+         (pre    test    inhib : weight_type) 
+         (m_steady    m_decreasing : marking_type)
+  : list trans_type :=
+  synchro_check_list_aux 
+    sometranss 
+    places
+    pre    test    inhib
+    m_steady    m_decreasing  [].
+
+Definition list_enabled_spn
+           (spn : SPN)
+           (m_decreasing : marking_type)
+  : list trans_type :=
   match spn with
   | mk_SPN
       places  transs (* nodup_places nodup_transitions *)
@@ -137,60 +160,29 @@ Definition list_enabled_spn (spn : SPN) : list trans_type :=
       (mk_prior
          Lol)
     =>
-    list_enabled
+    synchro_check_list
+      transs
       places 
       pre  test  inhib 
-      marking
-      transs 
+      marking    m_decreasing 
   end.
 
 Print list_enabled_spn.
-Definition list_enabled_stpn (stpn : STPN) : list trans_type :=
+Definition list_enabled_stpn
+           (stpn : STPN)
+           (m_decreasing : marking_type)
+  : list trans_type :=
   match stpn with
   | mk_STPN
       spn
       chronos
     =>
-    list_enabled_spn   spn
+    list_enabled_spn
+      spn
+      m_decreasing
   end.
 
 (*
-Fixpoint list_disabled_aux
-         (places : list place_type)
-         (pre test inhib : weight_type)
-         (m : marking_type)
-         (enabled_transs  disabled_transs : list trans_type)
-  : list trans_type :=
-  match enabled_transs with
-  | [] => disabled_transs
-  | t :: tail => if trans_is_enabled
-                      places
-                      pre test inhib
-                      m t
-                 then list_disabled_aux
-                        places
-                        pre test inhib
-                        m
-                        tail   disabled_transs
-                 else list_disabled_aux
-                        places
-                        pre test inhib
-                        m
-                        tail   (t::disabled_transs)
-  end.
-Definition list_disabled
-           (places : list place_type)
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (enabled_transs : list trans_type) (*input/output*)
-  : list trans_type :=
-  list_disabled_aux
-    places
-    pre test inhib
-    m
-    enabled_transs [].
- *)
-
 Search trans_type. 
 Fixpoint in_list    (* must exist in library List *)
          (some_transs : list trans_type)
@@ -201,44 +193,53 @@ Fixpoint in_list    (* must exist in library List *)
   | t :: tail => if (beq_transs trans t)  (* t =? trans *)
                  then true
                  else false
-  end.  
+  end.  *)
 
 (********************* TIME intervals  ---> chronos  ***********)
 
 Print STPN. Print chronos.
 (* increment time, for a given list of enabled transitions *)
-Fixpoint increment_time
+Definition increment_time_trans
+           (chronos : trans_type -> option chrono_type)
+           (t :  trans_type)
+  : trans_type -> option chrono_type :=
+  match (chronos t) with
+  | None => chronos  (* increment nothing ... *)
+  | Some (mk_chrono        (* immutable ... *)
+            mini
+            maxi
+            min_le_max
+            cpt )
+    => (fun trans =>
+          if beq_transs
+               trans t
+          then Some (mk_chrono
+                       mini
+                       maxi
+                       min_le_max
+                       (cpt + 1))
+          else (chronos trans))                      
+  end.
+
+Fixpoint increment_time_enabled
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
   : trans_type -> option chrono_type :=
   match enabled_transs with
   | [] => chronos
-  | t :: tail => match (chronos t) with
-                 | None => chronos  (* increment nothing ... *)
-                 | Some (mk_chrono        (* immutable ... *)
-                           mini
-                           maxi
-                           min_le_max
-                           cpt ) =>  increment_time
-                                       (fun trans =>
-                                          if beq_transs
-                                               trans t
-                                          then Some (mk_chrono
-                                                       mini
-                                                       maxi
-                                                       min_le_max
-                                                       (cpt + 1)
-                                                    (* !!! *) )
-                                          else (chronos trans)
-                                       )
-                                       tail
-                 end 
+  | t :: tail
+    =>
+    increment_time_enabled
+      (increment_time_trans
+         chronos   t)
+      tail
   end.
+
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
 facilement calculable *)
 
-Definition reset_time
+Definition reset_time_trans
            (chronos : trans_type -> option chrono_type)
            (t : trans_type)
   : trans_type -> option chrono_type :=
@@ -248,67 +249,34 @@ Definition reset_time
             mini
             maxi
             min_le_max
-            cpt ) => (fun trans =>
-                                if beq_transs
-                                     trans t
-                                then Some (mk_chrono
-                                             mini
-                                             maxi
-                                             min_le_max
-                                             0   (* !!! *) )
-                                else (chronos trans)
-                     )             
+            cpt )
+    => (fun trans =>
+          if beq_transs
+               trans t
+          then Some (mk_chrono
+                       mini
+                       maxi
+                       min_le_max
+                       0 )
+          else (chronos trans))             
   end.
-(* le reset de compteur est plus subtil : 
+(* 
+le reset de compteur est plus subtil : 
  1) quand faut-il le faire ?  
    ----> a la fin du cycle ou plutot dans stpn_sub_fire_pre !
  2) pour quelles transitions faut-il le faire ?
    ----> celles desensibilisees durant le cycle. meme transitoirement
 *)
-
-Print synchro_check_arcs.
-Fixpoint synchro_check_list_aux 
-         (class_transs : list trans_type)
-         (places : list place_type)
-         (pre    test    inhib : weight_type) 
-         (m_steady    m_decreasing : marking_type)
-         (enabled_transs : list trans_type)
-  : list trans_type :=
-  match class_transs with
-  | [] => enabled_transs 
-  | t :: tail
-    =>
-    if synchro_check_arcs
-         places  (pre t) (test t) (inhib t) m_decreasing m_steady
-    then synchro_check_list_aux 
-           tail  places  pre   test  inhib  
-           m_steady    m_decreasing   enabled_transs
-    else synchro_check_list_aux 
-           tail  places  pre   test  inhib  
-           m_steady    m_decreasing   (t::enabled_transs)
-  end.
-
-Definition synchro_check_list 
-         (class_transs : list trans_type)
-         (places : list place_type)
-         (pre    test    inhib : weight_type) 
-         (m_steady    m_decreasing : marking_type)
-  : list trans_type :=
-  synchro_check_list_aux 
-    class_transs 
-    places
-    pre    test    inhib
-    m_steady    m_decreasing  [].     
     
 (* reset time counters of (a class of ?) some transitions ... *)
-Fixpoint reset_time_list
+Fixpoint reset_time_disabled
            (chronos : trans_type -> option chrono_type)
-           (list_to_reset : list trans_type)
+           (disabled_transs : list trans_type)
   : trans_type -> option chrono_type :=
-  match list_to_reset with
+  match disabled_transs with
   | [] => chronos
-  | t :: tail => reset_time_list
-                   (reset_time
+  | t :: tail => reset_time_disabled
+                   (reset_time_trans
                       chronos
                       t)
                    tail
@@ -352,7 +320,7 @@ Fixpoint stpn_sub_fire_pre_aux
         (* updating the intervals in case ... *)
         (* bugged *)
         let new_chronos :=
-            (reset_time_list
+            (reset_time_disabled
                chronos
                (synchro_check_list
                   class_transs 
@@ -508,10 +476,7 @@ Definition stpn_fire
            (places : list place_type)
            (pre test inhib post : weight_type)
            (m_init : marking_type)
-           (* ......... to reset clocks .................. *)
-           (enabled_transs : list trans_type)
            (chronos : trans_type -> option chrono_type)
-           (* .......... to reset clocks ................. *)
            (classes_transs : list (list trans_type))
   : (list (list trans_type)) *
     marking_type             *
@@ -532,7 +497,7 @@ Definition stpn_fire
 (* The marking and the chronos are evolving,  
 but we want to see also the      fired transitions    *)
 (******************************* CYCLE **********************)
-Print list_enabled. Print STPN. Print SPN.
+Print list_enabled_stpn. Print STPN. Print SPN.
 Definition stpn_cycle (stpn : STPN)           
   : (list (list trans_type)) * STPN  :=
   match stpn with
@@ -545,32 +510,29 @@ Definition stpn_cycle (stpn : STPN)
             Lol) )
       chronos
     =>
-    let enabled := (list_enabled
-                      places 
-                      pre  test  inhib 
-                      marking
-                      transs )
+    let enabled := (list_enabled_stpn
+                      stpn
+                      marking)
     in
-    let chronos_incr := increment_time
+    let chronos_incr := increment_time_enabled
                           chronos 
                           enabled
     in
-    let '(fired, new_m, new_chronos) := stpn_fire  
-                                          places
-                                          pre  test  inhib  post
-                                          marking
-                                          enabled (* ! *)  
-                                          chronos_incr (* ! *)
-                                          Lol
-    in (fired ,  (* ! *)
+    let '(transs_fired, new_m, new_chro) := stpn_fire  
+                                              places
+                                              pre  test  inhib  post
+                                              marking
+                                              chronos_incr (* ! *)
+                                              Lol
+    in (transs_fired, 
         (mk_STPN
            (mk_SPN
               places  transs  (* nodup_places  nodup_transitions *)
               pre     post     test          inhib
-              new_m       (* ! *)
+              new_m      
               (mk_prior
                  Lol) )
-           new_chronos  (* ! *) )  )
+           new_chro  )  )
   end.
 
 
@@ -836,14 +798,42 @@ Compute (animate_stpn
            ex_stpn
            10).  (* 11 markings *)
 
+
+(*
+Definition get_m_stpn (stpn : STPN) : marking_type :=
+  match stpn with
+  | mk_STPN
+      (mk_SPN
+         places  transs (* nodup_places  nodup_transitions *)          
+         pre     post    test          inhib         
+         marking
+         (mk_prior
+            Lol) )
+      chronos
+    => 
+*)
+    
+Compute (
+    list_enabled_stpn
+      (snd (stpn_cycle  
+              ex_stpn))
+      (marking (spn (snd (stpn_cycle  
+                            ex_stpn))))).
+
+Check marking2list.
+Compute (marking2list
+           (places (spn (snd (stpn_cycle  
+                                ex_stpn))))
+           (marking (spn (snd (stpn_cycle  
+                                 ex_stpn))))).
 Compute
   (
     stpn_debug_pre
       (
-(*        snd (stpn_cycle  *)
-               (snd (stpn_cycle 
-                       (snd (stpn_cycle 
-                               (snd (stpn_cycle  
-                                       ex_stpn)
+        (*        snd (stpn_cycle  *)
+        (snd (stpn_cycle 
+                (snd (stpn_cycle 
+                        (snd (stpn_cycle  
+                                ex_stpn)
                                     
   ))))))).
