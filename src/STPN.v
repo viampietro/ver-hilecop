@@ -154,7 +154,7 @@ Definition list_enabled_stpn
 
 (***********************  useful ?   *******************)
 Print synchro_check_arcs.
-Fixpoint synchro_check_list_aux 
+Fixpoint not_synchro_check_list_aux 
          (sometranss : list trans_type)
          (places : list place_type)
          (pre    test    inhib : weight_type) 
@@ -167,21 +167,21 @@ Fixpoint synchro_check_list_aux
     =>
     if synchro_check_arcs
          places  (pre t) (test t) (inhib t) m_decreasing m_steady
-    then synchro_check_list_aux 
-           tail  places  pre   test  inhib  
-           m_steady    m_decreasing   (t::enabled_transs)
-    else synchro_check_list_aux 
+    then not_synchro_check_list_aux 
            tail  places  pre   test  inhib  
            m_steady    m_decreasing   enabled_transs
+    else not_synchro_check_list_aux 
+           tail  places  pre   test  inhib  
+           m_steady    m_decreasing   (t::enabled_transs)
   end.
 
-Definition synchro_check_list 
+Definition not_synchro_check_list 
          (sometranss : list trans_type)
          (places : list place_type)
          (pre    test    inhib : weight_type) 
          (m_steady    m_decreasing : marking_type)
   : list trans_type :=
-  synchro_check_list_aux 
+  not_synchro_check_list_aux 
     sometranss 
     places
     pre    test    inhib
@@ -318,27 +318,21 @@ Fixpoint stpn_sub_fire_pre_aux
     then
       if (good_time (chronos  t))
       then   (* firing  t *)
-        let (new_decreasing, new_chronos)  :=
-            ((update_marking_pre
-                places t pre
-                m_decreasing), reset_time_trans
-                                 chronos      t)
-
+        let new_decreasing   :=
+            (update_marking_pre
+               places t pre
+               m_decreasing)
         in
         (* updating the intervals in case ... *)
-        (* bugged *)
-     (*   let new_chronos :=
-            reset_time_trans
-              chronos      t
-              
-              
-            (*(reset_time_disabled
+        
+        let new_chronos :=
+            (reset_time_disabled
                chronos
-               (synchro_check_list
+               (not_synchro_check_list
                   class_transs 
                   places     pre    test    inhib
-                  m_steady    new_decreasing)) *)
-        in *)
+                  m_steady    new_decreasing))
+        in
         stpn_sub_fire_pre_aux
           places    pre    test   inhib
           m_steady      new_decreasing 
@@ -560,13 +554,13 @@ Fixpoint animate_stpn
        list (place_type * nat) *
        (list (trans_type * option (nat * nat * nat)))) :=
   match n with
-  | O => [ ( [] ,
-             marking2list
+  | O => [ ( [] , [] , [] 
+         (*    marking2list
                     (places   (spn stpn))
                     (marking  (spn stpn)) ,
              (intervals2list
                 (transs (spn stpn))
-                (chronos     stpn))
+                (chronos     stpn))  *)
          ) ]
   | S n' =>  let (Lol_fired, next_stpn) := (stpn_cycle stpn)
              in
