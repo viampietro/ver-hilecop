@@ -318,14 +318,16 @@ Fixpoint stpn_sub_fire_pre_aux
     then
       if (good_time (chronos  t))
       then   (* firing  t *)
-        let new_decreasing :=
-            (update_marking_pre
-               places t pre
-               m_decreasing)
+        let (new_decreasing, new_chronos)  :=
+            ((update_marking_pre
+                places t pre
+                m_decreasing), reset_time_trans
+                                 chronos      t)
+
         in
         (* updating the intervals in case ... *)
         (* bugged *)
-        let new_chronos :=
+     (*   let new_chronos :=
             reset_time_trans
               chronos      t
               
@@ -336,7 +338,7 @@ Fixpoint stpn_sub_fire_pre_aux
                   class_transs 
                   places     pre    test    inhib
                   m_steady    new_decreasing)) *)
-        in
+        in *)
         stpn_sub_fire_pre_aux
           places    pre    test   inhib
           m_steady      new_decreasing 
@@ -502,7 +504,7 @@ Definition stpn_fire
          places post
          m_inter
          sub_Lol ,
-       chronos ).
+       new_chronos ).
 
 (* The marking and the chronos are evolving,  
 but we want to see also the      fired transitions    *)
@@ -802,9 +804,17 @@ Check animate_stpn.
 
 Compute (animate_stpn
            ex_stpn
-           10).  (* 11 markings *)
-    
-Compute
+           11).  (* 12 markings but the last one is dub. It works. *)
+
+Compute (chronos
+           (snd (stpn_cycle
+                   (snd (stpn_cycle
+                           (snd (stpn_cycle
+                                   (snd (stpn_cycle
+                                           (snd (stpn_cycle  
+                                                   ex_stpn))))))))))). 
+
+           Compute
   (
     list_enabled_stpn
 (*      (snd (stpn_cycle *) 
