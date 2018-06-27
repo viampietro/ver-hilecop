@@ -305,50 +305,36 @@ Fixpoint stpn_sub_fire_pre_aux
          (m_steady    m_decreasing : marking_type) 
          (chronos : trans_type -> option chrono_type)
          (class_transs   subclass_half_fired : list trans_type)  
-  : (list trans_type) *
-    marking_type      *
-    (trans_type -> option chrono_type) :=
+  : (list trans_type) * marking_type * (trans_type -> option chrono_type) :=
   match class_transs with
   | t :: tail =>
-    if
-      synchro_check_arcs
-        places (pre t) (test t) 
-        (inhib t) m_decreasing m_steady
-        (* t is enabled, even w.r.t. to the others *)
-    then
-      if (good_time (chronos  t))
-      then   (* firing  t *)
-        let new_decreasing   :=
-            (update_marking_pre
-               places t pre
-               m_decreasing)
-        in
-        (* updating the intervals in case ... *)
-        
-        let new_chronos :=
-            (reset_time_disabled
-               chronos
-               (not_synchro_check_list
-                  class_transs 
-                  places     pre    test    inhib
-                  m_steady    new_decreasing))
-        in
-        stpn_sub_fire_pre_aux
-          places    pre    test   inhib
-          m_steady      new_decreasing 
-          new_chronos   tail      (subclass_half_fired ++ [t])
-          (* concatenate t behind, keep order *)
-      else (* not goog time *)
-        stpn_sub_fire_pre_aux
-          places    pre    test   inhib
-          m_steady    m_decreasing
-          chronos     tail         subclass_half_fired 
-          (* t not fired, let's continue with tail *)
-    else  (* not enabled   w.r.t. ...    same as previous else *)
+    if synchro_check_arcs
+         places (pre t) (test t) (inhib t) m_decreasing m_steady
+         (* t is enabled, even w.r.t. to the others *)
+    then  if (good_time (chronos  t))
+          then   (* firing  t *)
+            let new_decreasing   :=
+                (update_marking_pre
+                   places  t  pre  m_decreasing)
+            in   (* reseting the disabled intervals ! *)
+            let new_chronos :=
+                (reset_time_disabled
+                   chronos
+                   (not_synchro_check_list
+                      class_transs   places     pre    test    inhib
+                      m_steady       new_decreasing))
+            in
+            stpn_sub_fire_pre_aux
+              places    pre    test   inhib   m_steady      new_decreasing 
+              new_chronos   tail      (subclass_half_fired ++ [t])
+          else                     (* not goog time/window *)
+            stpn_sub_fire_pre_aux
+              places    pre    test   inhib   m_steady    m_decreasing
+              chronos     tail        subclass_half_fired
+    else  (* t not enabled   w.r.t. the other transs  *)
       stpn_sub_fire_pre_aux
-        places    pre    test    inhib
-        m_steady   m_decreasing
-        chronos    tail         subclass_half_fired 
+              places    pre    test   inhib   m_steady   m_decreasing
+              chronos     tail        subclass_half_fired 
   | []  => (subclass_half_fired, m_decreasing, chronos)
   end.
 (* 
@@ -489,15 +475,12 @@ Definition stpn_fire
     (trans_type -> option chrono_type)  :=
   let '(sub_Lol, m_inter, new_chronos) :=
       stpn_fire_pre
-        places  pre test inhib 
-        m_init
-        chronos
-        classes_transs
+        places    pre  test  inhib 
+        m_init       chronos    classes_transs
   in  (sub_Lol ,
        fire_post
-         places post
-         m_inter
-         sub_Lol ,
+         places     post
+         m_inter     sub_Lol ,
        new_chronos ).
 
 (* The marking and the chronos are evolving,  
@@ -509,36 +492,29 @@ Definition stpn_cycle (stpn : STPN)
   match stpn with
   | mk_STPN
       (mk_SPN
-         places  transs (* nodup_places  nodup_transitions *)          
+         places  transs (* nodup_places  nodup_transitions *)
          pre     post    test          inhib         
-         marking
-         (mk_prior
-            Lol) )
+         marking         (mk_prior
+                            Lol) )
       chronos
     =>
     let enabled := list_enabled_stpn
-                     stpn
-    in
+                     stpn                         in
     let chronos_incr := increment_time_enabled
                           chronos 
-                          enabled
-    in
-    let '(transs_fired, new_m, new_chro) := stpn_fire  
-                                              places
-                                              pre  test  inhib  post
-                                              marking
-                                              chronos_incr (* ! *)
-                                              Lol
+                          enabled                 in
+    let '(transs_fired, new_m, new_chro) :=
+        stpn_fire  
+          places     pre  test  inhib  post
+          marking     chronos_incr     Lol
     in (transs_fired, 
         (mk_STPN
            (mk_SPN
               places  transs  (* nodup_places  nodup_transitions *)
               pre     post     test          inhib
-              new_m      
-              (mk_prior
-                 Lol) )
-           new_chro  )  )
-  end.
+              new_m           (mk_prior
+                                 Lol) )
+           new_chro)) end.
 
 
 (**************************************************)
