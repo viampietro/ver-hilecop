@@ -231,7 +231,7 @@ Definition modif_mark
 
 Functional Scheme modif_mark_ind :=
   Induction for modif_mark Sort Prop.
-Theorem modif_mark_sound :
+Theorem modif_mark_correct :
   forall (m : marking_type) (p : place_type) (j : option nat_star)
          (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
     modif_mark m p j op p' = mp -> modif_mark_spec m p p' j op mp.
@@ -300,7 +300,7 @@ Fixpoint update_marking_pre
 
 Functional Scheme update_marking_pre_ind :=
   Induction for update_marking_pre Sort Prop.
-Theorem update_marking_pre_sound :
+Theorem update_marking_pre_correct :
   forall (places : list place_type)
          (t : trans_type)
          (pre : weight_type)
@@ -380,7 +380,7 @@ Fixpoint update_marking_post
 
 Functional Scheme update_marking_post_ind :=
   Induction for update_marking_post Sort Prop.
-Theorem update_marking_post_sound :
+Theorem update_marking_post_correct :
   forall (places : list place_type)
          (t : trans_type)
          (post : weight_type)
@@ -448,7 +448,7 @@ Definition update_marking
 
 Functional Scheme update_marking_ind :=
   Induction for update_marking Sort Prop.
-Theorem update_marking_sound :
+Theorem update_marking_correct :
   forall (places : list place_type)
          (t : trans_type)
          (pre post : weight_type)
@@ -507,7 +507,7 @@ Fixpoint marking2list
 
 Functional Scheme marking2list_ind :=
   Induction for marking2list Sort Prop.
-Theorem marking2list_sound :
+Theorem marking2list_correct :
   forall (places : list place_type)
          (m : marking_type)
          (truc : list (place_type * nat)),
@@ -649,7 +649,7 @@ Fixpoint pre_or_test_check
 
 Functional Scheme pre_or_test_check_ind :=
   Induction for pre_or_test_check Sort Prop.
-Theorem pre_or_test_check_sound :
+Theorem pre_or_test_check_correct :
   forall (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type),
@@ -773,7 +773,6 @@ Fixpoint inhib_check
                                end
                    end
   end.
-
 Functional Scheme inhib_check_ind :=
   Induction for inhib_check Sort Prop.
 Theorem inhib_check_correct :
@@ -913,12 +912,7 @@ Theorem synchro_check_arcs_correct :
 Proof.
   intros places  pre_arcs_t   test_arcs_t   inhib_arcs_t
          m_steady   m_decreasing    H.
- (* functional induction (synchro_check_arcs
-                          places
-                          pre_arcs_t   test_arcs_t   inhib_arcs_t
-                          m_decreasing   m_steady)
-             using synchro_check_arcs_ind. *)
-  unfold synchro_check_arcs in H. (*????*)
+  unfold synchro_check_arcs in H. 
   apply synchro_check_arcs_cst. assumption.
 Qed.
 Theorem synchro_check_arcs_complete :
@@ -1042,7 +1036,7 @@ and 2 markings are recorded :
 Functional Scheme spn_sub_fire_pre_aux_ind :=
   Induction for spn_sub_fire_pre_aux   Sort Prop.
 Check spn_sub_fire_pre_aux_spec.
-Theorem spn_sub_fire_pre_correct :
+Theorem spn_sub_fire_pre_aux_correct :
   forall (places : list place_type)
          (pre  test  inhib : weight_type)
          (m_steady      m_decreasing      m_final : marking_type)
@@ -1127,6 +1121,8 @@ Proof.
   - intros. unfold spn_sub_fire_pre_aux. (* rewrite H0. *)
 Admitted.
 
+(****** spn_sub_fire_pre_aux  ----> spn_sub_fire_pre ********)
+
 Inductive spn_sub_fire_pre_spec
           (places : list place_type)
           (pre   test   inhib : weight_type)  
@@ -1136,19 +1132,19 @@ Inductive spn_sub_fire_pre_spec
     marking_type ->
     Prop :=
 | spn_sub_fire_pre_cst :
-    forall (subclass_half_fired : list trans_type)
+    forall (subclass_fired_pre : list trans_type)
            (m_half_fired_class : marking_type),
       spn_sub_fire_pre_aux
         places
         pre    test    inhib
         m_steady    m_decreasing
-        class_transs    [] = (subclass_half_fired,
+        class_transs    [] = (subclass_fired_pre,
                               m_half_fired_class)
       ->
       spn_sub_fire_pre_spec
         places  pre  test  inhib
         m_steady    m_decreasing     
-        class_transs   subclass_half_fired  m_half_fired_class
+        class_transs   subclass_fired_pre  m_half_fired_class
 .
 Definition spn_sub_fire_pre
            (places : list place_type)
@@ -1160,30 +1156,28 @@ Definition spn_sub_fire_pre
     places
     pre    test    inhib
     m_steady    m_decreasing
-    class_transs    []. (*
+    class_transs    []. 
 Theorem spn_sub_fire_pre_correct :
   forall (places : list place_type)
          (pre  test  inhib : weight_type)
          (m_steady   m_decreasing     m_final : marking_type)
-         (class_transs  subclass_half_fired  sub_final : list trans_type),
-    spn_sub_fire_pre_spec
-      places 
-      pre test inhib   
-      m_steady    m_decreasing         
-      class_transs subclass_half_fired 
-      m_final
-    ->
+         (class_transs  subclass_fired_pre  : list trans_type),
     spn_sub_fire_pre
       places
       pre test inhib   
       m_steady    m_decreasing       
-      class_transs subclass_half_fired 
-    = (subclass_half_fired, m_final).
+      class_transs       
+    = (subclass_fired_pre, m_final)
+    ->
+    spn_sub_fire_pre_spec
+      places 
+      pre test inhib   
+      m_steady    m_decreasing         
+      class_transs
+      subclass_fired_pre    m_final.
 Proof.
-  intros. elim H.
-  - unfold spn_sub_fire_pre_aux. reflexivity.
-  - intros. unfold spn_sub_fire_pre_aux. (* rewrite H0. *)
-Admitted. 
+  intros. Admitted.
+ 
 Theorem spn_sub_fire_pre_complete :
   forall (places : list place_type)
          (pre  test  inhib : weight_type)
@@ -1193,8 +1187,8 @@ Theorem spn_sub_fire_pre_complete :
       places 
       pre test inhib   
       m_steady    m_decreasing         
-      class_transs subclass_half_fired 
-      m_final
+      class_transs
+      subclass_half_fired    m_final
     ->
     spn_sub_fire_pre
       places
@@ -1206,9 +1200,10 @@ Proof.
   intros. elim H.
   - Admitted. (* unfold spn_sub_fire_pre_aux. reflexivity.
   - intros. unfold spn_sub_fire_pre_aux. (* rewrite H0. *)
-Admitted. *) *)
+Admitted. *) 
 
-(************************************************************)
+(********** spn_sub_fire_pre ---> spn_fire_pre(_aux) *************)
+
 Inductive spn_fire_pre_aux_spec
           (places : list place_type)
           (pre test inhib : weight_type)
@@ -1362,57 +1357,47 @@ Definition spn_fire_pre
     pre test inhib 
     m_steady    m_steady
     classes_transs  [].
-(*
+
 Theorem spn_fire_pre_correct :
   forall (places : list place_type)
          (pre  test  inhib : weight_type)
          (m_steady   m_inter : marking_type)
-         (class_transs  subclass_half_fired  sub_final : list trans_type),
-    spn_sub_fire_pre_spec
-      places 
-      pre test inhib   
-      m_steady    m_decreasing         
-      class_transs subclass_half_fired 
-      m_final
+         (classes_transs  subclasses_fired_pre : list (list trans_type)),
+    spn_fire_pre
+      places     pre   test   inhib   
+      m_steady    classes_transs  
+    = (subclasses_fired_pre, m_inter)
     ->
-    spn_sub_fire_pre
-      places
-      pre test inhib   
-      m_steady    m_decreasing       
-      class_transs subclass_half_fired 
-    = (subclass_half_fired, m_final).
+    spn_fire_pre_spec
+      places     pre test inhib   
+      m_steady      classes_transs
+      subclasses_fired_pre    m_inter.
 Proof.
-  intros. elim H.
-  - unfold spn_sub_fire_pre_aux. reflexivity.
-  - intros. unfold spn_sub_fire_pre_aux. (* rewrite H0. *)
+  intros. 
 Admitted.
-Theorem spn_sub_fire_pre_complete :
+Theorem spn_fire_pre_complete :
   forall (places : list place_type)
          (pre  test  inhib : weight_type)
-         (m_steady   m_decreasing     m_final : marking_type)
-         (class_transs  subclass_half_fired  sub_final : list trans_type),
-    spn_sub_fire_pre_spec
-      places 
-      pre test inhib   
-      m_steady    m_decreasing         
-      class_transs subclass_half_fired 
-      m_final
+         (m_steady   m_inter : marking_type)
+         (classes_transs  subclasses_fired_pre : list (list trans_type)),
+     spn_fire_pre_spec
+      places     pre test inhib   
+      m_steady      classes_transs
+      subclasses_fired_pre    m_inter
     ->
-    spn_sub_fire_pre
-      places
-      pre test inhib   
-      m_steady    m_decreasing       
-      class_transs
-    = (subclass_half_fired, m_final).
+    spn_fire_pre
+      places     pre   test   inhib   
+      m_steady    classes_transs  
+    = (subclasses_fired_pre, m_inter).
 Proof.
   intros. elim H.
   - Admitted. (* unfold spn_sub_fire_pre_aux. reflexivity.
   - intros. unfold spn_sub_fire_pre_aux. (* rewrite H0. *)
-Admitted. *)   *)
+Admitted. *)   
 
 (***********************************************************)
 (***********  POST   ***************************************)
-(**********  not useful to separate in classes ... *********)
+(****  not useful to separate in classes ...  but... *******)
 (*
  given a marking "m_intermediate" got by above,
 after a given subclass of transs has been half fired, 
@@ -1531,17 +1516,18 @@ Inductive fire_post_spec
  intermediate marking computed by "fire_pre",
  after half (pre arcs) firing of ALL the chosen transitions.
  End with the FINAL marking of the cycle !  *)
+Print sub_fire_post.
 Fixpoint fire_post
          (places : list place_type)
          (post : weight_type)
-         (marking_increasing : marking_type)
+         (m_increasing : marking_type)
          (subclasses_fired_uphill : list (list trans_type))
   : marking_type := 
   match subclasses_fired_uphill with
-  | []  => marking_increasing
+  | []  => m_increasing
   | l :: Ltail  => let new_m := sub_fire_post
                                   places post
-                                  marking_increasing
+                                  m_increasing
                                   l
                    in
                    fire_post
@@ -1583,13 +1569,13 @@ Proof.
 Admitted.
 
 (****************************************************)
-Inductive fire_spn_spec   
+Inductive spn_fire_spec   
           (places : list place_type)
           (pre test inhib post : weight_type)
           (m_steady : marking_type)
           (classes_transs : list (list trans_type))
   : (list (list trans_type)) -> marking_type -> Prop :=
-| spn_fire_constr : fire_spn_spec   
+| spn_fire_constr : spn_fire_spec   
                       places
                       pre test inhib post
                       m_steady 
@@ -1600,50 +1586,49 @@ Inductive fire_spn_spec
   returning  "transitions fired (Lol)" + "final marking" ,
    branching spn_fire_post with spn_fire_pre   *)
 Print spn_fire_pre.
-Definition fire_spn  
+Definition spn_fire  
            (places : list place_type)
            (pre test inhib post : weight_type)
            (m_steady : marking_type)
            (classes_transs : list (list trans_type))
   : (list (list trans_type)) * marking_type :=
-  let (sub_Lol, m_decreased) := spn_fire_pre
+  let (sub_Lol, m_inter) := spn_fire_pre
                                   places  pre test inhib 
-                                  m_steady   m_steady
-                                  classes_transs
+                                  m_steady   classes_transs
   in
   (sub_Lol, fire_post
               places post
-              m_decreased
+              m_inter
               sub_Lol).
 
-Functional Scheme fire_spn_ind :=
-  Induction for fire_spn   Sort Prop.
+Functional Scheme spn_fire_ind :=
+  Induction for  spn_fire   Sort Prop.
 Theorem fire_spn_sound :
   forall (places : list place_type)
          (pre  test  inhib   post : weight_type)
-         (m_steady   m_after : marking_type)
+         (m_steady   m_next : marking_type)
          (classes_transs   sub_Lol : list (list trans_type)),
-    fire_spn
+    spn_fire
       places   pre  test  inhib  post
-      m_steady  classes_transs   =  (sub_Lol, m_after)
+      m_steady  classes_transs   =  (sub_Lol, m_next)
     ->
-    fire_spn_spec
+    spn_fire_spec
       places   pre  test  inhib  post
-      m_steady   classes_transs   sub_Lol  m_after.
+      m_steady   classes_transs   sub_Lol  m_next.
 Proof.
 Admitted.
 Theorem fire_spn_complete :
  forall (places : list place_type)
          (pre  test  inhib   post : weight_type)
-         (m_steady   m_after : marking_type)
+         (m_steady   m_next : marking_type)
          (classes_transs   sub_Lol : list (list trans_type)),
-   fire_spn_spec
+   spn_fire_spec
      places   pre  test  inhib  post
-     m_steady   classes_transs   sub_Lol  m_after
+     m_steady   classes_transs   sub_Lol  m_next
    ->
-   fire_spn
+   spn_fire
      places   pre  test  inhib  post
-     m_steady  classes_transs   =  (sub_Lol, m_after).
+     m_steady  classes_transs   =  (sub_Lol, m_next).
 Proof.
 Admitted.
 
@@ -1652,7 +1637,7 @@ Admitted.
 
 Print SPN.  (*** for nice and easy    prints   ***)
 (*** list of transitions fired +   INTERMEDIATE   marking  ***)
-Definition spn_fire_pre_print
+Definition spn_debug1
            (places : list place_type) (pre test inhib : weight_type)
            (marking : marking_type)
            (classes_transs  : list (list trans_type))
@@ -1660,14 +1645,12 @@ Definition spn_fire_pre_print
   let (sub_Lol, m) := (spn_fire_pre
                          places 
                          pre  test  inhib 
-                         marking   marking
-                         classes_transs []
-                      )
+                         marking    classes_transs)
   in
   (sub_Lol, marking2list
               places 
               m ).    (* go with snp_debug_pre *)
-Definition spn_debug_pre (spn : SPN)
+Definition spn_debug2 (spn : SPN)
            (* gives transitions fired  +  marking_pre  *)
   : (list (list trans_type)) * list (place_type * nat) :=
   match spn with
@@ -1678,7 +1661,7 @@ Definition spn_debug_pre (spn : SPN)
       m
       (mk_prior
          Lol)
-    =>  spn_fire_pre_print
+    =>  spn_debug1
           places
           pre test inhib
           m
@@ -1687,7 +1670,7 @@ Definition spn_debug_pre (spn : SPN)
 
 (*********************************************************)
 Print SPN. Print prior_type.
-Check fire_spn_spec. (* != spn_fire_spec *)
+Check spn_fire_spec. (* != spn_fire_spec *)
 Inductive spn_fired_spec
           (spn : SPN) :
   list (list trans_type) -> SPN -> Prop :=
@@ -1704,7 +1687,7 @@ Definition spn_fired (spn : SPN)
       m
       (mk_prior
          Lol)
-    =>  let (sub_Lol, final_m) := (fire_spn
+    =>  let (sub_Lol, final_m) := (spn_fire
                                      places 
                                      pre  test  inhib  post
                                      m
@@ -1717,50 +1700,40 @@ Definition spn_fired (spn : SPN)
               (mk_prior
                  Lol))
   end.
-
 Functional Scheme spn_fired_ind :=
   Induction for spn_fired   Sort Prop.
 Theorem spn_fired_sound :
-  forall (places : list place_type)
-         (pre  test  inhib   post : weight_type)
-         (m_steady   m_after : marking_type)
-         (classes_transs   sub_Lol : list (list trans_type)),
-    fire_spn
-      places   pre  test  inhib  post
-      m_steady  classes_transs   =  (sub_Lol, m_after)
+  forall (spn  next_spn : SPN)
+         (sub_Lol : list (list trans_type)),
+    spn_fired
+      spn    =  (sub_Lol, next_spn)
     ->
-    fire_spn_spec
-      places   pre  test  inhib  post
-      m_steady   classes_transs   sub_Lol  m_after.
+    spn_fired_spec
+      spn   sub_Lol  next_spn.
 Proof.
   intros. Admitted.
 Theorem spn_fired_complete :
- forall (places : list place_type)
-         (pre  test  inhib   post : weight_type)
-         (m_steady   m_after : marking_type)
-         (classes_transs   sub_Lol : list (list trans_type)),
-   fire_spn_spec
-     places   pre  test  inhib  post
-     m_steady   classes_transs   sub_Lol  m_after
+ forall (spn  next_spn : SPN)
+        (sub_Lol : list (list trans_type)),
+   spn_fired_spec
+     spn   sub_Lol  next_spn
    ->
-   fire_spn
-     places   pre  test  inhib  post
-     m_steady  classes_transs   =  (sub_Lol, m_after).
+   spn_fired
+      spn    =  (sub_Lol, next_spn).
 Proof.
   intros. Admitted.
+Print "<=". Print "<=?". Print leb_correct. Print Nat.leb_le.
 
 (*******************************************************)
 Check spn_fired. Check spn_fired_spec.
-Inductive animate_spn_spec
+Inductive spn_animate_spec
           (spn : SPN)
   : nat ->
     list
       (list (list trans_type)  *
        list (place_type * nat) ) -> Prop :=
-| animate_spn_O : animate_spn_spec
-                    spn
-                    O
-                    []
+| animate_spn_O : spn_animate_spec
+                    spn   O   []
 | animate_spn_S :
     forall (next_spn : SPN)
            (Lol_fired : list (list trans_type))
@@ -1776,45 +1749,44 @@ Inductive animate_spn_spec
                        (places next_spn)
                        (marking next_spn)
       ->
-      animate_spn_spec
+      spn_animate_spec
         next_spn    p    TAIL
       -> 
-      animate_spn_spec
-        spn   n   ((Lol_fired, m_visuel) :: TAIL)   .
+      spn_animate_spec
+        spn   n   ((Lol_fired, m_visuel) :: TAIL)
+.
 (* n steps calculus, n "cycles" with both markings and transs *)
-Fixpoint animate_spn
+Fixpoint spn_animate
          (spn : SPN)
          (n : nat)
   : list
       (list (list trans_type)  *
        list (place_type * nat) ) :=
   match n with
-  | O => [ ( [] , marking2list
-                    (places spn)
-                    (marking spn) ) ]
-  | S n' =>  let (Lol_fired, next_spn) :=  spn_fired spn 
-             in
-             ( Lol_fired ,
-               (marking2list
-                  (places next_spn)
-                  (marking next_spn))) 
-               ::
-               (animate_spn
-                  next_spn
-                  n')
-  end.    (* split / combine ... *)
-           
-Functional Scheme animate_spn_ind :=
-  Induction for animate_spn   Sort Prop.
-Theorem animate_spn_sound :
+  | O => [ ( [] , [] ) ]
+  | S n' =>
+    let (Lol_fired, next_spn) :=  spn_fired spn 
+    in
+    ( Lol_fired ,
+      (marking2list
+         (places next_spn)
+         (marking next_spn))) 
+      ::
+      (spn_animate
+         next_spn
+         n')
+  end.
+Functional Scheme spn_animate_ind :=
+  Induction for spn_animate   Sort Prop.
+Theorem spn_animate_correct :
   forall (spn   : SPN)
          (n : nat)
          (truc : list (list (list trans_type)  *
                        list (place_type * nat) )),
-    animate_spn
+    spn_animate
       spn    n   =  truc
     ->
-    animate_spn_spec
+    spn_animate_spec
       spn    n     truc.
 Proof.
   intros. Admitted.
@@ -1823,10 +1795,10 @@ Theorem animate_spn_complete :
          (n : nat)
          (truc : list (list (list trans_type)  *
                        list (place_type * nat) )),
-    animate_spn_spec
+    spn_animate_spec
       spn    n     truc
     ->
-    animate_spn
+    spn_animate
       spn    n   =  truc.
 Proof.
   intros. Admitted.
@@ -2322,7 +2294,7 @@ Check ex_spn. Compute (marking ex_spn). (* initial marking *)
 (* functions / lists *)
 
 Search SPN. (* spn_fired    spn_debug_pre  animate_spn  *)
-Compute (animate_spn
+Compute (spn_animate
            ex_spn
            10).  (* 11 markings *)
 Compute
