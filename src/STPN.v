@@ -412,7 +412,7 @@ Definition stpn_fire_pre
     chronos     classes_transs  [].
   
 (***************************************************)
-(*** for nice prints  only  !  DEBUGGING  ..  ******)
+(******* for  DEBUGGING  only  ..  *****************)
 Search SPN.
 Print spn_fire_pre_print. 
 Print stpn_fire_pre.
@@ -462,6 +462,10 @@ Definition stpn_debug_pre (stpn : STPN)
       chronos
       Lol
   end.
+
+(**************************************************************)
+(*******************  fire_post already done in SPN.v *********)
+(******* fire *************************************************)
 
 (* Returns  [transitions fired + final marking] *)
 Definition stpn_fire  
@@ -553,8 +557,8 @@ Fixpoint animate_stpn
                   n')
   end.    
 
-(***************************************************)
-(*************** example to remove *****************) 
+(**************************************************************)
+(*************** example (to put in a separate file ***********) 
 
 Require Export spn_examples.
 (* 7 places *)

@@ -1,4 +1,4 @@
-Require Import SPN.
+Require Export SPN.
 
 (******************************************************************)
 (****   example of David Andreu       written within TINA    ******)
@@ -263,6 +263,7 @@ Definition ex_prior_aux :=
     [mk_trans 4 ; mk_trans 9 ; mk_trans 13 ; mk_trans 14] ;
     [mk_trans 6]
   ].
+Print ex_prior_aux.
 Definition ex_prior :=
   mk_prior
     ex_prior_aux.    
