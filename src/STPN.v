@@ -311,30 +311,26 @@ Fixpoint stpn_sub_fire_pre_aux
     if synchro_check_arcs
          places (pre t) (test t) (inhib t) m_decreasing m_steady
          (* t is enabled, even w.r.t. to the others *)
-    then  if (good_time (chronos  t))
-          then   (* firing  t *)
-            let new_decreasing   :=
-                (update_marking_pre
-                   places  t  pre  m_decreasing)
-            in   (* reseting the disabled intervals ! *)
-            let new_chronos :=
-                (reset_time_disabled
-                   chronos
-                   (not_synchro_check_list
-                      class_transs   places     pre    test    inhib
-                      m_steady       new_decreasing))
-            in
-            stpn_sub_fire_pre_aux
-              places    pre    test   inhib   m_steady      new_decreasing 
-              new_chronos   tail      (subclass_half_fired ++ [t])
-          else                     (* not goog time/window *)
-            stpn_sub_fire_pre_aux
-              places    pre    test   inhib   m_steady    m_decreasing
-              chronos     tail        subclass_half_fired
-    else  (* t not enabled   w.r.t. the other transs  *)
+         && (good_time (chronos  t))
+    then   (* firing  t *)
+      let new_decreasing   :=
+          (update_marking_pre
+             places  t  pre  m_decreasing)
+      in   (* reseting the disabled intervals ! *)
+      let new_chronos :=
+          (reset_time_disabled
+             chronos
+             (not_synchro_check_list
+                class_transs   places     pre    test    inhib
+                m_steady       new_decreasing))
+      in
       stpn_sub_fire_pre_aux
-              places    pre    test   inhib   m_steady   m_decreasing
-              chronos     tail        subclass_half_fired 
+        places    pre    test   inhib   m_steady      new_decreasing 
+        new_chronos   tail      (subclass_half_fired ++ [t])
+    else  (* not enabled  w.r.t. the other transs OR not goog time*)
+      stpn_sub_fire_pre_aux
+        places    pre    test   inhib   m_steady    m_decreasing
+        chronos     tail        subclass_half_fired
   | []  => (subclass_half_fired, m_decreasing, chronos)
   end.
 (* 
@@ -414,9 +410,9 @@ Definition stpn_fire_pre
 (***************************************************)
 (******* for  DEBUGGING  only  ..  *****************)
 Search SPN.
-Print spn_fire_pre_print. 
+Print spn_debug1. 
 Print stpn_fire_pre.
-Definition stpn_fire_pre_print
+Definition stpn_debug1
            (places : list place_type)
            (transs : list trans_type)
            (pre test inhib : weight_type)
@@ -440,8 +436,8 @@ Definition stpn_fire_pre_print
     transs
     new_chronos).
 
-Print spn_debug_pre. Print SPN.
-Definition stpn_debug_pre (stpn : STPN)
+Print spn_debug2. Print SPN.
+Definition stpn_debug2 (stpn : STPN)
   : (list (list trans_type)) *
     list (place_type * nat)  *
     list (trans_type * option (nat * nat * nat))  :=
@@ -455,7 +451,7 @@ Definition stpn_debug_pre (stpn : STPN)
             Lol) )
       chronos
     =>
-    stpn_fire_pre_print
+    stpn_debug1
       places    transs
       pre   test   inhib
       marking
@@ -507,7 +503,7 @@ Definition stpn_cycle (stpn : STPN)
     let chronos_incr := increment_time_enabled
                           chronos 
                           enabled                 in
-    let '(transs_fired, new_m, new_chro) :=
+    let '(transs_fired, new_m, new_chronos) :=
         stpn_fire  
           places     pre  test  inhib  post
           marking     chronos_incr     Lol
@@ -518,15 +514,16 @@ Definition stpn_cycle (stpn : STPN)
               pre     post     test          inhib
               new_m           (mk_prior
                                  Lol) )
-           new_chro)) end.
+           new_chronos))
+  end.
 
 
 (**************************************************)
 (************* to animate a STPN   *****************)
 
 (* n steps calculus  *)
-Print STPN. Check intervals2list. Print animate_spn.
-Fixpoint animate_stpn
+Print STPN. Check intervals2list. Print spn_animate.
+Fixpoint stpn_animate
          (stpn : STPN)
          (n : nat)
   : list
@@ -552,7 +549,7 @@ Fixpoint animate_stpn
                   (transs (spn   next_stpn))
                   (chronos       next_stpn)) ) 
                ::
-               (animate_stpn
+               (stpn_animate
                   next_stpn
                   n')
   end.    
@@ -773,22 +770,21 @@ Definition ex_stpn := mk_STPN
 Check ex_stpn. 
 Search STPN.
 Check stpn_cycle.
-Check stpn_debug_pre.
-Check animate_stpn.
+Check stpn_debug2.
+Check stpn_animate.
 
-Compute (animate_stpn
+Compute (stpn_animate
            ex_stpn
            11).  (* 12 markings but the last one is dub. It works. *)
 
 Compute (chronos
-           (snd (stpn_cycle
                    (snd (stpn_cycle
                            (snd (stpn_cycle
                                    (snd (stpn_cycle
                                            (snd (stpn_cycle  
-                                                   ex_stpn))))))))))). 
+                                                   ex_stpn))))))))). 
 
-           Compute
+Compute
   (
     list_enabled_stpn
 (*      (snd (stpn_cycle *) 
@@ -808,12 +804,12 @@ Compute (marking2list
                                  ex_stpn))))).
 Compute
   (
-    stpn_debug_pre
-      (
-        (*        snd (stpn_cycle  
+    stpn_debug2
+      (        snd (stpn_cycle  
+
         (snd (stpn_cycle 
                 (snd (stpn_cycle   
-                        (snd (stpn_cycle  *)    
+                        (snd (stpn_cycle      
                                 ex_stpn)
                                     
-  ).
+  )))))))).

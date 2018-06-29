@@ -162,6 +162,9 @@ Definition ex_post (t : trans_type) (p : place_type)
                                         1
                                         one_positive)
   (* trans 6 *)
+  | (mk_trans 6, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
   | (mk_trans 6, mk_place 10) => Some (mk_nat_star
                                         1
                                         one_positive)
@@ -269,7 +272,7 @@ Definition ex_prior :=
     ex_prior_aux.    
     
 Print pre. Print weight_type.
-Definition ex_spn := mk_SPN
+Definition ex_spn1 := mk_SPN
                       ex_places
                       ex_transs
                      (* ex_nodup_places
@@ -283,25 +286,101 @@ Definition ex_spn := mk_SPN
                       ex_marking
                       ex_prior.
 
-Check ex_spn. Compute (marking ex_spn). (* initial marking *)
+Compute (marking ex_spn1). (* initial marking *)
 (* functions / lists *)
 
-Search SPN. (* spn_fired    spn_debug_pre  animate_spn  *)
-Compute (animate_spn
-           ex_spn
-           10).  (* 11 markings *)
-Compute
-  (
-    spn_debug_pre
-      (
-      (*  snd (spn_fired
-               (snd (spn_fired  *) 
-                       ex_spn
-      )
-  ).
-Print spn_debug_pre. Print spn_fire_pre_print.
-Print spn_fire_pre.
 
+Compute (spn_debug2
+                      (*  snd (spn_fired
+               (snd (spn_fired  *) 
+                      ex_spn1).
+
+Lemma ex_spn1_debugpre : spn_debug2
+                      (*  snd (spn_fired
+               (snd (spn_fired  *) 
+                      ex_spn1 =
+     ([[]; []; []; [mk_trans 0]; [mk_trans 1]],
+      [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
+       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 0); (mk_place 11, 0); 
+       (mk_place 12, 0)]).
+Proof. compute. reflexivity. Qed.
+
+
+Search SPN. (* spn_fired    spn_debug_pre  spn_animate  *)
+Compute (spn_animate
+           ex_spn1
+           10).  (* 11 markings *)
+
+Lemma ex_spn1_ok1 : (spn_animate
+                       ex_spn1
+                       10) =
+     [([[]; []; []; [mk_trans 0]; [mk_trans 1]],
+       [(mk_place 0, 1); (mk_place 1, 0); 
+        (mk_place 2, 1); (mk_place 3, 0); (mk_place 4, 1);
+        (mk_place 5, 1); (mk_place 7, 0); (mk_place 8, 0);
+        (mk_place 9, 0); (mk_place 10, 0); 
+        (mk_place 11, 0); (mk_place 12, 1)]);
+       ([[]; [mk_trans 4]; []; [mk_trans 5]; []],
+       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 1);
+       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 1);
+       (mk_place 10, 0); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[mk_trans 6]; []; []; [mk_trans 2]; []],
+       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
+       (mk_place 3, 1); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 1); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[]; []; [mk_trans 3]; [mk_trans 0]; []],
+       [(mk_place 0, 0); (mk_place 1, 1); (mk_place 2, 0);
+       (mk_place 3, 0); (mk_place 4, 1); (mk_place 5, 1);
+       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 1); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[]; [mk_trans 4]; []; []; [mk_trans 1]],
+       [(mk_place 0, 0); (mk_place 1, 0); (mk_place 2, 1);
+       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 1);
+       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 0);
+       (mk_place 10, 1); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[]; []; []; [mk_trans 5]; []],
+       [(mk_place 0, 0); (mk_place 1, 0); (mk_place 2, 1);
+       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 1);
+       (mk_place 10, 1); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[mk_trans 6]; []; []; [mk_trans 2]; []],
+       [(mk_place 0, 0); (mk_place 1, 0); (mk_place 2, 0);
+       (mk_place 3, 1); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 2); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[]; []; [mk_trans 3; mk_trans 8]; []; []],
+       [(mk_place 0, 0); (mk_place 1, 1); (mk_place 2, 0);
+       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 0); (mk_place 11, 1); 
+       (mk_place 12, 1)]);
+       ([[]; [mk_trans 9]; []; []; [mk_trans 1]],
+       [(mk_place 0, 2); (mk_place 1, 0); (mk_place 2, 1);
+       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
+       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 0); (mk_place 11, 0); 
+       (mk_place 12, 1)]);
+       ([[]; []; []; [mk_trans 0; mk_trans 2]; []],
+       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
+       (mk_place 3, 1); (mk_place 4, 1); (mk_place 5, 1);
+       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 0);
+       (mk_place 10, 0); (mk_place 11, 0); 
+       (mk_place 12, 1)]); ([], [])].
+Proof. compute. reflexivity. Qed.
+
+
+
+(******************************************************************)
 (******** second  example (permutation des sous-listes)  **********)
 
 Definition ex_prior_aux2 :=
@@ -328,19 +407,20 @@ Definition ex_spn2 := mk_SPN
                         
                         ex_marking
                         ex_prior2.
-Compute (animate_spn
+Compute
+  (
+    spn_debug2
+  (*    (
+        snd (spn_fired
+               (snd (spn_fired  *)
+                             ex_spn2)
+      .
+
+Compute (spn_animate
            ex_spn2
            10).  (* 11 markings *)
 
-Compute
-  (
-    spn_debug_pre
-      (
-        snd
-          (spn_fired (snd (spn_fired ex_spn)))
-      )
-  ).
-
+(******************************************************************)
 (********  SPN numero 3  (apres permuation des sous-listes)  ******)
 Definition ex_prior_aux3 :=
   [
@@ -366,17 +446,19 @@ Definition ex_spn3 := mk_SPN
                         
                         ex_marking
                         ex_prior3.
-Compute (animate_spn
-           ex_spn3
-           10).  (* 11 markings *)
 
 Compute
   (
-    spn_debug_pre
-      (
-        snd
-          (spn_fired (snd (spn_fired ex_spn)))
-      )
-  ).
+    spn_debug2
+ (*     (
+        snd (spn_fired 
+          (snd (spn_fired *)
+               ex_spn3)
+      .
 
+Compute (spn_animate
+           ex_spn3
+           10).  (* 11 markings *)
+
+      
 Search SPN. Print SPN.

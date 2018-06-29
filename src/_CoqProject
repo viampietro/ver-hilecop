@@ -1,8 +1,5 @@
 -R . Top
 
-CpdtTactics.v
-DepList.v
-MoreSpecif.v
 SPN.v
 spn_examples.v
 STPN.v

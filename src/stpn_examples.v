@@ -221,13 +221,13 @@ Check ex_stpn. Compute (marking
                              ex_stpn)). (* initial marking *)
 
 Search STPN.  (* stpn_cycle     stpn_debug_pre    animate_stpn *)
-Compute (animate_stpn
+Compute (stpn_animate
            ex_stpn
-           10).  (* 11 markings *)
+           11).  (* 12 markings *)
 
 Compute
   (
-    stpn_debug_pre
+    stpn_debug2
       (
      (*   snd (stpn_cycle
                (snd (stpn_cycle
