@@ -61,30 +61,24 @@ Fixpoint sitpn_sub_fire_pre_aux
   | [] => (subclass_half_fired, m_decreasing, chronos)
   | t :: tail =>
     if
-      synchro_check_arcs places (pre t) (test t) 
-                         (inhib t) m_decreasing m_steady
+      (synchro_check_arcs places (pre t) (test t) 
+                          (inhib t)  m_steady  m_decreasing)
+        && (good_time (chronos t))
+        && (condition_check conditions t)
     then
-      if good_time (chronos t)
-                   &&
-                   (condition_check conditions t)
-      then
-        let new_decreasing :=
-            update_marking_pre
-              places t pre m_decreasing in
-        let new_chronos :=
-            reset_time_disabled
-              chronos
-              (not_synchro_check_list
-                 class_transs places pre test
-                 inhib m_steady new_decreasing) in
-        stpn_sub_fire_pre_aux
-          places pre test inhib m_steady
-          new_decreasing new_chronos tail
-          (subclass_half_fired ++ [t])
-      else
-        stpn_sub_fire_pre_aux
-          places pre test inhib m_steady
-          m_decreasing chronos tail subclass_half_fired
+      let new_decreasing :=
+          update_marking_pre
+            places t pre m_decreasing in
+      let new_chronos :=
+          reset_time_disabled
+            chronos
+            (not_synchro_check_list
+               class_transs places pre test
+               inhib m_steady new_decreasing) in
+      stpn_sub_fire_pre_aux
+        places pre test inhib m_steady
+        new_decreasing new_chronos tail
+        (subclass_half_fired ++ [t])
     else
       stpn_sub_fire_pre_aux
         places pre test inhib m_steady
@@ -160,13 +154,78 @@ Definition sitpn_fire_pre
     places pre test inhib m_steady m_steady chronos
     classes_transs [] conditions.
 
+(***************************************************)
+(******* for  DEBUGGING  only  ..  *****************)
+Search SPN.
+Print stpn_debug1. 
+Definition sitpn_debug1
+           (places : list place_type)
+           (transs : list trans_type)
+           (pre test inhib : weight_type)
+           (marking : marking_type)
+           (chronos : trans_type -> option chrono_type)
+           (classes_transs : list (list trans_type))
+           (conditions : conditions_type )
+  : (list (list trans_type)) *
+    list (place_type * nat)  *
+    list (trans_type * option (nat * nat * nat)) (* chronos *) :=
+  let '(sub_Lol, m_inter, new_chronos ) := (sitpn_fire_pre
+                                              places 
+                                              pre   test  inhib 
+                                              marking
+                                              chronos
+                                              classes_transs
+                                              conditions)
+  in
+  (sub_Lol, marking2list
+              places 
+              m_inter ,
+  intervals2list
+    transs
+    new_chronos).
+
+Print stpn_debug2. Print SITPN. Print scenar_type. Print conditions_type.
+Definition sitpn_debug2 (sitpn : SITPN)
+  : (list (list trans_type)) *
+    list (place_type * nat)  *
+    list (trans_type * option (nat * nat * nat))  :=
+  match sitpn with
+  | mk_SITPN
+      (mk_STPN
+         (mk_SPN
+            places  transs (* nodup_places nodup_transitions *)
+            pre     test    inhib        post
+            marking
+            (mk_prior
+               Lol) )
+         chronos )
+      scenario
+    =>
+    match scenario with
+    | C :: tail
+      => 
+      sitpn_debug1
+        places    transs
+        pre   test   inhib
+        marking
+        chronos
+        Lol
+        C
+    | [] => ([], [], [])
+    end
+  end.
+
+(**************************************************************)
+(*******************  fire_post already done in SPN.v *********)
+(******* fire *************************************************)
+
+Print conditions_type.
 (* Returns  [transitions fired + final marking] *)
 Print stpn_fire.
 Definition sitpn_fire  
            (places : list place_type)
            (pre test inhib post : weight_type)
            (m_steady : marking_type)
-           (enabled_transs : list trans_type)
            (chronos : trans_type -> option chrono_type)
            (classes_transs : list (list trans_type))
            (conditions : conditions_type)
@@ -207,23 +266,32 @@ Definition sitpn_cycle (sitpn : SITPN)
          chronos)
       scenario
     =>
-    let enabled := list_enabled_stpn (stpn sitpn) in
-    let chronos_incr := increment_time_enabled chronos enabled in
-    let
-    '(transs_fired, new_m, new_chro) :=
-    stpn_fire places pre test inhib post marking chronos_incr Lol
-    in
-    (transs_fired,
-     (mk_SITPN
-        (mk_STPN
-           (mk_SPN
-              places  transs  (* nodup_places  nodup_transitions *)
-              pre     post     test          inhib
-              new_m      
-              (mk_prior
-                 Lol) )
-           new_chro  )
-        (tl scenario)))
+    match scenario with
+    | [] => ([], sitpn)   (* dangerous ? *)
+    | C :: tail =>
+      let chronos_incr := increment_time_enabled
+                            chronos
+                            (list_enabled_stpn
+                               (stpn sitpn))
+      in
+      let
+        '(transs_fired, new_m, new_chro) :=
+        sitpn_fire
+          places pre test inhib post marking 
+          chronos_incr Lol C
+      in
+      (transs_fired,
+       (mk_SITPN
+          (mk_STPN
+             (mk_SPN
+                places  transs  (* nodup_places  nodup_transitions *)
+                pre     post     test          inhib
+                new_m      
+                (mk_prior
+                   Lol) )
+             new_chro  )
+          (tl scenario)))
+    end
   end.
 
 (**************************************************)
@@ -233,7 +301,7 @@ Definition sitpn_cycle (sitpn : SITPN)
 Print SITPN. Check intervals2list.
 Fixpoint animate_sitpn
          (sitpn : SITPN)
-         (n : nat)   (* n should be less than scenario ... *)
+         (n : nat)   (* n should be less than length scenario ... *)
   : list
       (list (list trans_type)  *
        list (place_type * nat) *
@@ -257,40 +325,3 @@ Fixpoint animate_sitpn
   end.
 
 
-(**************** example  (to put in another file) ***********)
-
-Definition ex_eval_conds_cycle1 (t : trans_type)
-  : option bool :=
-  match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some false
-  | _ => None
-  end.
-Definition ex_eval_conds_cycle2 (t : trans_type)
-  : option bool :=
-  match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | _ => None
-  end.
-Definition ex_eval_conds_cycle3 (t : trans_type)
-  : option bool :=
-  match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | _ => None
-  end.
-
-Import ListNotations.
-Definition ex_scenar := [ex_eval_conds_cycle1 ;
-                           ex_eval_conds_cycle2 ;
-                           ex_eval_conds_cycle3 ].
-
-Print ex_stpn.
-Definition ex_sitpn := mk_SITPN
-                         ex_stpn
-                         ex_scenar.
-
-Compute (animate_sitpn
-           ex_sitpn
-           11).  

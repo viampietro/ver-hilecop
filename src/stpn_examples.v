@@ -3,12 +3,8 @@ Require Export STPN.
 (******************************************************************)
 (***** David Andreu's first example (redrawn in my Oxford) ********)
 
-(* Reset all. *)
-Require Export spn_examples.
-Print one_positive.
-
 (* 7 places *)
-Definition ex_places' : (list place_type) :=
+Definition ex_places : (list place_type) :=
   [ mk_place 1 ;
     mk_place 2 ;
     mk_place 3 ;
@@ -16,28 +12,34 @@ Definition ex_places' : (list place_type) :=
     mk_place 5 ;
     mk_place 6 ;
     mk_place 7 ].
-Definition ex_nodup_places' : NoDup ex_places' :=
+Definition ex_nodup_places : NoDup ex_places :=
   NoDup_nodup
     places_eq_dec
-    ex_places'. 
+    ex_places. 
 
 (* 6 transitions *)
-Definition ex_transs' : (list trans_type) :=
+Definition ex_transs : (list trans_type) :=
   [ mk_trans 1 ;
     mk_trans 2 ;
     mk_trans 3 ;
     mk_trans 4 ;
     mk_trans 5 ;
     mk_trans 6 ].
-Definition ex_nodup_transs' : NoDup ex_transs' :=
+Definition ex_nodup_transs : NoDup ex_transs :=
   NoDup_nodup
     transs_eq_dec
-    ex_transs'.
+    ex_transs.
 
 (* one lemma for each arc weight ...  already done*)
 
+(* Require Export spn_examples. (* surtout pas ! *) *)
+
+Lemma one_positive : 1 > 0. Proof. omega. Qed.
+Lemma two_positive : 2 > 0. Proof. omega. Qed.
+(* one lemma for each arc weight ... *)
+
 (* 7 arcs PT (place transition)  "incoming" *) 
-Definition ex_pre' (t : trans_type) (p : place_type)
+Definition ex_pre (t : trans_type) (p : place_type)
   : option nat_star :=
   match (t,p) with
   | (mk_trans 1, mk_place 1) => Some (mk_nat_star
@@ -67,7 +69,7 @@ Definition ex_pre' (t : trans_type) (p : place_type)
   | _ => None
   end.
 
-Definition ex_test' (t : trans_type) (p : place_type) :=
+Definition ex_test (t : trans_type) (p : place_type) :=
   (* 1 arc of type "test" *)
   match (t, p) with
   | (mk_trans 2, mk_place 2) => Some (mk_nat_star
@@ -76,7 +78,7 @@ Definition ex_test' (t : trans_type) (p : place_type) :=
   | _ => None
   end.
 
-Definition ex_inhib' (t : trans_type) (p : place_type) :=
+Definition ex_inhib (t : trans_type) (p : place_type) :=
   (* 1 arc of type "inhibitor"  *)
   match (t, p) with
   | (mk_trans 1, mk_place 2) => Some (mk_nat_star
@@ -86,7 +88,7 @@ Definition ex_inhib' (t : trans_type) (p : place_type) :=
   end.
 
 (* 7 arcs TP      "outcoming"  *)
-Definition ex_post' (t : trans_type) (p : place_type)
+Definition ex_post (t : trans_type) (p : place_type)
   : option nat_star :=
   match (t, p) with
   (* trans 1 *)
@@ -123,7 +125,7 @@ Definition ex_post' (t : trans_type) (p : place_type)
   end.
 
 (* tokens *)
-Definition ex_marking' (p : place_type) :=
+Definition ex_marking (p : place_type) :=
   match p with
   | mk_place 1 => 1
   | mk_place 2 => 0
@@ -177,7 +179,7 @@ Definition int_2_256 := mk_chrono
                           preuve2le256
                           0.
 
-Definition ex_chronos' :
+Definition ex_chronos :
   trans_type -> option chrono_type :=
   fun trans => 
     match trans with
@@ -187,7 +189,7 @@ Definition ex_chronos' :
     end.
 
 Print prior_type.
-Definition ex_prior' : prior_type :=
+Definition ex_prior : prior_type :=
   (* se restreindre aux conflits structurels ! *)
   mk_prior
     [
@@ -201,38 +203,163 @@ Definition ex_prior' : prior_type :=
 Print pre. Print weight_type. Print STPN.
 Definition ex_stpn := mk_STPN
                         (mk_SPN
-                           ex_places'
-                           ex_transs'
+                           ex_places
+                           ex_transs
                          (*  ex_nodup_places'
                            ex_nodup_transs' *)
                            
-                           ex_pre'
-                           ex_post'
-                           ex_test'
-                           ex_inhib'                 
+                           ex_pre
+                           ex_post
+                           ex_test
+                           ex_inhib                 
                       
-                           ex_marking'
-                           ex_prior'
+                           ex_marking
+                           ex_prior
                         )
-                        ex_chronos'.
+                        ex_chronos.
 
-Check ex_stpn. Compute (marking
-                          (spn
-                             ex_stpn)). (* initial marking *)
-
-Search STPN.  (* stpn_cycle     stpn_debug_pre    animate_stpn *)
-Compute (stpn_animate
-           ex_stpn
-           11).  (* 12 markings *)
+Check ex_stpn. 
+Search STPN.
+Check stpn_cycle.
+Check stpn_debug2.
+Check stpn_animate.
 
 Compute
   (
     stpn_debug2
-      (
-     (*   snd (stpn_cycle
-               (snd (stpn_cycle
-                       (snd (stpn_cycle
-                               (snd (stpn_cycle  *)
-                                      ex_stpn)
-      
+      (        snd (stpn_cycle  
+
+        (snd (stpn_cycle 
+                (snd (stpn_cycle   
+                        (snd (stpn_cycle      
+                                ex_stpn)
+                                    
+  )))))))).
+
+(*
+Lemma stpn_ok : stpn_debug2
+                  (snd (stpn_cycle  
+                          (snd (stpn_cycle 
+                                  (snd (stpn_cycle   
+                                          (snd (stpn_cycle      
+                                                  ex_stpn)
+                  ))))))) =
+.*)
+
+
+
+
+
+Compute (stpn_animate
+           ex_stpn
+           11).  (* 12 markings but the last one is dub. It works. *)
+
+Lemma stpn_ok_full : (stpn_animate
+                        ex_stpn
+                        11) =
+     [([[]; []; []; [mk_trans 1]],
+       [(mk_place 1, 0); (mk_place 2, 1); 
+        (mk_place 3, 2); (mk_place 4, 1); (mk_place 5, 0);
+        (mk_place 6, 0); (mk_place 7, 0)],
+        [(mk_trans 1, None); (mk_trans 2, None);
+        (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+        (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; []; []; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
+       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 1, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; []; []; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
+       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 2, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; []; [mk_trans 3]; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 1)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[mk_trans 6]; []; []; []],
+       [(mk_place 1, 1); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; []; []; [mk_trans 2]],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 1); (mk_place 6, 0);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; [mk_trans 4]; []; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 1);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; []; []; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 1);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 1, 256)); (mk_trans 6, None)]);
+       ([[]; []; []; [mk_trans 5]],
+       [(mk_place 1, 0); (mk_place 2, 0); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 1)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[mk_trans 6]; []; []; []],
+       [(mk_place 1, 1); (mk_place 2, 0); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([[]; []; []; [mk_trans 1]],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
+       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)],
+       [(mk_trans 1, None); (mk_trans 2, None);
+       (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
+       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
+       ([], [], [])].
+Proof. compute. reflexivity. Qed.
+
+       
+Compute (chronos
+           (snd (stpn_cycle
+                   (snd (stpn_cycle
+                           (snd (stpn_cycle
+                                   (snd (stpn_cycle  
+                                           ex_stpn))))))))). 
+
+Compute
+  (
+    list_enabled_stpn
+(*      (snd (stpn_cycle *) 
+              ex_stpn
   ).
+
+Compute (marking
+           (spn
+              ex_stpn)). (* initial marking *)
+Check marking2list.
+Compute (marking2list
+           (places (spn
+                      (snd (stpn_cycle  
+                                ex_stpn))))
+           (marking (spn
+                       (snd (stpn_cycle  
+                                 ex_stpn))))).
