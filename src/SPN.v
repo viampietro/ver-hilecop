@@ -1,7 +1,3 @@
-(***********************)
-(**** by ML, DD, DA ****)
-(***********************)
-
 Require Export Arith Omega List Bool FunInd.
 Export ListNotations.
 Search nat. Search list.
@@ -17,22 +13,13 @@ Inductive trans_type : Set :=
 | mk_trans : nat -> trans_type.
 
 (*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
-    along with "some" weight   (default is 1 usually).       *)
+    along with "some" positive weight   (default is 1 usually).       *)
 
 Structure nat_star : Set := mk_nat_star
                               { int : nat ;
                                 posi : int > 0 }.
 (* a given arc has some weight > 0 *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
-
-(*  Why not this inductive definition as well ????
-Inductive arc_type : Set :=
-| mk_arc_pt : place_type -> transition_type -> nat -> arc_type
-| mk_arc_tp : transition_type -> place_type -> nat -> arc_type
-(* extended (generalized = nat) Petri nets *)
-| mk_arc_inhi : place_type -> transition_type -> nat -> arc_type
-| mk_arc_test : place_type -> transition_type -> nat -> arc_type.
- *)
 
 Definition marking_type := place_type -> nat.
 
@@ -199,15 +186,17 @@ Inductive modif_mark_spec
           (op : nat -> nat -> nat)
   : nat -> Prop :=
 | modif_mark_p_eq_p'_none :
-    (beq_places p p') = true -> j = None ->
+    (beq_places p p') = true            ->
+    j = None                            ->
     modif_mark_spec m p p' j op (m p)
 | modif_mark_p_eq_p'_some :
     forall (i : nat_star) (n : nat) (pf : n > 0),
-      (beq_places p p') = true -> j = (Some i) ->
-      i = (mk_nat_star n pf) ->
+      (beq_places p p') = true          ->
+      j = (Some i)                      ->
+      i = (mk_nat_star n pf)            ->
       modif_mark_spec m p p' j op (op (m p) n)
 | modif_mark_p_neq_p' :
-    (beq_places p p') = false ->
+    (beq_places p p') = false           ->
       modif_mark_spec m p p' j op (m p').
 (* given a marking m, add/remove j tokens inside place p *)  
 Definition modif_mark
@@ -234,29 +223,29 @@ Functional Scheme modif_mark_ind :=
 Theorem modif_mark_correct :
   forall (m : marking_type) (p : place_type) (j : option nat_star)
          (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
-    modif_mark m p j op p' = mp -> modif_mark_spec m p p' j op mp.
+    modif_mark m p j op p' = mp ->
+    modif_mark_spec m p p' j op mp.
 Proof.
   do 6 intro.
   functional induction (modif_mark m p j op p') using modif_mark_ind.
-  Focus 3.  
-  intro. rewrite <- H. apply modif_mark_p_neq_p'. assumption.
-  Focus 2.
-  intro. rewrite <- H. apply modif_mark_p_eq_p'_none.
+  - intro. rewrite <- H. apply modif_mark_p_eq_p'_some with
+                             (i:={| int := inti; posi := _x |}) (pf:=_x); try reflexivity; assumption.
+  - intro. rewrite <- H. apply modif_mark_p_eq_p'_none.
   assumption. reflexivity.
-  intro. rewrite <- H.
-  apply modif_mark_p_eq_p'_some with
-      (i:={| int := inti; posi := _x |}) (pf:=_x) ; try reflexivity. assumption.
+  - intro. rewrite <- H. apply modif_mark_p_neq_p'. assumption.
 Qed.
 Theorem modif_mark_complete :
   forall (m : marking_type) (p : place_type) (j : option nat_star)
          (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
-    modif_mark_spec m p p' j op mp -> modif_mark m p j op p' = mp. 
+    modif_mark_spec m p p' j op mp ->
+    modif_mark m p j op p' = mp. 
 Proof.
   intros. elim H.
-  - intros. unfold modif_mark. rewrite H1. rewrite H0. reflexivity.
-  - intros. unfold modif_mark. rewrite H1. rewrite H0.
-    rewrite H2. reflexivity.
-  - intros. unfold modif_mark. rewrite H0. reflexivity.
+  - intros H0 H1. unfold modif_mark.
+    rewrite H1. rewrite H0. reflexivity.
+  - intros i n pf H0 H1 H2. unfold modif_mark.
+    rewrite H0. rewrite H1. rewrite H2. reflexivity.
+  - intros H0. unfold modif_mark. rewrite H0. reflexivity.
 Qed.
 
 Check Nat.sub. Check Nat.add.   (** the 2 op(erators) to use ... **)
@@ -271,20 +260,16 @@ Inductive update_marking_pre_spec
     marking_type ->
     Prop :=
 | update_marking_pre_nil :
-    update_marking_pre_spec
-      t pre m [] m 
+    update_marking_pre_spec        t pre m [] m 
 | update_marking_pre_cons :
-    forall (p p' : place_type)
+    forall (p : place_type)
            (tail : list place_type)
            (m' m'': marking_type),
-      update_marking_pre_spec
-        t  pre   m'   tail    m''
-      ->
       m' = (modif_mark
-              m p (pre t p) Nat.sub)
-      ->
-      update_marking_pre_spec
-        t  pre   m   (p::tail)  m''.
+              m p (pre t p) Nat.sub)                           ->
+      update_marking_pre_spec      t  pre  m' tail       m''   ->
+      update_marking_pre_spec      t  pre  m  (p::tail)  m''
+.
 Fixpoint update_marking_pre
          (places : list place_type)
          (t : trans_type)
@@ -294,8 +279,8 @@ Fixpoint update_marking_pre
   match places with
   | [] => m
   | cons p tail => update_marking_pre
-                     tail     t    pre  (modif_mark
-                                           m   p  (pre t p)  Nat.sub)
+                     tail  t  pre  (modif_mark
+                                      m  p  (pre t p)  Nat.sub)
   end.
 
 Functional Scheme update_marking_pre_ind :=
@@ -305,33 +290,33 @@ Theorem update_marking_pre_correct :
          (t : trans_type)
          (pre : weight_type)
          (m1 m2 : marking_type),
-    update_marking_pre places t pre m1 = m2 ->
-    update_marking_pre_spec t pre m1 places m2.
+    update_marking_pre places  t pre m1      = m2        ->
+    update_marking_pre_spec    t pre m1 places m2.
 Proof.
-  intros places t pre m1 m2.
+  intros  places t pre m1 m2.
   functional induction (update_marking_pre places t pre m1)
              using update_marking_pre_ind.
-  - intro. rewrite <- H. apply update_marking_pre_nil.
-  - intro.
+  - intro H. rewrite <- H. apply update_marking_pre_nil.
+  - intro H.
     assert (Hmid : update_marking_pre_spec
                      t pre0
                      (modif_mark m p (pre0 t p) Nat.sub) tail m2).
     { apply (IHm H). }
     apply update_marking_pre_cons
       with (m':= modif_mark m p (pre0 t p) Nat.sub) ;
-      try assumption; try reflexivity.
+    try assumption; reflexivity.
 Qed.
 Theorem update_marking_pre_complete :
   forall (places : list place_type)
          (t : trans_type)
          (pre : weight_type)
          (m m' : marking_type),
-    update_marking_pre_spec t pre m places m' ->
-    update_marking_pre places t pre m = m'.
+    update_marking_pre_spec    t pre m places m'    ->
+    update_marking_pre places  t pre m     = m'.
 Proof.
   intros places t pre m m' H. elim H.
   - simpl. reflexivity.
-  - intros. simpl. rewrite <- H2. assumption.
+  - intros. simpl. rewrite <- H2. rewrite H0. reflexivity.
 Qed.
 
 (************************************************************)
@@ -344,20 +329,15 @@ Inductive update_marking_post_spec
     marking_type ->
     Prop :=
 | update_marking_post_nil :
-    update_marking_post_spec
-      t post m [] m 
+    update_marking_post_spec       t post m [] m 
 | update_marking_post_cons :
-    forall (p p' : place_type)
+    forall (p : place_type)
            (tail : list place_type)
            (m' m'': marking_type),
-      update_marking_post_spec
-        t   post   m'   tail    m''
-      ->
       m' = (modif_mark
-              m p (post t p) Nat.add)
-      ->
-      update_marking_post_spec
-        t  post   m   (p::tail)  m''.
+              m p (post t p) Nat.add)                         ->
+      update_marking_post_spec    t post m' tail       m''    ->
+      update_marking_post_spec    t post m  (p::tail)  m''.
 Fixpoint update_marking_post
          (places : list place_type) 
          (t : trans_type)
@@ -368,14 +348,8 @@ Fixpoint update_marking_post
   match places with
   | [] => m
   | cons p tail => update_marking_post
-                     tail
-                     t
-                     post
-                     (modif_mark
-                           m
-                           p
-                           (post t p)
-                           Nat.add)
+                     tail  t  post  (modif_mark
+                                       m   p  (post t p)  Nat.add)
   end.
 
 Functional Scheme update_marking_post_ind :=
@@ -385,37 +359,37 @@ Theorem update_marking_post_correct :
          (t : trans_type)
          (post : weight_type)
          (m m' : marking_type),
-    update_marking_post places t post m = m' ->
-    update_marking_post_spec t post m places m'.
+    update_marking_post places  t post m      = m'       ->
+    update_marking_post_spec    t post m places m'.
 Proof.
   intros places t post m1 m2.
   functional induction (update_marking_post places t post m1)
              using update_marking_post_ind.
-  - intro. rewrite <- H. apply update_marking_post_nil.
-  - intro.
+  - intro H. rewrite <- H. apply update_marking_post_nil.
+  - intro H.
     assert (Hmid : update_marking_post_spec
                      t post0
                      (modif_mark m p (post0 t p) Nat.add) tail m2).
     { apply (IHm H). }
     apply update_marking_post_cons
       with (m':= modif_mark m p (post0 t p) Nat.add) ;
-      try assumption; try reflexivity.
+      try assumption; reflexivity.
 Qed.
 Theorem update_marking_post_complete :
   forall (places : list place_type)
          (t : trans_type)
          (post : weight_type)
          (m m' : marking_type),
-    update_marking_post_spec t post m places m' ->
-    update_marking_post places t post m = m'.
+    update_marking_post_spec    t post m places m'             ->
+    update_marking_post places  t post m      = m'.
 Proof.
   intros places t post m m' H. elim H.
   - simpl. reflexivity.
-  - intros. simpl. rewrite <- H2. assumption.
+  - intros. simpl. rewrite <- H2. rewrite H0. reflexivity.
 Qed.  
 
-(**********************************************************)
-(* here a function only useful for synchronous Petri nets *)
+(***************************************************************)
+(* here a function only useful for asynchronous Petri nets ... *)
    
 Inductive update_marking_spec
           (places : list place_type)
@@ -426,10 +400,9 @@ Inductive update_marking_spec
     Prop :=
 | update_marking_cst :
     update_marking_spec
-      places t pre post m
-      (update_marking_post
-         places t post (update_marking_pre
-                          places t pre m)). 
+      places t pre post m (update_marking_post
+                             places t post (update_marking_pre
+                                              places t pre m)). 
 Definition update_marking
            (places : list place_type) 
            (t : trans_type)
@@ -437,14 +410,8 @@ Definition update_marking
            (m : marking_type)         
   : marking_type :=
   update_marking_post
-    places  
-    t
-    post
-    (update_marking_pre
-       places 
-       t
-       pre
-       m).
+    places  t  post  (update_marking_pre
+                        places  t   pre   m).
 
 Functional Scheme update_marking_ind :=
   Induction for update_marking Sort Prop.
@@ -453,10 +420,8 @@ Theorem update_marking_correct :
          (t : trans_type)
          (pre post : weight_type)
          (m m' : marking_type),
-    update_marking
-      places t pre post m = m' ->
-    update_marking_spec
-      places t pre post m m'.
+    update_marking        places t pre post m = m'           ->
+    update_marking_spec   places t pre post m   m'.
 Proof.
   intros places t pre post m m'.
   functional induction (update_marking
@@ -469,14 +434,12 @@ forall (places : list place_type)
          (t : trans_type)
          (pre post : weight_type)
          (m m' : marking_type),
-    update_marking_spec
-      places t pre post m m' ->
-    update_marking
-      places t pre post m = m'.
+    update_marking_spec    places t pre post m   m'           ->
+    update_marking         places t pre post m = m'.
 Proof.
-  intros places t pre post m m' H. elim H.
-  (* specification probably not correct *)
-Admitted.
+  intros places t pre post m m' H.  elim H.
+  unfold update_marking. reflexivity.
+Qed.
 
 (**********   to print the markings  ***********************)
 (*** list the tokens !!!! ***)
@@ -492,9 +455,8 @@ Inductive marking2list_spec
     (p:place_type) (tail:list place_type)
     (listc : list (place_type * nat))
     (c : (place_type * nat)),
-    c = (p, m p) ->
-    marking2list_spec
-      m (p::tail) (c::listc).          
+    c = (p, m p)                                    ->
+    marking2list_spec    m (p::tail) (c::listc).          
 Fixpoint marking2list
          (places : list place_type)
          (m : marking_type)
@@ -511,38 +473,34 @@ Theorem marking2list_correct :
   forall (places : list place_type)
          (m : marking_type)
          (truc : list (place_type * nat)),
-    marking2list
-      places m = truc  ->
-    marking2list_spec
-      m places truc.
+    marking2list         places m = truc                    ->
+    marking2list_spec    m places   truc.
 Proof.
   intros places m truc.
   functional induction (marking2list places m)
-             using marking2list_ind ;
-    intro ; rewrite <- H ; try apply marking2list_nil.
-  apply marking2list_cons. reflexivity.
+             using marking2list_ind.
+  - intro H. rewrite <- H. apply marking2list_nil.
+  - intro H. rewrite <- H. apply marking2list_cons. reflexivity.
 Qed.
 Theorem marking2list_complete :
   forall (places : list place_type)
          (m : marking_type)
          (truc : list (place_type * nat)),
-    marking2list_spec
-      m places truc  ->
-    marking2list
-      places m = truc.
+    marking2list_spec    m places   truc                     ->
+    marking2list         places m = truc.
 Proof.
   intros places m truc H. elim H.
   - simpl. reflexivity.
   - intros p tail listc c H0.
-    simpl. rewrite H0. 
-(* lemma + specifiaction probably not correct *)    
+    simpl. unfold marking2list. rewrite H0. 
+(*                                                   no se  *)    
 Admitted.
 
 
 (****************************************************************)
 (*** CHECKING IF there are enough tokens in predecessor places **)
 Search bool.
-
+(*
 Theorem andb_commutative :
   forall b c, andb b c = andb c b.
 Proof.
@@ -585,7 +543,7 @@ Theorem theo_eq : forall n p : nat,
 Proof.
   intros n p. split.
   - intro H.
-Admitted.
+Admitted.  *)
 
 
 Print modif_mark_spec.
@@ -595,54 +553,41 @@ Inductive pre_or_test_check_spec
           (m : marking_type)
   : list place_type -> Prop :=
 | pre_or_test_check_nil : pre_or_test_check_spec
-                            pre_or_test_arcs_t
-                            m []
+                            pre_or_test_arcs_t    m []
 | pre_or_test_check_cons_none : forall (p:place_type)
                                        (tail:list place_type),
-    pre_or_test_arcs_t p = None
-    ->
-    pre_or_test_check_spec
-      pre_or_test_arcs_t       m   tail
-    ->
-    pre_or_test_check_spec
-      pre_or_test_arcs_t       m   (p::tail)
+    pre_or_test_arcs_t p = None                                 ->
+    pre_or_test_check_spec    pre_or_test_arcs_t    m   tail    ->
+    pre_or_test_check_spec    pre_or_test_arcs_t    m   (p::tail)
 | pre_or_test_check_cons_some : forall (p:place_type)
                                        (tail:list place_type)
                                        (pos:nat_star)
                                        (n:nat) (pf:n>0),
-    pre_or_test_arcs_t p = Some pos
-    ->
-    pos = {| int := n; posi := pf |}
-    ->
-    (n <= (m p))   (* marquage suffisant en place p*)
-    ->
-    pre_or_test_check_spec
-      pre_or_test_arcs_t       m    tail
-    ->
-    pre_or_test_check_spec
-      pre_or_test_arcs_t       m    (p::tail).      
+    pre_or_test_arcs_t p = Some pos                             ->
+    pos = {| int := n; posi := pf |}                            ->
+    (n <= (m p))   (* marquage suffisant en place p*)           ->
+    pre_or_test_check_spec    pre_or_test_arcs_t    m    tail   ->
+    pre_or_test_check_spec    pre_or_test_arcs_t    m    (p::tail).      
 Fixpoint pre_or_test_check
-         (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type)
+         (places : list place_type)
   : bool :=
   match places with
   | nil => true
   | cons h tail => match pre_or_test_arcs_t h with
                    | None => pre_or_test_check
-                               tail
-                               pre_or_test_arcs_t
-                               m
+                               pre_or_test_arcs_t   m  tail 
                    | Some n => match n with
                                | mk_nat_star
-                                   int 
-                                   careful =>
+                                   int   posi
+                                 =>
                                  (int <=? (m h))
                                    &&
                                    (pre_or_test_check
-                                      tail
                                       pre_or_test_arcs_t
-                                      m)
+                                      m
+                                      tail)
                                end
                    end
   end.
@@ -653,33 +598,24 @@ Theorem pre_or_test_check_correct :
   forall (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-    pre_or_test_check
-      places
-      pre_or_test_arcs_t
-      m = true 
-    ->
-    pre_or_test_check_spec
-      pre_or_test_arcs_t
-      m
-      places.
+    pre_or_test_check       pre_or_test_arcs_t  m  places  = true ->
+    pre_or_test_check_spec  pre_or_test_arcs_t  m  places.
 Proof.
   intros places pre_or_test_arcs_t m.
   functional induction (pre_or_test_check
-                          places   pre_or_test_arcs_t   m)
+                          pre_or_test_arcs_t   m  places)
              using pre_or_test_check_ind.
-  - intro. apply pre_or_test_check_nil.
-  - intro H. 
-    SearchPattern ( ?a = true /\ ?b = true ).
+  - intro H. apply pre_or_test_check_nil.
+  - intro H. SearchPattern ( ?a = true /\ ?b = true ).
     assert (H' : int0 <=? m h = true  /\
                  pre_or_test_check
-                   tail    pre_or_test_arcs_t   m = true).
+                   pre_or_test_arcs_t   m   tail  = true).
     { apply andb_prop. apply H. }    
     assert (Hright :  pre_or_test_check
-                        tail   pre_or_test_arcs_t   m = true).
+                        pre_or_test_arcs_t   m  tail   = true).
     Print proj2. { apply (proj2 H'). }
     assert (Hleft :  (int0 <=? m h) = true).
-    Print proj1.
-    { apply (proj1 H'). }
+    Print proj1. { apply (proj1 H'). }
     apply pre_or_test_check_cons_some with
         (pos:={| int := int0; posi := _x |})
         (n:=int0) (pf:=_x).
@@ -687,7 +623,7 @@ Proof.
     + reflexivity.
     + apply (leb_complete int0 (m h)  Hleft).
     + apply (IHb Hright).
-  - intro. apply pre_or_test_check_cons_none.
+  - intro H. apply pre_or_test_check_cons_none.
     + assumption.
     + apply (IHb H).    
 Qed.
@@ -695,19 +631,12 @@ Theorem pre_or_test_check_complete :
   forall (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-    pre_or_test_check_spec
-      pre_or_test_arcs_t
-      m
-      places
-    ->
-    pre_or_test_check
-      places
-      pre_or_test_arcs_t
-      m                           = true.
+    pre_or_test_check_spec   pre_or_test_arcs_t   m  places       ->
+    pre_or_test_check        pre_or_test_arcs_t   m  places  = true.
 Proof.
   intros places  pre_or_test_arcs_t  m  H. elim H.
   - simpl. reflexivity.
-  - intros. simpl. rewrite H0. assumption.
+  - intros p tail H0 H1 H2. simpl. rewrite H0. assumption.
   - intros. simpl. rewrite H0. rewrite H1.
     SearchPattern ( ?a && ?b = true ).
     apply andb_true_intro. split.
@@ -721,55 +650,40 @@ Inductive inhib_check_spec
           (inhib_arcs_t : place_type -> option nat_star)
           (m : marking_type)
   : list place_type -> Prop :=
-| inhib_check_nil : inhib_check_spec
-                      inhib_arcs_t    m    []
+| inhib_check_nil : inhib_check_spec    inhib_arcs_t   m  []
 | inhib_check_cons_none : forall (p:place_type)
                                  (tail:list place_type),
-    inhib_arcs_t p = None
-    ->
-    inhib_check_spec
-      inhib_arcs_t    m    tail
-    ->
-    inhib_check_spec
-      inhib_arcs_t    m   (p::tail)
+    inhib_arcs_t p = None                                    ->
+    inhib_check_spec       inhib_arcs_t  m  tail             ->
+    inhib_check_spec       inhib_arcs_t  m  (p::tail)
 | inhib_check_cons_some : forall (p:place_type)
                                  (tail:list place_type)
                                  (pos:nat_star)
                                  (n:nat) (pf:n>0),
-    inhib_arcs_t p = Some pos
-    ->
-    pos = {| int := n; posi := pf |}
-    ->
-    (m p < n)
-    ->
-    inhib_check_spec
-      inhib_arcs_t    m   tail
-    -> 
-    inhib_check_spec
-      inhib_arcs_t    m   (p::tail)
+    inhib_arcs_t p = Some pos                                ->
+    pos = {| int := n; posi := pf |}                         ->
+    (m p < n)                                                ->
+    inhib_check_spec      inhib_arcs_t  m  tail              -> 
+    inhib_check_spec      inhib_arcs_t  m  (p::tail)
 .
 Fixpoint inhib_check
-         (places : list place_type)
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type)
+         (places : list place_type)
   : bool :=
   match places with
   | nil => true
   | cons h tail => match inhib_arcs_t h with
                    | None => inhib_check
-                               tail
-                               inhib_arcs_t
-                               m
+                               inhib_arcs_t   m  tail
                    | Some n => match n with
                                | mk_nat_star
-                                   int 
-                                   careful =>
+                                   int   posi
+                                 =>
                                  ((m h) <? int)
                                    &&
                                    (inhib_check
-                                      tail
-                                      inhib_arcs_t
-                                      m)
+                                      inhib_arcs_t  m tail)
                                end
                    end
   end.
@@ -780,28 +694,25 @@ Theorem inhib_check_correct :
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type),
     inhib_check
-      places    inhib_arcs_t      m
-    = true 
-    ->
+      inhib_arcs_t      m   places    = true                ->
     inhib_check_spec
-      inhib_arcs_t      m      places.
+      inhib_arcs_t      m   places.
 Proof.
   intros places   inhib_arcs_t   m.
   functional induction (inhib_check
-                          places   inhib_arcs_t   m)
+                          inhib_arcs_t   m  places)
              using inhib_check_ind.
   - intro. apply inhib_check_nil.
   - intro.     SearchPattern ( ?a = true /\ ?b = true ).
     assert (H' : m h <? int0 = true  /\
                  inhib_check
-                   tail    inhib_arcs_t   m = true).
+                   inhib_arcs_t   m  tail = true).
     { apply andb_prop. apply H. }    
     assert (Hright :  inhib_check
-                        tail   inhib_arcs_t   m = true).
+                        inhib_arcs_t   m  tail = true).
     Print proj2. { apply (proj2 H'). }
     assert (Hleft :  m h <? int0 = true).
-    Print proj1.
-    { apply (proj1 H'). }
+    Print proj1.  { apply (proj1 H'). }
     apply inhib_check_cons_some with
         (pos:={| int := int0; posi := _x |})
         (n:=int0) (pf:=_x).
@@ -813,7 +724,7 @@ Proof.
     + unfold Nat.ltb in Hleft. unfold lt.
       apply (leb_complete  (S (m h)) int0). assumption.
     + apply (IHb Hright).
-  - intro. apply inhib_check_cons_none.
+  - intro H. apply inhib_check_cons_none.
     + assumption.
     + apply (IHb H).    
 Qed.    
@@ -825,7 +736,7 @@ Theorem inhib_check_complete :
       inhib_arcs_t    m    places
     ->
     inhib_check
-      places      inhib_arcs_t      m = true.
+      inhib_arcs_t    m    places  = true.
 Proof.
   intros places  inhib_arcs_t  m  H. elim H.
   - (* nil *) simpl. reflexivity.
@@ -850,19 +761,19 @@ Inductive synchro_check_arcs_spec
   :  Prop :=
 | synchro_check_arcs_cst : 
     (pre_or_test_check
-       places
        pre_arcs_t
-       m_decreasing)
+       m_decreasing
+       places)
       &&
       (pre_or_test_check
-         places
          test_arcs_t
-         m_steady)
+         m_steady
+         places)
       &&
       (inhib_check
-         places
          inhib_arcs_t
-         m_steady) = true
+         m_steady
+         places) = true
     ->
     synchro_check_arcs_spec
       places
@@ -878,20 +789,20 @@ Definition synchro_check_arcs
            (inhib_arcs_t : place_type -> option nat_star)
            (m_steady      m_decreasing    : marking_type)
   : bool :=
-  pre_or_test_check
-    places
+  (pre_or_test_check
     pre_arcs_t
     m_decreasing
-&&
-  (pre_or_test_check
-     places
-     test_arcs_t
-     m_steady)
-  &&
-  (inhib_check
-     places
-     inhib_arcs_t
-     m_steady).
+    places)
+    &&
+    (pre_or_test_check
+       test_arcs_t
+       m_steady
+       places)
+    &&
+    (inhib_check
+       inhib_arcs_t
+       m_steady
+       places).
 
 Functional Scheme synchro_check_arcs_ind :=
   Induction for synchro_check_arcs Sort Prop.  (* warning *)

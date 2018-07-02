@@ -70,11 +70,14 @@ Definition is_enabled
            (pre   test  inhib : weight_type)
            (m_steady : marking_type) (t : trans_type)
   : bool :=
-  (pre_or_test_check places (pre t) m_steady)
+  (pre_or_test_check
+     (pre t) m_steady places)
     &&
-    (pre_or_test_check places (test t) m_steady)
+    (pre_or_test_check
+       (test t) m_steady  places)
     &&
-    (inhib_check places (inhib t) m_steady). 
+    (inhib_check
+       (inhib t) m_steady  places). 
 (**   useless fonction ?  (unless for STPN and SITPN ...)
  because 
  firing a bunch of transitions synchronously implies
