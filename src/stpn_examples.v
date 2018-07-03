@@ -357,9 +357,9 @@ Compute (marking
               ex_stpn)). (* initial marking *)
 Check marking2list.
 Compute (marking2list
-           (places (spn
-                      (snd (stpn_cycle  
-                                ex_stpn))))
            (marking (spn
                        (snd (stpn_cycle  
-                                 ex_stpn))))).
+                               ex_stpn))))
+           (places (spn
+                      (snd (stpn_cycle  
+                              ex_stpn))))).

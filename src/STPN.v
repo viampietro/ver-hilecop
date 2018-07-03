@@ -296,13 +296,13 @@ Fixpoint reset_time_disabled
 **********   FIRING ALGORITHM    for STPN      *******************
 ******************************************************************)
 
-Print STPN. Print spn_sub_fire_pre. Print reset_time_trans.
+Print STPN. Print spn_class_fire_pre. Print reset_time_trans.
 Check update_marking_pre.
 (** given 1 ordered class of transitions 
 in structural conflict (a list class_of_transs), 
 return 1 list of transitions "subclass_half_fired" 
 and marking "m_intermediate" accordingly ...   *)
-Fixpoint stpn_sub_fire_pre_aux
+Fixpoint stpn_class_fire_pre_aux
          (places : list place_type)
          (pre    test    inhib : weight_type) 
          (m_steady    m_decreasing : marking_type) 
@@ -327,11 +327,11 @@ Fixpoint stpn_sub_fire_pre_aux
                 class_transs   places     pre    test    inhib
                 m_steady       new_decreasing))
       in
-      stpn_sub_fire_pre_aux
+      stpn_class_fire_pre_aux
         places    pre    test   inhib   m_steady      new_decreasing 
         new_chronos   tail      (subclass_half_fired ++ [t])
     else  (* not enabled  w.r.t. the other transs OR not goog time*)
-      stpn_sub_fire_pre_aux
+      stpn_class_fire_pre_aux
         places    pre    test   inhib   m_steady    m_decreasing
         chronos     tail        subclass_half_fired
   | []  => (subclass_half_fired, m_decreasing, chronos)
@@ -347,7 +347,7 @@ and 2 markings are recorded :
  *)
 
 (* filling subclass_half_fired  ...  *)
-Definition stpn_sub_fire_pre
+Definition stpn_class_fire_pre
            (places : list place_type)
            (pre    test    inhib : weight_type) 
            (m_steady    m_decreasing : marking_type) 
@@ -356,7 +356,7 @@ Definition stpn_sub_fire_pre
   : (list trans_type) *
     marking_type      *
     (trans_type -> option chrono_type) :=
-  stpn_sub_fire_pre_aux
+  stpn_class_fire_pre_aux
     places
     pre    test    inhib
     m_steady    m_decreasing
@@ -382,7 +382,7 @@ Fixpoint stpn_fire_pre_aux
   match classes_transs with
   | [] => (classes_half_fired , m_decreasing, chronos)
   | class :: Ltail => let '(sub_l, new_m, new_chronos) :=
-                          stpn_sub_fire_pre
+                          stpn_class_fire_pre
                             places
                             pre     test    inhib
                             m_steady    m_decreasing
@@ -433,8 +433,7 @@ Definition stpn_debug1
                                               classes_transs)
   in
   (sub_Lol, marking2list
-              places 
-              m_inter ,
+              m_inter   places ,
   intervals2list
     transs
     new_chronos).
@@ -546,8 +545,8 @@ Fixpoint stpn_animate
              in
              ( Lol_fired ,
                (marking2list
-                  (places (spn   next_stpn))
-                  (marking (spn  next_stpn))) ,
+                  (marking (spn  next_stpn))
+                  (places (spn   next_stpn))) ,
                (intervals2list
                   (transs (spn   next_stpn))
                   (chronos       next_stpn)) ) 

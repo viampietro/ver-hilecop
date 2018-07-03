@@ -45,9 +45,9 @@ Definition condition_check
 ******************************************************************)
 
 Print SITPN.
-Print stpn_sub_fire_pre_aux.
+Print stpn_class_fire_pre_aux.
 (** compared with STPN it just add an "if clause"  : *) 
-Fixpoint sitpn_sub_fire_pre_aux
+Fixpoint sitpn_class_fire_pre_aux
          (places : list place_type)
          (pre test inhib : weight_type)
          (m_steady m_decreasing : marking_type)
@@ -75,12 +75,12 @@ Fixpoint sitpn_sub_fire_pre_aux
             (not_synchro_check_list
                class_transs places pre test
                inhib m_steady new_decreasing) in
-      stpn_sub_fire_pre_aux
+      stpn_class_fire_pre_aux
         places pre test inhib m_steady
         new_decreasing new_chronos tail
         (subclass_half_fired ++ [t])
     else
-      stpn_sub_fire_pre_aux
+      stpn_class_fire_pre_aux
         places pre test inhib m_steady
         m_decreasing chronos tail subclass_half_fired
   end.
@@ -102,8 +102,8 @@ and 2 markings are recorded :
  (a bit like for sub_fire_pre) 
  *)
 
-Print stpn_sub_fire_pre.
-Definition sitpn_sub_fire_pre
+Print stpn_class_fire_pre.
+Definition sitpn_class_fire_pre
            (places : list place_type)
            (pre test inhib : weight_type)
            (m_steady m_decreasing : marking_type)
@@ -112,7 +112,7 @@ Definition sitpn_sub_fire_pre
            (conditions : conditions_type)
   : list trans_type * marking_type *
   (trans_type -> option chrono_type) :=
-  sitpn_sub_fire_pre_aux
+  sitpn_class_fire_pre_aux
     places    pre test inhib m_steady m_decreasing
     chronos class_transs []   conditions.
 
@@ -132,12 +132,12 @@ Fixpoint sitpn_fire_pre_aux
   | class :: Ltail =>
     let
       '(sub_l, new_m, new_chronos) :=
-      sitpn_sub_fire_pre
-        places pre test inhib m_steady
-        m_decreasing chronos class conditions         in
+      sitpn_class_fire_pre
+        places     pre test inhib    m_steady  m_decreasing
+        chronos    class             conditions         in
     sitpn_fire_pre_aux
-      places pre test inhib m_steady new_m
-      new_chronos Ltail (sub_l :: classes_half_fired) conditions
+      places       pre test inhib    m_steady  new_m
+      new_chronos  Ltail (sub_l :: classes_half_fired) conditions
   end.
 
 Print stpn_fire_pre.
@@ -178,8 +178,7 @@ Definition sitpn_debug1
                                               conditions)
   in
   (sub_Lol, marking2list
-              places 
-              m_inter ,
+              m_inter  places ,
   intervals2list
     transs
     new_chronos).
@@ -312,8 +311,8 @@ Fixpoint animate_sitpn
              in
              ( fired ,
                (marking2list
-                  (places (spn (stpn  next_sitpn)))
-                  (marking (spn (stpn  next_sitpn)))) ,
+                  (marking (spn (stpn  next_sitpn)))
+                  (places (spn (stpn  next_sitpn)))) ,
                (intervals2list
                   (transs (spn (stpn   next_sitpn)))
                   (chronos (stpn        next_sitpn)))
