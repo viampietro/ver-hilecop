@@ -449,13 +449,14 @@ Inductive marking2list_spec
   : list place_type ->
     list (place_type * nat) ->
     Prop :=
-| marking2list_nil : marking2list_spec
-                       m [] []
+| marking2list_nil : marking2list_spec    m [] []
 | marking2list_cons : forall
     (p:place_type) (tail:list place_type)
     (listc : list (place_type * nat))
     (c : (place_type * nat)),
     c = (p, m p)                                    ->
+    marking2list_spec    m tail listc               ->  (* ? *)
+    (* pas 2 fois la meme place dans la liste places *)
     marking2list_spec    m (p::tail) (c::listc).          
 Fixpoint marking2list
          (places : list place_type)
@@ -480,8 +481,10 @@ Proof.
   functional induction (marking2list places m)
              using marking2list_ind.
   - intro H. rewrite <- H. apply marking2list_nil.
-  - intro H. rewrite <- H. apply marking2list_cons. reflexivity.
-Qed.
+  - intro H. rewrite <- H. apply marking2list_cons.
+    + reflexivity.
+    + Admitted.
+
 Theorem marking2list_complete :
   forall (places : list place_type)
          (m : marking_type)
@@ -491,60 +494,13 @@ Theorem marking2list_complete :
 Proof.
   intros places m truc H. elim H.
   - simpl. reflexivity.
-  - intros p tail listc c H0.
-    simpl. unfold marking2list. rewrite H0. 
-(*                                                   no se  *)    
-Admitted.
-
+  - intros p tail listc c H0 H1 H2.
+    simpl. rewrite H0. rewrite H2. reflexivity. 
+Qed.
 
 (****************************************************************)
 (*** CHECKING IF there are enough tokens in predecessor places **)
 Search bool.
-(*
-Theorem andb_commutative :
-  forall b c, andb b c = andb c b.
-Proof.
-  intros [] [] ; reflexivity.
-Qed.
-Theorem andb_true_elim2 : forall b c : bool,
-  andb b c = true -> c = true.
-Proof.
-  intros b c H.
-  destruct c.
-  - reflexivity.
-  - destruct b.
-    + inversion H.
-    + inversion H.
-Qed.
-Theorem andb_true_elim1 : forall b c : bool,
-  andb b c = true -> b = true.
-Proof.
-  intros b c H.
-  rewrite andb_commutative in H.
-  apply andb_true_elim2 with (b:=c). assumption.
-Qed.
-
-Print leb_correct.
-Theorem ltb_correct : forall n p : nat,
-  n < p  ->  (n <? p) = true.
-Proof.
-  double induction n p.
-  - intro H. inversion H.
-  - intros. Print "<?". unfold Nat.ltb. 
-Admitted.
-Theorem ltb_complete : forall n p : nat,
-  n < p  ->  (n <? p) = true.
-Proof.
-Admitted.
-
-
-Theorem theo_eq : forall n p : nat,
-  n = p <-> (n =? p) = true.
-Proof.
-  intros n p. split.
-  - intro H.
-Admitted.  *)
-
 
 Print modif_mark_spec.
 (**** uphill (input set, preset) ***)
@@ -866,7 +822,7 @@ Inductive spn_sub_fire_pre_aux_spec
     (class_transs : list trans_type)
     (t : trans_type)
     (tail : list trans_type)
-    (m : marking_type),
+    (decreasing1  decreasing2 : marking_type),
     class_transs = t::tail
     ->
     synchro_check_arcs
@@ -875,14 +831,14 @@ Inductive spn_sub_fire_pre_aux_spec
     ->
     spn_sub_fire_pre_aux_spec
       places    pre  test  inhib     m_steady     m_decreasing    
-      tail    subclass_half_fired    m_decreasing
+      tail    subclass_half_fired    decreasing2
     ->
-    m = (update_marking_pre
-           places   t   pre   m_decreasing)
+    decreasing2 = (update_marking_pre
+                        places   t   pre   m_decreasing)
     ->
     spn_sub_fire_pre_aux_spec
       places  pre  test  inhib       m_steady     m_decreasing     
-      class_transs  (subclass_half_fired ++ [t])   m
+      class_transs  (subclass_half_fired ++ [t])   decreasing1
 | class_transs_cons_else :  forall
     (subclass_half_fired : list trans_type)
     (class_transs : list trans_type)
@@ -957,14 +913,14 @@ Theorem spn_sub_fire_pre_aux_correct :
       pre test inhib   
       m_steady     m_decreasing       
       class_transs subclass_half_fired 
-    = (subclass_half_fired, m_final)
+    = (sub_final, m_final)
     ->
     spn_sub_fire_pre_aux_spec
       places 
       pre test inhib   
       m_steady     m_decreasing         
-      class_transs subclass_half_fired 
-      m_final.
+      class_transs
+      subclass_half_fired    m_final.
 Proof. 
   intros places pre test inhib  m_decreasing m_steady m_final
   class_transs subclass_half_fired sub_final.
@@ -974,12 +930,20 @@ Proof.
                           class_transs subclass_half_fired)
              using spn_sub_fire_pre_aux_ind.
   - intros.
-    assert (Hright :  m_decreasing0 = m_final).
-    { injection  H. intro. assumption. }
+    assert (Hleft :  subclass_half_fired = sub_final).
+    { inversion  H. reflexivity. } (* useful ? *)
+    assert (Hright :   m_decreasing0 = m_final).
+    { inversion  H. reflexivity. }
     rewrite Hright. apply class_transs_nil.
   - intro H.
-
-(*    apply class_transs_cons_if.
+    assert (IHp' :   spn_sub_fire_pre_aux_spec places pre test inhib
+          m_decreasing
+          (update_marking_pre places t pre m_decreasing0) tail
+          (subclass_half_fired ++ [t]) m_final).
+    { apply (IHp H). }
+    Print class_transs_cons_if.
+    apply class_transs_cons_if. with (m':= modif_mark m p (pre0 t p) Nat.sub) ;
+.
     
 
     SearchPattern ( ?a = true /\ ?b = true ).
