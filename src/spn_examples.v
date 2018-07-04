@@ -313,9 +313,9 @@ Compute (spn_animate
            ex_spn1
            10).  (* 11 markings *)
 
-Lemma ex_spn1_ok1 : (spn_animate
-                       ex_spn1
-                       10) =
+Lemma ex_spn1_animate : (spn_animate
+                           ex_spn1
+                           10) =
      [([[]; []; []; [mk_trans 0]; [mk_trans 1]],
        [(mk_place 0, 1); (mk_place 1, 0); 
         (mk_place 2, 1); (mk_place 3, 0); (mk_place 4, 1);

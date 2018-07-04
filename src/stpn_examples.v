@@ -254,9 +254,9 @@ Compute (stpn_animate
            ex_stpn
            11).  (* 12 markings but the last one is dub. It works. *)
 
-Lemma stpn_ok_full : (stpn_animate
-                        ex_stpn
-                        11) =
+Lemma ex_stpn_animate : (stpn_animate
+                           ex_stpn
+                           11) =
      [([[]; []; []; [mk_trans 1]],
        [(mk_place 1, 0); (mk_place 2, 1); 
         (mk_place 3, 2); (mk_place 4, 1); (mk_place 5, 0);
