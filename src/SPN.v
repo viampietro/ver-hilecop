@@ -146,6 +146,10 @@ Definition beq_places (p p' : place_type) : bool :=
   | (mk_place n, mk_place n') => beq_nat n n'
   end.
 
+
+
+
+
 Inductive beq_transs_spec : trans_type -> trans_type -> Prop :=
 | beq_transs_mk : forall
     (t t' : trans_type)
@@ -470,12 +474,10 @@ Inductive marking2list_spec
 | marking2list_cons : forall
     (p:place_type)
     (tail:list place_type)
-    (couples_tail : list (place_type * nat))
-    (c : (place_type * nat)),
-    c = (p, (m p))                                       ->
-    marking2list_spec    m tail couples_tail             ->  (* ? *)
-    (* pas 2 fois la meme place dans la liste places ? *)
-    marking2list_spec    m (p::tail) (c::couples_tail).       
+    (couples_tail : list (place_type * nat)),
+    
+    marking2list_spec    m tail couples_tail                  ->  
+    marking2list_spec    m (p::tail) ((p, m p)::couples_tail).  
 Fixpoint marking2list
          (m : marking_type)
          (places : list place_type)
@@ -501,10 +503,10 @@ Proof.
              using marking2list_ind.
   - intro H. rewrite <- H. apply marking2list_nil.
   - intro H. rewrite <- H.
-    apply marking2list_cons
-     (* with (couples_tail:=couples)  *) .
-    + reflexivity.
-    + Admitted.   (************************** ? *)
+
+    (* apply marking2list_cons
+               with (couples_tail := tl(couples)).  *) 
+   Admitted.
 
 Theorem marking2list_complete :
   forall (places : list place_type)
@@ -515,9 +517,9 @@ Theorem marking2list_complete :
 Proof.
   intros places m truc H. elim H.
   - simpl. reflexivity.
-  - intros p tail listc c H0 H1 H2.
-    simpl. rewrite H0. rewrite H2. reflexivity. 
-Qed.
+  - intros p tail couples_tail  H0 H1.
+    simpl. rewrite H1. reflexivity. 
+Qed. 
 
 (****************************************************************)
 (*** CHECKING IF there are enough tokens in predecessor places **)
@@ -1731,26 +1733,24 @@ Inductive spn_animate_spec
       (list (list trans_type)  *
        list (place_type * nat) ) -> Prop :=
 | animate_spn_O : spn_animate_spec
-                    spn   O   []
+                    spn   O  [ ( [] , [] ) ]
 | animate_spn_S :
     forall (next_spn : SPN)
            (Lol_fired : list (list trans_type))
-           (m : marking_type)
            (m_visuel : list (place_type * nat))
-           (n p : nat)
+           (n : nat)
            (TAIL : list (list (list trans_type) * list (place_type * nat))),
-      n = S p
-      ->
+     
       (Lol_fired, next_spn) = spn_fired spn
       ->
       m_visuel = marking2list
                    (marking next_spn)   (places next_spn)
       ->
       spn_animate_spec
-        next_spn    p    TAIL
+        next_spn    n    TAIL
       -> 
       spn_animate_spec
-        spn   n   ((Lol_fired, m_visuel) :: TAIL)
+        spn   (S n)   ((Lol_fired, m_visuel) :: TAIL)
 .
 (* n steps calculus, n "cycles" with both markings and transs *)
 Fixpoint spn_animate
@@ -1785,7 +1785,16 @@ Theorem spn_animate_correct :
     spn_animate_spec
       spn    n     truc.
 Proof.
-  intros. Admitted.
+  intros spn n truc.
+  functional induction (spn_animate spn n)
+             using spn_animate_ind.
+  - intro H. rewrite <- H. apply animate_spn_O.
+  - intro H. rewrite <- H.
+    apply animate_spn_S with (next_spn := snd(spn_fired spn)).
+    + rewrite e0. simpl. reflexivity.
+    + rewrite e0. simpl. reflexivity.
+    + rewrite e0. simpl.      
+Admitted.
 Theorem animate_spn_complete :
   forall (spn   : SPN)
          (n : nat)
@@ -1797,9 +1806,11 @@ Theorem animate_spn_complete :
     spn_animate
       spn    n   =  truc.
 Proof.
-  intros. Admitted.
-
-
+  intros. elim H.
+  - simpl. reflexivity. 
+  - intros. simpl. rewrite <- H0. rewrite <- H1. rewrite <- H3.
+    reflexivity.
+Qed.
 
 (*****************************************************************)
 (*****************************************************************)
