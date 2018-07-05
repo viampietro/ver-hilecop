@@ -65,6 +65,7 @@ Fixpoint intervals2list
 
 
 (** "enabled" <=> "arcs_classic" + "arcs_test" + "arcs_inhi" OK **)
+
 Definition is_enabled
            (places : list place_type)
            (pre   test  inhib : weight_type)
@@ -77,21 +78,77 @@ Definition is_enabled
        (test t) m_steady  places)
     &&
     (inhib_check
-       (inhib t) m_steady  places). 
-(**   useless fonction ?  (unless for STPN and SITPN ...)
- because 
- firing a bunch of transitions synchronously implies
-   checking arcs with a constant marking AND a decreasing one ! 
- --->    useful only for _asynchronous_ Petri nets, or S(I)TPN **)
+       (inhib t) m_steady  places).
+Functional Scheme is_enabled_ind :=
+  Induction for is_enabled Sort Prop.
+Print is_enabled_ind. Print nat_ind.
+Inductive is_enabled_spec
+          (places : list place_type)
+          (pre   test  inhib : weight_type)
+          (m_steady : marking_type) (t : trans_type)
+  : Prop :=
+| is_enabled_mk :   
+    (pre_or_test_check
+       (pre t) m_steady places)
+      &&
+      (pre_or_test_check
+         (test t) m_steady  places)
+      &&
+      (inhib_check
+         (inhib t) m_steady  places) = true   ->
+    is_enabled_spec
+      places
+      pre   test  inhib
+      m_steady    t.
+Theorem is_enabled_correct :
+  forall (places : list place_type)
+          (pre   test  inhib : weight_type)
+          (m_steady : marking_type) (t : trans_type),
+    is_enabled
+      places
+      pre   test  inhib
+      m_steady    t   = true        ->
+    is_enabled_spec
+      places
+      pre   test  inhib
+      m_steady    t.
+Proof.
+  intros places pre test inhib m_steady t.
+  functional induction (is_enabled
+                          places pre test inhib m_steady t)
+             using is_enabled_ind.
+  intro H. apply is_enabled_mk. apply H.  
+Qed.
+Theorem is_enabled_complete :
+  forall (places : list place_type)
+          (pre   test  inhib : weight_type)
+          (m_steady : marking_type) (t : trans_type),
+    is_enabled_spec
+      places
+      pre   test  inhib
+      m_steady    t      ->
+    is_enabled
+      places
+      pre   test  inhib
+      m_steady    t   = true .
+Proof.
+  intros places pre   test  inhib m_steady  t H. elim H.
+  intros H0. unfold is_enabled. rewrite H0. reflexivity.
+Qed.
 
-(**   needed to list the enabled transitions :
+(**   useless fonction for SPN but useful for 
+
+-  _asynchronous_ Petri nets
+-   STPN  (and SITPN by extension) 
+
+  needed to list the enabled transitions :
 
 1) to increment time for the right transitions, 
 at the beginning of the cycle
 
-2) to reset disabled transitions ? during "fire_pre" ? or after ?
-NO !  because   m_steady   &  ! m_decreasing !
- *)
+2) to reset disabled transitions ? 
+NO !  because   m_steady   &  ! m_decreasing !    **)
+
 
 Fixpoint list_enabled_aux 
          (sometranss : list trans_type)
@@ -113,6 +170,50 @@ Fixpoint list_enabled_aux
            tail   places   pre   test   inhib  
            m_steady    enabled_transs
   end.
+Inductive list_enabled_aux_spec
+          (places : list place_type)
+          (pre    test    inhib : weight_type) 
+          (m_steady   : marking_type)
+          (enabled_transs : list trans_type)
+  : list trans_type  ->   (* sometranss *)
+    list trans_type  ->   (* enabled_transs *)
+    Prop :=
+| list_enabled_nil :
+    list_enabled_aux_spec 
+      places   pre   test   inhib  
+      m_steady  enabled_transs [] enabled_transs
+| list_enabled_cons_if :  forall
+    (tail : list trans_type)
+    (t : trans_type),
+    list_enabled_aux_spec 
+      places   pre   test   inhib  
+      m_steady  enabled_transs tail (t::enabled_transs)
+    ->
+    is_enabled
+      places
+      pre   test  inhib
+      m_steady    t  = true
+    ->
+    list_enabled_aux_spec 
+      places   pre   test   inhib  
+      m_steady  enabled_transs (t::tail) enabled_transs
+| list_enabled_cons_else :  forall
+    (tail : list trans_type)
+    (t : trans_type),
+    list_enabled_aux_spec 
+      places   pre   test   inhib  
+      m_steady  enabled_transs tail enabled_transs
+    ->
+    is_enabled
+      places
+      pre   test  inhib
+      m_steady    t  = true
+    ->
+    list_enabled_aux_spec 
+      places   pre   test   inhib  
+      m_steady  enabled_transs (t::tail) enabled_transs.
+
+
 
 
 Definition list_enabled 
@@ -123,7 +224,20 @@ Definition list_enabled
   : list trans_type :=
   list_enabled_aux
     sometranss    places    pre    test   inhib    m_steady  [].
-
+Inductive list_enabled_spec
+           (sometranss : list trans_type)
+           (places : list place_type)
+           (pre    test    inhib : weight_type) 
+           (m_steady   : marking_type)
+  : list trans_type  ->  Prop  :=
+| list_enabled_mk : forall (enabled_transs : list trans_type),
+    list_enabled_aux
+      sometranss    places    pre    test   inhib    m_steady  []
+    = enabled_transs
+    -> list_enabled_spec
+         sometranss    places    pre    test   inhib    m_steady
+         enabled_transs.
+         
 Print STPN. Print SPN.
 Definition list_enabled_spn
            (spn : SPN)
@@ -140,8 +254,33 @@ Definition list_enabled_spn
       transs      places
       pre  test  inhib      marking   
   end.
+Inductive list_enabled_spn_spec
+           (spn : SPN)
+  : list trans_type  ->  Prop  :=
+| list_enabled_spn_mk : forall
+    (Lol: list (list trans_type))
+    (m : marking_type)
+    (places : list place_type)
+    (transs : list trans_type)
+    (pre  post test inhib : weight_type)
+    (enabled_transs : list trans_type),
+    spn = (mk_SPN
+             places  transs  
+             pre  post test inhib
+             m
+             (mk_prior
+               Lol))
+    ->
+    list_enabled
+      transs    places    pre    test   inhib    m
+    = enabled_transs
+    ->
+    list_enabled_spn_spec
+         spn 
+         enabled_transs.
 
-Print list_enabled_spn.
+
+Print list_enabled_spn. Print chronos. 
 Definition list_enabled_stpn
            (stpn : STPN)
   : list trans_type :=
@@ -153,30 +292,92 @@ Definition list_enabled_stpn
     list_enabled_spn
       spn
   end.
+Inductive list_enabled_stpn_spec
+           (stpn : STPN)
+  : list trans_type  ->  Prop  :=
+| list_enabled_stpn_mk : forall
+    (spn : SPN)
+    (enabled_transs : list trans_type)
+    (chronos : trans_type -> option chrono_type),
+    stpn = mk_STPN
+             spn
+             chronos
+    ->
+    list_enabled_spn 
+      spn
+    = enabled_transs
+    ->
+    list_enabled_stpn_spec
+      stpn 
+      enabled_transs.
 
-
-(***********************  useful ?   *******************)
+(***********  the same but SYNCHRO  (so 2 markings) ***********)
 Print synchro_check_arcs.
 Fixpoint not_synchro_check_list_aux 
          (sometranss : list trans_type)
          (places : list place_type)
          (pre    test    inhib : weight_type) 
          (m_steady    m_decreasing : marking_type)
-         (enabled_transs : list trans_type)
+         (disabled_transs : list trans_type)
   : list trans_type :=
   match sometranss with
-  | [] => enabled_transs 
+  | [] => disabled_transs 
   | t :: tail
     =>
     if synchro_check_arcs
          places  (pre t) (test t) (inhib t) m_steady  m_decreasing
     then not_synchro_check_list_aux 
            tail  places  pre   test  inhib  
-           m_steady    m_decreasing   enabled_transs
+           m_steady    m_decreasing   disabled_transs
     else not_synchro_check_list_aux 
            tail  places  pre   test  inhib  
-           m_steady    m_decreasing   (t::enabled_transs)
+           m_steady    m_decreasing   (t::disabled_transs)
   end.
+Inductive not_synchro_check_list_aux_spec
+          (places : list place_type)
+          (pre    test    inhib : weight_type) 
+          (m_steady   m_decreasing  : marking_type)
+          (disabled_transs : list trans_type)
+  : list trans_type  ->   (* sometranss *)
+    list trans_type  ->   (* DISabled_transs *)
+    Prop :=
+| not_synchro_check_list_aux_nil :
+    not_synchro_check_list_aux_spec
+      places 
+      pre    test    inhib 
+      m_steady   m_decreasing  disabled_transs  [] disabled_transs
+| not_synchro_check_list_aux_cons_if :  forall
+    (tail : list trans_type)
+    (t : trans_type),
+    not_synchro_check_list_aux_spec 
+      places   pre   test   inhib  
+      m_steady m_decreasing disabled_transs tail
+      disabled_transs
+    ->
+     synchro_check_arcs
+       places  (pre t) (test t) (inhib t) m_steady  m_decreasing
+     = true 
+    ->
+    not_synchro_check_list_aux_spec  
+      places   pre   test   inhib  
+      m_steady  m_decreasing disabled_transs (t::tail)
+      disabled_transs
+| not_synchro_check_list_aux_cons_else :  forall
+    (tail : list trans_type)
+    (t : trans_type),
+    not_synchro_check_list_aux_spec 
+      places   pre   test   inhib  
+      m_steady m_decreasing disabled_transs tail
+      disabled_transs
+    ->
+     synchro_check_arcs
+       places  (pre t) (test t) (inhib t) m_steady  m_decreasing
+     = false
+    ->
+    not_synchro_check_list_aux_spec  
+      places   pre   test   inhib  
+      m_steady  m_decreasing disabled_transs (t::tail)
+      disabled_transs.
 
 Definition not_synchro_check_list 
          (sometranss : list trans_type)
@@ -189,20 +390,25 @@ Definition not_synchro_check_list
     places
     pre    test    inhib
     m_steady    m_decreasing  [].
+Inductive not_synchro_check_list_spec
+           (sometranss : list trans_type)
+           (places : list place_type)
+           (pre    test    inhib : weight_type) 
+           (m_steady   m_decreasing : marking_type)
+  : list trans_type  ->  Prop  :=
+| not_synchro_check_list_mk : forall
+    (enabled_transs : list trans_type),
+    not_synchro_check_list_aux 
+      sometranss 
+      places
+      pre    test    inhib
+      m_steady    m_decreasing  []
+    = enabled_transs
+    -> not_synchro_check_list_spec
+         sometranss    places    pre    test   inhib
+         m_steady  m_decreasing
+         enabled_transs.
 
-
-(*
-Search trans_type. 
-Fixpoint in_list    (* must exist in library List *)
-         (some_transs : list trans_type)
-         (trans : trans_type)
-  : bool :=
-  match some_transs with
-  | [] => false
-  | t :: tail => if (beq_transs trans t)  (* t =? trans *)
-                 then true
-                 else false
-  end.  *)
 
 (********************* TIME intervals  ---> chronos  ***********)
 
