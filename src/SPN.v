@@ -145,10 +145,34 @@ Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
   | (mk_place n, mk_place n') => beq_nat n n'
   end.
-
-
-
-
+Functional Scheme beq_places_ind :=
+  Induction for beq_places Sort Prop.
+Print beq_places_ind. Print nat_ind.
+Theorem beq_places_correct :
+  forall (p p' : place_type),
+    beq_places p p' = true ->
+    beq_places_spec p p'.
+Proof.
+  intros p p'.
+  functional induction (beq_places  p p') using beq_places_ind.
+  intro. rewrite beq_nat_true_iff in H. rewrite H.
+  apply beq_places_mk with (n:=n').
+  split; reflexivity. 
+Qed.
+Theorem beq_places_complete :
+  forall (p p' : place_type),
+    beq_places_spec p p'      ->
+    beq_places p p' = true. 
+Proof.
+  intros. elim H.
+  intros  p0 p'0  n  H0.
+  assert (p0 = mk_place n).
+  { firstorder. }  
+  assert (p'0 = mk_place n).
+  { firstorder. }                   
+  unfold beq_places. rewrite H1. rewrite H2.
+  rewrite beq_nat_refl with (n:=n). reflexivity.
+Qed.
 
 Inductive beq_transs_spec : trans_type -> trans_type -> Prop :=
 | beq_transs_mk : forall
@@ -161,6 +185,34 @@ Definition beq_transs (t t' : trans_type) : bool :=
   match (t, t') with
   | (mk_trans n, mk_trans n') => beq_nat n n'
   end.
+Functional Scheme beq_transs_ind :=
+  Induction for beq_transs Sort Prop.
+Print beq_transs_ind. Print nat_ind.
+Theorem beq_transs_correct :
+  forall (t t' : trans_type),
+    beq_transs t t' = true ->
+    beq_transs_spec t t'.
+Proof.
+  intros t t'.
+  functional induction (beq_transs  t t') using beq_transs_ind.
+  intro. rewrite beq_nat_true_iff in H. rewrite H.
+  apply beq_transs_mk with (n:=n').
+  split; reflexivity. 
+Qed.
+Theorem beq_transs_complete :
+  forall (t t' : trans_type),
+    beq_transs_spec t t'      ->
+    beq_transs t t' = true. 
+Proof.
+  intros. elim H.
+  intros  t0 t'0  n  H0.
+  assert (t0 = mk_trans n).
+  { firstorder. }  
+  assert (t'0 = mk_trans n).
+  { firstorder. }                   
+  unfold beq_transs. rewrite H1. rewrite H2.
+  rewrite beq_nat_refl with (n:=n). reflexivity.
+Qed.
 
 
 
@@ -200,6 +252,7 @@ Definition set_mark (m:marking_type) (p:place_type) (j:nat)
              else m p'.         (* other tokens left unchanged  *)
 (* function not used yet *)
 
+
 Inductive modif_mark_spec
           (m : marking_type)
           (p  p' : place_type)
@@ -225,28 +278,68 @@ Definition modif_mark
            (p : place_type)
            (j : option nat_star)
            (op : nat -> nat -> nat)
-           (p' : place_type) : nat :=
-    if beq_places p p'
-    then match j with
-          | None => m p              (* no change *)
-          | Some i => match i with
-                      | mk_nat_star
-                          inti
-                          _ => op (m p) inti
-                                      (* j=i tokens added/removed *)
-                      end
-         end
-    else m p'.         (* other places left unchanged  *)
+           (p' : place_type)
+  : nat :=
+  if beq_places p p'
+  then match j with
+       | None => m p              (* no change *)
+       | Some i => match i with
+                   | mk_nat_star
+                       inti
+                       _ => op (m p) inti
+                               (* j=i tokens added/removed *)
+                   end
+       end
+  else m p'.         (* other places left unchanged  *)
 
+Inductive modif_marking_locally_spec
+          (m : marking_type)
+          (p  : place_type)
+          (j : option nat_star)
+          (op : nat -> nat -> nat)
+  : marking_type -> Prop :=
+| modif_marking_locally_mk : forall (m' : marking_type),
+    (m' = fun p' => if beq_places p p'
+                    then match j with
+                        | None => m p     (* no change *)
+                        | Some i => match i with
+                                    | mk_nat_star
+                                        inti
+                                        _ => op (m p) inti
+                                (* j=i tokens added/removed *)
+                                    end
+                         end
+                    else m p'      )  ->
+    modif_marking_locally_spec m p j op m'.
+Definition modif_marking_locally
+           (m : marking_type)
+           (p : place_type)
+           (j : option nat_star)
+           (op : nat -> nat -> nat)
+  : marking_type :=
+  fun p' => if beq_places p p'
+            then match j with
+                 | None => m p              (* no change *)
+                 | Some i => match i with
+                             | mk_nat_star
+                                 inti
+                                 _ => op (m p) inti
+                             (* j=i tokens added/removed *)
+                             end
+                 end
+            else m p'.         (* other places left unchanged  *)
+(*****************************************************************)
+(*************** ????????????????????????????? *******************)
+(*****************************************************************)
 Functional Scheme modif_mark_ind :=
   Induction for modif_mark Sort Prop.
-Theorem modif_mark_correct :
-  forall (m : marking_type) (p : place_type) (j : option nat_star)
-         (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
+Theorem modif_mark_correct :  forall
+    (m : marking_type) (p : place_type) (j : option nat_star)
+    (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
     modif_mark m p j op p' = mp ->
     modif_mark_spec m p p' j op mp.
 Proof.
-  do 6 intro.
+  intros m p j op p' mp.
   functional induction (modif_mark m p j op p') using modif_mark_ind.
   - intro. rewrite <- H. apply modif_mark_p_eq_p'_some with
                              (i:={| int := inti; posi := _x |}) (pf:=_x); try reflexivity; assumption.
@@ -254,9 +347,9 @@ Proof.
   assumption. reflexivity.
   - intro. rewrite <- H. apply modif_mark_p_neq_p'. assumption.
 Qed.
-Theorem modif_mark_complete :
-  forall (m : marking_type) (p : place_type) (j : option nat_star)
-         (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
+Theorem modif_mark_complete :  forall
+    (m : marking_type) (p : place_type) (j : option nat_star)
+    (op : nat -> nat -> nat) (p' : place_type) (mp : nat),
     modif_mark_spec m p p' j op mp ->
     modif_mark m p j op p' = mp. 
 Proof.
@@ -1790,7 +1883,7 @@ Proof.
              using spn_animate_ind.
   - intro H. rewrite <- H. apply animate_spn_O.
   - intro H. rewrite <- H.
-    apply animate_spn_S with (next_spn := snd(spn_fired spn)).
+    apply animate_spn_S with (next_spn := snd (spn_fired spn)).
     + rewrite e0. simpl. reflexivity.
     + rewrite e0. simpl. reflexivity.
     + rewrite e0. simpl.      
