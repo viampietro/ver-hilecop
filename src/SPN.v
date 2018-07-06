@@ -291,7 +291,7 @@ Definition modif_mark
                    end
        end
   else m p'.         (* other places left unchanged  *)
-
+(*
 Inductive modif_marking_locally_spec
           (m : marking_type)
           (p  : place_type)
@@ -328,6 +328,7 @@ Definition modif_marking_locally
                              end
                  end
             else m p'.         (* other places left unchanged  *)
+*)
 (*****************************************************************)
 (*************** ????????????????????????????? *******************)
 (*****************************************************************)
@@ -565,18 +566,18 @@ Inductive marking2list_spec
     Prop :=
 | marking2list_nil : marking2list_spec    m [] []
 | marking2list_cons : forall
-    (p:place_type)
-    (tail:list place_type)
+    (p : place_type)
+    (tail : list place_type)
     (couples_tail : list (place_type * nat)),
     
-    marking2list_spec    m tail couples_tail                  ->  
+    marking2list_spec    m tail       couples_tail          ->  
     marking2list_spec    m (p::tail) ((p, m p)::couples_tail).  
 Fixpoint marking2list
          (m : marking_type)
          (places : list place_type)
   : list (place_type * nat) :=
   match places with
-  | nil => nil
+  | [] => []
   | p :: tail =>
     (p, m p) :: (marking2list
                    m  tail )
@@ -591,15 +592,13 @@ Theorem marking2list_correct :
     marking2list         m places = couples                 ->
     marking2list_spec    m places   couples.
 Proof.
-  intros places m couples.
+  intros places m.
   functional induction (marking2list  m  places)
              using marking2list_ind.
-  - intro H. rewrite <- H. apply marking2list_nil.
-  - intro H. rewrite <- H.
-
-    (* apply marking2list_cons
-               with (couples_tail := tl(couples)).  *) 
-   Admitted.
+  - intros couples H. rewrite <- H. apply marking2list_nil.
+  - intros couples H. rewrite <- H. apply marking2list_cons.
+    apply (IHl (marking2list m tail)). reflexivity. 
+Qed.    
 
 Theorem marking2list_complete :
   forall (places : list place_type)
@@ -1878,16 +1877,17 @@ Theorem spn_animate_correct :
     spn_animate_spec
       spn    n     truc.
 Proof.
-  intros spn n truc.
+  intros spn n.
   functional induction (spn_animate spn n)
              using spn_animate_ind.
-  - intro H. rewrite <- H. apply animate_spn_O.
-  - intro H. rewrite <- H.
+  - intros truc H. rewrite <- H. apply animate_spn_O.
+  - intros truc H. rewrite <- H.
     apply animate_spn_S with (next_spn := snd (spn_fired spn)).
     + rewrite e0. simpl. reflexivity.
     + rewrite e0. simpl. reflexivity.
-    + rewrite e0. simpl.      
-Admitted.
+    + rewrite e0. simpl.
+      apply (IHl (spn_animate next_spn n')). reflexivity.
+Qed.
 Theorem animate_spn_complete :
   forall (spn   : SPN)
          (n : nat)
