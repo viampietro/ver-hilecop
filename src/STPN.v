@@ -16,8 +16,8 @@ Structure chrono_type : Set :=
 sumbool ? ; *)
     }.
 
-Definition good_time (i : option chrono_type) : bool :=
-  match i with
+Definition good_time (I : option chrono_type) : bool :=
+  match I with
   | None => true
   | Some (mk_chrono
             mini
@@ -27,18 +27,39 @@ Definition good_time (i : option chrono_type) : bool :=
                          &&
                          (cpt <=? maxi))
   end.
-
+Inductive good_time_spec
+          (maybe_chrono : option chrono_type)
+  : Prop :=
+| good_time_none : 
+    maybe_chrono = None                             -> 
+    good_time_spec
+      maybe_chrono
+| good_time_some : forall
+    (mini maxi cpt: nat)
+    (min_leb_max : mini <= maxi),
+    maybe_chrono = Some (mk_chrono
+                           mini
+                           maxi
+                           min_leb_max
+                           cpt )                    ->
+    (mini <=? cpt)
+      &&
+      (cpt <=? maxi) = true              ->
+    good_time_spec
+      maybe_chrono.
 
 Structure STPN : Set := mk_STPN
                            { 
                              spn : SPN ;
-                             chronos : trans_type -> option chrono_type
+                             chronos :
+                               trans_type -> option chrono_type
                            }.
 
 
 
 (******* to print *****************************************)
 Print chrono_type. Print STPN.
+
 Fixpoint intervals2list
          (transs : list trans_type)
          (eval_chronos : trans_type -> option chrono_type)
@@ -61,6 +82,40 @@ Fixpoint intervals2list
                                                   eval_chronos)
                  end
   end.
+Inductive intervals2list_spec
+          (eval_chronos : trans_type -> option chrono_type)
+  : list trans_type ->   (* transs *)
+    list (trans_type * option (nat * nat * nat) ) ->
+  Prop :=
+| intervals2list_nil :  intervals2list_spec
+                          eval_chronos [] []
+| intervals2list_nil_none : forall
+    (transs_tail : list trans_type)
+    (t : trans_type)
+    (truc_tail : list (trans_type * option (nat * nat * nat))),
+    (eval_chronos t) = None                ->
+    intervals2list_spec
+      eval_chronos transs_tail  truc_tail             ->
+    intervals2list_spec
+      eval_chronos (t::transs_tail) ((t, None)::truc_tail)
+| intervals2list_nil_some : forall
+    (transs_tail : list trans_type)
+    (t : trans_type)
+    (chrono_t : chrono_type)
+    (truc_tail : list (trans_type * option (nat * nat * nat)))
+    (mini maxi cpt: nat)
+    (min_leb_max : mini <= maxi),
+    (eval_chronos t) = Some chrono_t                ->
+    chrono_t = mk_chrono
+                 mini
+                 maxi
+                 min_leb_max
+                 cpt                                ->
+    intervals2list_spec
+      eval_chronos transs_tail  truc_tail           ->
+    intervals2list_spec
+      eval_chronos (t::transs_tail) ((t, Some (mini, cpt, maxi))::truc_tail).
+
 (***************** to print ******************)
 
 
@@ -311,7 +366,7 @@ Inductive list_enabled_stpn_spec
       stpn 
       enabled_transs.
 
-(***********  the same but SYNCHRO  (so 2 markings) ***********)
+(********* same as "list_enabled_(aux)"  (so 2 markings) ***********)
 Print synchro_check_arcs.
 Fixpoint not_synchro_check_list_aux 
          (sometranss : list trans_type)
@@ -421,20 +476,42 @@ Definition increment_time_trans
   match (chronos t) with
   | None => chronos  (* increment nothing ... *)
   | Some (mk_chrono        (* immutable ... *)
-            mini
-            maxi
-            min_le_max
-            cpt )
+            mini     maxi
+            min_le_max      cpt)
     => (fun trans =>
           if beq_transs
                trans t
           then Some (mk_chrono
-                       mini
-                       maxi
-                       min_le_max
-                       (cpt + 1))
+                       mini     maxi
+                       min_le_max    (cpt + 1))
           else (chronos trans))                      
   end.
+Inductive increment_time_trans_spec
+          (chronos : trans_type -> option chrono_type)
+          (t :  trans_type)
+  : (trans_type -> option chrono_type)  ->  Prop  :=
+| increment_time_trans_none : 
+    (chronos t) = None              ->
+    increment_time_trans_spec
+      chronos t chronos
+| increment_time_trans_some : forall
+    (chrono_t : chrono_type)
+    (mini maxi cpt : nat)
+    (min_leb_max : mini <= maxi)
+    (chronos_t_incr : trans_type -> option chrono_type),
+    (chronos t) = Some (mk_chrono
+                          mini  maxi
+                          min_leb_max   cpt)
+    ->
+    (chronos_t_incr = (fun t' => if beq_transs t t'
+                               then Some (mk_chrono
+                                            mini   maxi
+                                            min_leb_max  (cpt + 1))
+                               else (chronos t')))
+    ->
+    increment_time_trans_spec
+      chronos t chronos_t_incr.
+
 
 Fixpoint increment_time_enabled
          (chronos : trans_type -> option chrono_type)
@@ -449,10 +526,33 @@ Fixpoint increment_time_enabled
          chronos   t)
       tail
   end.
+Inductive increment_time_enabled_spec
+          (chronos : trans_type -> option chrono_type)      
+  : list trans_type                     ->   (* enabled_transs *)
+    (trans_type -> option chrono_type)  ->  (* resulting chronos *)
+    Prop :=
+| increment_time_enabled_nil :
+    increment_time_enabled_spec chronos [] chronos
+| increment_time_enabled_cons : forall
+    (tail : list trans_type)
+    (t : trans_type)
+    (any_chronos : trans_type -> option chrono_type)
+    (chronos_t_incr : trans_type -> option chrono_type),
+    chronos_t_incr = increment_time_enabled 
+                      (increment_time_trans
+                         any_chronos   t)
+                      tail
+    ->
+    increment_time_enabled_spec chronos tail chronos_t_incr
+    ->
+    increment_time_enabled_spec chronos (t::tail) any_chronos.
 
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
 facilement calculable *)
+
+
+(**** on fait la meme chose pour les transitions disabled ... *)
 
 Definition reset_time_trans
            (chronos : trans_type -> option chrono_type)
@@ -475,6 +575,33 @@ Definition reset_time_trans
                        0 )
           else (chronos trans))             
   end.
+Inductive reset_time_trans_spec
+          (chronos : trans_type -> option chrono_type)
+          (t :  trans_type)
+  : (trans_type -> option chrono_type)  ->  Prop  :=
+| reset_time_trans_none : 
+    (chronos t) = None              ->
+    reset_time_trans_spec
+      chronos t chronos
+| reset_time_trans_some : forall
+    (chrono_t : chrono_type)
+    (mini maxi cpt : nat)
+    (min_leb_max : mini <= maxi)
+    (chronos_t_incr : trans_type -> option chrono_type),
+    (chronos t) = Some (mk_chrono
+                          mini  maxi
+                          min_leb_max   cpt)
+    ->
+    (chronos_t_incr = (fun t' => if beq_transs t t'
+                               then Some (mk_chrono
+                                            mini   maxi
+                                            min_leb_max  0)
+                               else (chronos t')))
+    ->
+    reset_time_trans_spec
+      chronos t chronos_t_incr.
+
+
 (* 
 le reset de compteur est plus subtil : 
  1) quand faut-il le faire ?  
@@ -496,6 +623,26 @@ Fixpoint reset_time_disabled
                       t)
                    tail
   end.
+Inductive reset_time_enabled_spec
+          (chronos : trans_type -> option chrono_type)      
+  : list trans_type                     ->   (* enabled_transs *)
+    (trans_type -> option chrono_type)  ->  (* resulting chronos *)
+    Prop :=
+| reset_time_enabled_nil :
+    reset_time_enabled_spec chronos [] chronos
+| reset_time_enabled_cons : forall
+    (tail : list trans_type)
+    (t : trans_type)
+    (any_chronos : trans_type -> option chrono_type)
+    (chronos_t_reset : trans_type -> option chrono_type),
+    chronos_t_reset = reset_time_disabled 
+                        (reset_time_trans
+                           any_chronos   t)
+                        tail
+    ->
+    reset_time_enabled_spec chronos tail chronos_t_reset
+    ->
+    reset_time_enabled_spec chronos (t::tail) any_chronos.
 
 
 (*****************************************************************
