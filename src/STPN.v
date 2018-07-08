@@ -16,8 +16,8 @@ Structure chrono_type : Set :=
 sumbool ? ; *)
     }.
 
-Definition good_time (I : option chrono_type) : bool :=
-  match I with
+Definition good_time (maybe_chrono : option chrono_type) : bool :=
+  match maybe_chrono with
   | None => true
   | Some (mk_chrono
             mini
@@ -47,6 +47,30 @@ Inductive good_time_spec
       (cpt <=? maxi) = true              ->
     good_time_spec
       maybe_chrono.
+Functional Scheme good_time_ind :=
+  Induction for good_time Sort Prop.
+Theorem good_time_correct : forall
+    (maybe_chrono : option chrono_type),
+    good_time       maybe_chrono = true     ->
+    good_time_spec  maybe_chrono.
+Proof.
+  intros maybe_chrono.
+  functional induction (good_time  maybe_chrono) using good_time_ind.
+  - intro H. apply good_time_some with (mini:=mini0) (maxi:=maxi0) (cpt:=cpt0) (min_leb_max:=_x).
+    + reflexivity.
+    + exact H.
+  - intro H. apply good_time_none. reflexivity.
+Qed.
+Theorem good_time_complete : forall
+    (maybe_chrono : option chrono_type),
+    good_time_spec  maybe_chrono            ->
+    good_time       maybe_chrono = true.     
+Proof.
+  intros maybe_chrono H. elim H.
+  - intro H'. unfold good_time. rewrite H'. reflexivity.
+  - intros mini maxi cpt min_leb_max H1 H2.
+    unfold good_time. rewrite H1. exact H2.
+Qed.
 
 Structure STPN : Set := mk_STPN
                            { 
@@ -115,6 +139,37 @@ Inductive intervals2list_spec
       eval_chronos transs_tail  truc_tail           ->
     intervals2list_spec
       eval_chronos (t::transs_tail) ((t, Some (mini, cpt, maxi))::truc_tail).
+Functional Scheme intervals2list_ind :=
+  Induction for intervals2list Sort Prop.
+Theorem intervals2list_correct : forall
+    (transs : list trans_type)
+    (eval_chronos : trans_type -> option chrono_type)
+    (list_chronos : list (trans_type * option (nat * nat * nat))),
+    intervals2list
+      transs eval_chronos = list_chronos    ->
+    intervals2list_spec
+      eval_chronos transs   list_chronos.
+Proof.
+  intros maybe_chrono.
+  functional induction (good_time  maybe_chrono) using good_time_ind.
+  - intro H. apply good_time_some with (mini:=mini0) (maxi:=maxi0) (cpt:=cpt0) (min_leb_max:=_x).
+    + reflexivity.
+    + exact H.
+  - intro H. apply good_time_none. reflexivity.
+Qed.
+Theorem intervals2list_complete : forall
+    (maybe_chrono : option chrono_type),
+    good_time_spec  maybe_chrono            ->
+    good_time       maybe_chrono = true.     
+Proof.
+  intros maybe_chrono H. elim H.
+  - intro H'. unfold good_time. rewrite H'. reflexivity.
+  - intros mini maxi cpt min_leb_max H1 H2.
+    unfold good_time. rewrite H1. exact H2.
+Qed.
+
+
+
 
 (***************** to print ******************)
 
