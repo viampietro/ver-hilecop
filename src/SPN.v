@@ -1662,7 +1662,7 @@ Proof.
   - rewrite Hleft in e. rewrite e. reflexivity.
   - rewrite <- Hright. rewrite Hleft. reflexivity.
 Qed.
-Theorem fire_spn_complete :
+Theorem spn_fire_complete :
   forall (places : list place_type)
          (pre  test  inhib   post : weight_type)
          (m_steady   m_next : marking_type)
