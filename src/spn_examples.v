@@ -1,8 +1,8 @@
 Require Export SPN.
 
-(******************************************************************)
-(****   example of David Andreu       written within TINA    ******)
-(******************************************************************)
+(**********************************)
+(********   example (1)   *********)
+(**********************************)
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
 (* 3 places *)
@@ -450,15 +450,230 @@ Definition ex_spn3 := mk_SPN
 Compute
   (
     spn_debug2
- (*     (
+      (*     (
         snd (spn_fired 
           (snd (spn_fired *)
-               ex_spn3)
-      .
+      ex_spn3)
+.
 
 Compute (spn_animate
            ex_spn3
            10).  (* 11 markings *)
 
-      
+
 Search SPN. Print SPN.
+
+
+(********************************************************)
+(**************** example 2 *****************************)
+(********************************************************)
+
+(* 7 places *)
+Definition ex2_places : (list place_type) :=
+  [ mk_place 1 ;
+    mk_place 2 ;
+    mk_place 3 ;
+    mk_place 4 ;
+    mk_place 5 ;
+    mk_place 6 ;
+    mk_place 7 ].
+Definition ex2_nodup_places : NoDup ex2_places :=
+  NoDup_nodup
+    places_eq_dec
+    ex2_places. 
+
+(* 6 transitions *)
+Definition ex2_transs : (list trans_type) :=
+  [ mk_trans 1 ;
+    mk_trans 2 ;
+    mk_trans 3 ;
+    mk_trans 4 ;
+    mk_trans 5 ;
+    mk_trans 6 ].
+Definition ex2_nodup_transs : NoDup ex2_transs :=
+  NoDup_nodup
+    transs_eq_dec
+    ex2_transs.
+
+(* one lemma for each arc weight ...  already done*)
+
+(* Require Export spn_examples. (* surtout pas ! *) *)
+
+(* one lemma for each new weight ... *)
+
+(* 7 arcs PT (place transition)  "incoming" *) 
+Definition ex2_pre (t : trans_type) (p : place_type)
+  : option nat_star :=
+  match (t,p) with
+  | (mk_trans 1, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 2, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 3, mk_place 3) => Some (mk_nat_star
+                                        2
+                                        two_positive)
+  | (mk_trans 3, mk_place 4) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 4, mk_place 5) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 5, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)  
+  | (mk_trans 5, mk_place 6) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | (mk_trans 6, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | _ => None
+  end.
+
+Definition ex2_test (t : trans_type) (p : place_type) :=
+  (* 1 arc of type "test" *)
+  match (t, p) with
+  | (mk_trans 2, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | _ => None
+  end.
+
+Definition ex2_inhib (t : trans_type) (p : place_type) :=
+  (* 1 arc of type "inhibitor"  *)
+  match (t, p) with
+  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | _ => None
+  end.
+
+(* 7 arcs TP      "outcoming"  *)
+Definition ex2_post (t : trans_type) (p : place_type)
+  : option nat_star :=
+  match (t, p) with
+  (* trans 1 *)
+  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+                                        1
+                                        one_positive)               
+  | (mk_trans 1, mk_place 3) => Some (mk_nat_star
+                                        2
+                                        two_positive)               
+  | (mk_trans 1, mk_place 4) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 2 *)
+  | (mk_trans 2, mk_place 5) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 3 *)
+  | (mk_trans 3, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 4 *)
+  | (mk_trans 4, mk_place 6) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 5 *)
+  | (mk_trans 5, mk_place 7) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  (* trans 6 *)
+  | (mk_trans 6, mk_place 1) => Some (mk_nat_star
+                                        1
+                                        one_positive)
+  | _ => None
+  end.
+
+(* tokens *)
+Definition ex2_marking (p : place_type) :=
+  match p with
+  | mk_place 1 => 1
+  | mk_place 2 => 0
+  | mk_place 3 => 0
+  | mk_place 4 => 0
+  | mk_place 5 => 0
+  | mk_place 6 => 0
+  | mk_place 7 => 0
+  | _ => 0
+  end.
+
+Definition ex2_prior : prior_type :=
+  (* se restreindre aux conflits structurels ! *)
+  mk_prior
+    [
+      [mk_trans 1 ; mk_trans 2 ; mk_trans 5] ;
+      [mk_trans 3] ;
+      [mk_trans 4] ;
+      [mk_trans 6]
+    ].
+ 
+    
+Print pre. Print weight_type. 
+Definition ex2_spn := mk_SPN
+                        ex2_places
+                        ex2_transs
+                        (*  ex2_nodup_places'
+                           ex2_nodup_transs' *)
+                        
+                        ex2_pre
+                        ex2_post
+                        ex2_test
+                        ex2_inhib                 
+                        
+                        ex2_marking
+                        ex2_prior.
+
+
+
+Compute (spn_animate
+           ex2_spn
+           10).  (* 11 markings *)
+
+      
+Lemma ex2_spn_animate : (spn_animate
+                           ex2_spn
+                           10) =
+      [([[]; []; []; [mk_trans 1]],
+        [(mk_place 1, 0); (mk_place 2, 1); 
+        (mk_place 3, 2); (mk_place 4, 1); (mk_place 5, 0);
+        (mk_place 6, 0); (mk_place 7, 0)]);
+       ([[]; []; [mk_trans 3]; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 1)]);
+       ([[mk_trans 6]; []; []; []],
+       [(mk_place 1, 1); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)]);
+       ([[]; []; []; [mk_trans 2]],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 1); (mk_place 6, 0);
+       (mk_place 7, 0)]);
+       ([[]; [mk_trans 4]; []; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 1);
+       (mk_place 7, 0)]);
+       ([[]; []; []; [mk_trans 5]],
+       [(mk_place 1, 0); (mk_place 2, 0); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 1)]);
+       ([[mk_trans 6]; []; []; []],
+       [(mk_place 1, 1); (mk_place 2, 0); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)]);
+       ([[]; []; []; [mk_trans 1]],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
+       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)]);
+       ([[]; []; [mk_trans 3]; []],
+       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 1)]);
+       ([[mk_trans 6]; []; []; []],
+       [(mk_place 1, 1); (mk_place 2, 1); (mk_place 3, 0);
+       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
+       (mk_place 7, 0)]); ([], [])].
+Proof. compute. reflexivity. Qed.

@@ -756,11 +756,12 @@ Proof.
   intros H0. unfold is_enabled. rewrite H0. reflexivity.
 Qed.
 
-
+(***************************************************************)
 (********************* TIME intervals  ---> chronos  ***********)
 
 Print STPN. Print chronos.
-(* increment time, for a given list of enabled transitions *)
+(* increment time, for a given  transitions *)
+
 Definition increment_time_trans
            (chronos : trans_type -> option chrono_type)
            (t :  trans_type)
@@ -778,6 +779,23 @@ Definition increment_time_trans
                        min_le_max    (cpt + 1))
           else (chronos trans))                      
   end.
+(*
+Definition increment_time_trans
+           (chronos : trans_type -> option chrono_type)
+           (t : trans_type)
+           (trans : trans_type)
+  : option chrono_type :=
+  match (chronos t) with
+  | None  => chronos trans   (* increment  nothing ... *)
+  | Some (mk_chrono
+            mini maxi min_le_max cpt) =>
+    if beq_transs
+         trans t
+    then Some (mk_chrono
+                 mini maxi min_le_max (cpt+1))
+    else (chronos trans)
+  end.
+*)
 Inductive increment_time_trans_spec
           (chronos : trans_type -> option chrono_type)
           (t :  trans_type)
@@ -804,9 +822,10 @@ Inductive increment_time_trans_spec
     increment_time_trans_spec
       chronos t chronos_t_incr.
 
-(*Functional Scheme increment_time_trans_ind :=
-  Induction for increment_time_trans Sort Prop. *)
-
+(*
+Functional Scheme increment_time_trans_ind :=
+  Induction for increment_time_trans Sort Prop. 
+*)
 Theorem increment_time_trans_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
@@ -844,13 +863,13 @@ Proof.
 Qed.
 
 
-
 Fixpoint increment_time_enabled
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
-  : trans_type -> option chrono_type :=
+    : trans_type -> option chrono_type  :=
   match enabled_transs with
   | [] => chronos
+            
   | t :: tail
     =>
     increment_time_enabled
@@ -858,6 +877,24 @@ Fixpoint increment_time_enabled
          chronos   t)
       tail
   end.
+(*
+Fixpoint increment_time_enabled
+         (chronos : trans_type -> option chrono_type)
+         (enabled_transs : list trans_type)
+         (trans : trans_type)
+  : option chrono_type  :=
+  match enabled_transs with
+  | [] => chronos
+            trans
+  | t :: tail
+    =>
+    increment_time_enabled
+      (increment_time_trans
+         chronos   t)
+      tail
+      trans
+  end.
+*)
 Inductive increment_time_enabled_spec
           (chronos : trans_type -> option chrono_type)      
   : list trans_type                     ->   (* enabled_transs *)
@@ -882,10 +919,10 @@ Inductive increment_time_enabled_spec
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
 facilement calculable *)
-
-(* Functional Scheme increment_time_enabled_ind :=
-  Induction for increment_time_enabled Sort Prop.  *)
-
+(*
+Functional Scheme increment_time_enabled_ind :=
+  Induction for increment_time_enabled Sort Prop.  
+*)
 Theorem increment_time_enabled_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
@@ -926,6 +963,7 @@ Qed.
 (**************************************************************)
 (**** on fait la meme chose pour les transitions disabled ... *)
 
+(*
 Definition reset_time_trans
            (chronos : trans_type -> option chrono_type)
            (t : trans_type)
@@ -947,6 +985,21 @@ Definition reset_time_trans
                        0 )
           else (chronos trans))             
   end.
+*)
+Definition reset_time_trans
+           (chronos : trans_type -> option chrono_type)
+           (t : trans_type) (trans : trans_type)
+  : option chrono_type :=
+  match (chronos t) with
+  | None  => chronos trans   (* reset nothing ... *)
+  | Some (mk_chrono
+            mini maxi min_le_max cpt) =>
+    if beq_transs trans t
+    then Some (mk_chrono
+                 mini maxi min_le_max 0)
+    else (chronos trans)
+  end.
+
 Inductive reset_time_trans_spec
           (chronos : trans_type -> option chrono_type)
           (t :  trans_type)
@@ -972,10 +1025,10 @@ Inductive reset_time_trans_spec
     ->
     reset_time_trans_spec
       chronos t chronos_t_incr.
-
-(* Functional Scheme reset_time_trans_ind :=
-  Induction for reset_time_trans Sort Prop. *)
-
+(*
+Functional Scheme reset_time_trans_ind :=
+  Induction for reset_time_trans Sort Prop. 
+*)
 Theorem reset_time_trans_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
@@ -1021,6 +1074,7 @@ le reset de compteur est plus subtil :
 *)
     
 (* reset time counters of (a class of ?) some transitions ... *)
+(*
 Fixpoint reset_time_disabled
            (chronos : trans_type -> option chrono_type)
            (disabled_transs : list trans_type)
@@ -1033,6 +1087,24 @@ Fixpoint reset_time_disabled
                       t)
                    tail
   end.
+*)
+Fixpoint reset_time_disabled
+         (chronos : trans_type -> option chrono_type)
+         (disabled_transs : list trans_type)
+         (trans : trans_type)
+  : option chrono_type  :=
+  match disabled_transs with
+  | [] => chronos
+            trans
+  | t :: tail
+    =>
+    reset_time_disabled
+      (reset_time_trans
+         chronos   t)
+      tail
+      trans
+  end.
+
 Inductive reset_time_disabled_spec
           (chronos : trans_type -> option chrono_type)      
   : list trans_type                     ->   (* disabled_transs *)
@@ -1054,9 +1126,10 @@ Inductive reset_time_disabled_spec
     ->
     reset_time_disabled_spec chronos (t::tail) any_chronos.
 
-(*  Functional Scheme reset_time_disabled_ind :=
-  Induction for reset_time_disabled Sort Prop. *)
-
+(*
+Functional Scheme reset_time_disabled_ind :=
+  Induction for reset_time_disabled Sort Prop. 
+*)
 Theorem reset_time_disabled_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
