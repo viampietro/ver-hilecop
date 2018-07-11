@@ -86,15 +86,15 @@ Print chrono_type. Print STPN.
 
 Fixpoint intervals2list
          (transs : list trans_type)
-         (eval_chronos : trans_type -> option chrono_type)
+         (chronoS : trans_type -> option chrono_type)
   : list (trans_type * option (nat * nat * nat) ) :=
   match transs with
   | nil => nil
-  | t :: tail => match (eval_chronos t) with
+  | t :: tail => match (chronoS t) with
                  | None  => (t, None) ::
                                       (intervals2list
                                          tail
-                                         eval_chronos)
+                                         chronoS)
                  | Some (mk_chrono
                            mini
                            maxi
@@ -103,78 +103,83 @@ Fixpoint intervals2list
                    (t, Some (mini, cpt, maxi)) ::
                                                (intervals2list
                                                   tail
-                                                  eval_chronos)
+                                                  chronoS)
                  end
   end.
 Inductive intervals2list_spec
-          (eval_chronos : trans_type -> option chrono_type)
+          (chronoS : trans_type -> option chrono_type)
   : list trans_type ->   (* transs *)
     list (trans_type * option (nat * nat * nat) ) ->
   Prop :=
 | intervals2list_nil :  intervals2list_spec
-                          eval_chronos [] []
-| intervals2list_nil_none : forall
+                          chronoS [] []
+| intervals2list_none : forall
     (transs_tail : list trans_type)
     (t : trans_type)
     (truc_tail : list (trans_type * option (nat * nat * nat))),
-    (eval_chronos t) = None                ->
+    (chronoS t) = None                ->
     intervals2list_spec
-      eval_chronos transs_tail  truc_tail             ->
+      chronoS transs_tail  truc_tail             ->
     intervals2list_spec
-      eval_chronos (t::transs_tail) ((t, None)::truc_tail)
-| intervals2list_nil_some : forall
+      chronoS (t::transs_tail) ((t, None)::truc_tail)
+| intervals2list_some : forall
     (transs_tail : list trans_type)
     (t : trans_type)
     (chrono_t : chrono_type)
     (truc_tail : list (trans_type * option (nat * nat * nat)))
     (mini maxi cpt: nat)
-    (min_leb_max : mini <= maxi),
-    (eval_chronos t) = Some chrono_t                ->
+    (mini_le_maxi : mini <= maxi),
+    (chronoS t) = Some chrono_t                ->
     chrono_t = mk_chrono
-                 mini
-                 maxi
-                 min_leb_max
-                 cpt                                ->
+                 mini    maxi
+                 mini_le_maxi      cpt          ->
     intervals2list_spec
-      eval_chronos transs_tail  truc_tail           ->
+      chronoS transs_tail  truc_tail           ->
     intervals2list_spec
-      eval_chronos (t::transs_tail) ((t, Some (mini, cpt, maxi))::truc_tail).
+      chronoS (t::transs_tail) ((t, Some (mini, cpt, maxi))::truc_tail).
 Functional Scheme intervals2list_ind :=
   Induction for intervals2list Sort Prop.
 Theorem intervals2list_correct : forall
     (transs : list trans_type)
-    (eval_chronos : trans_type -> option chrono_type)
+    (chronoS : trans_type -> option chrono_type)
     (list_chronos : list (trans_type * option (nat * nat * nat))),
     intervals2list
-      transs eval_chronos = list_chronos    ->
+      transs     chronoS = list_chronos    ->
     intervals2list_spec
-      eval_chronos transs   list_chronos.
+      chronoS    transs    list_chronos.
 Proof.
-  intros. (*
-  functional induction (good_time  maybe_chrono) using good_time_ind.
-  - intro H. apply good_time_some with (mini:=mini0) (maxi:=maxi0) (cpt:=cpt0) (min_leb_max:=_x).
+  intros transs chronoS. functional induction (intervals2list transs  chronoS) using intervals2list_ind.
+  - intros list_chronos H. rewrite <- H. apply intervals2list_nil.
+  - intros list_chronos H. rewrite <- H.
+    apply intervals2list_some
+      with (chrono_t := mk_chrono
+                          mini0 maxi0 _x cpt0) (mini_le_maxi := _x).
+    + assumption. 
     + reflexivity.
-    + exact H.
-  - intro H. apply good_time_none. reflexivity.
+    + apply (IHl (intervals2list  tail chronoS)). reflexivity.
+  - intros list_chronos H. rewrite <- H. apply intervals2list_none.
+    + assumption.
+    + apply (IHl (intervals2list  tail chronoS)). reflexivity. 
 Qed.
 Theorem intervals2list_complete : forall
-    (maybe_chrono : option chrono_type),
-    good_time_spec  maybe_chrono            ->
-    good_time       maybe_chrono = true.     
+    (transs : list trans_type)
+    (chronoS : trans_type -> option chrono_type)
+    (list_chronos : list (trans_type * option (nat * nat * nat))),
+    intervals2list_spec
+      chronoS    transs    list_chronos   ->
+    intervals2list
+      transs     chronoS = list_chronos.    
 Proof.
-  intros maybe_chrono H. elim H.
-  - intro H'. unfold good_time. rewrite H'. reflexivity.
-  - intros mini maxi cpt min_leb_max H1 H2.
-    unfold good_time. rewrite H1. exact H2.  *)
-Admitted.
+  intros transs chronoS list_chronos H. elim H.
+  - simpl. reflexivity.
+  - intros. simpl. rewrite H0. rewrite H2. reflexivity.
+  - intros. simpl. rewrite H0. rewrite H1. rewrite H3. reflexivity.
+Qed.
 
-
-
-(***************** to print ******************)
+(**************  end of "to print"  ******************)
 
 
 (** "enabled" <=> "arcs_classic" + "arcs_test" + "arcs_inhi" OK **)
-
 Definition is_enabled
            (places : list place_type)
            (pre   test  inhib : weight_type)
@@ -244,7 +249,6 @@ Proof.
   intros places pre   test  inhib m_steady  t H. elim H.
   intros H0. unfold is_enabled. rewrite H0. reflexivity.
 Qed.
-
 (**   useless fonction for SPN but useful for 
 
 -  _asynchronous_ Petri nets
@@ -283,87 +287,86 @@ Inductive list_enabled_aux_spec
           (places : list place_type)
           (pre    test    inhib : weight_type) 
           (m_steady   : marking_type)
-          (enabled_transs : list trans_type)
+          (enabled_transs_rec : list trans_type)
   : list trans_type  ->   (* sometranss *)
-    list trans_type  ->   (* enabled_transs *)
+    list trans_type  ->   (* enabled_transs     *)
     Prop :=
-| list_enabled_nil :
+| list_enabled_aux_nil :
     list_enabled_aux_spec 
       places   pre   test   inhib  
-      m_steady  enabled_transs [] enabled_transs
-| list_enabled_cons_if :  forall
-    (tail : list trans_type)
+      m_steady  enabled_transs_rec [] enabled_transs_rec
+| list_enabled_aux_cons_if :  forall
+    (tail  enabled_transs : list trans_type)
     (t : trans_type),
     list_enabled_aux_spec 
       places   pre   test   inhib  
-      m_steady  enabled_transs tail (t::enabled_transs)
+      m_steady  enabled_transs_rec   tail   (t::enabled_transs)
     ->
     is_enabled
-      places
-      pre   test  inhib
+      places      pre   test  inhib
       m_steady    t  = true
     ->
     list_enabled_aux_spec 
       places   pre   test   inhib  
-      m_steady  enabled_transs (t::tail) enabled_transs
-| list_enabled_cons_else :  forall
-    (tail : list trans_type)
+      m_steady  enabled_transs_rec   (t::tail)   enabled_transs
+| list_enabled_aux_cons_else :  forall
+    (tail   enabled_transs  : list trans_type)
     (t : trans_type),
     list_enabled_aux_spec 
       places   pre   test   inhib  
-      m_steady  enabled_transs tail enabled_transs
+      m_steady  enabled_transs_rec   tail    enabled_transs
     ->
     is_enabled
-      places
-      pre   test  inhib
+      places      pre   test  inhib
       m_steady    t  = true
     ->
     list_enabled_aux_spec 
       places   pre   test   inhib  
-      m_steady  enabled_transs (t::tail) enabled_transs.
+      m_steady  enabled_transs_rec   (t::tail)   enabled_transs.
 
 Functional Scheme list_enabled_aux_ind :=
   Induction for list_enabled_aux Sort Prop.
 
-Theorem list_enabled_aux_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem list_enabled_aux_correct : forall
+    (sometranss enabled_transs_rec enabled_transs : list trans_type)
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady : marking_type),
+    list_enabled_aux
+      sometranss    places     pre   test  inhib
+      m_steady    enabled_transs_rec         = enabled_transs   ->
+    list_enabled_aux_spec
+      places     pre   test  inhib
+      m_steady  enabled_transs_rec  sometranss enabled_transs.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
-Qed.
-Theorem list_enabled_aux_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+  intros sometranss enabled_transs_rec enabled_transs
+         places pre test inhib m_steady.
+  functional induction (list_enabled_aux
+                          sometranss places pre test inhib
+                          m_steady  enabled_transs_rec)
+             using list_enabled_aux_ind.
+  - intros H. rewrite H. apply list_enabled_aux_nil.
+  - intros H. apply list_enabled_aux_cons_if.
+    + Admitted.
+Theorem list_enabled_aux_complete : forall
+    (sometranss enabled_transs_rec enabled_transs : list trans_type)
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady : marking_type),
+    list_enabled_aux_spec
+      places     pre   test  inhib
+      m_steady  enabled_transs_rec  sometranss enabled_transs  ->
+    list_enabled_aux
+      sometranss    places     pre   test  inhib
+      m_steady    enabled_transs_rec         = enabled_transs.
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
-Qed.
+  intros sometranss enabled_transs_rec enabled_transs
+         places  pre   test  inhib   m_steady H. elim H.
+  - simpl.  reflexivity.
+  - intros tail enabled_transs0 t H1 H2 H3.
+    simpl. rewrite H3. Admitted.
 
-
-
-
+(****** list_enabled_aux   ->  list_enabled  *************)
 Definition list_enabled 
            (sometranss : list trans_type)
            (places : list place_type)
@@ -373,60 +376,57 @@ Definition list_enabled
   list_enabled_aux
     sometranss    places    pre    test   inhib    m_steady  [].
 Inductive list_enabled_spec
-           (sometranss : list trans_type)
+           (sometranss  : list trans_type)
            (places : list place_type)
            (pre    test    inhib : weight_type) 
            (m_steady   : marking_type)
-  : list trans_type  ->  Prop  :=
-| list_enabled_mk : forall (enabled_transs : list trans_type),
+           (enabled_transs : list trans_type) 
+  : Prop  :=
+| list_enabled_mk : 
     list_enabled_aux
       sometranss    places    pre    test   inhib    m_steady  []
-    = enabled_transs
-    -> list_enabled_spec
-         sometranss    places    pre    test   inhib    m_steady
-         enabled_transs.
-
+    = enabled_transs   ->
+    list_enabled_spec
+      sometranss    places    pre    test   inhib    m_steady
+      enabled_transs.
 Functional Scheme list_enabled_ind :=
   Induction for list_enabled Sort Prop.
-
-Theorem list_enabled_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem list_enabled_correct :  forall
+    (sometranss  enabled : list trans_type)
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady : marking_type),
+    list_enabled
+      sometranss  places    pre   test  inhib
+      m_steady      =   enabled        ->
+    list_enabled_spec
+      sometranss  places    pre   test  inhib
+      m_steady   enabled.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
+  intros sometranss  enabled places pre test inhib m_steady.
+  functional induction (list_enabled
+                          sometranss  places pre test inhib
+                          m_steady)
+             using list_enabled_ind.
+  intro H. apply list_enabled_mk. assumption.  
 Qed.
-Theorem list_enabled_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+Theorem list_enabled_complete : forall
+    (sometranss  enabled : list trans_type)
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady : marking_type),
+    list_enabled
+      sometranss  places    pre   test  inhib
+      m_steady      =   enabled        ->
+    list_enabled_spec
+      sometranss  places    pre   test  inhib
+      m_steady   enabled.
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
-Qed.
+  intros  sometranss  enabled places pre test inhib m_steady H.
+  elim H. unfold list_enabled.
+Admitted.
 
-
-(************************************** easy spn stpn ************)
+(********************************** easy spn stpn ... ********)
 Definition list_enabled_spn
            (spn : SPN)
   : list trans_type :=
@@ -470,42 +470,34 @@ Inductive list_enabled_spn_spec
 Functional Scheme list_enabled_spn_ind :=
   Induction for list_enabled_spn Sort Prop.
 
-Theorem list_enabled_spn_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem list_enabled_spn_correct : forall
+    (spn : SPN) (enabled : list trans_type),
+    list_enabled_spn
+      spn = enabled        ->
+    list_enabled_spn_spec
+      spn  enabled.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
+  intros spn  enabled.
+  functional induction (list_enabled_spn
+                          spn)
+             using list_enabled_spn_ind.
+  intro H. apply list_enabled_spn_mk with
+               (Lol := _x0) (m := marking)
+               (places := places) (transs := transs)
+               (pre:=pre) (post:=_x) (test:=test) (inhib:=inhib).
+  + reflexivity.
+  + assumption.   
 Qed.
-Theorem list_enabled_spn_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+Theorem list_enabled_spn_complete : forall
+    (spn : SPN) (enabled : list trans_type),
+    list_enabled_spn_spec
+      spn  enabled                  -> 
+    list_enabled_spn
+      spn = enabled.
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
+  intros spn  enabled H. elim H.
+  intros. unfold list_enabled_spn. rewrite H0. assumption. 
 Qed.
-
 
 Definition list_enabled_stpn
            (stpn : STPN)
@@ -536,47 +528,35 @@ Inductive list_enabled_stpn_spec
     list_enabled_stpn_spec
       stpn 
       enabled_transs.
-
 Functional Scheme list_enabled_stpn_ind :=
   Induction for list_enabled_stpn Sort Prop.
-
-Theorem list_enabled_stpn_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem list_enabled_stpn_correct :  forall
+    (stpn : STPN) (enabled : list trans_type),
+    list_enabled_stpn
+      stpn = enabled        ->
+    list_enabled_stpn_spec
+      stpn  enabled.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
+  intros stpn  enabled.
+  functional induction (list_enabled_stpn
+                          stpn)
+             using list_enabled_stpn_ind.
+  intro H. apply list_enabled_stpn_mk with
+               (spn := spn0) (chronos := _x).
+  + reflexivity.
+  + assumption.   
 Qed.
-Theorem list_enabled_stpn_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+Theorem list_enabled_stpn_complete : forall
+    (stpn : STPN) (enabled : list trans_type),
+    list_enabled_stpn_spec
+      stpn  enabled                  -> 
+    list_enabled_stpn
+      stpn = enabled.
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
+  intros stpn  enabled H. elim H.
+  intros. unfold list_enabled_stpn. rewrite H0. rewrite H1.
+  reflexivity. 
 Qed.
-
-
 
 (********* same as "list_enabled_(aux)"  (so 2 markings) ***********)
 Print synchro_check_arcs.
@@ -604,85 +584,100 @@ Inductive not_synchro_check_list_aux_spec
           (places : list place_type)
           (pre    test    inhib : weight_type) 
           (m_steady   m_decreasing  : marking_type)
-          (disabled_transs : list trans_type)
+          (disab_rec : list trans_type)
   : list trans_type  ->   (* sometranss *)
     list trans_type  ->   (* DISabled_transs *)
     Prop :=
 | not_synchro_check_list_aux_nil :
     not_synchro_check_list_aux_spec
-      places 
-      pre    test    inhib 
-      m_steady   m_decreasing  disabled_transs  [] disabled_transs
+      places     pre    test    inhib 
+      m_steady   m_decreasing    disab_rec
+      []         disab_rec
 | not_synchro_check_list_aux_cons_if :  forall
-    (tail : list trans_type)
+    (tail  disabled_transs : list trans_type)
     (t : trans_type),
     not_synchro_check_list_aux_spec 
-      places   pre   test   inhib  
-      m_steady m_decreasing disabled_transs tail
-      disabled_transs
+      places     pre   test   inhib  
+      m_steady   m_decreasing    disab_rec
+      tail       disabled_transs
     ->
      synchro_check_arcs
        places  (pre t) (test t) (inhib t) m_steady  m_decreasing
      = true 
     ->
     not_synchro_check_list_aux_spec  
-      places   pre   test   inhib  
-      m_steady  m_decreasing disabled_transs (t::tail)
-      disabled_transs
+      places     pre   test   inhib  
+      m_steady   m_decreasing    disab_rec
+      (t::tail)  disabled_transs
 | not_synchro_check_list_aux_cons_else :  forall
-    (tail : list trans_type)
+    (tail   disabled_transs  : list trans_type)
     (t : trans_type),
     not_synchro_check_list_aux_spec 
-      places   pre   test   inhib  
-      m_steady m_decreasing disabled_transs tail
-      disabled_transs
+      places     pre   test   inhib  
+      m_steady   m_decreasing   (t::disab_rec)
+      tail       disabled_transs
     ->
      synchro_check_arcs
        places  (pre t) (test t) (inhib t) m_steady  m_decreasing
      = false
     ->
     not_synchro_check_list_aux_spec  
-      places   pre   test   inhib  
-      m_steady  m_decreasing disabled_transs (t::tail)
-      disabled_transs.
+      places     pre   test   inhib  
+      m_steady   m_decreasing   disab_rec
+      (t::tail)  disabled_transs.
 
 Functional Scheme not_synchro_check_list_aux_ind :=
   Induction for not_synchro_check_list_aux Sort Prop.
 
-Theorem not_synchro_check_list_aux_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem not_synchro_check_list_aux_correct :  forall
+    (sometranss  disab_rec  disabled_transs: list trans_type)
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady  m_decreasing : marking_type),
+    not_synchro_check_list_aux 
+      sometranss     places   pre   test   inhib  
+      m_steady   m_decreasing    disab_rec
+    = disabled_transs    ->
+    not_synchro_check_list_aux_spec 
+      places     pre   test   inhib  
+      m_steady   m_decreasing    disab_rec
+      sometranss       disabled_transs.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
+  intros sometranss  disab_rec disabled_transs
+         places   pre   test   inhib  
+         m_steady   m_decreasing.
+  functional induction (not_synchro_check_list_aux
+                          sometranss     places   pre   test  inhib
+                          m_steady   m_decreasing  disab_rec)
+             using not_synchro_check_list_aux_ind.
+  - intro H. rewrite H. apply not_synchro_check_list_aux_nil.
+  - intro H. apply not_synchro_check_list_aux_cons_if.
+    + apply (IHl H).
+    + assumption.
+  - intro H. apply not_synchro_check_list_aux_cons_else.
+    + apply (IHl H).
+    + assumption.   
 Qed.
-Theorem not_synchro_check_list_aux_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+Theorem not_synchro_check_list_aux_complete :  forall
+    (sometranss  disab_rec  disabled_transs: list trans_type)
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady  m_decreasing : marking_type),
+    not_synchro_check_list_aux_spec 
+      places     pre   test   inhib  
+      m_steady   m_decreasing    disab_rec
+      sometranss       disabled_transs               ->
+    not_synchro_check_list_aux 
+      sometranss     places   pre   test   inhib  
+      m_steady   m_decreasing    disab_rec
+    = disabled_transs.  
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
+  intros sometranss  disab_rec disabled_transs
+         places   pre   test   inhib  
+         m_steady   m_decreasing  H. elim H.
+  - intro  disab_rec0. simpl. reflexivity.
+  - intros. simpl. rewrite H2. assumption.
+  - intros. simpl. rewrite H2. assumption. 
 Qed.
 
 (**************************************************************)
@@ -694,9 +689,7 @@ Definition not_synchro_check_list
          (m_steady    m_decreasing : marking_type)
   : list trans_type :=
   not_synchro_check_list_aux 
-    sometranss 
-    places
-    pre    test    inhib
+    sometranss     places    pre    test    inhib
     m_steady    m_decreasing  [].
 Inductive not_synchro_check_list_spec
            (sometranss : list trans_type)
@@ -707,53 +700,58 @@ Inductive not_synchro_check_list_spec
 | not_synchro_check_list_mk : forall
     (enabled_transs : list trans_type),
     not_synchro_check_list_aux 
-      sometranss 
-      places
-      pre    test    inhib
-      m_steady    m_decreasing  []
+      sometranss    places     pre    test    inhib
+      m_steady      m_decreasing  []
     = enabled_transs
-    -> not_synchro_check_list_spec
-         sometranss    places    pre    test   inhib
-         m_steady  m_decreasing
-         enabled_transs.
+    ->
+    not_synchro_check_list_spec
+      sometranss    places    pre    test   inhib
+      m_steady      m_decreasing      enabled_transs.
 
 Functional Scheme not_synchro_check_list_ind :=
   Induction for not_synchro_check_list Sort Prop.
 
-Theorem not_synchro_check_list_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem not_synchro_check_list_correct :  forall
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady   m_decreasing : marking_type)
+    (some_transs  enabled_transs  : list trans_type),
+    not_synchro_check_list 
+      some_transs     places
+      pre    test    inhib
+      m_steady    m_decreasing
+    =  enabled_transs                   ->
+    not_synchro_check_list_spec
+      some_transs   places    pre    test    inhib
+      m_steady    m_decreasing   enabled_transs.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
+  intros places  pre    test    inhib
+      m_steady    m_decreasing   some_transs  enabled_transspre.
+  functional induction (not_synchro_check_list
+                          some_transs places pre test inhib
+                          m_steady m_decreasing)
+             using not_synchro_check_list_ind.
+  intro H. apply not_synchro_check_list_mk. assumption.   
 Qed.
-Theorem not_synchro_check_list_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+Theorem not_synchro_check_list_complete : forall
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady   m_decreasing : marking_type)
+    (some_transs  enabled_transs  : list trans_type),
+    not_synchro_check_list_spec
+      some_transs   places    pre    test    inhib
+      m_steady    m_decreasing   enabled_transs          ->
+    not_synchro_check_list 
+      some_transs     places
+      pre    test    inhib
+      m_steady    m_decreasing
+    =  enabled_transs.
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
+  intros places  pre    test    inhib
+         m_steady  m_decreasing   some_transs  enabled_transs H.
+  elim H.
+  intros enabled_transs0 H0.  unfold not_synchro_check_list.
+  rewrite H0. reflexivity.
 Qed.
 
 (***************************************************************)
@@ -762,6 +760,7 @@ Qed.
 Print STPN. Print chronos.
 (* increment time, for a given  transitions *)
 
+(*
 Definition increment_time_trans
            (chronos : trans_type -> option chrono_type)
            (t :  trans_type)
@@ -779,7 +778,7 @@ Definition increment_time_trans
                        min_le_max    (cpt + 1))
           else (chronos trans))                      
   end.
-(*
+*)
 Definition increment_time_trans
            (chronos : trans_type -> option chrono_type)
            (t : trans_type)
@@ -795,7 +794,7 @@ Definition increment_time_trans
                  mini maxi min_le_max (cpt+1))
     else (chronos trans)
   end.
-*)
+
 Inductive increment_time_trans_spec
           (chronos : trans_type -> option chrono_type)
           (t :  trans_type)
@@ -822,10 +821,9 @@ Inductive increment_time_trans_spec
     increment_time_trans_spec
       chronos t chronos_t_incr.
 
-(*
 Functional Scheme increment_time_trans_ind :=
   Induction for increment_time_trans Sort Prop. 
-*)
+
 Theorem increment_time_trans_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
@@ -862,7 +860,7 @@ Proof.
   intros H0. unfold is_enabled. rewrite H0. reflexivity.
 Qed.
 
-
+(*
 Fixpoint increment_time_enabled
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
@@ -877,7 +875,7 @@ Fixpoint increment_time_enabled
          chronos   t)
       tail
   end.
-(*
+*)
 Fixpoint increment_time_enabled
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
@@ -894,7 +892,7 @@ Fixpoint increment_time_enabled
       tail
       trans
   end.
-*)
+
 Inductive increment_time_enabled_spec
           (chronos : trans_type -> option chrono_type)      
   : list trans_type                     ->   (* enabled_transs *)
@@ -919,10 +917,10 @@ Inductive increment_time_enabled_spec
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
 facilement calculable *)
-(*
+
 Functional Scheme increment_time_enabled_ind :=
   Induction for increment_time_enabled Sort Prop.  
-*)
+
 Theorem increment_time_enabled_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
@@ -1025,10 +1023,10 @@ Inductive reset_time_trans_spec
     ->
     reset_time_trans_spec
       chronos t chronos_t_incr.
-(*
+
 Functional Scheme reset_time_trans_ind :=
   Induction for reset_time_trans Sort Prop. 
-*)
+
 Theorem reset_time_trans_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
@@ -1126,10 +1124,10 @@ Inductive reset_time_disabled_spec
     ->
     reset_time_disabled_spec chronos (t::tail) any_chronos.
 
-(*
+
 Functional Scheme reset_time_disabled_ind :=
   Induction for reset_time_disabled Sort Prop. 
-*)
+
 Theorem reset_time_disabled_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)

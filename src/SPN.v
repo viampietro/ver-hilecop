@@ -145,9 +145,11 @@ Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
   | (mk_place n, mk_place n') => beq_nat n n'
   end.
+
 Functional Scheme beq_places_ind :=
   Induction for beq_places Sort Prop.
-Print beq_places_ind. Print nat_ind.
+(* Print beq_places_ind. Print nat_ind.  *)
+
 Theorem beq_places_correct :
   forall (p p' : place_type),
     beq_places p p' = true ->
@@ -291,8 +293,9 @@ Definition modif_mark
                    end
        end
   else m p'.         (* other places left unchanged  *)
+
 (*
-Inductive modif_marking_locally_spec
+Inductive modif_marking_spec
           (m : marking_type)
           (p  : place_type)
           (j : option nat_star)
@@ -310,8 +313,8 @@ Inductive modif_marking_locally_spec
                                     end
                          end
                     else m p'      )  ->
-    modif_marking_locally_spec m p j op m'.
-Definition modif_marking_locally
+    modif_marking_spec m p j op m'.
+Definition modif_marking
            (m : marking_type)
            (p : place_type)
            (j : option nat_star)
@@ -328,10 +331,11 @@ Definition modif_marking_locally
                              end
                  end
             else m p'.         (* other places left unchanged  *)
-*)
-(*****************************************************************)
-(*************** ????????????????????????????? *******************)
-(*****************************************************************)
+
+Functional Scheme modif_marking_ind :=
+  Induction for modif_marking Sort Prop.
+ *)
+
 Functional Scheme modif_mark_ind :=
   Induction for modif_mark Sort Prop.
 Theorem modif_mark_correct :  forall
@@ -392,10 +396,10 @@ Fixpoint update_marking_pre
   : marking_type :=
   match places with
   | [] => m
-  | cons p tail
-    => update_marking_pre
-         tail  t  pre  (modif_mark
-                          m  p  (pre t p)  Nat.sub)
+  | cons p tail    => update_marking_pre
+                        tail  t  pre
+                        (modif_mark
+                           m  p  (pre t p)  Nat.sub)
   end.
 
 Functional Scheme update_marking_pre_ind :=
@@ -464,8 +468,9 @@ Fixpoint update_marking_post
   match places with
   | [] => m
   | cons p tail => update_marking_post
-                     tail  t  post  (modif_mark
-                                       m   p  (post t p)  Nat.add)
+                     tail  t  post
+                     (modif_mark
+                        m   p  (post t p)  Nat.add)
   end.
 
 Functional Scheme update_marking_post_ind :=
@@ -950,10 +955,10 @@ Inductive spn_class_fire_pre_aux_spec
                           places   t   pre   m_decreasing_high)
     ->
     spn_class_fire_pre_aux_spec
-      places                       pre  test  inhib
-      m_steady                     m_decreasing_low
-      tail                         (subclass_fired_pre ++ [t])
-      sub                          m 
+      places               pre  test  inhib
+      m_steady             m_decreasing_low
+      tail                 (subclass_fired_pre ++ [t])
+      sub                  m 
     ->
     spn_class_fire_pre_aux_spec
       places               pre  test  inhib
@@ -973,13 +978,13 @@ Inductive spn_class_fire_pre_aux_spec
       places                pre  test  inhib
       m_steady              m_decreasing  
       tail                  subclass_half_fired
-      sub                  m 
+      sub                   m 
     ->
     spn_class_fire_pre_aux_spec
       places                pre  test  inhib
       m_steady              m_decreasing     
       (t::tail)             subclass_half_fired
-      sub                  m
+      sub                   m
 .
 (** given 1 ordered class of transitions 
 in structural conflict (a list class_of_transs), 
