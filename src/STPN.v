@@ -300,11 +300,12 @@ Inductive list_enabled_aux_spec
     (t : trans_type),
     list_enabled_aux_spec 
       places   pre   test   inhib  
-      m_steady  enabled_transs_rec   tail   (t::enabled_transs)
+      m_steady  (t::enabled_transs_rec)   tail   enabled_transs
     ->
     is_enabled
       places      pre   test  inhib
-      m_steady    t  = true
+      m_steady    t
+    = true
     ->
     list_enabled_aux_spec 
       places   pre   test   inhib  
@@ -318,7 +319,8 @@ Inductive list_enabled_aux_spec
     ->
     is_enabled
       places      pre   test  inhib
-      m_steady    t  = true
+      m_steady    t
+    = false
     ->
     list_enabled_aux_spec 
       places   pre   test   inhib  
@@ -345,9 +347,14 @@ Proof.
                           sometranss places pre test inhib
                           m_steady  enabled_transs_rec)
              using list_enabled_aux_ind.
-  - intros H. rewrite H. apply list_enabled_aux_nil.
-  - intros H. apply list_enabled_aux_cons_if.
-    + Admitted.
+  - intro H. rewrite H. apply list_enabled_aux_nil.
+  - intro H. apply list_enabled_aux_cons_if.
+    + apply (IHl H).
+    + assumption. 
+  - intro H. apply list_enabled_aux_cons_else.
+    + apply (IHl H).
+    + assumption.
+Qed.
 Theorem list_enabled_aux_complete : forall
     (sometranss enabled_transs_rec enabled_transs : list trans_type)
     (places : list place_type)
@@ -363,8 +370,11 @@ Proof.
   intros sometranss enabled_transs_rec enabled_transs
          places  pre   test  inhib   m_steady H. elim H.
   - simpl.  reflexivity.
-  - intros tail enabled_transs0 t H1 H2 H3.
-    simpl. rewrite H3. Admitted.
+  - intros enabled_transs_rec0 tail enabled_transs0 t H1 H2 H3.
+    simpl. rewrite H3. rewrite H2. reflexivity.
+  - intros enabled_transs_rec0 tail enabled_transs0 t H1 H2 H3.
+    simpl. rewrite H3. rewrite H2. reflexivity.
+Qed.
 
 (****** list_enabled_aux   ->  list_enabled  *************)
 Definition list_enabled 
@@ -380,9 +390,10 @@ Inductive list_enabled_spec
            (places : list place_type)
            (pre    test    inhib : weight_type) 
            (m_steady   : marking_type)
-           (enabled_transs : list trans_type) 
-  : Prop  :=
-| list_enabled_mk : 
+            
+  : list trans_type       (* enabled_transs  *)
+    -> Prop  :=
+| list_enabled_mk :  forall (enabled_transs : list trans_type),
     list_enabled_aux
       sometranss    places    pre    test   inhib    m_steady  []
     = enabled_transs   ->
@@ -423,7 +434,7 @@ Theorem list_enabled_complete : forall
       m_steady   enabled.
 Proof.
   intros  sometranss  enabled places pre test inhib m_steady H.
-  elim H. unfold list_enabled.
+  elim H. unfold list_enabled.  
 Admitted.
 
 (********************************** easy spn stpn ... ********)
@@ -798,67 +809,76 @@ Definition increment_time_trans
 Inductive increment_time_trans_spec
           (chronos : trans_type -> option chrono_type)
           (t :  trans_type)
-  : (trans_type -> option chrono_type)  ->  Prop  :=
+          (trans : trans_type)
+  : option chrono_type  ->  Prop  :=
 | increment_time_trans_none : 
-    (chronos t) = None              ->
+    (chronos t) = None
+    ->
     increment_time_trans_spec
-      chronos t chronos
-| increment_time_trans_some : forall
+      chronos  t  trans  (chronos  trans)
+| increment_time_trans_some_if : forall
     (chrono_t : chrono_type)
     (mini maxi cpt : nat)
     (min_leb_max : mini <= maxi)
-    (chronos_t_incr : trans_type -> option chrono_type),
+    (chrono_t_incr : option chrono_type),
     (chronos t) = Some (mk_chrono
                           mini  maxi
                           min_leb_max   cpt)
     ->
-    (chronos_t_incr = (fun t' => if beq_transs t t'
-                               then Some (mk_chrono
-                                            mini   maxi
-                                            min_leb_max  (cpt + 1))
-                               else (chronos t')))
+    beq_transs t trans = true
+    -> 
+    chrono_t_incr = Some (mk_chrono
+                             mini   maxi
+                             min_leb_max  (cpt + 1))
     ->
     increment_time_trans_spec
-      chronos t chronos_t_incr.
+      chronos t  trans  chrono_t_incr
+| increment_time_trans_some_else : forall
+    (chrono_t : chrono_type)
+    (mini maxi cpt : nat)
+    (min_leb_max : mini <= maxi)
+    (chrono_t_incr : option chrono_type),
+    (chronos t) = Some (mk_chrono
+                          mini  maxi
+                          min_leb_max   cpt)
+    ->
+    beq_transs t trans = false
+    ->
+    increment_time_trans_spec
+      chronos t  trans  (chronos trans).
 
 Functional Scheme increment_time_trans_ind :=
   Induction for increment_time_trans Sort Prop. 
 
-Theorem increment_time_trans_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem increment_time_trans_correct : forall
+    (chronos   chronos_incr: trans_type -> option chrono_type)
+    (t :  trans_type)
+    (trans : trans_type),
+    increment_time_trans
+      chronos  t  trans   = (chronos_incr trans)        ->
+    increment_time_trans_spec
+      chronos  t  trans     (chronos_incr trans).
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
-Qed.
-Theorem increment_time_trans_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+  intros chronos  chronos_incr  t  trans.  
+  functional induction (increment_time_trans
+                          chronos  t  trans)
+             using  increment_time_trans_ind.
+  - intro H. apply increment_time_trans_some_if with
+                 (mini := mini0) (maxi := maxi0) (cpt := cpt0 + 1) (min_leb_max:=min_le_max).
+Admitted.
+
+Theorem increment_time_trans_complete : forall
+    (chronos   chronos_incr: trans_type -> option chrono_type)
+    (t2incr :  trans_type)
+    (trans : trans_type),
+    increment_time_trans
+      chronos  t2incr  trans   = (chronos_incr trans)        ->
+    increment_time_trans_spec
+      chronos  t2incr  trans     (chronos_incr trans).
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
-Qed.
+  intros chronos  chronos_incr  t2incr  trans H. elim H.
+  unfold increment_time_trans.
+Admitted.
 
 (*
 Fixpoint increment_time_enabled
@@ -894,25 +914,29 @@ Fixpoint increment_time_enabled
   end.
 
 Inductive increment_time_enabled_spec
-          (chronos : trans_type -> option chrono_type)      
-  : list trans_type                     ->   (* enabled_transs *)
-    (trans_type -> option chrono_type)  ->  (* resulting chronos *)
+          (chronos : trans_type -> option chrono_type)
+          (trans : trans_type) 
+  : list trans_type                  ->   (* enabled_transs *)
+    option chrono_type               ->  (* resulting chronos *)
     Prop :=
 | increment_time_enabled_nil :
-    increment_time_enabled_spec chronos [] chronos
+    increment_time_enabled_spec
+      chronos  trans  [] (chronos trans)
 | increment_time_enabled_cons : forall
     (tail : list trans_type)
-    (t : trans_type)
+    (t2incr : trans_type)
     (any_chronos : trans_type -> option chrono_type)
     (chronos_t_incr : trans_type -> option chrono_type),
     chronos_t_incr = increment_time_enabled 
                       (increment_time_trans
-                         any_chronos   t)
+                         any_chronos   t2incr)
                       tail
     ->
-    increment_time_enabled_spec chronos tail chronos_t_incr
+    increment_time_enabled_spec
+      chronos trans tail (chronos_t_incr trans)
     ->
-    increment_time_enabled_spec chronos (t::tail) any_chronos.
+    increment_time_enabled_spec
+      chronos trans (t2incr::tail) (any_chronos trans).
 
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
@@ -921,41 +945,37 @@ facilement calculable *)
 Functional Scheme increment_time_enabled_ind :=
   Induction for increment_time_enabled Sort Prop.  
 
-Theorem increment_time_enabled_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem increment_time_enabled_correct : forall
+    (chronos   chronos_incr: trans_type -> option chrono_type)
+    (enabled_transs :  list trans_type)
+    (trans : trans_type),
+    increment_time_enabled
+      chronos  enabled_transs  trans  = (chronos_incr trans)
+    ->
+    increment_time_enabled_spec
+      chronos  trans  enabled_transs    (chronos_incr trans).
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
-Qed.
-Theorem increment_time_enabled_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+  intros chronos  chronos_incr  enabled_transs  trans.  
+  functional induction (increment_time_enabled
+                          chronos  enabled_transs  trans)
+             using  increment_time_enabled_ind.
+  - intro H. rewrite <- H. apply increment_time_enabled_nil.
+  - intro H. rewrite <- H. apply increment_time_enabled_cons
+                             with (chronos_t_incr := chronos_incr).
+    + 
+Admitted.
+Theorem increment_time_enabled_complete : forall
+    (chronos   chronos_incr: trans_type -> option chrono_type)
+    (enabled_transs :  list trans_type)
+    (trans : trans_type),
+    increment_time_enabled_spec
+      chronos  trans  enabled_transs    (chronos_incr trans)   ->
+    increment_time_enabled
+      chronos  enabled_transs  trans  = (chronos_incr trans).
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
-Qed.
+  intros chronos  chronos_incr  enabled_transs  trans H.  elim H.
+  - simpl. reflexivity.
+  - intros. simpl. Admitted.
 
 
 (**************************************************************)
@@ -986,13 +1006,13 @@ Definition reset_time_trans
 *)
 Definition reset_time_trans
            (chronos : trans_type -> option chrono_type)
-           (t : trans_type) (trans : trans_type)
+           (t2reset   trans : trans_type)
   : option chrono_type :=
-  match (chronos t) with
+  match (chronos t2reset) with
   | None  => chronos trans   (* reset nothing ... *)
   | Some (mk_chrono
             mini maxi min_le_max cpt) =>
-    if beq_transs trans t
+    if beq_transs  t2reset trans 
     then Some (mk_chrono
                  mini maxi min_le_max 0)
     else (chronos trans)
@@ -1000,67 +1020,86 @@ Definition reset_time_trans
 
 Inductive reset_time_trans_spec
           (chronos : trans_type -> option chrono_type)
-          (t :  trans_type)
-  : (trans_type -> option chrono_type)  ->  Prop  :=
+          (t2reset  trans :  trans_type)
+  :  option chrono_type  ->  Prop  :=
 | reset_time_trans_none : 
-    (chronos t) = None              ->
+    (chronos t2reset) = None
+    ->
     reset_time_trans_spec
-      chronos t chronos
-| reset_time_trans_some : forall
-    (chrono_t : chrono_type)
+      chronos t2reset trans  (chronos trans)
+| reset_time_trans_some_if : forall
     (mini maxi cpt : nat)
     (min_leb_max : mini <= maxi)
-    (chronos_t_incr : trans_type -> option chrono_type),
-    (chronos t) = Some (mk_chrono
-                          mini  maxi
-                          min_leb_max   cpt)
+    (chrono_t_reset : option chrono_type),
+    (chronos t2reset) = Some (mk_chrono
+                                mini  maxi
+                                min_leb_max   cpt)
     ->
-    (chronos_t_incr = (fun t' => if beq_transs t t'
-                               then Some (mk_chrono
-                                            mini   maxi
-                                            min_leb_max  0)
-                               else (chronos t')))
+    beq_transs t2reset  trans = true
+    ->
+    Some (mk_chrono
+            mini   maxi
+            min_leb_max  0) = chrono_t_reset
     ->
     reset_time_trans_spec
-      chronos t chronos_t_incr.
+      chronos t2reset  trans chrono_t_reset
+| reset_time_trans_some_else : forall
+    (mini maxi cpt : nat)
+    (min_leb_max : mini <= maxi),
+    (chronos t2reset) = Some (mk_chrono
+                                mini  maxi
+                                min_leb_max   cpt)
+    ->
+    beq_transs t2reset  trans = false
+    ->
+    reset_time_trans_spec
+      chronos t2reset  trans (chronos trans).
 
 Functional Scheme reset_time_trans_ind :=
   Induction for reset_time_trans Sort Prop. 
 
-Theorem reset_time_trans_correct :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true        ->
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t.
+Theorem reset_time_trans_correct :  forall
+    (chronos : trans_type -> option chrono_type)
+    (t2reset   trans : trans_type)
+    (chrono_t_reset : option chrono_type),
+    reset_time_trans
+      chronos    t2reset   trans    =  chrono_t_reset       ->
+    reset_time_trans_spec
+      chronos    t2reset   trans       chrono_t_reset.
 Proof.
-  intros places pre test inhib m_steady t.
-  functional induction (is_enabled
-                          places pre test inhib m_steady t)
-             using is_enabled_ind.
-  intro H. apply is_enabled_mk. apply H.  
+  intros  chronos  t2reset   trans  chrono_t_reset.
+  functional induction (reset_time_trans
+                          chronos  t2reset   trans)
+             using reset_time_trans_ind.
+  - intro H. apply reset_time_trans_some_if
+               with (mini:=mini0) (maxi:=maxi0) (cpt:=_x) (min_leb_max:=min_le_max).
+    + assumption.
+    + assumption.
+    + assumption.
+  - intro H. rewrite <- H. apply reset_time_trans_some_else with
+                               (mini:=mini0) (maxi:=maxi0)
+                               (cpt:=_x) (min_leb_max:=min_le_max).
+    + assumption.
+    + assumption.
+  - intro H. rewrite <- H. apply reset_time_trans_none.
+    assumption. 
 Qed.
-Theorem reset_time_trans_complete :
-  forall (places : list place_type)
-          (pre   test  inhib : weight_type)
-          (m_steady : marking_type) (t : trans_type),
-    is_enabled_spec
-      places
-      pre   test  inhib
-      m_steady    t      ->
-    is_enabled
-      places
-      pre   test  inhib
-      m_steady    t   = true .
+Theorem reset_time_trans_complete : forall
+    (chronos : trans_type -> option chrono_type)
+    (t2reset   trans : trans_type)
+    (chrono_t_reset : option chrono_type),
+    reset_time_trans_spec
+      chronos    t2reset   trans       chrono_t_reset   ->
+    reset_time_trans
+       chronos    t2reset   trans    =  chrono_t_reset.
 Proof.
-  intros places pre   test  inhib m_steady  t H. elim H.
-  intros H0. unfold is_enabled. rewrite H0. reflexivity.
+  intros chronos  t2reset  trans  chrono_t_reset H. elim H.
+  - intro H0. unfold reset_time_trans.
+    rewrite H0. reflexivity.
+  - intros. unfold reset_time_trans.
+    rewrite H0. rewrite H1. assumption.
+  - intros. unfold reset_time_trans.
+    rewrite H0. rewrite H1. reflexivity.
 Qed.
 
 (* 
