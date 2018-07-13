@@ -426,16 +426,17 @@ Theorem list_enabled_complete : forall
     (places : list place_type)
     (pre   test  inhib : weight_type)
     (m_steady : marking_type),
-    list_enabled
-      sometranss  places    pre   test  inhib
-      m_steady      =   enabled        ->
     list_enabled_spec
       sometranss  places    pre   test  inhib
-      m_steady   enabled.
+      m_steady   enabled     ->
+    list_enabled
+      sometranss  places    pre   test  inhib
+      m_steady      =   enabled.
 Proof.
   intros  sometranss  enabled places pre test inhib m_steady H.
-  elim H. unfold list_enabled.  
-Admitted.
+  elim H. intros enabled_transs H0. simpl. unfold list_enabled.
+  rewrite H0. reflexivity. 
+Qed.
 
 (********************************** easy spn stpn ... ********)
 Definition list_enabled_spn
@@ -1203,7 +1204,8 @@ Proof.
   - intro H. rewrite <- H. apply reset_time_disabled_nil.
   - intro H. rewrite <- H. apply reset_time_disabled_cons with
                                (chronos_t_reset := chronos0 ).
-    + Admitted.
+    +
+Admitted.
 
 (*
     apply reset_time_trans_some_if
@@ -1232,7 +1234,8 @@ Theorem reset_time_disabled_complete :  forall
 Proof.
   intros chronos  disabled_transs trans  chrono_t_reset H. elim H.
   - simpl. reflexivity.
-  - intros. simpl. unfold reset_time_disabled. Admitted.
+  - intros. simpl. unfold reset_time_disabled.
+Admitted.
 
 (*
     rewrite H0. reflexivity.
@@ -1266,7 +1269,7 @@ Fixpoint stpn_class_fire_pre_aux
   match class_transs with
   | t :: tail =>
     if synchro_check_arcs
-         places (pre t) (test t) (inhib t) m_decreasing m_steady
+         places (pre t) (test t) (inhib t)  m_steady  m_decreasing
          (* t is enabled, even w.r.t. to the others *)
          && (good_time (chronos  t))
     then   (* firing  t *)
@@ -1334,9 +1337,7 @@ Inductive stpn_class_fire_pre_aux_spec
     synchro_check_arcs
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing_high
-    = true
-    ->
-    good_time (chronos  t) = true
+    = true   /\     good_time (chronos  t) = true
     -> 
     m_decreasing_low = (update_marking_pre
                           places   t   pre   m_decreasing_high)
@@ -1369,7 +1370,7 @@ Inductive stpn_class_fire_pre_aux_spec
     synchro_check_arcs
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing
-    = false
+    = false   \/     good_time (chronos  t) = false
     ->
     stpn_class_fire_pre_aux_spec
       whole_class     places      pre  test  inhib
@@ -1439,21 +1440,19 @@ Proof.
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
                                    places t pre m_decreasing)))).
-    + Search bool. SearchPattern ( ?a = true /\ ?b = true ).
-      assert (H' : synchro_check_arcs
+    + apply andb_prop. assumption. 
+(*      assert (H' : synchro_check_arcs
                      places (pre t) (test t) 
                      (inhib t)  m_steady  m_decreasing = true /\
                    good_time (chronos0 t) = true).
-      { apply andb_prop. apply e0. }  
-      
-      apply (left H').
+      { apply andb_prop. apply e0. }  *) 
+    + reflexivity.
     + reflexivity.
     + apply (IHp H).      
   - intro H. apply class_cons_else.
-    + apply e0.
+    + apply andb_false_iff. assumption. 
     + apply (IHp H).
-Qed. *)
-Admitted.
+Qed. 
 Theorem stpn_class_fire_pre_aux_complete :  forall
     (whole_class : list trans_type)
     (places : list place_type)
@@ -1477,15 +1476,22 @@ Theorem stpn_class_fire_pre_aux_complete :  forall
 Proof.
   intros. elim H.
   - simpl. reflexivity.
-  - intros. simpl.  (*
-    rewrite H0. rewrite <- H1. rewrite H3.  reflexivity.
-  - intros. simpl. rewrite H0. rewrite H2.  reflexivity. 
-Qed. *)
-Admitted.
-
-
-
-
+  - intros. simpl.
+    assert (H0' : synchro_check_arcs
+                    places (pre t) (test t) 
+                    (inhib t) m_steady m_decreasing_high &&
+                    good_time (chronos1 t) = true).
+      { apply andb_true_iff. assumption. }  
+      rewrite H0'. rewrite <- H1. rewrite <- H2. rewrite H4.
+      reflexivity.
+  - intros. simpl.
+    assert (H0' : synchro_check_arcs
+                    places (pre t) (test t) 
+                    (inhib t) m_steady m_decreasing0 &&
+                    good_time (chronos1 t) = false).
+      { apply andb_false_iff. assumption. } 
+    rewrite H0'. rewrite H2.  reflexivity. 
+Qed.
 
 (* filling subclass_half_fired  ...  *)
 Definition stpn_class_fire_pre
@@ -1532,62 +1538,62 @@ Inductive stpn_class_fire_pre_spec
 
 Functional Scheme stpn_class_fire_pre_ind :=
   Induction for stpn_class_fire_pre   Sort Prop.
-Theorem stpn_class_fire_pre_correct :
-  forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady   m_decreasing     m_decreased : marking_type)
-         (class_transs     subclass_fired_pre  : list trans_type),
-    spn_class_fire_pre
-      places        pre test inhib   
-      m_steady      m_decreasing       
-      class_transs       
-    = (subclass_fired_pre, m_decreased)
+Theorem stpn_class_fire_pre_correct : forall
+    (places : list place_type)
+    (pre  test  inhib : weight_type)
+    (m_steady   m_decreasing     m_decreased : marking_type)
+    (class_transs     subclass_fired_pre  : list trans_type)
+    (chronos chronos_final: trans_type -> option chrono_type),
+    stpn_class_fire_pre
+      places    pre    test    inhib
+      m_steady
+      m_decreasing   chronos     class_transs
+    = (subclass_fired_pre, m_decreased, chronos_final)
     ->
-    spn_class_fire_pre_spec
-      places        pre test inhib   
-      m_steady      m_decreasing         
-      class_transs
-      subclass_fired_pre    m_decreased.
+    stpn_class_fire_pre_spec
+      places          pre  test  inhib
+      m_steady
+      m_decreasing        chronos            class_transs
+      subclass_fired_pre  m_decreased  chronos_final.
 Proof.
   intros places pre test inhib m_steady m_decreasing m_decreased
-         class_transs  subclass_fired_pre H.
-  functional induction (spn_class_fire_pre
-                          places  pre test inhib
+         class_transs  subclass_fired_pre chronos chronos_final H.
+  functional induction (stpn_class_fire_pre
+                          places    pre test inhib
                           m_steady  m_decreasing
-                          class_transs)
-             using spn_class_fire_pre_ind.
-  apply spn_sub_fire_pre_mk. assumption.
+                          chronos   class_transs)
+             using stpn_class_fire_pre_ind.
+  apply stpn_sub_fire_pre_mk. assumption.
 Qed. 
-Theorem stpn_class_fire_pre_complete :
-  forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady   m_decreasing     m_decreased : marking_type)
-         (class_transs    subclass_fired_pre  : list trans_type),
-    spn_class_fire_pre_spec
-      places         pre test inhib   
-      m_steady       m_decreasing         
-      class_transs
-      subclass_fired_pre    m_decreased
-    ->
-    spn_class_fire_pre
-      places         pre test inhib   
-      m_steady       m_decreasing       
-      class_transs
-    = (subclass_fired_pre, m_decreased).
+Theorem stpn_class_fire_pre_complete : forall
+    (places : list place_type)
+    (pre  test  inhib : weight_type)
+    (m_steady   m_decreasing     m_decreased : marking_type)
+    (class_transs     subclass_fired_pre  : list trans_type)
+    (chronos chronos_final: trans_type -> option chrono_type),
+    stpn_class_fire_pre_spec
+      places          pre  test  inhib
+      m_steady
+      m_decreasing        chronos            class_transs
+      subclass_fired_pre  m_decreased  chronos_final
+    -> 
+    stpn_class_fire_pre
+      places    pre    test    inhib
+      m_steady
+      m_decreasing   chronos     class_transs
+    = (subclass_fired_pre, m_decreased, chronos_final).
 Proof.
   intros. elim H.
-  intros. unfold spn_class_fire_pre. assumption.
+  intros. unfold stpn_class_fire_pre. assumption.
 Qed.
 
 (**************************************************************)
 (*********************  stpn_fire_pre 
- apply sub_fire_pre over ALL classes of transitions. 
+ apply stpn_class_fire_pre over ALL classes of transitions. 
  Begin with initial marking, 
-  end with half fired marking.  
- "classes_half_fired" is empty at first 
- (a bit like for sub_fire_pre) 
- *)
-Print nth. Print prior_type.
+  end with                          half fired marking.  
+ "classes_half_fired" is meant to be empty at first   *)
+
 Fixpoint stpn_fire_pre_aux
          (places : list place_type)
          (pre test inhib : weight_type)
@@ -1617,112 +1623,146 @@ Inductive stpn_fire_pre_aux_spec
           (places : list place_type)
           (pre test inhib : weight_type)
           (m_steady  : marking_type)
-  : marking_type             ->  (* build_m_decreasing *)
+  : marking_type             ->  (* m_decreasing *)
     list (list trans_type)   ->  (* classes   *)
-    list (list trans_type)   ->  (* buil_classes_fired_pre *)
-
+    list (list trans_type)   ->  (* classes_fired_pre *)
+    (trans_type -> option chrono_type)     ->     (* chronos *)
     list (list trans_type)   ->  (* classes_fired_pre *)
     marking_type             ->  (* m_decreasing *)
+    (trans_type -> option chrono_type)     ->     (* chronos *)
     Prop :=
 | classes_nil : forall
     (classes_fired_pre : list (list trans_type))
-    (m_decreased : marking_type),
+    (m_decreased : marking_type)
+    (chronos : trans_type -> option chrono_type)
+  ,
     stpn_fire_pre_aux_spec
       places               pre   test  inhib
-      m_steady             m_decreased
-      []                   classes_fired_pre    
-      classes_fired_pre    m_decreased
+      m_steady
+      m_decreased      []       classes_fired_pre    chronos 
+      classes_fired_pre    m_decreased          chronos
 | classes_cons : forall
     (classes_tail classes_fired_pre_tail C : list (list trans_type))
     (class     class_fired_pre : list trans_type)
-    (m_decreased_class   m_decreasing  m_any  : marking_type),
-    (class_fired_pre, m_decreased_class) =
-    (spn_class_fire_pre
-       places     pre  test  inhib
-       m_steady   m_decreasing
-       class)
+    (m_decreased   m_decreasing  m_any  : marking_type)
+    (chronos   chronos_final  any_chronos : trans_type ->
+                                            option chrono_type),
+    stpn_class_fire_pre
+      places          pre    test    inhib
+      m_steady
+      m_decreasing   chronos     class
+    = (class_fired_pre, m_decreased, chronos_final)
     ->
-    spn_fire_pre_aux_spec
-      places              pre   test   inhib
-      m_steady            m_decreased_class
-      classes_tail        (class_fired_pre ::
-                                           classes_fired_pre_tail)
-      C                   m_any
+    stpn_fire_pre_aux_spec
+      places          pre   test   inhib
+      m_steady
+      m_decreased      classes_tail
+      (class_fired_pre :: classes_fired_pre_tail)
+      chronos     C     m_any    any_chronos
     ->
     stpn_fire_pre_aux_spec
       places                  pre   test   inhib
-      m_steady                m_decreasing
+      m_steady
+      m_decreasing
       (class :: classes_tail) classes_fired_pre_tail
-      C                       m_any
-.
+      chronos    C      m_any   any_chronos.
 
 Functional Scheme stpn_fire_pre_aux_ind :=
   Induction for stpn_fire_pre_aux   Sort Prop.
-Theorem stpn_fire_pre_aux_correct :
-  forall (places : list place_type)
-         (pre   test  inhib : weight_type)
-         (m_steady  m_decreasing  m_decreased : marking_type)
-         (classes_transs   classes_fired_pre_growing
-                           classes_fired_pre : list (list trans_type)),
-    spn_fire_pre_aux
+
+
+Section projections.
+  Context {A : Type} {B : Type} {C : Type}.
+
+  Definition fst (p:A * B * C) := match p with
+                                  | (x, y, z) => x
+                                  end.
+  Definition snd (p:A * B * C) := match p with
+                                  | (x, y, z) => y
+                                  end.
+  Definition third (p:A * B * C) := match p with
+                                    | (x, y, z) => z
+                                    end.
+End projections.
+
+Theorem stpn_fire_pre_aux_correct :  forall
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady  m_decreasing  m_decreased : marking_type)
+    (classes_transs   classes_fired_pre_rec
+                      classes_fired_pre : list (list trans_type))
+    (chronos   chronos_final  : trans_type -> option chrono_type),
+    stpn_fire_pre_aux
       places             pre   test  inhib
       m_steady           m_decreasing 
-      classes_transs     classes_fired_pre_growing
-    = (classes_fired_pre, m_decreased)
+      chronos     classes_transs     classes_fired_pre_rec
+    = (classes_fired_pre, m_decreased, chronos_final)
     ->
-    spn_fire_pre_aux_spec
-      places             pre   test  inhib
-      m_steady           m_decreasing
-      classes_transs     classes_fired_pre_growing
-      classes_fired_pre  m_decreased.
+    stpn_fire_pre_aux_spec
+      places              pre   test   inhib
+      m_steady            m_decreasing
+      classes_transs      classes_fired_pre_rec
+      chronos    classes_fired_pre    m_decreased chronos_final.
 Proof.
-  do 10 intro. (*
-  functional induction (spn_fire_pre_aux
-                          places0         pre0 test0 inhib0
-                          m_steady        m_decreasing
-                          classes_transs  classes_fired_pre_growing)
-             using spn_fire_pre_aux_ind.
-  - intro H.
-    assert (Hleft :  classes_fired_pre0 = classes_fired_pre).
+  do 12 intro.
+  functional induction
+             (stpn_fire_pre_aux
+                places pre test inhib m_steady m_decreasing
+                chronos0 classes_transs classes_fired_pre_rec)
+             using stpn_fire_pre_aux_ind.
+  - intro H. 
+    assert (Hleft :  classes_half_fired = classes_fired_pre).
     { inversion  H. reflexivity. } 
-    assert (Hright :   m_decreasing = m_decreased).
+    assert (Hmiddle :  m_decreasing = m_decreased).
     { inversion  H. reflexivity. }
-    rewrite Hright. rewrite Hleft. apply classes_nil.
+    assert (Hright :  chronos0   = chronos_final).
+    { inversion  H. reflexivity. } 
+    rewrite Hleft. rewrite Hright. rewrite Hmiddle.
+    apply classes_nil.
   - intro H.
     apply classes_cons
-      with (class_fired_pre := fst(spn_class_fire_pre
-                                     places0 pre0 test0 inhib0
-                                     m_steady
-                                     m_decreasing class))
-           (m_decreased_class := snd(spn_class_fire_pre
-                                       places0 pre0 test0 inhib0
-                                       m_steady
-                                       m_decreasing class)).
-    + rewrite e0. reflexivity.
-    + rewrite e0. simpl. apply (IHp H).
-Qed. *) Admitted.
-Theorem stpn_fire_pre_aux_complete :
-  forall (places : list place_type)
-         (pre   test  inhib : weight_type)
-         (m_steady  m_decreasing  m_decreased : marking_type)
-         (classes_transs   classes_fired_pre_growing
-                           classes_fired_pre : list (list trans_type)),
-    spn_fire_pre_aux_spec
-      places             pre   test  inhib
-      m_steady           m_decreasing
-      classes_transs     classes_fired_pre_growing
-      classes_fired_pre  m_decreased
-    -> 
-    spn_fire_pre_aux
+      with (class_fired_pre := fst (stpn_class_fire_pre
+                                      places pre test inhib
+                                      m_steady
+                                      m_decreasing chronos0 class))
+           (m_decreased := snd (stpn_class_fire_pre
+                                  places pre test inhib
+                                  m_steady
+                                  m_decreasing chronos0 class))
+           (chronos_final := third (stpn_class_fire_pre
+                                      places pre test inhib
+                                      m_steady
+                                      m_decreasing chronos0 class)).
+    + rewrite e0. simpl. reflexivity.
+    + rewrite e0. simpl. (* apply (IHp H). *)
+
+      (* spec  not correct *)
+Admitted.
+Theorem stpn_fire_pre_aux_complete : forall
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady  m_decreasing  m_decreased : marking_type)
+    (classes_transs   classes_fired_pre_rec
+                      classes_fired_pre : list (list trans_type))
+    (chronos   chronos_final  : trans_type -> option chrono_type),
+    stpn_fire_pre_aux_spec
+      places              pre   test   inhib
+      m_steady            m_decreasing
+      classes_transs      classes_fired_pre_rec
+      chronos    classes_fired_pre    m_decreased chronos_final
+    ->
+    stpn_fire_pre_aux
       places             pre   test  inhib
       m_steady           m_decreasing 
-      classes_transs     classes_fired_pre_growing
-    = (classes_fired_pre, m_decreased).
+      chronos     classes_transs     classes_fired_pre_rec
+    = (classes_fired_pre, m_decreased, chronos_final).    
 Proof.
   intros. elim H.
   -  intros. simpl. reflexivity.
-  -  intros. simpl. (* rewrite <- H0. apply H2.
-Qed. *) Admitted.
+  -  intros. simpl. rewrite H0. rewrite <- H2.
+
+     (* spec  not correct  *)
+ Admitted.
 
 
 Definition stpn_fire_pre
@@ -1743,68 +1783,76 @@ Inductive stpn_fire_pre_spec
          (places : list place_type)
          (pre test inhib : weight_type)
          (m_steady : marking_type)
+         (chronos : trans_type -> option chrono_type)
          (classes_transs  : list (list trans_type))
   : (list (list trans_type)) ->
     marking_type ->
+    (trans_type -> option chrono_type)   ->
     Prop :=
 | spn_fire_pre_mk :
     forall (classes_fired_pre : list (list trans_type))
-           (m_inter : marking_type),
-      spn_fire_pre_aux
+           (m_inter : marking_type)
+           (chronos_next  : trans_type ->   option chrono_type),
+      stpn_fire_pre_aux
         places           pre    test    inhib
-        m_steady         m_steady
-        classes_transs   []
-      = (classes_fired_pre, m_inter)
+        m_steady
+        m_steady   chronos        classes_transs   []
+      = (classes_fired_pre, m_inter,  chronos_next)
       ->
       stpn_fire_pre_spec
         places              pre  test  inhib
-        m_steady            classes_transs
-        classes_fired_pre   m_inter
-.
+        m_steady
+        chronos                 classes_transs
+        classes_fired_pre   m_inter    chronos_next.
+
 Functional Scheme stpn_fire_pre_ind :=
   Induction for stpn_fire_pre   Sort Prop.
-Theorem stpn_fire_pre_correct :
-  forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady   m_inter : marking_type)
-         (classes_transs  subclasses_fired_pre : list (list trans_type)),
-    spn_fire_pre
-      places           pre   test   inhib   
-      m_steady         classes_transs  
-    = (subclasses_fired_pre, m_inter)
+Theorem stpn_fire_pre_correct :  forall
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady  m_decreased : marking_type)
+    (classes_transs  classes_fired_pre : list (list trans_type))
+    (chronos   chronos_final  : trans_type -> option chrono_type),
+    stpn_fire_pre
+      places             pre   test  inhib
+      m_steady            
+      chronos     classes_transs
+    = (classes_fired_pre, m_decreased, chronos_final)
     ->
-    spn_fire_pre_spec
-      places           pre test inhib   
-      m_steady         classes_transs
-      subclasses_fired_pre    m_inter.
+    stpn_fire_pre_spec
+      places              pre   test   inhib
+      m_steady            
+      chronos      classes_transs
+      classes_fired_pre    m_decreased   chronos_final.
 Proof.
-  do 8 intro. (*
-  functional induction (spn_fire_pre
-                          places0      pre0 test0 inhib0
-                          m_steady     classes_transs)
-             using spn_fire_pre_ind.
+  do 10 intro.
+  functional induction (stpn_fire_pre
+                          places pre test inhib
+                          m_steady chronos0    classes_transs)
+             using stpn_fire_pre_ind.
   apply spn_fire_pre_mk. 
-Qed. *) Admitted.
-Theorem stpn_fire_pre_complete :
-  forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady   m_inter : marking_type)
-         (classes_transs  subclasses_fired_pre : list (list trans_type)),
-    spn_fire_pre_spec
-      places           pre test inhib   
-      m_steady         classes_transs
-      subclasses_fired_pre    m_inter
+Qed.
+Theorem stpn_fire_pre_complete : forall
+    (places : list place_type)
+    (pre   test  inhib : weight_type)
+    (m_steady  m_decreased : marking_type)
+    (classes_transs  classes_fired_pre : list (list trans_type))
+    (chronos   chronos_final  : trans_type -> option chrono_type),
+    stpn_fire_pre_spec
+      places              pre   test   inhib
+      m_steady            
+      chronos      classes_transs
+      classes_fired_pre    m_decreased   chronos_final
     ->
-    spn_fire_pre
-      places           pre   test   inhib   
-      m_steady         classes_transs  
-    = (subclasses_fired_pre, m_inter).
+    stpn_fire_pre
+      places             pre   test  inhib
+      m_steady            
+      chronos     classes_transs
+    = (classes_fired_pre, m_decreased, chronos_final).
 Proof.
   intros. elim H.
-  intros. unfold spn_fire_pre. assumption.
+  intros. unfold stpn_fire_pre. assumption.
 Qed.
-
-
 
 (***************************************************)
 (******* for  DEBUGGING  only  ..  *****************)
@@ -1865,7 +1913,7 @@ Definition stpn_debug2 (stpn : STPN)
 Definition stpn_fire  
            (places : list place_type)
            (pre test inhib post : weight_type)
-           (m_init : marking_type)
+           (m_steady : marking_type)
            (chronos : trans_type -> option chrono_type)
            (classes_transs : list (list trans_type))
   : (list (list trans_type)) *
@@ -1874,7 +1922,7 @@ Definition stpn_fire
   let '(sub_Lol, m_inter, new_chronos) :=
       stpn_fire_pre
         places    pre  test  inhib 
-        m_init       chronos    classes_transs
+        m_steady       chronos    classes_transs
   in  (sub_Lol ,
        fire_post
          places     post
@@ -1885,73 +1933,83 @@ Inductive stpn_fire_spec
           (places : list place_type)
           (pre test inhib post : weight_type)
           (m_steady : marking_type)
+          (chronos : trans_type -> option chrono_type)
           (classes_transs : list (list trans_type))
   : (list (list trans_type))   ->
     marking_type               ->
+    (trans_type -> option chrono_type)    ->
     Prop :=
-| spn_fire_mk :  forall
+| stpn_fire_mk :  forall
     (sub_Lol : list (list trans_type))
-    (m_inter   m  : marking_type),
-    (sub_Lol, m_inter) = spn_fire_pre
+    (m_inter   m  : marking_type)
+    (new_chronos : trans_type -> option chrono_type),
+    (sub_Lol, m_inter, new_chronos) = stpn_fire_pre
                            places  pre test inhib 
-                           m_steady   classes_transs
+                           m_steady  chronos  classes_transs
     ->
     m = fire_post
           places post   m_inter  sub_Lol
     ->
     stpn_fire_spec   
       places         pre test inhib post
-      m_steady       classes_transs
-      sub_Lol    m.
+      m_steady       chronos  classes_transs
+      sub_Lol    m   new_chronos.
 
 Functional Scheme stpn_fire_ind :=
   Induction for  stpn_fire   Sort Prop.
-Theorem stpn_fire_correct :
-  forall (places : list place_type)
-         (pre  test  inhib   post : weight_type)
-         (m_steady   m_next : marking_type)
-         (classes_transs   sub_Lol : list (list trans_type)),
-    spn_fire
+Theorem stpn_fire_correct : forall
+    (places : list place_type)
+    (pre test inhib post : weight_type)
+    (m_steady  m_next: marking_type)
+    (chronos  next_chronos : trans_type -> option chrono_type)
+    (classes_transs   sub_Lol: list (list trans_type)),
+    stpn_fire
       places   pre  test  inhib  post
-      m_steady  classes_transs   =  (sub_Lol, m_next)
+      m_steady  chronos   classes_transs
+    =  (sub_Lol, m_next, next_chronos)
     ->
-    spn_fire_spec
+    stpn_fire_spec
       places   pre  test  inhib  post
-      m_steady   classes_transs   sub_Lol  m_next.
+      m_steady   chronos  classes_transs
+      sub_Lol  m_next next_chronos.
 Proof.
-  do 9 intro. (*
-  functional induction (spn_fire
-                          places0       pre0 test0 inhib0 post0
-                          m_steady  classes_transs)
-             using spn_fire_ind.
+  do 11 intro.
+  functional induction (stpn_fire
+                          places pre test inhib post
+                          m_steady chronos0
+                          classes_transs)
+             using stpn_fire_ind.
   intro H.
   assert (Hleft : sub_Lol0 = sub_Lol).
   { inversion  H. reflexivity. } 
-  assert (Hright :  fire_post
-                      places0 post0 m_inter sub_Lol0 = m_next).
+  assert (Hmiddle :  m_next = fire_post
+                                places post m_inter sub_Lol0 ).
   { inversion  H. reflexivity. }
-  apply spn_fire_mk with (m_inter := m_inter).
-  - rewrite Hleft in e. rewrite e. reflexivity.
-  - rewrite <- Hright. rewrite Hleft. reflexivity.
-Qed. *) Admitted.
-Theorem stpn_fire_complete :
-  forall (places : list place_type)
-         (pre  test  inhib   post : weight_type)
-         (m_steady   m_next : marking_type)
-         (classes_transs   sub_Lol : list (list trans_type)),
-    spn_fire_spec
+  assert (Hright :   new_chronos = next_chronos).
+  { inversion  H. reflexivity. }
+  apply stpn_fire_mk with (m_inter := m_inter).
+  - rewrite Hleft in e. rewrite e. rewrite Hright. reflexivity.
+  - rewrite <-  Hleft. assumption. 
+Qed.
+Theorem stpn_fire_complete : forall
+    (places : list place_type)
+    (pre test inhib post : weight_type)
+    (m_steady  m_next: marking_type)
+    (chronos  next_chronos : trans_type -> option chrono_type)
+    (classes_transs   sub_Lol: list (list trans_type)),
+    stpn_fire_spec
       places   pre  test  inhib  post
-      m_steady   classes_transs   sub_Lol  m_next
+      m_steady   chronos  classes_transs
+      sub_Lol  m_next next_chronos
     ->
-    spn_fire
+    stpn_fire
       places   pre  test  inhib  post
-      m_steady  classes_transs   =  (sub_Lol, m_next).
+      m_steady  chronos   classes_transs
+    =  (sub_Lol, m_next, next_chronos).
 Proof.
   intros. elim H.
-  intros. unfold spn_fire. rewrite <- H0. rewrite H1. reflexivity.
+  intros. unfold stpn_fire. rewrite <- H0. rewrite H1. reflexivity.
 Qed.
-
-
 
 
 (* The marking and the chronos are evolving,  
@@ -2025,7 +2083,7 @@ Inductive stpn_cycle_spec
 
 Functional Scheme stpn_cycle_ind :=
   Induction for stpn_cycle   Sort Prop.
-Theorem stpn_fired_correct :
+Theorem stpn_cycle_correct :
   forall (spn  next_spn : SPN)
          (sub_Lol : list (list trans_type)),
     spn_fired
@@ -2047,7 +2105,7 @@ Proof.
   rewrite <- Hleft. rewrite e1. reflexivity.
   - inversion H. reflexivity.
 Qed. *) Admitted.
-Theorem stpn_fired_complete :
+Theorem stpn_cycle_complete :
  forall (spn  next_spn : SPN)
         (sub_Lol : list (list trans_type)),
    spn_fired_spec
