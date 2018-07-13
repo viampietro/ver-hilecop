@@ -1231,7 +1231,8 @@ Theorem reset_time_disabled_complete :  forall
       chronos  disabled_transs   trans  =   chrono_t_reset.
 Proof.
   intros chronos  disabled_transs trans  chrono_t_reset H. elim H.
-  -  unfold reset_time_disabled. Admitted.
+  - simpl. reflexivity.
+  - intros. simpl. unfold reset_time_disabled. Admitted.
 
 (*
     rewrite H0. reflexivity.
@@ -1408,26 +1409,44 @@ Theorem stpn_class_fire_pre_aux_correct : forall
       class_transs    subclass_fired_pre
       sub_final       m_final   chronos_final.
 Proof.
-
-  (*
-  intros places pre test inhib  m_steady  m_decreasing m_final
-  class_transs subclass_fired_pre  sub_final.
-  functional induction (spn_class_fire_pre_aux
-                          places  pre test inhib
-                          m_steady  m_decreasing
-                          class_transs  subclass_fired_pre)
-             using spn_class_fire_pre_aux_ind.
-  - intro H.
+  intros whole_class  places  pre test inhib  m_steady
+         m_decreasing  m_final
+         class_transs   subclass_fired_pre    sub_final
+         chronos  chronos_final.
+  functional induction 
+             (stpn_class_fire_pre_aux
+                whole_class places  pre test inhib
+                m_steady  m_decreasing    chronos 
+                class_transs  subclass_fired_pre)
+             using stpn_class_fire_pre_aux_ind.
+  - intro H.     
     assert (Hleft :  subclass_half_fired = sub_final).
     { inversion  H. reflexivity. } (* useful ? *)
-    assert (Hright :   m_decreasing = m_final).
+    assert (Hmiddle :   m_decreasing = m_final).
     { inversion  H. reflexivity. }
-    rewrite Hright. rewrite Hleft.  apply class_nil.
+    assert (Hright :  chronos0 =  chronos_final).
+    { inversion  H. reflexivity. } (* useful ? *)
+    rewrite Hleft. rewrite Hmiddle. rewrite Hright.
+    apply class_nil.
   - intro H.
     apply class_cons_if
       with (m_decreasing_low := (update_marking_pre
-                                   places t pre m_decreasing)).
-    + apply e0.
+                                   places t pre m_decreasing))
+           (new_chronos :=
+              (reset_time_disabled
+                 chronos0
+                 (not_synchro_check_list
+                    whole_class   places     pre    test    inhib
+                    m_steady    (update_marking_pre
+                                   places t pre m_decreasing)))).
+    + Search bool. SearchPattern ( ?a = true /\ ?b = true ).
+      assert (H' : synchro_check_arcs
+                     places (pre t) (test t) 
+                     (inhib t)  m_steady  m_decreasing = true /\
+                   good_time (chronos0 t) = true).
+      { apply andb_prop. apply e0. }  
+      
+      apply (left H').
     + reflexivity.
     + apply (IHp H).      
   - intro H. apply class_cons_else.
