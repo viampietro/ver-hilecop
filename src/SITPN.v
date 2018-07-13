@@ -121,14 +121,14 @@ Fixpoint sitpn_class_fire_pre_aux
             (not_synchro_check_list
                class_transs places pre test
                inhib m_steady new_decreasing) in
-      stpn_class_fire_pre_aux
-        places pre test inhib m_steady
-        new_decreasing new_chronos tail
-        (subclass_half_fired ++ [t])
+      sitpn_class_fire_pre_aux
+        places pre test inhib     m_steady
+        new_decreasing     new_chronos     tail
+        (subclass_half_fired ++ [t])    conditions
     else
-      stpn_class_fire_pre_aux
-        places pre test inhib m_steady
-        m_decreasing chronos tail subclass_half_fired
+      sitpn_class_fire_pre_aux
+        places pre test inhib     m_steady
+        m_decreasing  chronos  tail  subclass_half_fired  conditions
   end.
 (* 
 there are 3 parallel calculus in this function : 

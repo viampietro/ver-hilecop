@@ -38,7 +38,7 @@ Definition ex_stpn := mk_STPN
 
 Compute (stpn_animate
            ex_stpn
-           3).  (* 4 steps takes 30 secs !!!!!! *)
+           3).  (* 3 steps takes ~15 secs ! *)
 
 Lemma ex_stpn_animate : (stpn_animate
                            ex_stpn
@@ -82,7 +82,7 @@ Lemma ex_stpn_animate : (stpn_animate
        (mk_trans 9, Some (1, 0, 2)); (mk_trans 12, None);
        (mk_trans 13, None); (mk_trans 14, None);
        (mk_trans 16, None)]); ([], [], [])].
-Proof. compute. reflexivity. Qed.
+Proof. vm_compute. reflexivity. Qed.
 
 (********************************************************)
 (**************** example 2 *****************************)
@@ -248,7 +248,7 @@ Lemma ex2_stpn_animate : (stpn_animate
        (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
        (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
        ([], [], [])].
-Proof. compute. reflexivity. Qed.
+Proof. vm_compute. reflexivity. Qed.
 
        
 Compute (chronos

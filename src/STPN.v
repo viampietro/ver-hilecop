@@ -808,77 +808,91 @@ Definition increment_time_trans
 
 Inductive increment_time_trans_spec
           (chronos : trans_type -> option chrono_type)
-          (t :  trans_type)
-          (trans : trans_type)
+          (t2incr  trans : trans_type)
   : option chrono_type  ->  Prop  :=
 | increment_time_trans_none : 
-    (chronos t) = None
+    (chronos   t2incr) = None
     ->
     increment_time_trans_spec
-      chronos  t  trans  (chronos  trans)
+      chronos  t2incr  trans  (chronos  trans)
 | increment_time_trans_some_if : forall
-    (chrono_t : chrono_type)
     (mini maxi cpt : nat)
     (min_leb_max : mini <= maxi)
     (chrono_t_incr : option chrono_type),
-    (chronos t) = Some (mk_chrono
-                          mini  maxi
-                          min_leb_max   cpt)
+    (chronos    t2incr) = Some (mk_chrono
+                                  mini  maxi
+                                  min_leb_max   cpt)
     ->
-    beq_transs t trans = true
+    beq_transs    trans  t2incr   = true
     -> 
-    chrono_t_incr = Some (mk_chrono
-                             mini   maxi
-                             min_leb_max  (cpt + 1))
+    Some (mk_chrono
+            mini   maxi
+            min_leb_max  (cpt + 1))  = chrono_t_incr 
     ->
     increment_time_trans_spec
-      chronos t  trans  chrono_t_incr
+      chronos    t2incr  trans  chrono_t_incr
 | increment_time_trans_some_else : forall
-    (chrono_t : chrono_type)
     (mini maxi cpt : nat)
     (min_leb_max : mini <= maxi)
     (chrono_t_incr : option chrono_type),
-    (chronos t) = Some (mk_chrono
-                          mini  maxi
-                          min_leb_max   cpt)
+    (chronos   t2incr) = Some (mk_chrono
+                                 mini  maxi
+                                 min_leb_max   cpt)
     ->
-    beq_transs t trans = false
+    beq_transs    trans   t2incr  = false
     ->
     increment_time_trans_spec
-      chronos t  trans  (chronos trans).
+      chronos     t2incr  trans  (chronos trans).
 
 Functional Scheme increment_time_trans_ind :=
   Induction for increment_time_trans Sort Prop. 
 
 Theorem increment_time_trans_correct : forall
-    (chronos   chronos_incr: trans_type -> option chrono_type)
-    (t :  trans_type)
-    (trans : trans_type),
+    (chronos   : trans_type -> option chrono_type)
+    (t2incr     trans : trans_type)
+    (chronos_incr :  option chrono_type),
     increment_time_trans
-      chronos  t  trans   = (chronos_incr trans)        ->
+      chronos  t2incr  trans   =  chronos_incr        ->
     increment_time_trans_spec
-      chronos  t  trans     (chronos_incr trans).
+      chronos  t2incr  trans      chronos_incr.
 Proof.
-  intros chronos  chronos_incr  t  trans.  
+  intros chronos  t2incr  trans  chrono_incr.  
   functional induction (increment_time_trans
-                          chronos  t  trans)
+                          chronos  t2incr  trans)
              using  increment_time_trans_ind.
   - intro H. apply increment_time_trans_some_if with
-                 (mini := mini0) (maxi := maxi0) (cpt := cpt0 + 1) (min_leb_max:=min_le_max).
-Admitted.
+                 (mini := mini0) (maxi := maxi0)
+                 (cpt := cpt0) (min_leb_max:=min_le_max).
+    + assumption.
+    + assumption.
+    + assumption.
+  - intro H. rewrite <- H. apply increment_time_trans_some_else with
+                               (mini:=mini0) (maxi:=maxi0)
+                               (cpt:=cpt0) (min_leb_max:=min_le_max).
+    + assumption.
+    + assumption.
+    + assumption. 
+  - intro H. rewrite <- H. apply increment_time_trans_none.
+    assumption. 
+Qed.
 
 Theorem increment_time_trans_complete : forall
-    (chronos   chronos_incr: trans_type -> option chrono_type)
-    (t2incr :  trans_type)
-    (trans : trans_type),
-    increment_time_trans
-      chronos  t2incr  trans   = (chronos_incr trans)        ->
+    (chronos   : trans_type -> option chrono_type)
+    (t2incr   trans : trans_type)
+    (chrono_incr : option chrono_type),
     increment_time_trans_spec
-      chronos  t2incr  trans     (chronos_incr trans).
+      chronos  t2incr  trans    chrono_incr        ->
+    increment_time_trans
+      chronos  t2incr  trans  = chrono_incr .
 Proof.
-  intros chronos  chronos_incr  t2incr  trans H. elim H.
-  unfold increment_time_trans.
-Admitted.
+  intros chronos   t2incr  trans chrono_incr H. elim H.
+  - intro H0. unfold increment_time_trans.
+    rewrite H0. reflexivity.
+  - intros. unfold increment_time_trans.
+    rewrite H0. rewrite H1. assumption.
+  - intros. unfold increment_time_trans.
+    rewrite H0. rewrite H1. reflexivity.
+Qed.
 
 (*
 Fixpoint increment_time_enabled
@@ -937,6 +951,9 @@ Inductive increment_time_enabled_spec
     ->
     increment_time_enabled_spec
       chronos trans (t2incr::tail) (any_chronos trans).
+
+
+
 
 (* on incremente en debut de cycle. Avec un marquage stable 
 donc on se sert d'une liste de transitions enabled, 
@@ -1208,13 +1225,13 @@ Theorem reset_time_disabled_complete :  forall
     (disabled_transs : list trans_type)
     (trans   : trans_type)
     (chrono_t_reset : option chrono_type),
-    reset_time_disabled
-      chronos    disabled_transs trans    =  chrono_t_reset       ->
     reset_time_disabled_spec
-      chronos    trans  disabled_transs      chrono_t_reset.
+      chronos  trans   disabled_transs      chrono_t_reset       ->
+    reset_time_disabled
+      chronos  disabled_transs   trans  =   chrono_t_reset.
 Proof.
   intros chronos  disabled_transs trans  chrono_t_reset H. elim H.
-  unfold reset_time_disabled. Admitted.
+  -  unfold reset_time_disabled. Admitted.
 
 (*
     rewrite H0. reflexivity.
@@ -1238,6 +1255,7 @@ in structural conflict (a list class_of_transs),
 return 1 list of transitions "subclass_half_fired" 
 and marking "m_intermediate" accordingly ...   *)
 Fixpoint stpn_class_fire_pre_aux
+         (whole_class : list trans_type)
          (places : list place_type)
          (pre    test    inhib : weight_type) 
          (m_steady    m_decreasing : marking_type) 
@@ -1259,16 +1277,17 @@ Fixpoint stpn_class_fire_pre_aux
           (reset_time_disabled
              chronos
              (not_synchro_check_list
-                class_transs   places     pre    test    inhib
+                whole_class   places     pre    test    inhib
                 m_steady       new_decreasing))
       in
       stpn_class_fire_pre_aux
-        places    pre    test   inhib   m_steady      new_decreasing 
-        new_chronos   tail      (subclass_half_fired ++ [t])
+        whole_class  places    pre    test   inhib   m_steady
+        new_decreasing  new_chronos   tail
+        (subclass_half_fired ++ [t])
     else  (* not enabled  w.r.t. the other transs OR not goog time*)
       stpn_class_fire_pre_aux
-        places    pre    test   inhib   m_steady    m_decreasing
-        chronos     tail        subclass_half_fired
+        whole_class   places    pre    test   inhib   m_steady
+        m_decreasing   chronos     tail        subclass_half_fired
   | []  => (subclass_half_fired, m_decreasing, chronos)
   end.
 (* 
@@ -1367,25 +1386,30 @@ Inductive stpn_class_fire_pre_aux_spec
 
 Functional Scheme stpn_class_fire_pre_aux_ind :=
   Induction for stpn_class_fire_pre_aux   Sort Prop.
-(*
-Theorem stpn_class_fire_pre_aux_correct :
-  forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady      m_decreasing      m_final : marking_type)
-         (class_transs  subclass_fired_pre  sub_final : list trans_type)
-         (chronos chronos_final : trans_type -> option chrono_type),
-    spn_class_fire_pre_aux
-      places         pre   test   inhib   
-      m_steady       m_decreasing    chronos      
+
+Theorem stpn_class_fire_pre_aux_correct : forall
+    (whole_class : list trans_type)
+    (places : list place_type)
+    (pre  test  inhib : weight_type)
+    (m_steady      m_decreasing      m_final : marking_type)
+    (class_transs  subclass_fired_pre  sub_final : list trans_type)
+    (chronos chronos_final : trans_type -> option chrono_type),
+    stpn_class_fire_pre_aux
+      whole_class     places         pre   test   inhib   
+      m_steady
+      m_decreasing    chronos      
       class_transs   subclass_fired_pre 
     = (sub_final, m_final, chronos_final)
     ->
-    spn_class_fire_pre_aux_spec
-      places          pre   test  inhib   
-      m_steady        m_decreasing         
+    stpn_class_fire_pre_aux_spec
+      whole_class     places          pre   test  inhib   
+      m_steady
+      m_decreasing    chronos     
       class_transs    subclass_fired_pre
-      sub_final       m_final.
-Proof. 
+      sub_final       m_final   chronos_final.
+Proof.
+
+  (*
   intros places pre test inhib  m_steady  m_decreasing m_final
   class_transs subclass_fired_pre  sub_final.
   functional induction (spn_class_fire_pre_aux
@@ -1398,7 +1422,7 @@ Proof.
     { inversion  H. reflexivity. } (* useful ? *)
     assert (Hright :   m_decreasing = m_final).
     { inversion  H. reflexivity. }
-    rewrite Hright. rewrite Hleft. (* apply class_nil.
+    rewrite Hright. rewrite Hleft.  apply class_nil.
   - intro H.
     apply class_cons_if
       with (m_decreasing_low := (update_marking_pre
@@ -1409,31 +1433,37 @@ Proof.
   - intro H. apply class_cons_else.
     + apply e0.
     + apply (IHp H).
-Qed. *) Admitted.
-Theorem stpn_class_fire_pre_aux_complete :
-  forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady   m_decreasing     m_final : marking_type)
-         (class_transs  subclass_fired_pre  sub_final : list trans_type),
-    spn_class_fire_pre_aux_spec
-      places               pre test inhib   
-      m_steady             m_decreasing         
+Qed. *)
+Admitted.
+Theorem stpn_class_fire_pre_aux_complete :  forall
+    (whole_class : list trans_type)
+    (places : list place_type)
+    (pre  test  inhib : weight_type)
+    (m_steady   m_decreasing     m_final : marking_type)
+    (class_transs  subclass_fired_pre  sub_final : list trans_type)
+    (chronos chronos_final : trans_type -> option chrono_type),
+    stpn_class_fire_pre_aux_spec
+      whole_class      places               pre test inhib   
+      m_steady
+      m_decreasing        chronos 
       class_transs         subclass_fired_pre
-      sub_final   m_final
+      sub_final   m_final    chronos_final
     ->
-    spn_class_fire_pre_aux
-      places          pre test inhib   
-      m_steady        m_decreasing       
+    stpn_class_fire_pre_aux
+      whole_class      places          pre test inhib   
+      m_steady
+      m_decreasing    chronos       
       class_transs    subclass_fired_pre 
-    = (sub_final , m_final).
+    = (sub_final , m_final, chronos_final).
 Proof.
   intros. elim H.
   - simpl. reflexivity.
-  - intros. simpl.
-    rewrite H0. rewrite <- H1. rewrite H3. (* reflexivity.
+  - intros. simpl.  (*
+    rewrite H0. rewrite <- H1. rewrite H3.  reflexivity.
   - intros. simpl. rewrite H0. rewrite H2.  reflexivity. 
-Qed. *) Admitted.
-*)
+Qed. *)
+Admitted.
+
 
 
 
@@ -1449,33 +1479,36 @@ Definition stpn_class_fire_pre
     marking_type      *
     (trans_type -> option chrono_type) :=
   stpn_class_fire_pre_aux
-    places
-    pre    test    inhib
-    m_steady    m_decreasing
-    chronos     class_transs    [].
+    class_transs   places    pre    test    inhib
+    m_steady
+    m_decreasing   chronos     class_transs    [].
 
 Inductive stpn_class_fire_pre_spec
           (places : list place_type)
           (pre   test   inhib : weight_type)  
           (m_steady    m_decreasing    : marking_type)
+          (chronos  :  trans_type -> option chrono_type)
           (class_transs : list trans_type)
-  : (list trans_type) ->
-    marking_type ->
+  : (list trans_type)                     ->
+    marking_type                          ->
+    (trans_type -> option chrono_type)    ->
     Prop :=
 | stpn_sub_fire_pre_mk :
     forall (subclass_fired_pre : list trans_type)
-           (m_fired_pre_class : marking_type),
-      spn_class_fire_pre_aux
-        places          pre    test    inhib
-        m_steady        m_decreasing
+           (m_fired_pre_class : marking_type)
+           (chronos_final: trans_type -> option chrono_type),
+      stpn_class_fire_pre_aux
+        class_transs     places          pre    test    inhib
+        m_steady
+        m_decreasing     chronos
         class_transs    []
-      = (subclass_fired_pre, m_fired_pre_class)
+      = (subclass_fired_pre, m_fired_pre_class, chronos_final)
       ->
       stpn_class_fire_pre_spec
         places          pre  test  inhib
-        m_steady        m_decreasing     
-        class_transs
-        subclass_fired_pre  m_fired_pre_class
+        m_steady
+        m_decreasing        chronos            class_transs
+        subclass_fired_pre  m_fired_pre_class  chronos_final
 .
 
 Functional Scheme stpn_class_fire_pre_ind :=
