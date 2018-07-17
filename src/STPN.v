@@ -1658,7 +1658,7 @@ Inductive stpn_fire_pre_aux_spec
       m_steady
       m_decreased      classes_tail
       (class_fired_pre :: classes_fired_pre_tail)
-      chronos     C     m_any    any_chronos
+      chronos_final     C     m_any    any_chronos
     ->
     stpn_fire_pre_aux_spec
       places                  pre   test   inhib
@@ -1734,10 +1734,9 @@ Proof.
                                       m_steady
                                       m_decreasing chronos0 class)).
     + rewrite e0. simpl. reflexivity.
-    + rewrite e0. simpl. (* apply (IHp H). *)
+    + rewrite e0. simpl.  apply (IHp H).
+Qed.
 
-      (* spec  not correct *)
-Admitted.
 Theorem stpn_fire_pre_aux_complete : forall
     (places : list place_type)
     (pre   test  inhib : weight_type)
@@ -1759,11 +1758,8 @@ Theorem stpn_fire_pre_aux_complete : forall
 Proof.
   intros. elim H.
   -  intros. simpl. reflexivity.
-  -  intros. simpl. rewrite H0. rewrite <- H2.
-
-     (* spec  not correct  *)
- Admitted. About stpn_fire_pre_aux_complete.
-
+  -  intros. simpl. rewrite H0. rewrite <- H2. reflexivity. 
+Qed.
 
 Definition stpn_fire_pre
          (places : list place_type)
@@ -2188,7 +2184,7 @@ Proof.
    rewrite H2 in H3. inversion  H3. simpl. reflexivity. }
   rewrite H23left. (* unfold prod. *)
 
-Admitted.
+Admitted.   (****  blocage stupide *******************************)
 
 (**************************************************)
 (************* to animate a STPN   *****************)

@@ -40,12 +40,13 @@ Compute (stpn_animate
            ex_stpn
            3).  (* 3 steps takes ~15 secs ! *)
 
+Compute (marking (spn ex_stpn)). 
 Lemma ex_stpn_animate : (stpn_animate
                            ex_stpn
                            3) =
-     [([[]; []; []; [mk_trans 0]; [mk_trans 1; mk_trans 12]],
+     [([[]; []; []; [mk_trans 0]; [mk_trans 1]],
         [(mk_place 0, 1); (mk_place 1, 0); 
-        (mk_place 2, 2); (mk_place 3, 0); (mk_place 4, 1);
+        (mk_place 2, 1); (mk_place 3, 0); (mk_place 4, 1);
         (mk_place 5, 1); (mk_place 7, 0); (mk_place 8, 0);
         (mk_place 9, 0); (mk_place 10, 0); 
         (mk_place 11, 0); (mk_place 12, 1)],
@@ -57,7 +58,7 @@ Lemma ex_stpn_animate : (stpn_animate
         (mk_trans 13, None); (mk_trans 14, None);
         (mk_trans 16, None)]);
        ([[]; []; []; [mk_trans 5]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 2);
+       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 1);
        (mk_place 3, 0); (mk_place 4, 1); (mk_place 5, 0);
        (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 1);
        (mk_place 10, 0); (mk_place 11, 0); 
@@ -70,7 +71,7 @@ Lemma ex_stpn_animate : (stpn_animate
        (mk_trans 13, None); (mk_trans 14, None);
        (mk_trans 16, None)]);
        ([[]; [mk_trans 4]; []; [mk_trans 2]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 1);
+       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
        (mk_place 3, 1); (mk_place 4, 0); (mk_place 5, 0);
        (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 1);
        (mk_place 10, 0); (mk_place 11, 0); 
