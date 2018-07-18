@@ -36,11 +36,14 @@ Definition ex_stpn := mk_STPN
                         ex_spn1
                         ex_chronos.
 
+Compute (list_enabled_spn ex_spn1).
+Compute (marking ex_spn1).
+
 Compute (stpn_animate
            ex_stpn
            3).  (* 3 steps takes ~15 secs ! *)
 
-Compute (marking (spn ex_stpn)). 
+ 
 Lemma ex_stpn_animate : (stpn_animate
                            ex_stpn
                            3) =
@@ -252,7 +255,7 @@ Lemma ex2_stpn_animate : (stpn_animate
 Proof. vm_compute. reflexivity. Qed.
 
        
-Compute (chronos
+Compute (all_chronos
            (snd (stpn_cycle
                    (snd (stpn_cycle
                            (snd (stpn_cycle

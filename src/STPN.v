@@ -384,7 +384,7 @@ Definition list_enabled
            (m_steady   : marking_type)
   : list trans_type :=
   list_enabled_aux
-    places    pre    test   inhib    m_steady  sometranss  [].
+    places    pre    test   inhib    m_steady  [] sometranss.
 Inductive list_enabled_spec
            (sometranss  : list trans_type)
            (places : list place_type)
@@ -394,7 +394,7 @@ Inductive list_enabled_spec
     Prop  :=
 | list_enabled_mk :  forall (enabled_transs : list trans_type),
     list_enabled_aux
-      places   pre   test  inhib    m_steady  sometranss    []
+      places   pre   test  inhib    m_steady   [] sometranss
     = enabled_transs
     ->
     list_enabled_spec
@@ -770,6 +770,7 @@ Qed.
 
 (***************************************************************)
 (********************* TIME intervals  ---> chronos  ***********)
+(********************  complexity problems *********************)
 
 Print STPN. Print all_chronos.
 (* increment time, for a given  transitions *)
@@ -777,36 +778,36 @@ Print STPN. Print all_chronos.
 
 Definition increment_time_trans0
            (chronos : trans_type -> option chrono_type)
-           (t :  trans_type)
+           (t2incr :  trans_type)
   : trans_type -> option chrono_type :=
-  match (chronos t) with
+  match (chronos t2incr) with
   | None => chronos  (* increment nothing ... *)
   | Some (mk_chrono        (* immutable ... *)
             mini     maxi
             min_le_max      cpt)
-    => (fun trans =>
+    => (fun t =>
           if beq_transs
-               trans t
+               t t2incr
           then Some (mk_chrono
                        mini     maxi
                        min_le_max    (cpt + 1))
-          else (chronos trans))                      
+          else (chronos t))                      
   end.
 
 Definition increment_time_trans
            (all_chronos : trans_type -> option chrono_type)
            (t2incr : trans_type)
-           (trans : trans_type)
+           (t : trans_type)
   : option chrono_type :=
   match (all_chronos t2incr) with
-  | None  => all_chronos trans   (* increment  nothing ... *)
+  | None  => all_chronos t   (* increment  nothing ... *)
   | Some (mk_chrono
             mini maxi min_le_max cpt) =>
     if beq_transs
-         trans t2incr
+         t t2incr
     then Some (mk_chrono
                  mini maxi min_le_max (cpt+1))
-    else (all_chronos trans)
+    else (all_chronos t)
   end.
 
 Inductive increment_time_trans_spec
@@ -851,16 +852,16 @@ Functional Scheme increment_time_trans_ind :=
 
 Theorem increment_time_trans_correct : forall
     (chronos   : trans_type -> option chrono_type)
-    (t2incr     trans : trans_type)
+    (t2incr     t : trans_type)
     (chronos_incr :  option chrono_type),
     increment_time_trans
-      chronos  t2incr  trans   =  chronos_incr        ->
+      chronos  t2incr  t   =  chronos_incr        ->
     increment_time_trans_spec
-      chronos  t2incr  trans      chronos_incr.
+      chronos  t2incr  t      chronos_incr.
 Proof.
-  intros chronos  t2incr  trans  chrono_incr.  
+  intros chronos  t2incr  t  chrono_incr.  
   functional induction (increment_time_trans
-                          chronos  t2incr  trans)
+                          chronos  t2incr  t)
              using  increment_time_trans_ind.
   - intro Hsome. apply increment_time_trans_some_if with
                      (mini := mini0) (maxi := maxi0)
@@ -880,12 +881,12 @@ Qed.
 
 Theorem increment_time_trans_complete : forall
     (chronos   : trans_type -> option chrono_type)
-    (t2incr   trans : trans_type)
+    (t2incr   t : trans_type)
     (chrono_incr : option chrono_type),
     increment_time_trans_spec
-      chronos  t2incr  trans    chrono_incr        ->
+      chronos  t2incr  t    chrono_incr        ->
     increment_time_trans
-      chronos  t2incr  trans  = chrono_incr .
+      chronos  t2incr  t  = chrono_incr .
 Proof.
   intros chronos   t2incr  trans chrono_incr Hspec. elim Hspec.
   - intro H0. unfold increment_time_trans.
@@ -899,22 +900,21 @@ Proof.
     reflexivity.
 Qed.
 
-(*
-Fixpoint increment_time_enabled
+
+Fixpoint increment_time_enabled0
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
     : trans_type -> option chrono_type  :=
   match enabled_transs with
   | [] => chronos
-            
-  | t :: tail
+  | t2incr :: tail
     =>
-    increment_time_enabled
-      (increment_time_trans
-         chronos   t)
+    increment_time_enabled0
+      (increment_time_trans0
+         chronos   t2incr)
       tail
   end.
-*)
+
 Fixpoint increment_time_enabled
          (chronos : trans_type -> option chrono_type)
          (enabled_transs : list trans_type)
@@ -1004,29 +1004,23 @@ Admitted.
 (**************************************************************)
 (**** on fait la meme chose pour les transitions disabled ... *)
 
-(*
-Definition reset_time_trans
+
+Definition reset_time_trans0
            (chronos : trans_type -> option chrono_type)
-           (t : trans_type)
+           (t2reset : trans_type)
   : trans_type -> option chrono_type :=
-  match (chronos t) with
+  match (chronos t2reset) with
   | None  => chronos   (* reset nothing ... *)
   | Some (mk_chrono
-            mini
-            maxi
-            min_le_max
-            cpt )
-    => (fun trans =>
-          if beq_transs
-               trans t
-          then Some (mk_chrono
-                       mini
-                       maxi
-                       min_le_max
-                       0 )
-          else (chronos trans))             
+            mini    maxi   min_le_max   cpt )  =>
+    (fun t =>
+       if beq_transs
+            t t2reset
+       then Some (mk_chrono
+                    mini  maxi   min_le_max   0 )
+       else (chronos t))             
   end.
-*)
+
 Definition reset_time_trans
            (chronos : trans_type -> option chrono_type)
            (t2reset   t : trans_type)
@@ -1043,13 +1037,13 @@ Definition reset_time_trans
 
 Inductive reset_time_trans_spec
           (chronos : trans_type -> option chrono_type)
-          (t2reset  trans :  trans_type)
+          (t2reset  t :  trans_type)
   :  option chrono_type  ->  Prop  :=
 | reset_time_trans_none : 
     (chronos t2reset) = None
     ->
     reset_time_trans_spec
-      chronos t2reset trans  (chronos trans)
+      chronos t2reset t  (chronos t)
 | reset_time_trans_some_if : forall
     (mini maxi cpt : nat)
     (min_leb_max : mini <= maxi)
@@ -1058,14 +1052,14 @@ Inductive reset_time_trans_spec
                                 mini  maxi
                                 min_leb_max   cpt)
     ->
-    beq_transs t2reset  trans = true
+    beq_transs t2reset  t = true
     ->
     Some (mk_chrono
             mini   maxi
             min_leb_max  0) = chrono_t_reset
     ->
     reset_time_trans_spec
-      chronos t2reset  trans chrono_t_reset
+      chronos t2reset  t chrono_t_reset
 | reset_time_trans_some_else : forall
     (mini maxi cpt : nat)
     (min_leb_max : mini <= maxi),
@@ -1073,26 +1067,26 @@ Inductive reset_time_trans_spec
                                 mini  maxi
                                 min_leb_max   cpt)
     ->
-    beq_transs t2reset  trans = false
+    beq_transs t2reset  t = false
     ->
     reset_time_trans_spec
-      chronos t2reset  trans (chronos trans).
+      chronos t2reset  t (chronos t).
 
 Functional Scheme reset_time_trans_ind :=
   Induction for reset_time_trans Sort Prop. 
 
 Theorem reset_time_trans_correct :  forall
     (chronos : trans_type -> option chrono_type)
-    (t2reset   trans : trans_type)
+    (t2reset   t : trans_type)
     (chrono_t_reset : option chrono_type),
     reset_time_trans
-      chronos    t2reset   trans    =  chrono_t_reset       ->
+      chronos    t2reset   t    =  chrono_t_reset       ->
     reset_time_trans_spec
-      chronos    t2reset   trans       chrono_t_reset.
+      chronos    t2reset   t       chrono_t_reset.
 Proof.
-  intros  chronos  t2reset   trans  chrono_t_reset.
+  intros  chronos  t2reset   t  chrono_t_reset.
   functional induction (reset_time_trans
-                          chronos  t2reset   trans)
+                          chronos  t2reset   t)
              using reset_time_trans_ind.
   - intro H. apply reset_time_trans_some_if
                with (mini:=mini0) (maxi:=maxi0) (cpt:=_x) (min_leb_max:= mini_le_maxi0).
@@ -1109,14 +1103,14 @@ Proof.
 Qed.
 Theorem reset_time_trans_complete : forall
     (chronos : trans_type -> option chrono_type)
-    (t2reset   trans : trans_type)
+    (t2reset   t : trans_type)
     (chrono_t_reset : option chrono_type),
     reset_time_trans_spec
-      chronos    t2reset   trans       chrono_t_reset   ->
+      chronos    t2reset   t       chrono_t_reset   ->
     reset_time_trans
-       chronos    t2reset   trans    =  chrono_t_reset.
+      chronos    t2reset   t    =  chrono_t_reset.
 Proof.
-  intros chronos  t2reset  trans  chrono_t_reset H. elim H.
+  intros chronos  t2reset  t  chrono_t_reset H. elim H.
   - intro H0. unfold reset_time_trans.
     rewrite H0. reflexivity.
   - intros. unfold reset_time_trans.
@@ -1134,45 +1128,42 @@ le reset de compteur est plus subtil :
 *)
     
 (* reset time counters of (a class of ?) some transitions ... *)
-(*
-Fixpoint reset_time_disabled
+Print increment_time_enabled. 
+Fixpoint reset_time_disabled0
            (chronos : trans_type -> option chrono_type)
            (disabled_transs : list trans_type)
   : trans_type -> option chrono_type :=
   match disabled_transs with
   | [] => chronos
-  | t :: tail => reset_time_disabled
-                   (reset_time_trans
-                      chronos
-                      t)
-                   tail
+  | t2reset :: tail =>
+    reset_time_disabled0
+      (reset_time_trans0
+         chronos  t2reset)
+      tail
   end.
-*)
+
 Fixpoint reset_time_disabled
          (chronos : trans_type -> option chrono_type)
          (disabled_transs : list trans_type)
-         (trans : trans_type)
+         (t : trans_type)
   : option chrono_type  :=
   match disabled_transs with
-  | [] => chronos
-            trans
-  | t :: tail
-    =>
+  | [] => chronos  t
+  | t2reset :: tail    =>
     reset_time_disabled
-      (reset_time_trans
-         chronos   t)
+      (reset_time_trans   chronos   t2reset)
       tail
-      trans
+      t
   end.
 
 Inductive reset_time_disabled_spec
           (chronos : trans_type -> option chrono_type)
-          (trans : trans_type)
+          (t : trans_type)
   : list trans_type             ->   (* disabled_transs *)
     option chrono_type          ->  (* resulting chronos *)
     Prop :=
 | reset_time_disabled_nil :
-    reset_time_disabled_spec chronos trans [] (chronos trans)
+    reset_time_disabled_spec chronos t [] (chronos t)
 | reset_time_disabled_cons : forall
     (tail : list trans_type)
     (t2reset : trans_type)
@@ -1184,10 +1175,10 @@ Inductive reset_time_disabled_spec
                         tail
     ->
     reset_time_disabled_spec
-      chronos trans tail            (chronos_t_reset trans)
+      chronos t tail            (chronos_t_reset t)
     ->
     reset_time_disabled_spec
-      chronos trans (t2reset::tail) (any_chronos trans).
+      chronos t (t2reset::tail) (any_chronos t).
 
 Functional Scheme reset_time_disabled_ind :=
   Induction for reset_time_disabled Sort Prop. 
@@ -1195,61 +1186,39 @@ Functional Scheme reset_time_disabled_ind :=
 Theorem reset_time_disabled_correct :  forall
     (chronos : trans_type -> option chrono_type)
     (disabled_transs : list trans_type)
-    (trans   : trans_type)
+    (t   : trans_type)
     (chrono_t_reset : option chrono_type),
     reset_time_disabled
-      chronos    disabled_transs trans    =  chrono_t_reset       ->
+      chronos    disabled_transs t    =  chrono_t_reset       ->
     reset_time_disabled_spec
-      chronos    trans  disabled_transs      chrono_t_reset.
+      chronos    t  disabled_transs      chrono_t_reset.
 Proof.
-  intros  chronos    disabled_transs trans   chrono_t_reset.
+  intros  chronos    disabled_transs   t   chrono_t_reset.
   functional induction (reset_time_disabled
-                          chronos disabled_transs trans)
+                          chronos disabled_transs t)
              using reset_time_disabled_ind.
   - intro H. rewrite <- H. apply reset_time_disabled_nil.
   - intro H. rewrite <- H. apply reset_time_disabled_cons with
                                (chronos_t_reset := chronos ).
-    +
+    +  
 Admitted.
 
-(*
-    apply reset_time_trans_some_if
-               with (mini:=mini0) (maxi:=maxi0) (cpt:=_x) (min_leb_max:=min_le_max).
-    + assumption.
-    + assumption.
-    + assumption.
-  - intro H. rewrite <- H. apply reset_time_trans_some_else with
-                               (mini:=mini0) (maxi:=maxi0)
-                               (cpt:=_x) (min_leb_max:=min_le_max).
-    + assumption.
-    + assumption.
-  - intro H. rewrite <- H. apply reset_time_trans_none.
-    assumption. 
-Qed.  *)
+
  
 Theorem reset_time_disabled_complete :  forall
     (chronos : trans_type -> option chrono_type)
     (disabled_transs : list trans_type)
-    (trans   : trans_type)
+    (t  : trans_type)
     (chrono_t_reset : option chrono_type),
     reset_time_disabled_spec
-      chronos  trans   disabled_transs      chrono_t_reset       ->
+      chronos  t   disabled_transs      chrono_t_reset       ->
     reset_time_disabled
-      chronos  disabled_transs   trans  =   chrono_t_reset.
+      chronos  disabled_transs   t  =   chrono_t_reset.
 Proof.
-  intros chronos  disabled_transs trans  chrono_t_reset H. elim H.
+  intros chronos  disabled_transs t  chrono_t_reset H. elim H.
   - simpl. reflexivity.
   - intros. simpl. unfold reset_time_disabled.
 Admitted.
-
-(*
-    rewrite H0. reflexivity.
-  - intros. unfold reset_time_trans.
-    rewrite H0. rewrite H1. assumption.
-  - intros. unfold reset_time_trans.
-    rewrite H0. rewrite H1. reflexivity.
-Qed. *)
-
 
     
 

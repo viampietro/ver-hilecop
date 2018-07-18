@@ -110,12 +110,12 @@ Fixpoint sitpn_class_fire_pre_aux
     if
       (synchro_check_arcs places (pre t) (test t) 
                           (inhib t)  m_steady  m_decreasing)
-        && (good_time (chronos t))
+        && (time_check (chronos t))
         && (condition_check conditions t)
     then
       let new_decreasing :=
           update_marking_pre
-            places t pre m_decreasing in
+            t pre m_decreasing places  in
       let new_chronos :=
           reset_time_disabled
             chronos
@@ -176,11 +176,11 @@ Inductive sitpn_class_fire_pre_aux_spec
     synchro_check_arcs
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing_high               = true   /\
-    good_time (chronos  t)                      = true   /\
+    time_check (chronos  t)                     = true   /\
     (condition_check conditions t)              = true
     -> 
     m_decreasing_low = (update_marking_pre
-                          places   t   pre   m_decreasing_high)
+                          t   pre   m_decreasing_high places)
     ->
      new_chronos =
      (reset_time_disabled
@@ -210,7 +210,7 @@ Inductive sitpn_class_fire_pre_aux_spec
     synchro_check_arcs
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing                   = false   \/
-    good_time (chronos  t)                     = false   \/
+    time_check (chronos  t)                    = false   \/
     (condition_check conditions t)             = false
     ->
     sitpn_class_fire_pre_aux_spec
@@ -301,14 +301,14 @@ Proof.
   - intro H.
     apply class_cons_if
       with (m_decreasing_low := (update_marking_pre
-                                   places t pre m_decreasing))
+                                   t pre m_decreasing  places))
            (new_chronos :=
               (reset_time_disabled
                  chronos
                  (not_synchro_check_list
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
-                                   places t pre m_decreasing)))).
+                                   t pre m_decreasing  places)))).
     + apply andb3_true_iff. assumption.  
     + reflexivity.
     + reflexivity.
@@ -345,7 +345,7 @@ Proof.
     assert (H0' : synchro_check_arcs
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing_high &&
-                    good_time (chronos0 t)               &&
+                    time_check (chronos0 t)               &&
                     (condition_check conditions t) = true).
       { apply andb3_true_iff. assumption. }  
       rewrite H0'. rewrite <- H1. rewrite <- H2. rewrite H4.
@@ -354,7 +354,7 @@ Proof.
     assert (H0' : synchro_check_arcs
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing0 &&
-                    good_time (chronos0 t)           &&
+                    time_check (chronos0 t)           &&
                     (condition_check conditions t) = false).
       { apply andb3_false_iff. assumption. } 
     rewrite H0'. rewrite H2.  reflexivity. 
@@ -766,8 +766,7 @@ Definition sitpn_debug1
   (sub_Lol, marking2list
               m_inter  places ,
   intervals2list
-    transs
-    new_chronos).
+    new_chronos   transs).
 
 Print stpn_debug2. Print SITPN. Print scenar_type. Print conditions_type.
 Definition sitpn_debug2 (sitpn : SITPN)
@@ -1176,7 +1175,7 @@ Proof.
                                    marking := marking;
                                    priority :=
                                      {| Lol := Lol |} |} ;
-                           chronos := chronos |})
+                           all_chronos := chronos |})
                                  
                  (enabled := list_enabled_spn
                                {|
@@ -1281,8 +1280,8 @@ Fixpoint sitpn_animate
                   (marking (spn (stpn  next_sitpn)))
                   (places (spn (stpn  next_sitpn)))) ,
                (intervals2list
-                  (transs (spn (stpn   next_sitpn)))
-                  (chronos (stpn        next_sitpn)))
+                  (all_chronos (stpn   next_sitpn))
+                  (transs (spn (stpn   next_sitpn))))
              ) 
                ::
                (sitpn_animate
@@ -1316,8 +1315,9 @@ Inductive sitpn_animate_spec
                    (places (spn  (stpn next_sitpn)))
       ->
       chronos_visuels = intervals2list
+                          (all_chronos      (stpn next_sitpn))
                           (transs (spn  (stpn next_sitpn)))
-                          (chronos      (stpn next_sitpn))
+                          
       ->
       sitpn_animate_spec
         next_sitpn    n    TAIL
