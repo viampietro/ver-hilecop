@@ -1509,29 +1509,29 @@ Definition stpn_class_fire_pre
 Inductive stpn_class_fire_pre_spec
           (places : list place_type)
           (pre   test   inhib : weight_type)  
-          (m_steady    m_decreasing    : marking_type)
-          (chronos  :  trans_type -> option chrono_type)
+          (m_steady    : marking_type)
           (class_transs : list trans_type)
+          (m_decreasing    : marking_type)
+          (chronos  :  trans_type -> option chrono_type)
   : (list trans_type)                     ->
     marking_type                          ->
     (trans_type -> option chrono_type)    ->
     Prop :=
 | stpn_sub_fire_pre_mk :
-    forall (subclass_fired_pre : list trans_type)
+    forall (fired_pre_class : list trans_type)
            (m_fired_pre_class : marking_type)
            (chronos_final: trans_type -> option chrono_type),
       stpn_class_fire_pre_aux
-        class_transs     places          pre    test    inhib
-        m_steady
+        class_transs     places    pre    test    inhib m_steady
+        class_transs     []
         m_decreasing     chronos
-        class_transs    []
-      = (subclass_fired_pre, m_fired_pre_class, chronos_final)
+      = (fired_pre_class, m_fired_pre_class, chronos_final)
       ->
       stpn_class_fire_pre_spec
-        places          pre  test  inhib
-        m_steady
-        m_decreasing        chronos            class_transs
-        subclass_fired_pre  m_fired_pre_class  chronos_final
+        places          pre  test  inhib        m_steady
+        class_transs
+        m_decreasing        chronos
+        fired_pre_class  m_fired_pre_class  chronos_final
 .
 
 Functional Scheme stpn_class_fire_pre_ind :=
@@ -1540,26 +1540,26 @@ Theorem stpn_class_fire_pre_correct : forall
     (places : list place_type)
     (pre  test  inhib : weight_type)
     (m_steady   m_decreasing     m_decreased : marking_type)
-    (class_transs     subclass_fired_pre  : list trans_type)
+    (class_transs    fired_pre_class  : list trans_type)
     (chronos chronos_final: trans_type -> option chrono_type),
     stpn_class_fire_pre
-      places    pre    test    inhib
-      m_steady
-      m_decreasing   chronos     class_transs
-    = (subclass_fired_pre, m_decreased, chronos_final)
+      places    pre    test    inhib     m_steady
+      class_transs
+      m_decreasing         chronos     
+    = (fired_pre_class, m_decreased, chronos_final)
     ->
     stpn_class_fire_pre_spec
-      places          pre  test  inhib
-      m_steady
-      m_decreasing        chronos            class_transs
-      subclass_fired_pre  m_decreased  chronos_final.
+      places          pre  test  inhib    m_steady
+      class_transs
+      m_decreasing        chronos 
+      fired_pre_class  m_decreased  chronos_final.
 Proof.
   intros places pre test inhib m_steady m_decreasing m_decreased
-         class_transs  subclass_fired_pre chronos chronos_final H.
+         class_transs  fired_pre_class chronos chronos_final H.
   functional induction (stpn_class_fire_pre
-                          places    pre test inhib
-                          m_steady  m_decreasing
-                          chronos   class_transs)
+                          places    pre test inhib  m_steady
+                          class_transs
+                          m_decreasing   chronos)
              using stpn_class_fire_pre_ind.
   apply stpn_sub_fire_pre_mk. assumption.
 Qed. 
@@ -1570,18 +1570,20 @@ Theorem stpn_class_fire_pre_complete : forall
     (class_transs     subclass_fired_pre  : list trans_type)
     (chronos chronos_final: trans_type -> option chrono_type),
     stpn_class_fire_pre_spec
-      places          pre  test  inhib
-      m_steady
-      m_decreasing        chronos            class_transs
+      places          pre  test  inhib     m_steady
+      class_transs
+      m_decreasing        chronos 
       subclass_fired_pre  m_decreased  chronos_final
     -> 
     stpn_class_fire_pre
-      places    pre    test    inhib
-      m_steady
-      m_decreasing   chronos     class_transs
+      places    pre    test    inhib       m_steady
+      class_transs
+      m_decreasing         chronos
     = (subclass_fired_pre, m_decreased, chronos_final).
 Proof.
-  intros. elim H.
+  intros  places pre test inhib m_steady m_decreasing m_decreased
+          class_transs  fired_pre_class chronos chronos_final H.
+  elim H.
   intros. unfold stpn_class_fire_pre. assumption.
 Qed.
 
@@ -1592,29 +1594,29 @@ Qed.
   end with                          half fired marking.  
  "classes_half_fired" is meant to be empty at first   *)
 
+Print spn_fire_pre_aux.
 Fixpoint stpn_fire_pre_aux
          (places : list place_type)
          (pre test inhib : weight_type)
-         (m_steady    m_decreasing : marking_type)
+         (m_steady   : marking_type)
+         (classes   fired_pre_classes : list (list trans_type))
+         (m_decreasing : marking_type)
          (chronos : trans_type -> option chrono_type)
-         (classes_transs  classes_half_fired : list (list trans_type))
   : (list (list trans_type)) *
     marking_type *
     (trans_type -> option chrono_type)  :=
-  match classes_transs with
-  | [] => (classes_half_fired , m_decreasing, chronos)
+  match classes with
+  | [] => (fired_pre_classes , m_decreasing, chronos)
   | class :: Ltail => let '(sub_l, new_m, new_chronos) :=
                           stpn_class_fire_pre
-                            places
-                            pre     test    inhib
-                            m_steady    m_decreasing
-                            chronos     class
+                            places  pre   test  inhib  m_steady
+                            class
+                            m_decreasing     chronos
                       in  stpn_fire_pre_aux
-                            places
-                            pre  test  inhib
-                            m_steady   new_m
-                            new_chronos      Ltail
-                            (sub_l :: classes_half_fired)         
+                            places   pre  test  inhib  m_steady
+                            Ltail
+                            (sub_l :: fired_pre_classes)
+                            new_m      new_chronos        
   end.
 
 Inductive stpn_fire_pre_aux_spec
