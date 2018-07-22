@@ -118,7 +118,7 @@ Fixpoint sitpn_class_fire_pre_aux
           update_marking_pre
             t pre m_decreasing places  in
       let new_chronos :=
-          reset_time_disabled
+          reset_time_disabled0
             (reset_time_trans0 chronos t)    (* ! reset de t *)
             (not_synchro_check_list
                full_class   places pre test
@@ -184,7 +184,7 @@ Inductive sitpn_class_fire_pre_aux_spec
                           t   pre   m_decreasing_high places)
     ->
      new_chronos =
-     (reset_time_disabled
+     (reset_time_disabled0
         (reset_time_trans0 chronos t)    (* ! reset de t *)
         (not_synchro_check_list
            whole_class   places     pre    test    inhib
@@ -231,11 +231,6 @@ Inductive sitpn_class_fire_pre_aux_spec
 Functional Scheme sitpn_class_fire_pre_aux_ind :=
   Induction for sitpn_class_fire_pre_aux   Sort Prop.
 
-Lemma andb3_prop : forall a b c:bool, a && b && c = true -> a = true /\ b = true /\ c = true.
-Proof.
-  destruct a, b, c; repeat split; assumption.
-Qed.
-Hint Resolve andb3_prop: bool.
 Lemma andb3_true_iff :
   forall b1 b2 b3:bool,
     b1 && b2 && b3 = true   <-> b1 = true /\ b2 = true /\ b3 = true.
@@ -249,13 +244,7 @@ Lemma andb3_false_iff :
 Proof.
   destr_bool; intuition.
 Qed.
-
-Lemma andb3_true_eq :
-  forall b1 b2 b3:bool,
-    true = b1 && b2 && b3 -> true = b1 /\ true = b2 /\ true = b3.
-Proof.
-  destr_bool. auto.
-Defined.
+Hint Resolve andb3_true_iff andb3_false_iff: bool.
 
 
 Theorem sitpn_class_fire_pre_aux_correct : forall
@@ -290,21 +279,13 @@ Proof.
                 m_steady  m_decreasing    chronos 
                 class_transs  subclass_fired_pre  conditions)
              using sitpn_class_fire_pre_aux_ind.
-  - intro H.     
-    assert (Hleft :  subclass_half_fired = sub_final).
-    { inversion  H. reflexivity. } (* useful ? *)
-    assert (Hmiddle :   m_decreasing = m_final).
-    { inversion  H. reflexivity. }
-    assert (Hright :  chronos =  chronos_final).
-    { inversion  H. reflexivity. } (* useful ? *)
-    rewrite Hleft. rewrite Hmiddle. rewrite Hright.
-    apply class_nil.
+  - intro H. inversion H.  apply class_nil.
   - intro H.
     apply class_cons_if
       with (m_decreasing_low := (update_marking_pre
                                    t pre m_decreasing  places))
            (new_chronos :=
-              (reset_time_disabled
+              (reset_time_disabled0
                  (reset_time_trans0 chronos t)    (* ! reset de t *)
                  (not_synchro_check_list
                     whole_class   places     pre    test    inhib

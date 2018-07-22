@@ -1272,7 +1272,7 @@ Fixpoint stpn_class_fire_pre_aux
              t  pre  m_decreasing  places )
       in   (* reseting the disabled intervals ! *)
       let new_chronos :=
-          (reset_time_disabled
+          (reset_time_disabled0
              (reset_time_trans0   chronos t)    (* ! reset de t *)
              (not_synchro_check_list
                 whole_class   places     pre    test    inhib
@@ -1337,7 +1337,7 @@ Inductive stpn_class_fire_pre_aux_spec
                           t   pre   m_decreasing_high  places)
     ->
      new_chronos =
-     (reset_time_disabled
+     (reset_time_disabled0
         (reset_time_trans0 chronos t)    (* ! reset de t *)
         (not_synchro_check_list
            whole_class   places     pre    test    inhib
@@ -1414,7 +1414,7 @@ Proof.
       with (m_decreasing_low := (update_marking_pre
                                    t pre m_decreasing  places ))
            (new_chronos :=
-              (reset_time_disabled
+              (reset_time_disabled0
                  (reset_time_trans0 chronos t)    (* ! reset de t *)
                  (not_synchro_check_list
                     whole_class   places     pre    test    inhib

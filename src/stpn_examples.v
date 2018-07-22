@@ -14,7 +14,10 @@ Lemma preuve1le2 : 1 <= 2.
 Proof. omega. Qed.
 
 
-Compute (transs ex_spn1). (* no 7 no 10 no 15 *)
+Compute (transs ex_spn1). 
+(* no 7 no 10 no 15 ;   0-indexed *)
+Compute (places ex_spn1). (* no 6  ; 0-indexed *)
+Compute (transs ex2_spn). Compute (places ex2_spn). (* 1-indexed *)
 
 Definition int_1_2 := mk_chrono
                         1        2
@@ -187,7 +190,7 @@ Lemma stpn_ok : stpn_debug2
 
 Compute (stpn_animate
            ex2_stpn
-           9).  (* 9 markings but the last one is dub. It works. *)
+           10).  (* 9 markings but the last one is dub. It works. *)
 
 Lemma ex2_stpn_animate : (stpn_animate
                            ex2_stpn

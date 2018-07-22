@@ -60,7 +60,7 @@ Definition ex_sitpn := mk_SITPN
 
 Compute (sitpn_animate
            ex_sitpn
-           3).    (* faster than STPN because of false conditions *)
+           5).    (* faster than STPN because of false conditions *)
 
 Print SITPN.
 Compute
@@ -183,6 +183,7 @@ Definition ex2_sitpn := mk_SITPN
                          ex2_scenar.
 
 
+Compute (marking ex2_spn).
 Compute (sitpn_animate
            ex2_sitpn
            13).
