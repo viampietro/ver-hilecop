@@ -1,4 +1,5 @@
 Require Export STPN.
+From Coq Require Extraction.
 
 (* ~/.opam/4.06.1/lib/coq/theories/  *)
 
@@ -118,7 +119,7 @@ Fixpoint sitpn_class_fire_pre_aux
             t pre m_decreasing places  in
       let new_chronos :=
           reset_time_disabled
-            chronos
+            (reset_time_trans0 chronos t)    (* ! reset de t *)
             (not_synchro_check_list
                full_class   places pre test
                inhib m_steady new_decreasing) in
@@ -184,7 +185,7 @@ Inductive sitpn_class_fire_pre_aux_spec
     ->
      new_chronos =
      (reset_time_disabled
-        chronos
+        (reset_time_trans0 chronos t)    (* ! reset de t *)
         (not_synchro_check_list
            whole_class   places     pre    test    inhib
            m_steady       m_decreasing_low))
@@ -304,7 +305,7 @@ Proof.
                                    t pre m_decreasing  places))
            (new_chronos :=
               (reset_time_disabled
-                 chronos
+                 (reset_time_trans0 chronos t)    (* ! reset de t *)
                  (not_synchro_check_list
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
@@ -1241,23 +1242,25 @@ Theorem sitpn_cycle_complete :
    sitpn_cycle
       sitpn    =  (sub_Lol, next_sitpn).
 Proof.
-  intros. elim H.
-  - intros. unfold sitpn_cycle.
-  rewrite  H0. rewrite  H1. reflexivity. 
-  - intros. assert (H23left : sub_Lol0 =
-                              premz (sitpn_fire
-                                       places pre test inhib post m
-                                       (increment_time_enabled
-                                          chronos
-                                          (list_enabled
-                                             transs places pre test inhib m))
-                                       Lol
-                                       C)).
-  {unfold list_enabled_spn in H4. rewrite H0 in H4. rewrite <- H4.
-   rewrite <- H5.  inversion H6. simpl. reflexivity. }
-  rewrite H23left. unfold sitpn_cycle.
-  rewrite H2. rewrite H1. rewrite H0. rewrite H3. simpl. rewrite H7.  
-Admitted.
+  intros  sitpn next_sitpn  sub_Lol H. elim H.
+  - intros Lol  m places transs pre post test inhib
+           chronos  scenario0 H0 H1.
+    rewrite H1 in H0. rewrite H0. simpl. reflexivity. 
+  - intros sub_Lol0 Lol   next_m   m     next_sitpn0
+           next_stpn stpn0 next_spn  spn
+           places transs  enabled  pre  post  test  inhib 
+           chronos chronos_incr
+           next_chronos  scenario0 Tail  C  H0 H1 H2 H3 H4  H5 H6 H7.
+
+    unfold sitpn_cycle.
+
+    rewrite  H2. rewrite H1. rewrite H0. simpl.
+    rewrite H3. simpl.
+    unfold list_enabled_spn in H4. rewrite H0 in H4.
+
+    rewrite <- H4.
+    rewrite <- H5. rewrite  <- H6. rewrite H7. reflexivity. 
+Qed.
 
 (**************************************************)
 (************* to animate a SITPN   *****************)
@@ -1370,3 +1373,9 @@ Proof.
     rewrite <- H0. rewrite <- H1. rewrite <- H2. rewrite <- H4.
     reflexivity.
 Qed. 
+
+
+
+
+Recursive Extraction  sitpn_animate.
+Extraction            "animator" sitpn_animate.

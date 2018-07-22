@@ -80,6 +80,7 @@ Structure STPN : Set := mk_STPN
                              spn : SPN ;
                              all_chronos :
                                trans_type -> option chrono_type
+                             (* list (trans_type * chrono_type) *)                    
                            }.
 
 
@@ -1035,6 +1036,22 @@ Definition reset_time_trans
     else (chronos t)
   end.
 
+
+Theorem reset_time_trans_equiv : forall
+    (chronos : trans_type -> option chrono_type)
+    (t2reset  t :  trans_type)
+    (chrono_t : option chrono_type),
+    reset_time_trans
+      chronos t2reset t  = (chronos t)
+    <->
+    reset_time_trans0
+      chronos t2reset t  = (chronos t).
+Proof.
+  intros chronos t2reset t chrono_t. split. 
+  - intro H. unfold reset_time_trans in H. unfold reset_time_trans0.
+Admitted.
+
+
 Inductive reset_time_trans_spec
           (chronos : trans_type -> option chrono_type)
           (t2reset  t :  trans_type)
@@ -1225,7 +1242,7 @@ Admitted.
 (*****************************************************************
 **********   FIRING ALGORITHM    for STPN      *******************
 ******************************************************************)
-
+Print reset_time_trans. Print reset_time_trans0.
 Print STPN. Print spn_class_fire_pre. Print reset_time_trans.
 Check update_marking_pre.
 (** given 1 ordered class of transitions 
@@ -1256,7 +1273,7 @@ Fixpoint stpn_class_fire_pre_aux
       in   (* reseting the disabled intervals ! *)
       let new_chronos :=
           (reset_time_disabled
-             chronos
+             (reset_time_trans0   chronos t)    (* ! reset de t *)
              (not_synchro_check_list
                 whole_class   places     pre    test    inhib
                 m_steady       new_decreasing))
@@ -1321,7 +1338,7 @@ Inductive stpn_class_fire_pre_aux_spec
     ->
      new_chronos =
      (reset_time_disabled
-        chronos
+        (reset_time_trans0 chronos t)    (* ! reset de t *)
         (not_synchro_check_list
            whole_class   places     pre    test    inhib
            m_steady       m_decreasing_low))
@@ -1398,7 +1415,7 @@ Proof.
                                    t pre m_decreasing  places ))
            (new_chronos :=
               (reset_time_disabled
-                 chronos
+                 (reset_time_trans0 chronos t)    (* ! reset de t *)
                  (not_synchro_check_list
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
@@ -2275,4 +2292,6 @@ Proof.
   - intros. simpl.
     rewrite <- H0. rewrite <- H1. rewrite <- H2. rewrite <- H4.
     reflexivity.
-Qed. 
+Qed.
+
+Recursive Extraction  stpn_animate.
