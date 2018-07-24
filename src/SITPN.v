@@ -235,17 +235,16 @@ Lemma andb3_true_iff :
   forall b1 b2 b3:bool,
     b1 && b2 && b3 = true   <-> b1 = true /\ b2 = true /\ b3 = true.
 Proof.
-  destr_bool; intuition.
+  destr_bool; tauto.
 Qed.
 
 Lemma andb3_false_iff :
   forall b1 b2 b3:bool,
     b1 && b2 && b3  = false <-> b1 = false \/ b2 = false \/ b3 = false.
 Proof.
-  destr_bool; intuition.
+  destr_bool; tauto.
 Qed.
-Hint Resolve andb3_true_iff andb3_false_iff: bool.
-
+Hint Resolve ->  andb3_true_iff andb3_false_iff: mybool.
 
 Theorem sitpn_class_fire_pre_aux_correct : forall
     (whole_class : list trans_type)
@@ -269,6 +268,7 @@ Theorem sitpn_class_fire_pre_aux_correct : forall
       class_transs    subclass_fired_pre
       sub_final       m_final   chronos_final.
 Proof.
+   
   intros whole_class  places  pre test inhib  m_steady
          m_decreasing  m_final
          class_transs   subclass_fired_pre    sub_final
@@ -291,7 +291,7 @@ Proof.
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
                                    t pre m_decreasing  places)))).
-    + apply andb3_true_iff. assumption.  
+    +  auto with mybool. 
     + reflexivity.
     + reflexivity.
     + apply (IHp H).      
