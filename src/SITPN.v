@@ -20,12 +20,12 @@ Inductive cond_type : Set :=
 some transitions of a Petri net are given conditions
 which have a boolean value  ****)
 
-(***  a list of size n allows one to compute up to n cycles  ***) 
 
 Definition conditions_type := trans_type -> option bool.
 (* some transitions don't have any condition *)
 
 Definition scenar_type := list conditions_type.
+(***  a list of size n allows one to compute up to n cycles  ***) 
 
 Structure SITPN : Set := mk_SITPN
                            { 

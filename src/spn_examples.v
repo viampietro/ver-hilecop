@@ -1,8 +1,8 @@
 Require Export SPN.
 
-(**********************************)
-(********   example (1)   *********)
-(**********************************)
+
+(** * example 1 *)
+
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
 (* 3 places *)
@@ -380,8 +380,7 @@ Proof. compute. reflexivity. Qed.
 
 
 
-(******************************************************************)
-(******** second  example (permutation des sous-listes)  **********)
+(** **  Second  example (permutation des sous-listes)  *)
 
 Definition ex_prior_aux2 :=
   [
@@ -420,8 +419,8 @@ Compute (spn_animate
            ex_spn2
            10).  (* 11 markings *)
 
-(******************************************************************)
-(********  SPN numero 3  (apres permuation des sous-listes)  ******)
+
+(**  **  SPN numero 3  (apres permuation des sous-listes)  *)
 Definition ex_prior_aux3 :=
   [
     [mk_trans 12 ; mk_trans 1] ;
@@ -464,9 +463,7 @@ Compute (spn_animate
 Search SPN. Print SPN.
 
 
-(********************************************************)
-(**************** example 2 *****************************)
-(********************************************************)
+(** *  example 2 *)
 
 (* 7 places *)
 Definition ex2_places : (list place_type) :=

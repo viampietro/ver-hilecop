@@ -343,7 +343,7 @@ Qed.
 Check Nat.sub. Check Nat.add.   (** the 2 op(erators) to use ... **)
 (* Require Import Nat. (* for Nat.leb != (Bool.)leb *)  *)
 
-(*************   update marking   *********************)
+(** ** *********   update marking   *********************)
 Inductive update_marking_pre_spec
           (t : trans_type)
           (pre : weight_type)
@@ -362,6 +362,8 @@ Inductive update_marking_pre_spec
     update_marking_pre_spec   t  pre  m_modif    tail   m_fin   ->
     update_marking_pre_spec   t  pre  m      (p::tail)  m_fin
 .
+
+(**  *  remove some tokens    - accordingly to the firing of t   *)
 Fixpoint update_marking_pre
          (t : trans_type)
          (pre : weight_type)
@@ -410,7 +412,7 @@ Proof.
 Qed.
 
 (************************************************************)
-(**** downhill (output set, postset) ***)
+(** **   downhill (output set, postset) ***)
 Inductive update_marking_post_spec
           (t : trans_type)
           (post : weight_type)
@@ -429,6 +431,7 @@ Inductive update_marking_post_spec
     update_marking_post_spec    t post m_modif   tail   m_fin   ->
     update_marking_post_spec    t post m     (p::tail)  m_fin
 .
+(** * add some tokens     - accordingly to the firing of t  *)
 Fixpoint update_marking_post
          (t : trans_type)
          (post : weight_type)
