@@ -2,31 +2,35 @@ Require Export Arith Omega List Bool FunInd.
 Export ListNotations.
 Search nat. Search list.
 
-(***********************************************************
-****   syntax of (generalized, extended) Petri nets   ******
-************************************************************)
+(******************************************************************)
+(* Syntax of generalized (weight on transitions > or equal to 1), *)
+(* extended (test and inhibiting edges) Petri nets                *)
+(******************************************************************)
 
+(* A place is identified by an index which is unique. *)
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
 
+(* A transition is identified by an index which is unique. *)
 Inductive trans_type : Set :=
 | mk_trans : nat -> trans_type.
 
-(*   4 "TYPES" of arcs : pred, post, pred_inhib, pred_test 
-    along with "some" positive weight   (default is 1 usually).       *)
+(* There are 4 kinds of transition : pred, post, pred_inhib, pred_test 
+ * along with "some" positive weight (default is 1 usually).       
+ *)
 
-Structure nat_star : Set := mk_nat_star
-                              { int : nat ;
-                                posi : int > 0 }.
-(* a given arc has some weight > 0 *)
+(* Set of natural numbers that are strictly over zero. *)
+Structure nat_star : Set := mk_nat_star { int : nat ; posi : int > 0 }.
+
+(* A given transition has some weight > 0 *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
 
 Definition marking_type := place_type -> nat.
 
-(*****************************************************************)
-(***  priority relation  .................
-  to DETERMINE the Petri net (along with the imperative semantic) 
-***)
+(*******************************************************************)
+(**********************  Priority relation *************************)
+(* to DETERMINE the Petri net (along with the imperative semantic) *)
+(*******************************************************************)
 
 (*
 
@@ -84,25 +88,26 @@ Print prior_type.
 (****************************************************************)
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
 
-Structure SPN : Set := mk_SPN
-                         {
-                           places : list place_type ;
-                           transs : list trans_type ;
-                         (*  different_place : NoDup places ;
-                             different_trans : NoDup transs ; *)
-                           pre : weight_type ;
-                           post : weight_type ;
-                           test : weight_type ;
-                           inhib : weight_type ;
-                           
-                           marking : marking_type ;
-                           
-                           priority : prior_type ;
-                         }.
+(***********************************************)
+(* Defines the structure for Simple Petri Nets *)
+(***********************************************)
+Structure SPN : Set :=
+  mk_SPN {
+      places : list place_type;
+      transs : list trans_type;
+      (*  different_place : NoDup places ;
+          different_trans : NoDup transs ; *)
+      pre : weight_type;
+      post : weight_type;
+      test : weight_type ;
+      inhib : weight_type ;
+      marking : marking_type ;                     
+      priority : prior_type ;
+  }.
 
-(* on suppose que 
-1) les places sont toutes differentes  (NoDup ...)
-2) les transs sont toutes differentes  (NoDup ...)
+(* Let's suppose that 
+1) all places are different (NoDup ...)
+2) all transitions are different (NoDup ...)
 
 3) priority/prior_type  
 forme une partition des transitions, partition correspondante
@@ -110,18 +115,18 @@ aux classes de "conflits structurels" (arcs amonts en commum)
 *) 
 
 (**************************************************************)
-(************ are 2 nat/places/transitions equal ? ************)
-Print beq_nat. Print Nat.eqb.
-SearchPattern (forall x y : _, {x = y} + {x <> y}).
-Print N.eq_dec.   (*  useful ! *)
+(************ Are 2 nat/places/transitions equal ? ************)
+(**************************************************************)
 
+(*** Formal specification : beq_places ***)
 Inductive beq_places_spec : place_type -> place_type -> Prop :=
-| beq_places_mk : forall
-    (p p' : place_type)
-    (n : nat), 
-    p = mk_place n /\ p' = mk_place n ->  
-    beq_places_spec p p'.
-(* verify if 2 places have same index, return a boolean *)
+| beq_places_mk :
+    forall (p p' : place_type) (n : nat), 
+    p = mk_place n /\ p' = mk_place n -> beq_places_spec p p'.
+
+(* Function : Returns true if p and p' have the same index. 
+ *            false otherwise.
+ *)
 Definition beq_places (p p' : place_type) : bool :=
   match (p, p') with
   | (mk_place n, mk_place n') => beq_nat n n'
@@ -129,12 +134,11 @@ Definition beq_places (p p' : place_type) : bool :=
 
 Functional Scheme beq_places_ind :=
   Induction for beq_places Sort Prop.
-(* Print beq_places_ind. Print nat_ind.  *)
 
+(*** Correctness proof : beq_places ***)
 Theorem beq_places_correct :
   forall (p p' : place_type),
-    beq_places      p p' = true     ->
-    beq_places_spec p p'.
+  beq_places p p' = true -> beq_places_spec p p'.
 Proof.
   intros p p'.
   functional induction (beq_places  p p') using beq_places_ind.
@@ -142,10 +146,11 @@ Proof.
   apply beq_places_mk with (n:=n').
   split; reflexivity. 
 Qed.
+
+(*** Completeness proof : beq_places ***)
 Theorem beq_places_complete :
   forall (p p' : place_type),
-    beq_places_spec p p'            ->
-    beq_places      p p' = true. 
+  beq_places_spec p p' -> beq_places p p' = true. 
 Proof.
   intros p p' H. elim H.
   intros  p0 p1  n  H01.
@@ -155,21 +160,24 @@ Proof.
   rewrite beq_nat_true_iff. reflexivity.
 Qed.
 
+(*** Formal specification : beq_transs ***)
 Inductive beq_transs_spec : trans_type -> trans_type -> Prop :=
-| beq_transs_mk : forall
-    (t t' : trans_type)
-    (n : nat), 
-    t = mk_trans n /\ t' = mk_trans n
-    ->  
-    beq_transs_spec t t'.
-(* verify if 2 transitions have same index, return a bool *)
+| beq_transs_mk :
+    forall (t t' : trans_type) (n : nat), 
+      t = mk_trans n /\ t' = mk_trans n -> beq_transs_spec t t'.
+
+(* Function : Returns true if t and t' have the same index.
+ *            false otherwise.
+ *)
 Definition beq_transs (t t' : trans_type) : bool :=
   match (t, t') with
   | (mk_trans n, mk_trans n') => beq_nat n n'
   end.
+
 Functional Scheme beq_transs_ind :=
   Induction for beq_transs Sort Prop.
-Print beq_transs_ind. Print nat_ind.
+
+(*** Correctness prooof : beq_transs ***)
 Theorem beq_transs_correct :
   forall (t t' : trans_type),
     beq_transs      t t' = true        ->
@@ -181,6 +189,8 @@ Proof.
   apply beq_transs_mk with (n:=n').
   split; reflexivity. 
 Qed.
+
+(*** Completeness proof : beq_transs ***)
 Theorem beq_transs_complete :
   forall (t t' : trans_type),
     beq_transs_spec t t'               ->
@@ -194,45 +204,39 @@ Proof.
   rewrite beq_nat_true_iff. reflexivity.
 Qed.
 
-
-Definition places_eq_dec : forall x y : place_type,
-    {x = y} + {x <> y}.
-Proof.
-  decide equality.
-  decide equality.
-Defined.
-Definition transs_eq_dec : forall x y : trans_type,
-    {x = y} + {x <> y}.
+(*** Equality decidability for place_type. ***)
+Definition places_eq_dec :
+  forall x y : place_type, {x = y} + {x <> y}.
 Proof.
   decide equality.
   decide equality.
 Defined.
 
-(*
-Definition option_eq {A: Type} (eqA: forall (x y: A), {x=y} + {x<>y}):
-  forall (x y: option A), {x=y} + {x<>y}.
+(*** Equality decidability for trans_type. ***)
+Definition transs_eq_dec :
+  forall x y : trans_type, {x = y} + {x <> y}.
 Proof.
   decide equality.
-Defined.  (* the proof is important when "Defined." *)
-(* Global Opaque option_eq.     ???   ***)
-*)
+  decide equality.
+Defined.
 
-(**********************************************************
-***********   Semantics of these SPN   ********************
-***********************************************************)
+(*******************************************************
+***********   Semantics of these SPN   *****************
+********************************************************)
 
+(*** Formal specification : modif_mark ***)
 Inductive modif_mark_spec
           (m : marking_type)
           (p2modif : place_type)
           (j : option nat_star)
           (op : nat -> nat -> nat)
-          (p2get : place_type)
-  : nat -> Prop :=
+          (p2get : place_type) : nat -> Prop :=
+(* Case where j = None. *)
 | modif_mark_eq_none :
-    (beq_places  p2modif  p2get) = true            ->
-    j = None                            ->
-    modif_mark_spec
-      m p2modif  j op p2get  (m p2modif)
+    (beq_places p2modif p2get) = true ->
+    j = None ->
+    modif_mark_spec m p2modif j op p2get (m p2modif)
+(* Case where j = Some nat_star. *)
 | modif_mark_eq_some :
     forall (i : nat_star) (n : nat) (pf : n > 0),
       (beq_places p2modif p2get) = true          ->
@@ -240,31 +244,30 @@ Inductive modif_mark_spec
       i = (mk_nat_star n pf)            ->
       modif_mark_spec
         m p2modif j op p2get  (op (m p2modif) n)
+(* Case where p2modif and p2get are two different places. *)
 | modif_mark_neq :
-    (beq_places p2modif  p2get) = false           ->
+    (beq_places p2modif p2get) = false           ->
     modif_mark_spec
       m p2modif j op p2get (m p2get).
 
-(* given a marking m, add/remove j tokens (if j is)
- inside place p2modif  and give the marking in place p2get    *)
-
+(* given a marking m, add/remove j tokens (if j is not None)
+ * inside place p2modif and give the marking in place p2get 
+ *)
 Definition modif_mark
            (m : marking_type)
            (p2modif : place_type)
            (j : option nat_star)
            (op : nat -> nat -> nat)  (* add or substract *)
-           (p2get : place_type)
-  : nat :=
-  if beq_places   p2modif p2get
-  then match j with
-       | None => m p2modif          (*  (m p2get) works too *)
-       | Some i => match i with
-                   | mk_nat_star
-                       inti
-                       _   => op (m p2modif) inti
+           (p2get : place_type) : nat :=
+  if beq_places p2modif p2get
+  then
+    match j with
+    | None => m p2modif          (*  (m p2get) works too *)
+    | Some i => match i with
+                | mk_nat_star inti _ => op (m p2modif) inti
                                (* j=i tokens added/removed *)
-                   end
-       end
+                end
+    end
   else m p2get.         (* other places left unchanged  *)
 
 (*
@@ -292,7 +295,7 @@ Definition modif_marking
            (p : place_type)
            (j : option nat_star)
            (op : nat -> nat -> nat)
-  : marking_type :=
+           : marking_type :=
   fun p' => if beq_places p p'
             then match j with
                  | None => m p              (* no change *)
@@ -308,24 +311,35 @@ Definition modif_marking
 Functional Scheme modif_marking_ind :=
   Induction for modif_marking Sort Prop.     (* hard *)
  *)
-Print nat_star.
+
 Functional Scheme modif_mark_ind :=
   Induction for modif_mark Sort Prop.
-Theorem modif_mark_correct :  forall
-    (m : marking_type)    (p2modif  p2get  : place_type)
-    (j : option nat_star)  (op : nat -> nat -> nat)  (mp : nat),
-    modif_mark      m p2modif j op p2get  = mp ->
-    modif_mark_spec m p2modif j op p2get    mp.
+
+(*** Correctness proof : modif_mark ***)
+Theorem modif_mark_correct :
+  forall (m : marking_type)
+         (p2modif p2get : place_type)
+         (j : option nat_star)
+         (op : nat -> nat -> nat)
+         (mp : nat),
+    modif_mark m p2modif j op p2get = mp ->
+    modif_mark_spec m p2modif j op p2get mp.
 Proof.
-  intros m p2modif p2get j op  mp.
+  intros m p2modif p2get j op mp.
   functional induction (modif_mark m p2modif j op p2get)
              using modif_mark_ind.
-  - intro H. rewrite <- H. apply modif_mark_eq_some with
-                             (i:={| int := inti; posi := _x |}) (pf:=_x); try reflexivity; assumption.
+  - intro H.
+    rewrite <- H.
+    apply modif_mark_eq_some
+      with (i:= {| int := inti; posi := _x |}) (pf := _x);
+      try reflexivity;
+      assumption.
   - intro H. rewrite <- H. apply modif_mark_eq_none.
     assumption. reflexivity.
   - intro H. rewrite <- H. apply modif_mark_neq. assumption.
 Qed.
+
+(*** Completeness proof : modif_mark ***)
 Theorem modif_mark_complete :  forall
     (m : marking_type) (p2modif p2get : place_type)
     (j : option nat_star) (op : nat -> nat -> nat) (mp : nat),
@@ -343,27 +357,23 @@ Qed.
 Check Nat.sub. Check Nat.add.   (** the 2 op(erators) to use ... **)
 (* Require Import Nat. (* for Nat.leb != (Bool.)leb *)  *)
 
-(** ** *********   update marking   *********************)
+(************** Update marking *********************)
 Inductive update_marking_pre_spec
           (t : trans_type)
           (pre : weight_type)
           (m : marking_type)
-  : list place_type ->
-    marking_type ->
-    Prop :=
+  : list place_type -> marking_type -> Prop :=
 | update_marking_pre_nil :
-    update_marking_pre_spec        t pre m [] m 
-| update_marking_pre_cons :  forall
-    (p : place_type)
-    (tail : list place_type)
-    (m_modif  m_fin  : marking_type),
-    m_modif = (modif_mark
-                 m p (pre t p) Nat.sub)                         ->
-    update_marking_pre_spec   t  pre  m_modif    tail   m_fin   ->
-    update_marking_pre_spec   t  pre  m      (p::tail)  m_fin
-.
+    update_marking_pre_spec t pre m [] m 
+| update_marking_pre_cons :
+    forall (p : place_type)
+           (tail : list place_type)
+           (m_modif m_fin : marking_type),
+    m_modif = (modif_mark m p (pre t p) Nat.sub) ->
+    update_marking_pre_spec t pre m_modif tail m_fin ->
+    update_marking_pre_spec t pre m (p :: tail) m_fin.
 
-(**  *  remove some tokens    - accordingly to the firing of t   *)
+(*** Remove some tokens - accordingly to the firing of t ***)
 Fixpoint update_marking_pre
          (t : trans_type)
          (pre : weight_type)
@@ -372,15 +382,16 @@ Fixpoint update_marking_pre
   : marking_type :=
   match places with
   | [] => m
-  | cons p tail    => update_marking_pre
-                        t  pre
-                        (modif_mark
-                           m  p  (pre t p)  Nat.sub)
-                        tail
+  | cons p tail => update_marking_pre
+                     t
+                     pre
+                     (modif_mark m p (pre t p) Nat.sub)
+                     tail
   end.
 
 Functional Scheme update_marking_pre_ind :=
   Induction for update_marking_pre Sort Prop.
+
 Theorem update_marking_pre_correct : forall
     (places : list place_type)  (t : trans_type)
     (pre : weight_type)   (m m_updated : marking_type),
