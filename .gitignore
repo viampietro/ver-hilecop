@@ -45,3 +45,8 @@ CoqMakefile*
 .Trashes
 ehthumbs.db
 Thumbs.db
+*.aux
+*.d
+*.conf
+*.ml
+*.mli

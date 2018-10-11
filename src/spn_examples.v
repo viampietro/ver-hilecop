@@ -1,6 +1,5 @@
 Require Export SPN.
 
-
 (** * example 1 *)
 
 
