@@ -11,9 +11,13 @@ Search nat. Search list.
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
 
+Notation "'pl' nat" := (mk_place nat) (at level 100, no associativity).
+
 (* A transition is identified by an index which is unique. *)
 Inductive trans_type : Set :=
 | mk_trans : nat -> trans_type.
+
+Notation "'tr' nat" := (mk_trans nat) (at level 100, no associativity).
 
 (* There are 4 kinds of edges : pred, post, pred_inhib, pred_test 
  * along with "some" positive weight (default is 1 usually).       
@@ -88,8 +92,6 @@ Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
          (In x transs) ->
          exists (l : list trans_type),
            (In x l) -> (In l list_lists) }. *)
-
-Print prior_type.
 
 (**************************************************)
 (*** Defines the structure of Simple Petri Nets ***)
@@ -1031,13 +1033,15 @@ Fixpoint spn_class_fire_pre_aux
                                            m_decreasing)
   | []  => (fired_pre_class, m_decreasing)
   end.
+
 (* 
-there are 2 parallel calculus in this function : 
-1) pumping tokens to get "m_intermediate_decreasing"  (half fired)
-2) returning subclass of transitions (half fired)
-and 2 markings are recorded : 
-1) the initial one to check with inhib and test arcs
-2) a floating (decreasing) intermediate marking to check classic arcs
+ * There are 2 parallel calculus in spn_class_fire_pre_aux : 
+ * 1. pumping tokens to get "m_intermediate_decreasing" (half fired)
+ * 2. returning subclass of transitions (half fired)
+ *
+ * and 2 markings are recorded : 
+ * 1. the initial one to check with inhib and test arcs
+ * 2. a floating (decreasing) intermediate marking to check classic arcs
  *)
 
 Functional Scheme spn_class_fire_pre_aux_ind :=
@@ -1627,8 +1631,9 @@ Proof.
     simpl. rewrite <- Htail. rewrite Hgreater. reflexivity.
 Qed.
 
-(****************************************************)
-(****************************************************)
+(*************************************************)
+(****************** SPN FIRE *********************)
+(*************************************************)
 
 (*** Formal specification : spn_fire ***)
 Inductive spn_fire_spec   
@@ -1721,106 +1726,63 @@ Proof.
   unfold spn_fire. rewrite <- Heq. rewrite Hm. reflexivity.
 Qed.
 
-(***********************************************************)
-(************* to animate a SPN  (and debug)  **************)
+(*********************************************************)
+(************* TO ANIMATE A SPN (AND DEBUG) **************)
+(*********************************************************)
 
-Print SPN.  (*** for nice and easy    prints   ***)
-(*** list of transitions fired +   INTERMEDIATE   marking  ***)
-Definition spn_debug1
-           (places : list place_type) (pre test inhib : weight_type)
-           (marking : marking_type)
-           (classes_transs  : list (list trans_type))
-  : (list (list trans_type)) * list (place_type * nat) :=
-  let (sub_Lol, m) := (spn_fire_pre
-                         places 
-                         pre  test  inhib 
-                         marking    classes_transs)
-  in
-  (sub_Lol, marking2list
-              m   places ).    
-Definition spn_debug2 (spn : SPN)
-  (* gives transitions fired  +  marking_pre  *)
-  : (list (list trans_type)) * list (place_type * nat) :=
+(*
+ * Function : Returns the list of lists of transitions
+ *            fired and a list of pair (place, nboftokens), 
+ *            corresponding to the intermediate marking
+ *            after pre-condition resolution.
+ *   
+ *)
+Definition spn_print_fire_pre (spn : SPN) :
+  (list (list trans_type)) * list (place_type * nat) :=
   match spn with
-  | mk_SPN
-      places
-      transs
-      pre  post test inhib
-      m
-      (mk_prior
-         Lol)
-    =>  spn_debug1
-          places
-          pre test inhib
-          m
-          Lol
+  | (mk_SPN places transs pre post test inhib m (mk_prior Lol)) =>
+    let (sub_Lol, m) := (spn_fire_pre places pre test inhib m Lol)
+    in (sub_Lol, (marking2list m places))
   end.
 
-(*********************************************************
- **********************************************************)
+(* (spn_debug1 places pre test inhib m Lol) *)
 
-Print SPN. Print prior_type.
-Check spn_fire_spec. (* != spn_fire_spec *)
-Inductive spn_cycle_spec
-          (spn : SPN) :
-  list (list trans_type)    ->
-  SPN                       ->
-  Prop :=
-| spn_cycle_mk : forall
-    (sub_Lol  Lol: list (list trans_type))
-    (final_m   m : marking_type)
-    (next_spn : SPN)
-    (places : list place_type)
-    (transs : list trans_type)
-    (pre  post test inhib : weight_type),
-    spn = (mk_SPN
-             places  transs  
-             pre  post test inhib
-             m
-             (mk_prior
-               Lol))
-    ->
-    (sub_Lol, final_m) = (spn_fire
-                            places 
-                            pre  test  inhib  post
-                            m
-                            Lol)
-    ->
-    next_spn = mk_SPN
-                 places   transs  
-                 pre      post    test   inhib
-                 final_m
-                 (mk_prior
-                    Lol)
-    -> 
-    spn_cycle_spec
-      spn   sub_Lol  next_spn.
-(* Only the marking is evolving ! 
-but we also record the fired transitions ! *)
-Definition spn_cycle (spn : SPN)
-  : (list (list trans_type)) * SPN :=
+(************************************************************)
+(****************** SPN CYCLE EVOLUTION *********************)
+(************************************************************)
+
+(*** Formal specification : spn_cycle ***)
+Inductive spn_cycle_spec (spn : SPN) :
+  list (list trans_type) -> SPN -> Prop :=
+| spn_cycle_mk :
+    forall (sub_Lol Lol : list (list trans_type))
+           (next_m m : marking_type)
+           (next_spn : SPN)
+           (places : list place_type)
+           (transs : list trans_type)
+           (pre post test inhib : weight_type),
+    spn = (mk_SPN places transs pre post test inhib m (mk_prior Lol)) ->
+    (sub_Lol, next_m) = (spn_fire places pre test inhib post m Lol) ->
+    next_spn = (mk_SPN places transs pre post test inhib next_m (mk_prior Lol)) -> 
+    (spn_cycle_spec spn sub_Lol next_spn).
+
+(*  
+ * Function : Returns the resulting Petri net after all the sensitized
+ *            transitions in spn have been fired, and returns
+ *            the list of lists containing these transitions.
+ *            
+ *)
+Definition spn_cycle (spn : SPN) : (list (list trans_type)) * SPN :=
   match spn with
-  | mk_SPN
-      places  transs  
-      pre  post test inhib
-      m
-      (mk_prior
-         Lol)
-    =>  let (sub_Lol, final_m) := (spn_fire
-                                     places 
-                                     pre  test  inhib  post
-                                     m
-                                     Lol)
-        in (sub_Lol,
-            mk_SPN
-              places  transs  
-              pre  post test inhib
-              final_m
-              (mk_prior
-                 Lol))
+  | (mk_SPN places transs pre post test inhib m (mk_prior Lol)) =>
+    let (sub_Lol, next_m) := (spn_fire places pre test inhib post m Lol)
+    in (sub_Lol, (mk_SPN places transs pre post test inhib next_m (mk_prior Lol)))
   end.
+
 Functional Scheme spn_cycle_ind :=
   Induction for spn_cycle   Sort Prop.
+
+(*** Correctness proof : spn_cycle ***)
 Theorem spn_cycle_correct :
   forall (spn  next_spn : SPN)
          (sub_Lol : list (list trans_type)),
@@ -1835,111 +1797,84 @@ Proof.
              using spn_cycle_ind.
   intro Heq.
   apply spn_cycle_mk
-    with (Lol:=Lol0) (final_m:=final_m) (m:=m)
+    with (Lol:=Lol0) (next_m:=next_m) (m:=m)
          (places:=places0) (transs:=transs0)
          (pre:=pre0) (post:=post0) (test:=test0) (inhib:=inhib0).
   - reflexivity.
   - rewrite e1. inversion Heq. reflexivity.
   - inversion Heq. reflexivity.
 Qed.
-Theorem spn_fired_complete :
- forall (spn  next_spn : SPN)
-        (sub_Lol : list (list trans_type)),
-   spn_cycle_spec
-     spn         sub_Lol  next_spn
-   ->
-   spn_cycle
-      spn    =  (sub_Lol, next_spn).
+
+(*** Completeness proof : spn_cycle ***)
+Theorem spn_cycle_complete :
+  forall (spn next_spn : SPN)
+         (sub_Lol : list (list trans_type)),
+  (spn_cycle_spec spn sub_Lol next_spn) ->
+  (spn_cycle spn) = (sub_Lol, next_spn).
 Proof.
   intros spn next_spn sub_Lol H. elim H.
   intros. unfold spn_cycle. rewrite  H0. rewrite <- H1.
   rewrite H2. reflexivity.
 Qed.
 
-Print "<=". Print "<=?". Print leb_correct. Print Nat.leb_le.
+(*******************************************)
+(******** ANIMATING DURING N CYCLES ********)
+(*******************************************)
 
-(**************************************************************)
-(*************** graphical part ..... *************************)
-Check spn_cycle. Check spn_cycle_spec.
-Inductive spn_animate_spec
-          (spn : SPN)
-  : nat ->
-    list
-      (list (list trans_type)  *
-       list (place_type * nat) ) -> Prop :=
-| animate_spn_O : spn_animate_spec
-                    spn   O  [ ( [] , [] ) ]
-| animate_spn_S :  forall (next_spn : SPN)
-                          (Lol_fired : list (list trans_type))
-                          (m_visuel : list (place_type * nat))
-                          (n : nat)
-                          (TAIL : list (list (list trans_type) *
-                         list (place_type * nat))),
-    (Lol_fired, next_spn) = spn_cycle spn
-    ->
-    m_visuel = marking2list
-                 (marking next_spn)   (places next_spn)
-    ->
-    spn_animate_spec
-      next_spn    n    TAIL
-    -> 
-    spn_animate_spec
-      spn   (S n)   ((Lol_fired, m_visuel) :: TAIL)
-.
-(* n steps calculus, n "cycles" with both markings and transs *)
-Fixpoint spn_animate
-         (spn : SPN)
-         (n : nat)
-  : list
-      (list (list trans_type)  *
-       list (place_type * nat) ) :=
+(*** Formal specification : spn_animate ***)
+Inductive spn_animate_spec (spn : SPN) :
+  nat -> list (list (list trans_type) * list (place_type * nat)) -> Prop :=
+| animate_spn_O : spn_animate_spec spn O [ ([], []) ]
+| animate_spn_S :
+    forall (next_spn : SPN)
+           (Lol_fired : list (list trans_type))
+           (visual_marking : list (place_type * nat))
+           (n : nat)
+           (TAIL : list (list (list trans_type) * list (place_type * nat))),
+    (Lol_fired, next_spn) = spn_cycle spn ->
+    visual_marking = (marking2list (marking next_spn) (places next_spn)) ->
+    (spn_animate_spec next_spn n TAIL) -> 
+    (spn_animate_spec spn (S n) ((Lol_fired, visual_marking) :: TAIL)).
+
+(*  
+ * Function : Returns the list of (transitions_fired(i), marking(i))
+ *            for each cycle i, from 0 to n, representing the evolution
+ *            of the Petri net spn.
+ *)
+Fixpoint spn_animate (spn : SPN) (n : nat) :
+  list ((list (list trans_type)) * (list (place_type * nat))) :=
   match n with
-  | O => [ ( [] , [] ) ]
-  | S n' =>
-    let (Lol_fired, next_spn) :=  spn_cycle spn 
-    in
-    ( Lol_fired ,
-      (marking2list
-         (marking next_spn)   (places next_spn) )) 
-      ::
-      (spn_animate
-         next_spn
-         n')
+  | O => [ ([], []) ]
+  | S n' => let (Lol_fired, next_spn) := (spn_cycle spn) 
+            in (Lol_fired, (marking2list (marking next_spn) (places next_spn))) ::
+               (spn_animate next_spn n')
   end.
+
 Functional Scheme spn_animate_ind :=
   Induction for spn_animate   Sort Prop.
+
+(*** Correctness proof : spn_animate ***)
 Theorem spn_animate_correct :
-  forall (spn   : SPN)
-         (n : nat)
-         (couples  : list (list (list trans_type)  *
-                           list (place_type * nat) )),
-    spn_animate
-      spn    n   =  couples 
-    ->
-    spn_animate_spec
-      spn    n      couples.
+  forall (spn : SPN) (n : nat) (couples : list (list (list trans_type) *
+                                                list (place_type * nat))),
+  spn_animate spn n = couples -> spn_animate_spec spn n couples.
 Proof.
   intros spn n.
-  functional induction (spn_animate spn n)
-             using spn_animate_ind.
+  functional induction (spn_animate spn n) using spn_animate_ind.
   - intros couples Heq. rewrite <- Heq. apply animate_spn_O.
-  - intros coules Htail. rewrite <- Htail.
+  - intros couples Htail. rewrite <- Htail.
     apply animate_spn_S with (next_spn := snd (spn_cycle spn)).
     + rewrite e0. simpl. reflexivity.
     + rewrite e0. simpl. reflexivity.
     + rewrite e0. simpl.
       apply (IHl (spn_animate next_spn n')). reflexivity.
 Qed.
-Theorem animate_spn_complete :
-  forall (spn   : SPN)
-         (n : nat)
-         (couples : list (list (list trans_type)  *
-                       list (place_type * nat) )),
-    spn_animate_spec
-      spn    n      couples 
-    ->
-    spn_animate
-      spn    n   =  couples .
+
+(*** Completeness proof : spn_animate ***)
+Theorem spn_animate_complete :
+  forall (spn : SPN) (n : nat) (couples : list (list (list trans_type)  *
+                                                list (place_type * nat))),
+  (spn_animate_spec spn n couples) -> spn_animate spn n = couples.
 Proof.
   intros spn n couples H. elim H.
   - simpl. reflexivity. 
@@ -1951,6 +1886,7 @@ Qed.
 (*****************************************************************)
 (**** HOW TO get the classes of transitions...    from what ? ****)
 (*************** sections sorting ********************************)
+
 (*
 Require Import Coq.Sorting.Sorted. Search sort.
 
@@ -1958,33 +1894,24 @@ Section insertion_sort.
 
 
   Print prior_type1. Print prior_type2.
-  Fixpoint insert
-           (a : trans_type)
-           (l : list trans_type)
-           (prior1 : prior_type1)
-  : list trans_type :=
+  Fixpoint insert (a : trans_type)
+                  (l : list trans_type)
+                  (prior1 : prior_type1) : list trans_type :=
     match l with
     | nil  => [a]
-    | b::l' => match prior1 with
-               | mk_prior_type1
-                   rel
-                   irre
-                   assym
-                   trans => if (rel a b)
-                            then a :: l
-                            else b :: (insert
-                                         a l' prior1)
+    | b :: l' => match prior1 with
+                 | mk_prior_type1 rel irre assym trans =>
+                   if (rel a b)
+                   then a :: l
+                   else b :: (insert a l' prior1)
                end
     end.
   
-  Fixpoint sort
-           (l: list trans_type)
-           (prior1 : prior_type1)
-    : list trans_type :=
+  Fixpoint sort (l : list trans_type)
+                (prior1 : prior_type1) : list trans_type :=
     match l with
-    | [ ] => [ ]
-    | a::l' => insert
-                 a (sort l' prior1) prior1
+    | [] => []
+    | a :: l' => insert a (sort l' prior1) prior1
     end.
   
   (* Fixpoint find_highest (A:Type) (l:list A) : (A * list A) :=
@@ -1995,13 +1922,8 @@ Section insertion_sort.
                else find_highest a l'
     end.*)
 
-  Definition sort_transs
-             (prior1 : prior_type1)
-             (l : list trans_type)
-    : list trans_type :=
-    sort
-      l
-      prior1.
+  Definition sort_transs (prior1 : prior_type1)
+                         (l : list trans_type) : list trans_type := (sort l prior1).
   
 End insertion_sort.
 

@@ -2,44 +2,20 @@ Require Export SPN.
 
 (** * example 1 *)
 
-
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
 (* 3 places *)
-Definition ex_places : (list place_type) :=
-  nodup
-    places_eq_dec
-    [ mk_place 0 ;
-      mk_place 1 ;
-      mk_place 2 ;
-      mk_place 3 ;
-      mk_place 4 ;
-      mk_place 5 ; (* 6 is missing *)
-      mk_place 7 ; 
-      mk_place 8 ;
-      mk_place 9 ;
-      mk_place 10 ;
-      mk_place 11 ;
-      mk_place 12 ].
-Definition ex_nodup_places : NoDup ex_places :=
-  NoDup_nodup
-    places_eq_dec
-    ex_places. 
+Definition ex_places : (list place_type) := (* 6 is missing *)
+  nodup places_eq_dec [ pl 0; pl 1; pl 2; pl 3; pl 4; pl 5; 
+                        pl 7; pl 8; pl 9; pl 10; pl 11; pl 12 ].
 
-(* 3 transitions *)
+Definition ex_nodup_places : NoDup ex_places :=
+  NoDup_nodup places_eq_dec ex_places. 
+
+(* 16 transitions *)
+(* 7, 10, 11, 15 is missing *)
 Definition ex_transs : (list trans_type) :=
-  [ mk_trans 0 ;
-    mk_trans 1 ;
-    mk_trans 2 ;
-    mk_trans 3 ;
-    mk_trans 4 ;
-    mk_trans 5 ;
-    mk_trans 6 ;  (* 7 is missing *)
-    mk_trans 8 ;
-    mk_trans 9 ;  (* 10, 11 are missing *)
-    mk_trans 12 ;
-    mk_trans 13 ;
-    mk_trans 14 ; (* 15 is missing *)
-    mk_trans 16 ].
+  [ tr 0; tr 1; tr 2; tr 3; tr 4; tr 5; tr 6; tr 8; tr 9; tr 12; tr 13; tr 14; tr 16 ].
+
 Definition ex_nodup_transs : NoDup ex_transs :=
   NoDup_nodup
     transs_eq_dec
@@ -52,73 +28,60 @@ Lemma two_positive : 2 > 0. Proof. omega. Qed.
 (* one lemma for each arc weight ... *)
 
 (* many arcs PT (place transition)  "incoming" *) 
-Definition ex_pre (t : trans_type) (p : place_type)
-  : option nat_star :=
+Definition ex_pre (t : trans_type) (p : place_type) : option nat_star :=
   (* transitions 7, 10, 11, 15  missing *)
   (* place 6 missing *)
-  match (t,p) with
+  match (t, p) with
   (* trans 0 *)
-  | (mk_trans 0, mk_place 0) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 0, mk_place 7) => Some (mk_nat_star
-                                        1
-                                        one_positive)               
-  | (mk_trans 0, mk_place 12) => Some (mk_nat_star
-                                        1
-                                        one_positive)
+  | (tr 0, pl 0) => Some (mk_nat_star 1 one_positive)               
+  | (tr 0, pl 7) => Some (mk_nat_star 1 one_positive)               
+  | (tr 0, pl 12) => Some (mk_nat_star 1 one_positive)
   (* trans 1 *)
-  | (mk_trans 1, mk_place 1) => Some (mk_nat_star
-                                        1
-                                        one_positive)
+  | (tr 1, pl 1) => Some (mk_nat_star 1 one_positive)
   (* trans 2 *)
-  | (mk_trans 2, mk_place 2) => Some (mk_nat_star
-                                        1
-                                        one_positive)
+  | (tr 2, pl 2) => Some (mk_nat_star 1 one_positive)
   (* trans 3 *)
-  | (mk_trans 3, mk_place 3) => Some (mk_nat_star
-                                        1
-                                        one_positive)
+  | (tr 3, pl 3) => Some (mk_nat_star 1 one_positive)
   (* trans 4 *)
-  | (mk_trans 4, mk_place 4) => Some (mk_nat_star
+  | (tr 4, pl 4) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 5 *)
-  | (mk_trans 5, mk_place 5) => Some (mk_nat_star
+  | (tr 5, pl 5) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 6 *)
-  | (mk_trans 6, mk_place 8) => Some (mk_nat_star
+  | (tr 6, pl 8) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 6, mk_place 9) => Some (mk_nat_star
+  | (tr 6, pl 9) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 8 *)
-  | (mk_trans 8, mk_place 10) => Some (mk_nat_star
+  | (tr 8, pl 10) => Some (mk_nat_star
                                         2
                                         two_positive)
   (* trans 9 *)
-  | (mk_trans 9, mk_place 11) => Some (mk_nat_star
+  | (tr 9, pl 11) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 12 *)
-  | (mk_trans 12, mk_place 1) => Some (mk_nat_star
+  | (tr 12, pl 1) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 13 *)
-  | (mk_trans 13, mk_place 11) => Some (mk_nat_star
+  | (tr 13, pl 11) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 14 *)
-  | (mk_trans 14, mk_place 11) => Some (mk_nat_star
+  | (tr 14, pl 11) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 16 *)
-  | (mk_trans 16, mk_place 3) => Some (mk_nat_star
+  | (tr 16, pl 3) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 16, mk_place 10) => Some (mk_nat_star
+  | (tr 16, pl 10) => Some (mk_nat_star
                                         1
                                         one_positive)
   | _ => None
@@ -131,69 +94,67 @@ Definition ex_post (t : trans_type) (p : place_type)
   (* place 6 missing *)
   match (t, p) with
   (* trans 0 *)
-  | (mk_trans 0, mk_place 4) => Some (mk_nat_star
+  | (tr 0, pl 4) => Some (mk_nat_star
                                         1
                                         one_positive)               
-  | (mk_trans 0, mk_place 5) => Some (mk_nat_star
+  | (tr 0, pl 5) => Some (mk_nat_star
                                         1
                                         one_positive)               
-  | (mk_trans 0, mk_place 12) => Some (mk_nat_star
+  | (tr 0, pl 12) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 1 *)
-  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+  | (tr 1, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 2 *)
-  | (mk_trans 2, mk_place 3) => Some (mk_nat_star
+  | (tr 2, pl 3) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 3 *)
-  | (mk_trans 3, mk_place 1) => Some (mk_nat_star
+  | (tr 3, pl 1) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 4 *)
-  | (mk_trans 4, mk_place 8) => Some (mk_nat_star
+  | (tr 4, pl 8) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 5 *)
-  | (mk_trans 5, mk_place 9) => Some (mk_nat_star
+  | (tr 5, pl 9) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 6 *)
-  | (mk_trans 6, mk_place 7) => Some (mk_nat_star
+  | (tr 6, pl 7) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 6, mk_place 10) => Some (mk_nat_star
+  | (tr 6, pl 10) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 8 *)
-  | (mk_trans 8, mk_place 11) => Some (mk_nat_star
+  | (tr 8, pl 11) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 9 *)
-  | (mk_trans 9, mk_place 0) => Some (mk_nat_star
+  | (tr 9, pl 0) => Some (mk_nat_star
                                         2
                                         two_positive)
   (* trans 12 *)
-  | (mk_trans 12, mk_place 2) => Some (mk_nat_star
+  | (tr 12, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 13 *)
-  | (mk_trans 13, mk_place 0) => Some (mk_nat_star
+  | (tr 13, pl 0) => Some (mk_nat_star
                                          2
                                          two_positive)
   (* trans 14 *)
-  | (mk_trans 14, mk_place 0) => Some (mk_nat_star
+  | (tr 14, pl 0) => Some (mk_nat_star
                                          2
                                          two_positive)
   (* trans 16 *)
-  | (mk_trans 16, mk_place 3) => Some (mk_nat_star
+  | (tr 16, pl 3) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 16, mk_place 10) => Some (mk_nat_star
-                                        1
-                                        one_positive)
+  | (tr 16, pl 10) => Some (mk_nat_star 1 one_positive)
   | _ => None
   end.
 
@@ -201,10 +162,10 @@ Definition ex_post (t : trans_type) (p : place_type)
 (*** tokens of the initial marking ***)
 Definition ex_marking (p : place_type) :=
   match p with
-  | mk_place 0 => 2
-  | mk_place 1 => 1
-  | mk_place 7 => 1
-  | mk_place 12 => 1
+  | (pl 0) => 2
+  | (pl 1) => 1
+  | (pl 7) => 1
+  | (pl 12) => 1
   | _ => 0
   end. Print ex_marking. Check marking_type.
 (* ? reductions, simplifications ? *)
@@ -215,10 +176,10 @@ Definition ex_test (t : trans_type) (p : place_type) :=
   (* place 6 missing *)
   match (t, p) with
   (* trans 5 *)
-  | (mk_trans 5, mk_place 2) => Some (mk_nat_star
+  | (tr 5, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)               
-  | (mk_trans 5, mk_place 12) => Some (mk_nat_star
+  | (tr 5, pl 12) => Some (mk_nat_star
                                         1
                                         one_positive)
   | _ => None
@@ -230,11 +191,11 @@ Definition ex_inhib (t : trans_type) (p : place_type) :=
   (* place 6 missing *)
   match (t, p) with
   (* trans 2 *)
-  | (mk_trans 2, mk_place 5) => Some (mk_nat_star
+  | (tr 2, pl 5) => Some (mk_nat_star
                                         1
                                         one_positive)               
   (* trans 4 *)
-  | (mk_trans 4, mk_place 11) => Some (mk_nat_star
+  | (tr 4, pl 11) => Some (mk_nat_star
                                          1
                                          one_positive)               
   | _ => None
@@ -244,154 +205,137 @@ Definition ex_inhib (t : trans_type) (p : place_type) :=
 Definition ex_prior1 (t1 t2 : trans_type) : bool :=
   (* transitions squared  ---> lot's of match branches ... *)
   match (t1 , t2) with
-  | (mk_trans 0, mk_trans 0) => false
-  | (mk_trans 0, mk_trans 1) => true
-  | (mk_trans 0, mk_trans 2) => true
-  | (mk_trans 1, mk_trans 0) => false
-  | (mk_trans 1, mk_trans 1) => false
-  | (mk_trans 1, mk_trans 2) => true
-  | (mk_trans 2, mk_trans 0) => false
-  | (mk_trans 2, mk_trans 1) => false
-  | (mk_trans 2, mk_trans 2) => false
+  | (tr 0, tr 0) => false
+  | (tr 0, tr 1) => true
+  | (tr 0, tr 2) => true
+  | (tr 1, tr 0) => false
+  | (tr 1, tr 1) => false
+  | (tr 1, tr 2) => true
+  | (tr 2, tr 0) => false
+  | (tr 2, tr 1) => false
+  | (tr 2, tr 2) => false
   | (_,_) => false  (* False or True     who care ? -> option bool?*) 
   end.    *)
 
-Print prior_type.
-Definition ex_prior_aux :=
-  [
-    [mk_trans 1 ; mk_trans 12] ;
-    [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ;
-    [mk_trans 3 ; mk_trans 8 ; mk_trans 16] ;
-    [mk_trans 4 ; mk_trans 9 ; mk_trans 13 ; mk_trans 14] ;
-    [mk_trans 6]
-  ].
-Print ex_prior_aux.
-Definition ex_prior :=
-  mk_prior
-    ex_prior_aux.    
+Definition ex_prior := {| Lol := [
+                                    [tr 1 ; tr 12];
+                                    [tr 0 ; tr 2 ; tr 5];
+                                    [tr 3 ; tr 8 ; tr 16];
+                                    [tr 4 ; tr 9 ; tr 13 ; tr 14];
+                                    [tr 6]
+                                ]
+                       |}.    
     
-Print pre. Print weight_type.
 Definition ex_spn1 := mk_SPN
-                      ex_places
-                      ex_transs
-                     (* ex_nodup_places
+                        ex_places
+                        ex_transs
+                        (* ex_nodup_places
                       ex_nodup_transs *)
-                      
-                      ex_pre
-                      ex_post
-                      ex_test
-                      ex_inhib                 
-                      
-                      ex_marking
-                      ex_prior.
+                        ex_pre
+                        ex_post
+                        ex_test
+                        ex_inhib                 
+                        ex_marking
+                        ex_prior.
 
 Compute (marking ex_spn1). (* initial marking *)
 (* functions / lists *)
 
+Compute (spn_print_fire_pre ex_spn1).
 
-Compute (spn_debug2
-                      (*  snd (spn_fired
-               (snd (spn_fired  *) 
-                      ex_spn1).
-
-Lemma ex_spn1_debugpre : spn_debug2
-                      (*  snd (spn_fired
-               (snd (spn_fired  *) 
-                      ex_spn1 =
-     ([[]; []; []; [mk_trans 0]; [mk_trans 1]],
-      [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
-       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 0); (mk_place 11, 0); 
-       (mk_place 12, 0)]).
+Lemma ex_spn1_debugpre :              
+  (spn_print_fire_pre ex_spn1) =
+  ([[]; []; []; [tr 0]; [tr 1]],
+   [(pl 0, 1); (pl 1, 0); (pl 2, 0);
+      (pl 3, 0); (pl 4, 0); (pl 5, 0);
+        (pl 7, 0); (pl 8, 0); (pl 9, 0);
+          (pl 10, 0); (pl 11, 0); 
+            (pl 12, 0)]).
 Proof. compute. reflexivity. Qed.
 
-
 Search SPN. (* spn_fired    spn_debug_pre  spn_animate  *)
-Compute (spn_animate
-           ex_spn1
-           10).  (* 11 markings *)
+Compute (spn_animate ex_spn1 10).  (* 11 markings *)
 
 Lemma ex_spn1_animate : (spn_animate
                            ex_spn1
                            10) =
-     [([[]; []; []; [mk_trans 0]; [mk_trans 1]],
-       [(mk_place 0, 1); (mk_place 1, 0); 
-        (mk_place 2, 1); (mk_place 3, 0); (mk_place 4, 1);
-        (mk_place 5, 1); (mk_place 7, 0); (mk_place 8, 0);
-        (mk_place 9, 0); (mk_place 10, 0); 
-        (mk_place 11, 0); (mk_place 12, 1)]);
-       ([[]; [mk_trans 4]; []; [mk_trans 5]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 1);
-       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 1);
-       (mk_place 10, 0); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[mk_trans 6]; []; []; [mk_trans 2]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
-       (mk_place 3, 1); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 1); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[]; []; [mk_trans 3]; [mk_trans 0]; []],
-       [(mk_place 0, 0); (mk_place 1, 1); (mk_place 2, 0);
-       (mk_place 3, 0); (mk_place 4, 1); (mk_place 5, 1);
-       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 1); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[]; [mk_trans 4]; []; []; [mk_trans 1]],
-       [(mk_place 0, 0); (mk_place 1, 0); (mk_place 2, 1);
-       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 1);
-       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 0);
-       (mk_place 10, 1); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[]; []; []; [mk_trans 5]; []],
-       [(mk_place 0, 0); (mk_place 1, 0); (mk_place 2, 1);
-       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 1);
-       (mk_place 10, 1); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[mk_trans 6]; []; []; [mk_trans 2]; []],
-       [(mk_place 0, 0); (mk_place 1, 0); (mk_place 2, 0);
-       (mk_place 3, 1); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 2); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[]; []; [mk_trans 3; mk_trans 8]; []; []],
-       [(mk_place 0, 0); (mk_place 1, 1); (mk_place 2, 0);
-       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 0); (mk_place 11, 1); 
-       (mk_place 12, 1)]);
-       ([[]; [mk_trans 9]; []; []; [mk_trans 1]],
-       [(mk_place 0, 2); (mk_place 1, 0); (mk_place 2, 1);
-       (mk_place 3, 0); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 1); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 0); (mk_place 11, 0); 
-       (mk_place 12, 1)]);
-       ([[]; []; []; [mk_trans 0; mk_trans 2]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
-       (mk_place 3, 1); (mk_place 4, 1); (mk_place 5, 1);
-       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 0);
-       (mk_place 10, 0); (mk_place 11, 0); 
-       (mk_place 12, 1)]); ([], [])].
+     [([[]; []; []; [tr 0]; [tr 1]],
+       [(pl 0, 1); (pl 1, 0); 
+        (pl 2, 1); (pl 3, 0); (pl 4, 1);
+        (pl 5, 1); (pl 7, 0); (pl 8, 0);
+        (pl 9, 0); (pl 10, 0); 
+        (pl 11, 0); (pl 12, 1)]);
+       ([[]; [tr 4]; []; [tr 5]; []],
+       [(pl 0, 1); (pl 1, 0); (pl 2, 1);
+       (pl 3, 0); (pl 4, 0); (pl 5, 0);
+       (pl 7, 0); (pl 8, 1); (pl 9, 1);
+       (pl 10, 0); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[tr 6]; []; []; [tr 2]; []],
+       [(pl 0, 1); (pl 1, 0); (pl 2, 0);
+       (pl 3, 1); (pl 4, 0); (pl 5, 0);
+       (pl 7, 1); (pl 8, 0); (pl 9, 0);
+       (pl 10, 1); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[]; []; [tr 3]; [tr 0]; []],
+       [(pl 0, 0); (pl 1, 1); (pl 2, 0);
+       (pl 3, 0); (pl 4, 1); (pl 5, 1);
+       (pl 7, 0); (pl 8, 0); (pl 9, 0);
+       (pl 10, 1); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[]; [tr 4]; []; []; [tr 1]],
+       [(pl 0, 0); (pl 1, 0); (pl 2, 1);
+       (pl 3, 0); (pl 4, 0); (pl 5, 1);
+       (pl 7, 0); (pl 8, 1); (pl 9, 0);
+       (pl 10, 1); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[]; []; []; [tr 5]; []],
+       [(pl 0, 0); (pl 1, 0); (pl 2, 1);
+       (pl 3, 0); (pl 4, 0); (pl 5, 0);
+       (pl 7, 0); (pl 8, 1); (pl 9, 1);
+       (pl 10, 1); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[tr 6]; []; []; [tr 2]; []],
+       [(pl 0, 0); (pl 1, 0); (pl 2, 0);
+       (pl 3, 1); (pl 4, 0); (pl 5, 0);
+       (pl 7, 1); (pl 8, 0); (pl 9, 0);
+       (pl 10, 2); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[]; []; [tr 3; tr 8]; []; []],
+       [(pl 0, 0); (pl 1, 1); (pl 2, 0);
+       (pl 3, 0); (pl 4, 0); (pl 5, 0);
+       (pl 7, 1); (pl 8, 0); (pl 9, 0);
+       (pl 10, 0); (pl 11, 1); 
+       (pl 12, 1)]);
+       ([[]; [tr 9]; []; []; [tr 1]],
+       [(pl 0, 2); (pl 1, 0); (pl 2, 1);
+       (pl 3, 0); (pl 4, 0); (pl 5, 0);
+       (pl 7, 1); (pl 8, 0); (pl 9, 0);
+       (pl 10, 0); (pl 11, 0); 
+       (pl 12, 1)]);
+       ([[]; []; []; [tr 0; tr 2]; []],
+       [(pl 0, 1); (pl 1, 0); (pl 2, 0);
+       (pl 3, 1); (pl 4, 1); (pl 5, 1);
+       (pl 7, 0); (pl 8, 0); (pl 9, 0);
+       (pl 10, 0); (pl 11, 0); 
+       (pl 12, 1)]); ([], [])].
 Proof. compute. reflexivity. Qed.
-
-
 
 (** **  Second  example (permutation des sous-listes)  *)
 
 Definition ex_prior_aux2 :=
   [
-    [mk_trans 1 ; mk_trans 12] ;
-    [mk_trans 2 ; mk_trans 0 ; mk_trans 5] ;
-    [mk_trans 16 ; mk_trans 8 ; mk_trans 3] ;
-    [mk_trans 9 ; mk_trans 4 ; mk_trans 14 ; mk_trans 13] ;
-    [mk_trans 6]
+    [tr 1 ; tr 12] ;
+    [tr 2 ; tr 0 ; tr 5] ;
+    [tr 16 ; tr 8 ; tr 3] ;
+    [tr 9 ; tr 4 ; tr 14 ; tr 13] ;
+    [tr 6]
   ].
+
 Definition ex_prior2 :=
   mk_prior
     ex_prior_aux2.    
+
 Definition ex_spn2 := mk_SPN
                         ex_places
                         ex_transs
@@ -405,32 +349,24 @@ Definition ex_spn2 := mk_SPN
                         
                         ex_marking
                         ex_prior2.
-Compute
-  (
-    spn_debug2
-  (*    (
-        snd (spn_fired
-               (snd (spn_fired  *)
-                             ex_spn2)
-      .
 
-Compute (spn_animate
-           ex_spn2
-           10).  (* 11 markings *)
-
+Compute (spn_print_fire_pre ex_spn2).
+Compute (spn_animate ex_spn2 10).  (* 11 markings *)
 
 (**  **  SPN numero 3  (apres permuation des sous-listes)  *)
 Definition ex_prior_aux3 :=
   [
-    [mk_trans 12 ; mk_trans 1] ;
-    [mk_trans 0 ; mk_trans 2 ; mk_trans 5] ;
-    [mk_trans 16 ; mk_trans 3 ; mk_trans 8] ;
-    [mk_trans 9 ; mk_trans 14 ; mk_trans 4 ; mk_trans 13] ;
-    [mk_trans 6]
+    [tr 12 ; tr 1] ;
+    [tr 0 ; tr 2 ; tr 5] ;
+    [tr 16 ; tr 3 ; tr 8] ;
+    [tr 9 ; tr 14 ; tr 4 ; tr 13] ;
+    [tr 6]
   ].
+
 Definition ex_prior3 :=
   mk_prior
     ex_prior_aux3.    
+
 Definition ex_spn3 := mk_SPN
                         ex_places
                         ex_transs
@@ -447,7 +383,7 @@ Definition ex_spn3 := mk_SPN
 
 Compute
   (
-    spn_debug2
+    spn_print_fire_pre
       (*     (
         snd (spn_fired 
           (snd (spn_fired *)
@@ -466,13 +402,13 @@ Search SPN. Print SPN.
 
 (* 7 places *)
 Definition ex2_places : (list place_type) :=
-  [ mk_place 1 ;
-    mk_place 2 ;
-    mk_place 3 ;
-    mk_place 4 ;
-    mk_place 5 ;
-    mk_place 6 ;
-    mk_place 7 ].
+  [ pl 1 ;
+    pl 2 ;
+    pl 3 ;
+    pl 4 ;
+    pl 5 ;
+    pl 6 ;
+    pl 7 ].
 Definition ex2_nodup_places : NoDup ex2_places :=
   NoDup_nodup
     places_eq_dec
@@ -480,12 +416,12 @@ Definition ex2_nodup_places : NoDup ex2_places :=
 
 (* 6 transitions *)
 Definition ex2_transs : (list trans_type) :=
-  [ mk_trans 1 ;
-    mk_trans 2 ;
-    mk_trans 3 ;
-    mk_trans 4 ;
-    mk_trans 5 ;
-    mk_trans 6 ].
+  [ tr 1 ;
+    tr 2 ;
+    tr 3 ;
+    tr 4 ;
+    tr 5 ;
+    tr 6 ].
 Definition ex2_nodup_transs : NoDup ex2_transs :=
   NoDup_nodup
     transs_eq_dec
@@ -501,28 +437,28 @@ Definition ex2_nodup_transs : NoDup ex2_transs :=
 Definition ex2_pre (t : trans_type) (p : place_type)
   : option nat_star :=
   match (t,p) with
-  | (mk_trans 1, mk_place 1) => Some (mk_nat_star
+  | (tr 1, pl 1) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 2, mk_place 1) => Some (mk_nat_star
+  | (tr 2, pl 1) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 3, mk_place 3) => Some (mk_nat_star
+  | (tr 3, pl 3) => Some (mk_nat_star
                                         2
                                         two_positive)
-  | (mk_trans 3, mk_place 4) => Some (mk_nat_star
+  | (tr 3, pl 4) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 4, mk_place 5) => Some (mk_nat_star
+  | (tr 4, pl 5) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 5, mk_place 2) => Some (mk_nat_star
+  | (tr 5, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)  
-  | (mk_trans 5, mk_place 6) => Some (mk_nat_star
+  | (tr 5, pl 6) => Some (mk_nat_star
                                         1
                                         one_positive)
-  | (mk_trans 6, mk_place 7) => Some (mk_nat_star
+  | (tr 6, pl 7) => Some (mk_nat_star
                                         1
                                         one_positive)
   | _ => None
@@ -531,7 +467,7 @@ Definition ex2_pre (t : trans_type) (p : place_type)
 Definition ex2_test (t : trans_type) (p : place_type) :=
   (* 1 arc of type "test" *)
   match (t, p) with
-  | (mk_trans 2, mk_place 2) => Some (mk_nat_star
+  | (tr 2, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)               
   | _ => None
@@ -540,7 +476,7 @@ Definition ex2_test (t : trans_type) (p : place_type) :=
 Definition ex2_inhib (t : trans_type) (p : place_type) :=
   (* 1 arc of type "inhibitor"  *)
   match (t, p) with
-  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+  | (tr 1, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)               
   | _ => None
@@ -551,33 +487,33 @@ Definition ex2_post (t : trans_type) (p : place_type)
   : option nat_star :=
   match (t, p) with
   (* trans 1 *)
-  | (mk_trans 1, mk_place 2) => Some (mk_nat_star
+  | (tr 1, pl 2) => Some (mk_nat_star
                                         1
                                         one_positive)               
-  | (mk_trans 1, mk_place 3) => Some (mk_nat_star
+  | (tr 1, pl 3) => Some (mk_nat_star
                                         2
                                         two_positive)               
-  | (mk_trans 1, mk_place 4) => Some (mk_nat_star
+  | (tr 1, pl 4) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 2 *)
-  | (mk_trans 2, mk_place 5) => Some (mk_nat_star
+  | (tr 2, pl 5) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 3 *)
-  | (mk_trans 3, mk_place 7) => Some (mk_nat_star
+  | (tr 3, pl 7) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 4 *)
-  | (mk_trans 4, mk_place 6) => Some (mk_nat_star
+  | (tr 4, pl 6) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 5 *)
-  | (mk_trans 5, mk_place 7) => Some (mk_nat_star
+  | (tr 5, pl 7) => Some (mk_nat_star
                                         1
                                         one_positive)
   (* trans 6 *)
-  | (mk_trans 6, mk_place 1) => Some (mk_nat_star
+  | (tr 6, pl 1) => Some (mk_nat_star
                                         1
                                         one_positive)
   | _ => None
@@ -586,13 +522,13 @@ Definition ex2_post (t : trans_type) (p : place_type)
 (* tokens *)
 Definition ex2_marking (p : place_type) :=
   match p with
-  | mk_place 1 => 1
-  | mk_place 2 => 0
-  | mk_place 3 => 0
-  | mk_place 4 => 0
-  | mk_place 5 => 0
-  | mk_place 6 => 0
-  | mk_place 7 => 0
+  | (pl 1) => 1
+  | (pl 2) => 0
+  | (pl 3) => 0
+  | (pl 4) => 0
+  | (pl 5) => 0
+  | (pl 6) => 0
+  | (pl 7) => 0
   | _ => 0
   end.
 
@@ -600,10 +536,10 @@ Definition ex2_prior : prior_type :=
   (* se restreindre aux conflits structurels ! *)
   mk_prior
     [
-      [mk_trans 1 ; mk_trans 2 ; mk_trans 5] ;
-      [mk_trans 3] ;
-      [mk_trans 4] ;
-      [mk_trans 6]
+      [tr 1 ; tr 2 ; tr 5] ;
+      [tr 3] ;
+      [tr 4] ;
+      [tr 6]
     ].
  
     
@@ -632,44 +568,25 @@ Compute (spn_animate
 Lemma ex2_spn_animate : (spn_animate
                            ex2_spn
                            10) =
-      [([[]; []; []; [mk_trans 1]],
-        [(mk_place 1, 0); (mk_place 2, 1); 
-        (mk_place 3, 2); (mk_place 4, 1); (mk_place 5, 0);
-        (mk_place 6, 0); (mk_place 7, 0)]);
-       ([[]; []; [mk_trans 3]; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 1)]);
-       ([[mk_trans 6]; []; []; []],
-       [(mk_place 1, 1); (mk_place 2, 1); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)]);
-       ([[]; []; []; [mk_trans 2]],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 1); (mk_place 6, 0);
-       (mk_place 7, 0)]);
-       ([[]; [mk_trans 4]; []; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 1);
-       (mk_place 7, 0)]);
-       ([[]; []; []; [mk_trans 5]],
-       [(mk_place 1, 0); (mk_place 2, 0); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 1)]);
-       ([[mk_trans 6]; []; []; []],
-       [(mk_place 1, 1); (mk_place 2, 0); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)]);
-       ([[]; []; []; [mk_trans 1]],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)]);
-       ([[]; []; [mk_trans 3]; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 1)]);
-       ([[mk_trans 6]; []; []; []],
-       [(mk_place 1, 1); (mk_place 2, 1); (mk_place 3, 0);
-       (mk_place 4, 0); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)]); ([], [])].
+       [([[]; []; []; [tr 1]],
+         [(pl 1, 0); (pl 2, 1); (pl 3, 2); (pl 4, 1); (pl 5, 0); (pl 6, 0); (pl 7, 0)]);
+        ([[]; []; [tr 3]; []],
+         [(pl 1, 0); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 1)]);
+        ([[tr 6]; []; []; []],
+         [(pl 1, 1); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 0)]);
+        ([[]; []; []; [tr 2]],
+         [(pl 1, 0); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 1); (pl 6, 0); (pl 7, 0)]);
+        ([[]; [tr 4]; []; []],
+         [(pl 1, 0); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 1); (pl 7, 0)]);
+        ([[]; []; []; [tr 5]],
+         [(pl 1, 0); (pl 2, 0); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 1)]);
+        ([[tr 6]; []; []; []],
+         [(pl 1, 1); (pl 2, 0); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 0)]);
+       ([[]; []; []; [tr 1]],
+        [(pl 1, 0); (pl 2, 1); (pl 3, 2); (pl 4, 1); (pl 5, 0); (pl 6, 0); (pl 7, 0)]);
+       ([[]; []; [tr 3]; []],
+        [(pl 1, 0); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 1)]);
+       ([[tr 6]; []; []; []],
+        [(pl 1, 1); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 0)]);
+       ([], [])].
 Proof. compute. reflexivity. Qed.
