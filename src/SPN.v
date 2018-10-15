@@ -11,12 +11,14 @@ Search nat. Search list.
 Inductive place_type : Set :=
 | mk_place : nat -> place_type.
 
+(* Simpler notation for mk_place, strong binding level. *)
 Notation "'pl' nat" := (mk_place nat) (at level 100, no associativity).
 
 (* A transition is identified by an index which is unique. *)
 Inductive trans_type : Set :=
 | mk_trans : nat -> trans_type.
 
+(* Simpler notation for mk_transition, strong binding level. *)
 Notation "'tr' nat" := (mk_trans nat) (at level 100, no associativity).
 
 (* There are 4 kinds of edges : pred, post, pred_inhib, pred_test 
@@ -27,9 +29,10 @@ Notation "'tr' nat" := (mk_trans nat) (at level 100, no associativity).
 (* The second member, posi, must be a lemma of the form "n > 0" *)
 Structure nat_star : Set := mk_nat_star { int : nat ; posi : int > 0 }.
 
-(* A given transition, either reaching in or coming out of a place,
- * has some weight over 0 or no weight at all (which is why
- * weight_type returns a option nat_star that can take the None value). 
+(* A given edge, either reaching in or coming out of a place,
+ * has some weight over 0 or no weight at all, meaning it
+ * doesn't exist (which is why weight_type returns a option nat_star 
+ * that can take the None value). 
  *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
 
@@ -100,24 +103,22 @@ Structure SPN : Set :=
   mk_SPN {
       places : list place_type;
       transs : list trans_type;
-      (*  different_place : NoDup places ;
-          different_trans : NoDup transs ; *)
       pre : weight_type;
       post : weight_type;
-      test : weight_type ;
-      inhib : weight_type ;
-      marking : marking_type ;                     
-      priority : prior_type ;
+      test : weight_type;
+      inhib : weight_type;
+      marking : marking_type;                     
+      priority : prior_type;
   }.
 
 (* Let's suppose that 
-1) all places are different (NoDup ...)
-2) all transitions are different (NoDup ...)
-
-3) priority/prior_type  
-forme une partition des transitions, partition correspondante
-aux classes de "conflits structurels" (arcs amonts en commum)
-*) 
+ * 1) all places are different (NoDup ...)
+ * 2) all transitions are different (NoDup ...)
+ *
+ * 3) priority/prior_type  
+ * forme une partition des transitions, partition correspondante
+ * aux classes de "conflits structurels" (arcs amonts en commum)
+ *) 
 
 (**************************************************************)
 (************ Are 2 nat/places/transitions equal ? ************)
@@ -863,7 +864,7 @@ Inductive synchro_check_arcs_spec
  * Function : Returns true if a certain transition t
  *            is sensitized according to a marking m_steady
  *            (or m_decreasing) on the list of places "places" and
- *            to some weight fuctions pre_arcs_t, test_arcs_t
+ *            to some weight functions pre_arcs_t, test_arcs_t
  *            and inhib_arcs_t.
  *)
 Definition synchro_check_arcs
@@ -934,7 +935,6 @@ Inductive spn_class_fire_pre_aux_spec
   : (list trans_type) ->   (* class *)
     (list trans_type) ->   (* fired_pre_class *)
     marking_type      ->   (* m_decreasing *)
-
     (list trans_type) ->   (* fired_pre_class *)
      marking_type     ->   (* m_decreasing *)
     Prop :=
@@ -995,13 +995,13 @@ Inductive spn_class_fire_pre_aux_spec
 
 (* Function : Given 1 ordered class of transitions 
  *            in structural conflict (a list class_transs), 
- *            returns 1 list of transitions "subclass_half_fired" 
- *            and marking "m_intermediate" accordingly ...
+ *            returns 1 list of transitions "fired_pre_class" 
+ *            and marking "m_decreasing" accordingly ...
  *
  *            Returns a couple (list of transitions, marking)
- *            For each transition of the list that are sensitized
+ *            For each transition of the list that are sensitized,
  *            the marking of the pre-condition places are updated (the 
- *            transition is fired). "marking" is then the resulting marking.
+ *            transition is fired). "m_decreasing" is then the resulting marking.
  *)
 Fixpoint spn_class_fire_pre_aux
          (places : list place_type)
@@ -1036,8 +1036,8 @@ Fixpoint spn_class_fire_pre_aux
 
 (* 
  * There are 2 parallel calculus in spn_class_fire_pre_aux : 
- * 1. pumping tokens to get "m_intermediate_decreasing" (half fired)
- * 2. returning subclass of transitions (half fired)
+ * 1. pumping tokens to get "m_decreasing" (fired pre)
+ * 2. returning subclass of transitions (fired_pre_class)
  *
  * and 2 markings are recorded : 
  * 1. the initial one to check with inhib and test arcs

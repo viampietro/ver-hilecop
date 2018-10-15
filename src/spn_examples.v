@@ -1,5 +1,45 @@
 Require Export SPN.
 
+(*** Tests on conficts resolution ***)
+Lemma one_positive : 1 > 0. Proof. omega. Qed.
+
+Definition places_ex : (list place_type) := [pl 0; pl 1; pl 2].
+Definition transitions_ex : (list trans_type) := [tr 0; tr 1].
+Definition pre_ex (t : trans_type) (p : place_type) : option nat_star :=
+  match (t, p) with
+  | (tr 0, pl 0) | (tr 1, pl 1) => Some (mk_nat_star 1 one_positive)
+  | _ => None
+  end.
+Definition post_ex (t : trans_type) (p : place_type) : option nat_star :=
+  match (t, p) with
+  | (tr 0, pl 2) | (tr 1, pl 2) => Some (mk_nat_star 1 one_positive)
+  | _ => None
+  end.
+
+Definition test_ex (t : trans_type) (p : place_type) : option nat_star :=
+  match (t, p) with
+  | (tr 0, pl 1) => Some (mk_nat_star 1 one_positive)
+  | _ => None
+  end.
+Definition marking_ex (p : place_type): nat :=
+  match p with
+  | (pl 2) => 0
+  | _ => 1
+  end.
+Definition prior_ex : prior_type := {| Lol := [ [tr 1; tr 0] ] |}.
+
+Definition spn_ex : SPN := {| places := places_ex;
+                              transs := transitions_ex;
+                              pre := pre_ex;
+                              post := post_ex;
+                              test := test_ex;
+                              inhib := (fun t p => None);
+                              marking := marking_ex;
+                              priority := prior_ex
+                           |}.
+
+Compute spn_animate spn_ex 2.
+                               
 (** * example 1 *)
 
 Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
