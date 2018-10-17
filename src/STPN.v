@@ -174,7 +174,7 @@ Qed.
  *            false otherwise.
  *)
 (** "sensitized" <=> "arcs_classic" + "arcs_test" + "arcs_inhi" OK **)
-Definition trans_is_sensitized
+Definition is_sensitized
            (places : list place_type)
            (pre test inhib : weight_type)
            (m_steady : marking_type)
@@ -183,11 +183,11 @@ Definition trans_is_sensitized
   && (pre_or_test_check (test t) m_steady places)
   && (inhib_check (inhib t) m_steady  places).
 
-Functional Scheme trans_is_sensitized_ind :=
-  Induction for trans_is_sensitized Sort Prop.
+Functional Scheme is_sensitized_ind :=
+  Induction for is_sensitized Sort Prop.
 
-(*** Formal specification : trans_is_sensitized ***)
-Inductive trans_is_sensitized_spec
+(*** Formal specification : is_sensitized ***)
+Inductive is_sensitized_spec
           (places : list place_type)
           (pre   test  inhib : weight_type)
           (m_steady : marking_type) (t : trans_type) : Prop :=
@@ -200,42 +200,42 @@ Inductive trans_is_sensitized_spec
       &&
       (inhib_check
          (inhib t) m_steady  places) = true   ->
-    trans_is_sensitized_spec
+    is_sensitized_spec
       places   pre   test  inhib   m_steady    t.
 
-(*** Correctness proof : trans_is_sensitized ***)
-Theorem trans_is_sensitized_correct :
+(*** Correctness proof : is_sensitized ***)
+Theorem is_sensitized_correct :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
           (m_steady : marking_type) (t : trans_type),
-    trans_is_sensitized
+    is_sensitized
       places      pre   test  inhib
       m_steady    t   = true        ->
-    trans_is_sensitized_spec
+    is_sensitized_spec
       places      pre   test  inhib
       m_steady    t.
 Proof.
   intros places pre test inhib m_steady t.
-  functional induction (trans_is_sensitized
+  functional induction (is_sensitized
                           places pre test inhib m_steady t)
-             using trans_is_sensitized_ind.
+             using is_sensitized_ind.
   intro Htrue. apply is_enabled_mk. apply Htrue.  
 Qed.
 
-(*** Completeness proof : trans_is_sensitized ***)
-Theorem trans_is_sensitized_complete :
+(*** Completeness proof : is_sensitized ***)
+Theorem is_sensitized_complete :
   forall (places : list place_type)
           (pre   test  inhib : weight_type)
           (m_steady : marking_type) (t : trans_type),
-    trans_is_sensitized_spec
+    is_sensitized_spec
       places      pre   test  inhib
       m_steady    t      ->
-    trans_is_sensitized
+    is_sensitized
       places      pre   test  inhib
       m_steady    t   = true .
 Proof.
   intros places pre   test  inhib m_steady  t Hspec. elim Hspec.
-  intros Htrue. unfold trans_is_sensitized. rewrite Htrue. reflexivity.
+  intros Htrue. unfold is_sensitized. rewrite Htrue. reflexivity.
 Qed.
 
 (* Useless fonction for SPN but useful for 
@@ -264,7 +264,7 @@ Fixpoint list_sensitized_aux
          (sometranss : list trans_type) : list trans_type :=
   match sometranss with
   | [] => sensitized_transs 
-  | t :: tail => if (trans_is_sensitized places pre test inhib m_steady t)
+  | t :: tail => if (is_sensitized places pre test inhib m_steady t)
                  then (list_sensitized_aux places
                                            pre
                                            test
@@ -284,44 +284,39 @@ Fixpoint list_sensitized_aux
 (*** Formal specification : list_sensitized_aux ***)
 Inductive list_sensitized_aux_spec
           (places : list place_type)
-          (pre    test    inhib : weight_type) 
-          (m_steady   : marking_type)
+          (pre test inhib : weight_type) 
+          (m_steady : marking_type)
           (sensitized_transs_rec : list trans_type)  (* ? modified *) :
   list trans_type  ->   (* sometranss *)
-  list trans_type  ->   (* sensitized_transs     *)
+  list trans_type  ->   (* sensitized_transs *)
   Prop :=
+
 | list_sensitized_aux_nil :
-    list_sensitized_aux_spec 
-      places   pre   test   inhib  m_steady
-      sensitized_transs_rec [] sensitized_transs_rec
-| list_sensitized_aux_cons_if :  forall
-    (tail  sensitized_transs : list trans_type)
-    (t : trans_type),
-    list_sensitized_aux_spec 
-      places   pre   test   inhib  m_steady
-      (t::sensitized_transs_rec)   tail   sensitized_transs
-    ->
-    trans_is_sensitized
-      places   pre   test   inhib  m_steady    t
-    = true
-    ->
-    list_sensitized_aux_spec 
-      places   pre   test   inhib  m_steady
-      sensitized_transs_rec   (t::tail)   sensitized_transs
-| list_sensitized_aux_cons_else :  forall
-    (tail   sensitized_transs  : list trans_type)
-    (t : trans_type),
-    list_sensitized_aux_spec 
-      places   pre   test   inhib  m_steady
-      sensitized_transs_rec       tail    sensitized_transs
-    ->
-    trans_is_sensitized
-      places   pre   test  inhib   m_steady    t
-    = false
-    ->
-    list_sensitized_aux_spec 
-      places   pre   test   inhib  m_steady
-      sensitized_transs_rec   (t::tail)   sensitized_transs.
+    (list_sensitized_aux_spec
+       places pre test inhib m_steady
+       sensitized_transs_rec [] sensitized_transs_rec)
+      
+| list_sensitized_aux_cons_if :
+    forall (tail sensitized_transs : list trans_type)
+           (t : trans_type),
+    (list_sensitized_aux_spec
+       places pre test inhib m_steady
+       (t :: sensitized_transs_rec) tail sensitized_transs) ->
+    (is_sensitized places pre test inhib m_steady t) = true ->
+    (list_sensitized_aux_spec 
+      places pre test inhib m_steady
+      sensitized_transs_rec (t :: tail) sensitized_transs)
+      
+| list_sensitized_aux_cons_else :
+    forall (tail sensitized_transs : list trans_type)
+           (t : trans_type),
+    (list_sensitized_aux_spec 
+      places pre test inhib m_steady
+      sensitized_transs_rec tail sensitized_transs) ->
+    (is_sensitized places pre test inhib m_steady t) = false ->
+    (list_sensitized_aux_spec 
+       places pre test inhib m_steady
+       sensitized_transs_rec (t :: tail) sensitized_transs).
 
 Functional Scheme list_sensitized_aux_ind :=
   Induction for list_sensitized_aux Sort Prop.
@@ -571,12 +566,10 @@ Proof.
 Qed.
 
 (*** Completeness proof : list_sensitized_stpn ***)
-Theorem list_sensitized_stpn_complete : forall
-    (stpn : STPN) (sensitized : list trans_type),
-    list_sensitized_stpn_spec
-      stpn  sensitized                  -> 
-    list_sensitized_stpn
-      stpn = sensitized.
+Theorem list_sensitized_stpn_complete :
+  forall (stpn : STPN) (sensitized : list trans_type),
+  list_sensitized_stpn_spec stpn sensitized -> 
+  list_sensitized_stpn stpn = sensitized.
 Proof.
   intros stpn  sensitized H. elim H.
   intros. unfold list_sensitized_stpn. rewrite H0. rewrite H1.
@@ -602,12 +595,10 @@ Fixpoint list_disabled_aux
   match sometranss with
   | [] => disabled_transs 
   | t :: tail => if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
-                 then list_disabled_aux 
-                        places pre test inhib m_steady m_decreasing
-                        disabled_transs tail 
-                 else list_disabled_aux 
-                        places pre test inhib m_steady m_decreasing
-                        (t :: disabled_transs) tail   
+                 then list_disabled_aux places pre test inhib m_steady m_decreasing
+                                        disabled_transs tail 
+                 else list_disabled_aux places pre test inhib m_steady m_decreasing
+                                        (t :: disabled_transs) tail   
   end.
 
 (*** Formal specification : list_disabled_aux ***)
@@ -723,14 +714,11 @@ Qed.
  *            to zero.
  *)
 Definition list_disabled 
-         (sometranss : list trans_type)
-         (places : list place_type)
-         (pre    test    inhib : weight_type) 
-         (m_steady    m_decreasing : marking_type)
-  : list trans_type :=
-  list_disabled_aux 
-    places    pre  test  inhib   m_steady  m_decreasing  []
-    sometranss.
+           (sometranss : list trans_type)
+           (places : list place_type)
+           (pre test inhib : weight_type) 
+           (m_steady m_decreasing : marking_type) : list trans_type :=
+    list_disabled_aux places pre test inhib m_steady m_decreasing [] sometranss.
 
 (*** Formal specification : list_disabled ***)
 Inductive list_disabled_spec
@@ -962,11 +950,10 @@ Fixpoint increment_time_sensitized
          (t : trans_type) : option chrono_type  :=
   match sensitized_transs with
   | [] => chronos t
-  | t2incr :: tail =>
-    increment_time_sensitized
-      (increment_time_trans chronos t2incr)
-      tail
-      t
+  | t2incr :: tail => (increment_time_sensitized
+                         (increment_time_trans chronos t2incr)
+                         tail
+                         t)
   end.
 
 (*** Formal specification : increment_time_sensitized ***)
@@ -977,8 +964,7 @@ Inductive increment_time_sensitized_spec
     option chrono_type               ->  (* resulting chronos *)
     Prop :=
 | increment_time_sensitized_nil :
-    increment_time_sensitized_spec
-      chronos  t  [] (chronos t)
+    increment_time_sensitized_spec chronos t [] (chronos t)
 | increment_time_sensitized_cons :
     forall (tail : list trans_type)
            (t2incr : trans_type)
@@ -995,21 +981,19 @@ Inductive increment_time_sensitized_spec
 
 (* On incremente en debut de cycle. Avec un marquage stable 
  * donc on se sert d'une liste de transitions sensitized, 
- * facilement calculable 
+ * facilement calculable. 
  *)
 
 Functional Scheme increment_time_sensitized_ind :=
   Induction for increment_time_sensitized Sort Prop.  
 
-Theorem increment_time_sensitized_correct : forall
-    (chronos   chronos_incr: trans_type -> option chrono_type)
-    (sensitized_transs :  list trans_type)
-    (t : trans_type),
-    increment_time_sensitized
-      chronos  sensitized_transs  t  = (chronos_incr t)
-    ->
-    increment_time_sensitized_spec
-      chronos  t  sensitized_transs    (chronos_incr t).
+(*** Correctness proof : increment_time_sensitized ***)
+Theorem increment_time_sensitized_correct :
+  forall (chronos chronos_incr : trans_type -> option chrono_type)
+         (sensitized_transs : list trans_type)
+         (t : trans_type),
+  increment_time_sensitized chronos sensitized_transs t = (chronos_incr t) ->
+  increment_time_sensitized_spec chronos t sensitized_transs (chronos_incr t).
 Proof.
   intros chronos  chronos_incr  sensitized_transs t.  
   functional induction (increment_time_sensitized
@@ -1021,6 +1005,8 @@ Proof.
       with (chronos_t_incr := increment_time_trans chronos t2incr).
     + unfold increment_time_trans. 
 Admitted.
+
+(*** Completeness proof : increment_time_sensitized ***)
 Theorem increment_time_sensitized_complete : forall
     (chronos   chronos_incr: trans_type -> option chrono_type)
     (sensitized_transs :  list trans_type)
@@ -1038,136 +1024,121 @@ Admitted.
 
 
 (**************************************************************)
-(**** on fait la meme chose pour les transitions disabled ... *)
+(**************************************************************)
 
-
-Definition reset_time_trans0
+(*  
+ * Function : Resets the value of transition t2reset's 
+ *            chrono to zero.
+ *            Returns a function taking a transition in parameter
+ *            and returning its associated chrono. 
+ *)
+Definition reset_time0
            (chronos : trans_type -> option chrono_type)
-           (t2reset : trans_type)
-  : trans_type -> option chrono_type :=
+           (t2reset : trans_type) : trans_type -> option chrono_type :=
   match (chronos t2reset) with
   | None  => chronos   (* reset nothing ... *)
-  | Some (mk_chrono
-            min_t    max_t   min_le_max   cnt )  =>
-    (fun t =>
-       if beq_transs
-            t t2reset
-       then Some (mk_chrono
-                    min_t  max_t   min_le_max   0 )
-       else (chronos t))             
+  | Some (mk_chrono min_t max_t min_le_max cnt) =>
+    (fun t => if beq_transs t t2reset
+              then Some (mk_chrono min_t max_t min_le_max 0)
+              else (chronos t))             
   end.
 
-Definition reset_time_trans
+(*  
+ * Function : Same as reset_time0, except that no lambda
+ *            used. The function takes an extra parameter t 
+ *            instead.
+ *)
+Definition reset_time
            (chronos : trans_type -> option chrono_type)
-           (t2reset   t : trans_type)
-  : option chrono_type :=
+           (t2reset t : trans_type) : option chrono_type :=
   match (chronos t2reset) with
   | None  => chronos t   (* reset nothing ... *)
-  | Some (mk_chrono
-            min_t max_t   min_t_le_max_t cnt) =>
-    if beq_transs  t2reset t 
-    then Some (mk_chrono
-                 min_t max_t    min_t_le_max_t 0)
+  | Some (mk_chrono min_t max_t min_t_le_max_t cnt) =>
+    if beq_transs t2reset t 
+    then Some (mk_chrono min_t max_t min_t_le_max_t 0)
     else (chronos t)
   end.
 
-
-Theorem reset_time_trans_equiv : forall
-    (chronos : trans_type -> option chrono_type)
-    (t2reset  t :  trans_type)
-    (chrono_t : option chrono_type),
-    reset_time_trans
-      chronos t2reset t  = (chronos t)
-    <->
-    reset_time_trans0
-      chronos t2reset t  = (chronos t).
+Theorem reset_time_equiv :
+  forall (chronos : trans_type -> option chrono_type)
+         (t2reset t : trans_type)
+         (chrono_t : option chrono_type),
+  reset_time chronos t2reset t = (chronos t) <->
+  reset_time0 chronos t2reset t = (chronos t).
 Proof.
   intros chronos t2reset t chrono_t. split. 
-  - intro H. unfold reset_time_trans in H. unfold reset_time_trans0.
+  - intro H. unfold reset_time in H. unfold reset_time0.
 Admitted.
 
-
-Inductive reset_time_trans_spec
+(*** Formal specification : reset_time ***)
+Inductive reset_time_spec
           (chronos : trans_type -> option chrono_type)
-          (t2reset  t :  trans_type)
-  :  option chrono_type  ->  Prop  :=
-| reset_time_trans_none : 
-    (chronos t2reset) = None
-    ->
-    reset_time_trans_spec
-      chronos t2reset t  (chronos t)
-| reset_time_trans_some_if : forall
-    (min_t max_t cnt : nat)
-    (min_leb_max : min_t <= max_t)
-    (chrono_t_reset : option chrono_type),
-    (chronos t2reset) = Some (mk_chrono
-                                min_t  max_t
-                                min_leb_max   cnt)
-    ->
-    beq_transs t2reset  t = true
-    ->
-    Some (mk_chrono
-            min_t   max_t
-            min_leb_max  0) = chrono_t_reset
-    ->
-    reset_time_trans_spec
-      chronos t2reset  t chrono_t_reset
-| reset_time_trans_some_else : forall
-    (min_t max_t cnt : nat)
-    (min_leb_max : min_t <= max_t),
-    (chronos t2reset) = Some (mk_chrono
-                                min_t  max_t
-                                min_leb_max   cnt)
-    ->
-    beq_transs t2reset  t = false
-    ->
-    reset_time_trans_spec
-      chronos t2reset  t (chronos t).
+          (t2reset  t :  trans_type) : option chrono_type -> Prop :=
+| reset_time_none : 
+    (chronos t2reset) = None ->
+    reset_time_spec chronos t2reset t (chronos t)
+| reset_time_some_if :
+    forall (min_t max_t cnt : nat)
+           (min_leb_max : min_t <= max_t)
+           (chrono_t_reset : option chrono_type),
+    (chronos t2reset) = Some (mk_chrono min_t max_t min_leb_max   cnt) ->
+    beq_transs t2reset  t = true ->
+    Some (mk_chrono min_t   max_t min_leb_max  0) = chrono_t_reset ->
+    reset_time_spec chronos t2reset  t chrono_t_reset
+| reset_time_some_else :
+    forall (min_t max_t cnt : nat)
+           (min_leb_max : min_t <= max_t),
+    (chronos t2reset) = Some (mk_chrono min_t  max_t min_leb_max   cnt) ->
+    beq_transs t2reset  t = false ->
+    reset_time_spec chronos t2reset  t (chronos t).
 
-Functional Scheme reset_time_trans_ind :=
-  Induction for reset_time_trans Sort Prop. 
+Functional Scheme reset_time_ind :=
+  Induction for reset_time Sort Prop. 
 
-Theorem reset_time_trans_correct :  forall
+(*** Correctness proof : reset_time ***)
+Theorem reset_time_correct :  forall
     (chronos : trans_type -> option chrono_type)
     (t2reset   t : trans_type)
     (chrono_t_reset : option chrono_type),
-    reset_time_trans
+    reset_time
       chronos    t2reset   t    =  chrono_t_reset       ->
-    reset_time_trans_spec
+    reset_time_spec
       chronos    t2reset   t       chrono_t_reset.
 Proof.
   intros  chronos  t2reset   t  chrono_t_reset.
-  functional induction (reset_time_trans
+  functional induction (reset_time
                           chronos  t2reset   t)
-             using reset_time_trans_ind.
-  - intro H. apply reset_time_trans_some_if
+             using reset_time_ind.
+  - intro H. apply reset_time_some_if
                with (min_t:=min_t0) (max_t:=max_t0) (cnt:=_x) (min_leb_max:= min_t_le_max_t0).
     + assumption.
     + assumption.
     + assumption.
-  - intro H. rewrite <- H. apply reset_time_trans_some_else with
+  - intro H. rewrite <- H. apply reset_time_some_else with
                                (min_t:=min_t0) (max_t:=max_t0)
                                (cnt:=_x) (min_leb_max:=min_t_le_max_t0).
     + assumption.
     + assumption.
-  - intro H. rewrite <- H. apply reset_time_trans_none.
+  - intro H. rewrite <- H. apply reset_time_none.
     assumption. 
 Qed.
-Theorem reset_time_trans_complete : forall
+
+(*** Completeness proof : reset_time ***)
+Theorem reset_time_complete : forall
     (chronos : trans_type -> option chrono_type)
     (t2reset   t : trans_type)
     (chrono_t_reset : option chrono_type),
-    reset_time_trans_spec
+    reset_time_spec
       chronos    t2reset   t       chrono_t_reset   ->
-    reset_time_trans
+    reset_time
       chronos    t2reset   t    =  chrono_t_reset.
 Proof.
   intros chronos  t2reset  t  chrono_t_reset H. elim H.
-  - intro H0. unfold reset_time_trans.
+  - intro H0. unfold reset_time.
     rewrite H0. reflexivity.
-  - intros. unfold reset_time_trans.
+  - intros. unfold reset_time.
     rewrite H0. rewrite H1. assumption.
-  - intros. unfold reset_time_trans.
+  - intros. unfold reset_time.
     rewrite H0. rewrite H1. reflexivity.
 Qed.
 
@@ -1179,188 +1150,195 @@ le reset de compteur est plus subtil :
    ----> celles desensibilisees durant le cycle. meme transitoirement
 *)
     
-(* reset time counters of (a class of ?) some transitions ... *)
-Print increment_time_sensitized. 
-Fixpoint reset_time_disabled0
-           (chronos : trans_type -> option chrono_type)
-           (disabled_transs : list trans_type)
-  : trans_type -> option chrono_type :=
-  match disabled_transs with
+(* 
+ * Function : Resets time counters of all transitions in
+ *            transs.
+ *            Returns the updated chrono function (of type
+ *            trans_type -> option chrono_type).
+ *)
+Fixpoint reset_all_chronos0
+         (chronos : trans_type -> option chrono_type)
+         (transs : list trans_type) :
+  trans_type -> option chrono_type :=
+  match transs with
   | [] => chronos
-  | t2reset :: tail =>
-    reset_time_disabled0
-      (reset_time_trans0
-         chronos  t2reset)
-      tail
+  | t2reset :: tail => reset_all_chronos0 (reset_time0 chronos t2reset) tail
   end.
 
-Fixpoint reset_time_disabled
+(* 
+ * Function : Same as reset_all_chronos0, with extra parameter t
+ *            of type trans_type (simulates a lambda function
+ *            when no value is given for this parameter).
+ *)
+Fixpoint reset_all_chronos
          (chronos : trans_type -> option chrono_type)
+         (transs : list trans_type)
+         (t : trans_type) : option chrono_type :=
+  match transs with
+  | [] => chronos t
+  | t2reset :: tail => reset_all_chronos (reset_time chronos t2reset) tail t
+  end.
+
+(*** Formal specification : reset_all_chronos ***)
+Inductive reset_all_chronos_spec
+          (chronos : trans_type -> option chrono_type)
+          (t : trans_type) :
+  list trans_type -> option chrono_type -> Prop :=
+(* Case transs = nil *)
+| reset_all_chronos_nil :
+    reset_all_chronos_spec chronos t [] (chronos t)
+                           
+| reset_all_chronos_cons :
+    forall (tail : list trans_type)
+           (t2reset : trans_type)
+           (reset_chronos : trans_type -> option chrono_type),
+    (reset_all_chronos_spec chronos t tail (reset_chronos t)) ->
+    (reset_all_chronos_spec chronos t (t2reset :: tail) ((reset_time reset_chronos t2reset) t)).
+
+Functional Scheme reset_all_chronos_ind :=
+  Induction for reset_all_chronos Sort Prop. 
+
+(*** Correctness proof : reset_all_chronos ***)
+Theorem reset_all_chronos_correct :
+  forall (chronos : trans_type -> option chrono_type)
          (disabled_transs : list trans_type)
          (t : trans_type)
-  : option chrono_type  :=
-  match disabled_transs with
-  | [] => chronos  t
-  | t2reset :: tail    =>
-    reset_time_disabled
-      (reset_time_trans   chronos   t2reset)
-      tail
-      t
-  end.
-
-Inductive reset_time_disabled_spec
-          (chronos : trans_type -> option chrono_type)
-          (t : trans_type)
-  : list trans_type             ->   (* disabled_transs *)
-    option chrono_type          ->  (* resulting chronos *)
-    Prop :=
-| reset_time_disabled_nil :
-    reset_time_disabled_spec chronos t [] (chronos t)
-| reset_time_disabled_cons : forall
-    (tail : list trans_type)
-    (t2reset : trans_type)
-    (any_chronos : trans_type -> option chrono_type)
-    (chronos_t_reset : trans_type -> option chrono_type),
-    chronos_t_reset = reset_time_disabled 
-                        (reset_time_trans
-                           any_chronos   t2reset)
-                        tail
-    ->
-    reset_time_disabled_spec
-      chronos t tail            (chronos_t_reset t)
-    ->
-    reset_time_disabled_spec
-      chronos t (t2reset::tail) (any_chronos t).
-
-Functional Scheme reset_time_disabled_ind :=
-  Induction for reset_time_disabled Sort Prop. 
-
-Theorem reset_time_disabled_correct :  forall
-    (chronos : trans_type -> option chrono_type)
-    (disabled_transs : list trans_type)
-    (t   : trans_type)
-    (chrono_t_reset : option chrono_type),
-    reset_time_disabled
-      chronos    disabled_transs t    =  chrono_t_reset       ->
-    reset_time_disabled_spec
-      chronos    t  disabled_transs      chrono_t_reset.
+         (chrono_t_reset : option chrono_type),
+    reset_all_chronos chronos disabled_transs t = chrono_t_reset ->
+    reset_all_chronos_spec chronos t disabled_transs chrono_t_reset.
 Proof.
-  intros  chronos    disabled_transs   t   chrono_t_reset.
-  functional induction (reset_time_disabled
-                          chronos disabled_transs t)
-             using reset_time_disabled_ind.
-  - intro H. rewrite <- H. apply reset_time_disabled_nil.
-  - intro H. rewrite <- H. apply reset_time_disabled_cons with
-                               (chronos_t_reset := chronos ).
+  intros chronos disabled_transs t chrono_t_reset.
+  functional induction (reset_all_chronos chronos disabled_transs t)
+             using reset_all_chronos_ind.
+  - intro H. rewrite <- H. apply reset_all_chronos_nil.
+  - intro H. rewrite <- H. apply reset_all_chronos_cons with
+                               (reset_chronos := chronos ).
     +  
 Admitted.
 
-
- 
-Theorem reset_time_disabled_complete :  forall
-    (chronos : trans_type -> option chrono_type)
-    (disabled_transs : list trans_type)
-    (t  : trans_type)
-    (chrono_t_reset : option chrono_type),
-    reset_time_disabled_spec
+(*** Completeness proof : reset_all_chronos ***)
+Theorem reset_all_chronos_complete :
+  forall (chronos : trans_type -> option chrono_type)
+         (disabled_transs : list trans_type)
+         (t : trans_type)
+         (chrono_t_reset : option chrono_type),
+  reset_all_chronos_spec
       chronos  t   disabled_transs      chrono_t_reset       ->
-    reset_time_disabled
+    reset_all_chronos
       chronos  disabled_transs   t  =   chrono_t_reset.
 Proof.
   intros chronos  disabled_transs t  chrono_t_reset H. elim H.
   - simpl. reflexivity.
-  - intros. simpl. unfold reset_time_disabled.
+  - intros. simpl. unfold reset_all_chronos.
 Admitted.
 
     
-
 (*****************************************************************
 **********   FIRING ALGORITHM    for STPN      *******************
 ******************************************************************)
-Print reset_time_trans. Print reset_time_trans0.
-Print STPN. Print spn_class_fire_pre. Print reset_time_trans.
-Check update_marking_pre.
-(** given 1 ordered class of transitions 
-in structural conflict (a list class_of_transs), 
-return 1 list of transitions "subclass_half_fired" 
-and marking "m_intermediate" accordingly ...   *)
+
+(*
+ * Function : Given 1 ordered class of transitions 
+ *            in structural conflict (a list class_transs), 
+ *            returns a 3-uplet composed of a list of transitions 
+ *            "fired_pre_class" (the transitions that have been pre-fired), 
+ *            a marking, obtained after the update of the tokens in the pre-condition 
+ *            places of the fired_pre_class's transitions, 
+ *            and a new chrono function (of type trans_type -> option chrono_type).
+ *)
 Fixpoint stpn_class_fire_pre_aux
          (whole_class : list trans_type)
          (places : list place_type)
-         (pre    test    inhib : weight_type) 
-         (m_steady    : marking_type)
-         (class_transs   fired_pre_class : list trans_type)
+         (pre test inhib : weight_type) 
+         (m_steady : marking_type)
+         (class_transs fired_pre_class : list trans_type)
          (m_decreasing : marking_type) 
-         (chronos : trans_type -> option chrono_type)
-  : (list trans_type)      *
-    marking_type           *
-    (trans_type -> option chrono_type) :=
+         (chronos : trans_type -> option chrono_type) :
+  (list trans_type) * marking_type * (trans_type -> option chrono_type) :=
+
   match class_transs with
   | t :: tail =>
-    if synchro_check_arcs
-         places (pre t) (test t) (inhib t)  m_steady  m_decreasing
-         (* t is sensitized, even w.r.t. to the others *)
-         && (time_check (chronos  t))
-    then   (* firing  t *)
-      let new_decreasing   :=
-          (update_marking_pre
-             t  pre  m_decreasing  places )
-      in   (* reseting the disabled intervals ! *)
-      let new_chronos :=
-          (reset_time_disabled0
-             (reset_time_trans0   chronos t)    (* ! reset de t *)
-             (list_disabled
-                whole_class   places     pre    test    inhib
-                m_steady       new_decreasing))
+    (* t is sensitized, even w.r.t. to the others *)
+    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+       && (time_check (chronos t))
+    then
+      (* (Half-)Fires t by updating the marking in its pre-condition places *)
+      let new_decreasing := (update_marking_pre t pre m_decreasing places)
       in
-      stpn_class_fire_pre_aux
-        whole_class  places    pre    test   inhib   m_steady
-        tail
-        (fired_pre_class ++ [t]) new_decreasing  new_chronos
-    else  (* not sensitized  w.r.t. the other transs OR not goog time*)
-      stpn_class_fire_pre_aux
-        whole_class   places    pre    test   inhib   m_steady
-        tail
-        fired_pre_class          m_decreasing   chronos
+      (* Resets the time counters of all transitions that have been
+       * disabled after the firing of t, along with transition t's chrono! 
+       *)
+      let new_chronos := (reset_all_chronos0 (reset_time0 chronos t)    
+                                             (list_disabled whole_class
+                                                            places
+                                                            pre
+                                                            test
+                                                            inhib
+                                                            m_steady
+                                                            new_decreasing))
+      (* Adds t to the fired_pre_class list, and continue
+       * with a new marking and a new "chronos".
+       *)
+      in (stpn_class_fire_pre_aux whole_class
+                                  places
+                                  pre
+                                  test
+                                  inhib
+                                  m_steady
+                                  tail
+                                  (fired_pre_class ++ [t])
+                                  new_decreasing
+                                  new_chronos)
+    (* not sensitized  w.r.t. the other transs OR not goog time *)
+    else (stpn_class_fire_pre_aux whole_class
+                                  places
+                                  pre
+                                  test
+                                  inhib
+                                  m_steady
+                                  tail
+                                  fired_pre_class
+                                  m_decreasing
+                                  chronos)
   | []  => (fired_pre_class, m_decreasing, chronos)
   end.
+
 (* 
-there are 3 parallel calculus in this function : 
-1) pumping tokens to get "m_intermediate"  (half fired)
-2) returning subclass of transitions (half fired)
-3) resting local counters of any "sensitized transition no more sensitized". 
-and 2 markings are recorded : 
-1) the initial one to check with inhib and test arcs
-2) a floating (decreasing) intermediate marking to check classic arcs
+ * There are 3 parallel calculus in this function : 
+ * 1) pumping tokens to get "m_intermediate"  (half fired)
+ * 2) returning subclass of transitions (half fired)
+ * 3) resting local counters of any "sensitized transition no more sensitized". 
+ * and 2 markings are recorded : 
+ * 1) the initial one to check with inhib and test arcs
+ * 2) a floating (decreasing) intermediate marking to check classic arcs
  *)
-Print spn_class_fire_pre_aux. Print spn_class_fire_pre_aux_spec. 
+
+(*** Formal specification : stpn_class_fire_pre_aux ***)
 Inductive stpn_class_fire_pre_aux_spec
           (whole_class : list trans_type)
           (places : list place_type)
-          (pre   test   inhib : weight_type)  
-          (m_steady     : marking_type)
-  : (list trans_type)                   ->     (* class *)
-    (list trans_type)                   ->  (* subclass_fired_pre *)
-    marking_type                        ->  (* m_decreasing *)
-    (trans_type -> option chrono_type)  ->  (* chronos *)
-    
+          (pre test inhib : weight_type)  
+          (m_steady : marking_type) :
+  (list trans_type)                   ->     (* class *)
+  (list trans_type)                   ->  (* subclass_fired_pre *)
+  marking_type                        ->  (* m_decreasing *)
+  (trans_type -> option chrono_type)  ->  (* chronos *)      
+  (list trans_type)           ->   (* subclass_fired_pre *)
+  marking_type                       ->   (* m_decreasing *)
+  (trans_type -> option chrono_type)    ->  (* chronos *)
+  Prop :=
+  
+| class_nil :
+    forall (m_decreased : marking_type)
+           (subclass_fired_pre : list trans_type)
+           (chronos : trans_type -> option chrono_type),
+    (stpn_class_fire_pre_aux_spec
+       whole_class places pre test inhib m_steady [] subclass_fired_pre
+       m_decreased chronos subclass_fired_pre m_decreased chronos)
       
-    (list trans_type)           ->   (* subclass_fired_pre *)
-    marking_type                       ->   (* m_decreasing *)
-    (trans_type -> option chrono_type)    ->  (* chronos *)
-    Prop :=
-| class_nil : forall
-    (m_decreased : marking_type)
-    (subclass_fired_pre : list trans_type)
-    (chronos : trans_type -> option chrono_type),
-    stpn_class_fire_pre_aux_spec
-      whole_class    places   pre  test  inhib  m_steady
-      []
-      subclass_fired_pre   m_decreased     chronos
-      subclass_fired_pre   m_decreased     chronos
 | class_cons_if :  forall
     (t : trans_type)
-    (tail    subclass_fired_pre  sub : list trans_type)
+    (tail subclass_fired_pre sub : list trans_type)
     (m_decreasing_low  m_decreasing_high  m : marking_type)
     (chronos  new_chronos   chronos_final : trans_type -> option chrono_type),
     synchro_check_arcs
@@ -1372,8 +1350,8 @@ Inductive stpn_class_fire_pre_aux_spec
                           t   pre   m_decreasing_high  places)
     ->
      new_chronos =
-     (reset_time_disabled0
-        (reset_time_trans0 chronos t)    (* ! reset de t *)
+     (reset_all_chronos0
+        (reset_time0 chronos t)    (* ! reset de t *)
         (list_disabled
            whole_class   places     pre    test    inhib
            m_steady       m_decreasing_low))
@@ -1414,6 +1392,7 @@ Inductive stpn_class_fire_pre_aux_spec
 Functional Scheme stpn_class_fire_pre_aux_ind :=
   Induction for stpn_class_fire_pre_aux   Sort Prop.
 
+(*** Correctness proof : stpn_class_fire_pre_aux ***)
 Theorem stpn_class_fire_pre_aux_correct : forall
     (whole_class : list trans_type)
     (places : list place_type)
@@ -1449,8 +1428,8 @@ Proof.
       with (m_decreasing_low := (update_marking_pre
                                    t pre m_decreasing  places ))
            (new_chronos :=
-              (reset_time_disabled0
-                 (reset_time_trans0 chronos t)    (* ! reset de t *)
+              (reset_all_chronos0
+                 (reset_time0 chronos t)    (* ! reset de t *)
                  (list_disabled
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
@@ -1510,8 +1489,11 @@ Proof.
     rewrite Hsynchro'. rewrite Htail.  reflexivity. 
 Qed.
 
-(* filling subclass_half_fired  ...  *)
-Print spn_class_fire_pre_aux.
+(*   
+ * Function : Wrapper around the stpn_class_fire_pre function.
+ * 
+ *)
+
 Definition stpn_class_fire_pre
            (places : list place_type)
            (pre    test    inhib : weight_type) 
@@ -1693,7 +1675,7 @@ Functional Scheme stpn_fire_pre_aux_ind :=
 Section projections3.
   Context {A : Type} {B : Type} {C : Type}.
 
-  Definition premz (p:A * B * C) := match p with
+  Definition premz (p : A * B * C) := match p with
                                   | (x, y, z) => x
                                   end.
   Definition deuz (p:A * B * C) := match p with

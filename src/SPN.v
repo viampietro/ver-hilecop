@@ -353,15 +353,13 @@ Fixpoint update_marking_pre
          (t : trans_type)
          (pre : weight_type)
          (m : marking_type)
-         (places : list place_type)
-  : marking_type :=
+         (places : list place_type) : marking_type :=
   match places with
   | [] => m
-  | cons p tail => update_marking_pre
-                     t
-                     pre
-                     (modif_mark m p (pre t p) Nat.sub)
-                     tail
+  | cons p tail => update_marking_pre t
+                                      pre
+                                      (modif_mark m p (pre t p) Nat.sub)
+                                      tail
   end.
 
 Functional Scheme update_marking_pre_ind :=
@@ -410,9 +408,8 @@ Qed.
 Inductive update_marking_post_spec
           (t : trans_type)
           (post : weight_type)
-          (m : marking_type)
-  : list place_type -> marking_type -> Prop :=
-  
+          (m : marking_type) :
+  list place_type -> marking_type -> Prop :=
 | update_marking_post_nil :
     update_marking_post_spec t post m [] m
                              
@@ -495,15 +492,9 @@ Inductive update_marking_spec
           (pre post : weight_type)
           (m : marking_type) : marking_type -> Prop :=
 | update_marking_mk :
-    (update_marking_spec places
-                         t
-                         pre
-                         post
-                         m
-                         (update_marking_post t
-                                              post
-                                              (update_marking_pre t pre m places)
-                                              places)).
+    (update_marking_spec
+       places t pre post m
+       (update_marking_post t post (update_marking_pre t pre m places) places)).
 
 (* Function : Updates the marking for all the places in
  *            the list places, resulting of the firing
