@@ -356,10 +356,10 @@ Fixpoint update_marking_pre
          (places : list place_type) : marking_type :=
   match places with
   | [] => m
-  | cons p tail => update_marking_pre t
-                                      pre
-                                      (modif_mark m p (pre t p) Nat.sub)
-                                      tail
+  | p :: tail => update_marking_pre t
+                                    pre
+                                    (modif_mark m p (pre t p) Nat.sub)
+                                    tail
   end.
 
 Functional Scheme update_marking_pre_ind :=
