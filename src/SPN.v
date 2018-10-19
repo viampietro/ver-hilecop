@@ -96,29 +96,14 @@ Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
          exists (l : list trans_type),
            (In x l) -> (In l list_lists) }. *)
 
-(**************************************************)
-(*** Defines the structure of Simple Petri Nets ***)
-(**************************************************)
-Structure SPN : Set :=
-  mk_SPN {
-      places : list place_type;
-      transs : list trans_type;
-      pre : weight_type;
-      post : weight_type;
-      test : weight_type;
-      inhib : weight_type;
-      marking : marking_type;                     
-      priority : prior_type;
-  }.
-
-(* Let's suppose that 
- * 1) all places are different (NoDup ...)
- * 2) all transitions are different (NoDup ...)
- *
- * 3) priority/prior_type  
- * forme une partition des transitions, partition correspondante
- * aux classes de "conflits structurels" (arcs amonts en commum)
- *) 
+(* Defines a function taking a transition
+ * and returning a 4-uplet corresponding to its
+ * associated pre, test, inhib and post places. 
+ *)
+Definition incidence_type := trans_type -> (list place_type *
+                                            list place_type *
+                                            list place_type *
+                                            list place_type). 
 
 (**************************************************************)
 (************ Are 2 nat/places/transitions equal ? ************)
@@ -226,6 +211,52 @@ Proof.
   decide equality.
 Defined.
 
+(**************************************************)
+(*** Defines the structure of Simple Petri Nets ***)
+(**************************************************)
+
+(* Let's suppose that 
+ * 1) some properties on the places
+ *    - all places have different index (NoDup)
+ *   
+ * 2) some properties on the transitions
+ *    - all transitions are different (NoDup ...)
+ *
+ * 3) priority/prior_type, list of sublists of transs 
+ *    A sublist in priority denotes a group of transitions
+ *    being in structural conflict.
+ *
+ * 4) some properties on the incidence list :
+ *    - no isolated transitions are possible =>
+ *      ~exists t, ((pre t) = None /\ (test t) = None /\ (inhib t) = None) \/ (post t) = None ->
+ *      ((fst (incidence t)) <> [] \/ (snd (incidence t)) <> [] \/ (trd (incidence t)) <> [])
+ *      /\ ((fth (incidence t)) <> [])
+ *)
+
+
+Structure SPN : Set :=
+  mk_SPN {
+      places : list place_type;
+      transs : list trans_type;
+      pre : weight_type;
+      post : weight_type;
+      test : weight_type;
+      inhib : weight_type;
+      marking : marking_type;                     
+      priority : prior_type;
+
+      (* Contains the list of pre places, 
+       * test places, inhib places and post places associated
+       * with each transition of the SPN.
+       *)
+      incidence : incidence_type;
+
+      (* Properties on places and transitions *)
+      nodup_places : NoDup places;
+      nodup_transs : NoDup transs;
+      
+  }.
+
 (*********************************************************)
 (************** ANIMATING THE PETRI NET ******************)
 (************** (semantics definition)  ******************)
@@ -249,20 +280,19 @@ Inductive modif_mark_spec
     modif_mark_spec m p2modif j op p2get (m p2modif)
 (* Case where j = Some nat_star. *)
 | modif_mark_eq_some :
-    forall (i : nat_star) (n : nat) (pf : n > 0),
-      (beq_places p2modif p2get) = true          ->
-      j = (Some i)                      ->
-      i = (mk_nat_star n pf)            ->
-      modif_mark_spec
-        m p2modif j op p2get  (op (m p2modif) n)
+    forall (n : nat) (pf : n > 0),
+      (beq_places p2modif p2get) = true ->
+      j = (Some (mk_nat_star n pf)) ->
+      modif_mark_spec m p2modif j op p2get (op (m p2modif) n)
 (* Case where p2modif and p2get are two different places. *)
 | modif_mark_neq :
-    (beq_places p2modif p2get) = false           ->
-    modif_mark_spec
-      m p2modif j op p2get (m p2get).
+    (beq_places p2modif p2get) = false ->
+    modif_mark_spec m p2modif j op p2get (m p2get).
 
 (* Function : Given a marking m, add/remove j tokens (if j is not None)
  *            inside place p2modif and give the marking in place p2get.
+ *
+ * Param j : number of tokens to add or sub for place p2modif.
  *
  * Param p2get : extra place argument, if not given, the modif_mark
  *               function returns a marking application (place_type -> nat).  
@@ -270,18 +300,16 @@ Inductive modif_mark_spec
 Definition modif_mark
            (m : marking_type)
            (p2modif : place_type)
-           (j : option nat_star)
+           (j : option nat_star)     
            (op : nat -> nat -> nat)  (* add or substract *)
            (p2get : place_type) : nat :=
   if beq_places p2modif p2get
   then
     match j with
-    | None => m p2modif          (*  (m p2get) works too *)
-    | Some i => match i with
-                | mk_nat_star inti _ => op (m p2modif) inti
-                end
+    | None => m p2modif
+    | Some (mk_nat_star n _) => op (m p2modif) n
     end
-  else m p2get.         (* other places left unchanged  *) 
+  else m p2get. (* other places left unchanged  *) 
 
 Functional Scheme modif_mark_ind :=
   Induction for modif_mark Sort Prop.
@@ -302,26 +330,29 @@ Proof.
   - intro H.
     rewrite <- H.
     apply modif_mark_eq_some
-      with (i:= {| int := inti; posi := _x |}) (pf := _x);
-      try reflexivity;
-      assumption.
+      with (j := Some {| int := n; posi := _x |}) (pf := _x).
+    + auto.
+    + auto.
   - intro H. rewrite <- H. apply modif_mark_eq_none.
     assumption. reflexivity.
   - intro H. rewrite <- H. apply modif_mark_neq. assumption.
 Qed.
 
 (*** Completeness proof : modif_mark ***)
-Theorem modif_mark_complete :  forall
-    (m : marking_type) (p2modif p2get : place_type)
-    (j : option nat_star) (op : nat -> nat -> nat) (mp : nat),
+Theorem modif_mark_complete :
+  forall (m : marking_type)
+         (p2modif p2get : place_type)
+         (j : option nat_star)
+         (op : nat -> nat -> nat)
+         (mp : nat),
     modif_mark_spec m p2modif j op p2get mp ->
     modif_mark m p2modif j op p2get = mp. 
 Proof.
   intros m p2modif p2get j op  mp H. elim H.
   - intros Hbeq_true Hnone_j. unfold modif_mark.
     rewrite Hbeq_true. rewrite Hnone_j. reflexivity.
-  - intros i n pf Hsome_j Hji Hi_n_pf. unfold modif_mark.
-    rewrite Hsome_j. rewrite Hji. rewrite Hi_n_pf. reflexivity.
+  - intros n pf Hbeq Hj. unfold modif_mark.
+    rewrite Hbeq. rewrite Hj. reflexivity.
   - intros Hbeq_false. unfold modif_mark. rewrite Hbeq_false. reflexivity.
 Qed.
 
@@ -333,8 +364,8 @@ Qed.
 Inductive update_marking_pre_spec
           (t : trans_type)
           (pre : weight_type)
-          (m : marking_type)
-  : list place_type -> marking_type -> Prop :=
+          (m : marking_type) :
+  list place_type -> marking_type -> Prop :=
 | update_marking_pre_nil :
     update_marking_pre_spec t pre m [] m 
 | update_marking_pre_cons :
@@ -356,10 +387,7 @@ Fixpoint update_marking_pre
          (places : list place_type) : marking_type :=
   match places with
   | [] => m
-  | p :: tail => update_marking_pre t
-                                    pre
-                                    (modif_mark m p (pre t p) Nat.sub)
-                                    tail
+  | p :: tail => update_marking_pre t pre (modif_mark m p (pre t p) Nat.sub) tail
   end.
 
 Functional Scheme update_marking_pre_ind :=
@@ -432,22 +460,19 @@ Fixpoint update_marking_post (* structural induction over list of places *)
          (places : list place_type) : marking_type :=
   match places with
   | [] => m
-  | cons p tail => (update_marking_post
-                      t
-                      post
-                      (modif_mark m p (post t p) Nat.add)
-                      tail) 
+  | p :: tail => update_marking_post t post (modif_mark m p (post t p) Nat.add) tail
   end.
 
 Functional Scheme update_marking_post_ind :=
   Induction for update_marking_post Sort Prop.
 
 (*** Correctness proof : update_marking_post ***)
-Theorem update_marking_post_correct : forall
-    (places : list place_type)     (t : trans_type)
-    (post : weight_type)   (m m_updated : marking_type),
-    update_marking_post        t post m places  = m_updated     ->
-    update_marking_post_spec   t post m places    m_updated.
+Theorem update_marking_post_correct :
+  forall (places : list place_type)
+         (t : trans_type)
+         (post : weight_type) (m m_updated : marking_type),
+    update_marking_post t post m places = m_updated ->
+    update_marking_post_spec t post m places m_updated.
 Proof.
   intros places t post m m_updated.
   functional induction (update_marking_post  t post m places)
@@ -461,11 +486,13 @@ Proof.
 Qed.
 
 (*** Completeness proof : update_marking_post ***)
-Theorem update_marking_post_complete : forall
-    (places : list place_type)    (t : trans_type)
-    (post : weight_type)    (m m_updated : marking_type),
-    update_marking_post_spec  t post m places    m_updated       ->
-    update_marking_post       t post m places  = m_updated.
+Theorem update_marking_post_complete :
+  forall (places : list place_type)
+         (t : trans_type)
+         (post : weight_type)
+         (m m_updated : marking_type),
+    update_marking_post_spec t post m places m_updated ->
+    update_marking_post t post m places = m_updated.
 Proof.
   intros places t post m m_updated Hspec. elim Hspec.
   - simpl. reflexivity.
@@ -492,9 +519,9 @@ Inductive update_marking_spec
           (pre post : weight_type)
           (m : marking_type) : marking_type -> Prop :=
 | update_marking_mk :
-    (update_marking_spec
-       places t pre post m
-       (update_marking_post t post (update_marking_pre t pre m places) places)).
+    update_marking_spec
+      places t pre post m
+      (update_marking_post t post (update_marking_pre t pre m places) places).
 
 (* Function : Updates the marking for all the places in
  *            the list places, resulting of the firing
@@ -506,10 +533,7 @@ Definition update_marking
            (t : trans_type)
            (pre post : weight_type)
            (m : marking_type) : marking_type :=
-  (update_marking_post t
-                       post
-                       (update_marking_pre t pre m places)
-                       places).
+  update_marking_post t post (update_marking_pre t pre m places) places.
 
 Functional Scheme update_marking_ind :=
   Induction for update_marking Sort Prop.
@@ -548,7 +572,8 @@ Qed.
 (*** Formal specification : marking2list ***)
 Inductive marking2list_spec (m : marking_type) :
   list place_type -> list (place_type * nat) -> Prop :=
-| marking2list_nil : marking2list_spec m [] []
+| marking2list_nil :
+    marking2list_spec m [] []
 | marking2list_cons :
     forall (p : place_type)
            (tail : list place_type)
@@ -618,20 +643,18 @@ Inductive pre_or_test_check_spec
     pre_or_test_check_spec pre_or_test_arcs_t m []
                            
 | pre_or_test_check_cons_none :
-    forall (p:place_type)
-           (tail:list place_type),
+    forall (p : place_type)
+           (tail : list place_type),
     pre_or_test_arcs_t p = None ->
     pre_or_test_check_spec pre_or_test_arcs_t m tail ->
     pre_or_test_check_spec pre_or_test_arcs_t m (p :: tail)
                            
 | pre_or_test_check_cons_some :
-    forall (p:place_type)
-           (tail:list place_type)
-           (pos:nat_star)
-           (n:nat)
+    forall (p : place_type)
+           (tail : list place_type)
+           (n : nat)
            (pf : n > 0),
-    pre_or_test_arcs_t p = Some pos ->
-    pos = {| int := n; posi := pf |} ->
+    pre_or_test_arcs_t p = Some {| int := n; posi := pf |} ->
     (n <= (m p)) -> (* marquage suffisant en place p *)           
     pre_or_test_check_spec pre_or_test_arcs_t m tail ->
     pre_or_test_check_spec pre_or_test_arcs_t m (p :: tail).
@@ -652,16 +675,11 @@ Fixpoint pre_or_test_check
          (places : list place_type) : bool :=
   match places with
   | nil => true
-  | cons h tail => match pre_or_test_arcs_t h with
-                   | None => pre_or_test_check pre_or_test_arcs_t m tail 
-                   | Some n => match n with
-                               | mk_nat_star int posi =>
-                                 (int <=? (m h)) && (pre_or_test_check
-                                                       pre_or_test_arcs_t
-                                                       m
-                                                       tail)
-                               end
-                   end
+  | h :: tail => match pre_or_test_arcs_t h with
+                 | None => pre_or_test_check pre_or_test_arcs_t m tail 
+                 | Some (mk_nat_star int posi) =>
+                   (int <=? (m h)) && (pre_or_test_check pre_or_test_arcs_t m tail)
+                 end
   end.
 
 Functional Scheme pre_or_test_check_ind :=
@@ -682,16 +700,12 @@ Proof.
   - intro Htrue. apply pre_or_test_check_nil.
   - intro Hconj.
     SearchPattern ( ?a = true /\ ?b = true ). (* and_prop *)
-    assert (Hconjb : int0 <=? m h = true  /\
-                     pre_or_test_check
-                       pre_or_test_arcs_t   m   tail  = true).
+    assert (Hconjb : int0 <=? m h = true /\ pre_or_test_check pre_or_test_arcs_t m tail = true).
     { apply andb_prop. apply Hconj. }    
-    apply pre_or_test_check_cons_some with
-        (pos:={| int := int0; posi := _x |})
-        (n:=int0) (pf:=_x).
+    apply pre_or_test_check_cons_some with (n := int0) (pf := _x).
     + assumption.
-    + reflexivity.
-    + apply leb_complete. apply (proj1 Hconjb).
+    + SearchPattern ( _ <=? _ = true).
+      elim Hconjb. intros. apply leb_complete. auto.
     + apply (IHb (proj2 Hconjb)).
   - intro Htail. apply pre_or_test_check_cons_none.
     + assumption.
@@ -710,8 +724,8 @@ Proof.
   - simpl. reflexivity.
   - intros p tail Hnone Hspectail Htail. simpl.
     rewrite Hnone. assumption.
-  - intros p tail pos n pf Hsome Hposnpf Hnmp Hspectail Htail.
-    simpl. rewrite Hsome. rewrite Hposnpf.
+  - intros p tail n pf Hsome Hnmp Hspectail Htail.
+    simpl. rewrite Hsome.
     SearchPattern ( ?a && ?b = true ).
     apply andb_true_intro. split.
     + apply leb_correct.  apply Hnmp. 
@@ -737,15 +751,13 @@ Inductive inhib_check_spec
     inhib_check_spec inhib_arcs_t m (p::tail)
 
 | inhib_check_cons_some :
-    forall (p:place_type)
-           (tail:list place_type)
-           (pos:nat_star)
-           (n:nat) (pf : n > 0),
-    inhib_arcs_t p = Some pos ->
-    pos = {| int := n; posi := pf |} ->
+    forall (p : place_type)
+           (tail : list place_type)
+           (n : nat) (pf : n > 0),
+    inhib_arcs_t p = Some {| int := n; posi := pf |} ->
     (m p < n) ->
     inhib_check_spec inhib_arcs_t m tail -> 
-    inhib_check_spec inhib_arcs_t m (p::tail).
+    inhib_check_spec inhib_arcs_t m (p :: tail).
 
 (*
  * Function : Returns true if all places in the places list
@@ -762,10 +774,8 @@ Fixpoint inhib_check
   | nil => true
   | cons h tail => match inhib_arcs_t h with
                    | None => (inhib_check inhib_arcs_t m tail)
-                   | Some n => match n with
-                               | mk_nat_star int posi =>
-                                   ((m h) <? int) && (inhib_check inhib_arcs_t m tail)
-                               end
+                   | Some (mk_nat_star int posi) => 
+                     ((m h) <? int) && (inhib_check inhib_arcs_t m tail)
                    end
   end.
 
@@ -777,24 +787,18 @@ Theorem inhib_check_correct :
   forall (places : list place_type)
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-    inhib_check        inhib_arcs_t  m   places  = true        ->
-    inhib_check_spec   inhib_arcs_t  m   places.
+  inhib_check inhib_arcs_t m places = true ->
+  inhib_check_spec inhib_arcs_t m places.
 Proof.
-  intros places   inhib_arcs_t   m.
-  functional induction (inhib_check
-                          inhib_arcs_t   m  places)
+  intros places inhib_arcs_t m.
+  functional induction (inhib_check inhib_arcs_t m places)
              using inhib_check_ind.
   - intro H. apply inhib_check_nil.
   - intro Hconj. SearchPattern ( ?a = true /\ ?b = true ).
-    assert (Hconjb : m h <? int0 = true      /\
-                     inhib_check
-                       inhib_arcs_t   m  tail = true).
+    assert (Hconjb : m h <? int0 = true /\ inhib_check inhib_arcs_t m tail = true).
     { apply andb_prop. apply Hconj. }    
-    apply inhib_check_cons_some with
-        (pos:={| int := int0; posi := _x |})
-        (n:=int0) (pf:=_x).
+    apply inhib_check_cons_some with (n := int0) (pf := _x).
     + assumption.
-    + reflexivity.
     + unfold Nat.ltb in Hconjb. unfold lt.
       apply leb_complete. apply (proj1 Hconjb). 
     + apply (IHb (proj2 Hconjb)).
@@ -808,15 +812,15 @@ Theorem inhib_check_complete :
   forall (places : list place_type)
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-    inhib_check_spec   inhib_arcs_t  m  places     ->
-    inhib_check        inhib_arcs_t  m  places  = true.
+  inhib_check_spec inhib_arcs_t m places ->
+  inhib_check inhib_arcs_t m places = true.
 Proof.
-  intros places  inhib_arcs_t  m  Hspec. elim Hspec.
+  intros places inhib_arcs_t m Hspec. elim Hspec.
   - simpl. reflexivity.
   - intros p tail Hnone Hspectail Htail. simpl.
     rewrite Hnone. assumption.
-  - intros p tail pos n pf Hsome Hposnpf Hmpn Hspectail Htail.
-    simpl. rewrite Hsome. rewrite Hposnpf.
+  - intros p tail n pf Hsome Hmpn Hspectail Htail.
+    simpl. rewrite Hsome. 
     SearchPattern ( ?a && ?b = true ). apply andb_true_intro. split.
     + apply leb_correct. unfold lt in Hmpn. assumption.
     + assumption.
@@ -851,6 +855,7 @@ Inductive synchro_check_arcs_spec
                              inhib_arcs_t
                              m_steady
                              m_decreasing).
+
 (* 
  * Function : Returns true if a certain transition t
  *            is sensitized according to a marking m_steady
@@ -878,17 +883,10 @@ Theorem synchro_check_arcs_correct :
          (test_arcs_t : place_type -> option nat_star)
          (inhib_arcs_t : place_type -> option nat_star)
          (m_steady     m_decreasing    : marking_type),
-    synchro_check_arcs
-      places      pre_arcs_t   test_arcs_t   inhib_arcs_t
-      m_steady    m_decreasing    
-    = true 
-    ->
-    synchro_check_arcs_spec
-      places      pre_arcs_t   test_arcs_t   inhib_arcs_t
-      m_steady    m_decreasing.
+    synchro_check_arcs places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing = true ->
+    synchro_check_arcs_spec places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing.
 Proof.
-  intros places  pre_arcs_t   test_arcs_t   inhib_arcs_t
-         m_steady   m_decreasing    H.
+  intros places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing H.
   unfold synchro_check_arcs in H. 
   apply synchro_check_arcs_mk. assumption.
 Qed.
@@ -922,13 +920,13 @@ Qed.
 Inductive spn_class_fire_pre_aux_spec
           (places : list place_type)
           (pre test inhib : weight_type)  
-          (m_steady : marking_type)
-  : (list trans_type) ->   (* class *)
-    (list trans_type) ->   (* fired_pre_class *)
-    marking_type      ->   (* m_decreasing *)
-    (list trans_type) ->   (* fired_pre_class *)
-     marking_type     ->   (* m_decreasing *)
-    Prop :=
+          (m_steady : marking_type) :
+  (list trans_type) ->   (* class *)
+  (list trans_type) ->   (* fired_pre_class *)
+  marking_type      ->   (* m_decreasing *)
+  (list trans_type) ->   (* fired_pre_class *)
+  marking_type      ->   (* m_decreasing *)
+  Prop :=
 | class_nil :
     forall
       (m_decreased : marking_type)
@@ -990,7 +988,7 @@ Inductive spn_class_fire_pre_aux_spec
  *            and marking "m_decreasing" accordingly ...
  *
  *            Returns a couple (list of transitions, marking)
- *            For each transition of the list that are sensitized,
+ *            For each sensitized transition of the list,
  *            the marking of the pre-condition places are updated (the 
  *            transition is fired). "m_decreasing" is then the resulting marking.
  *)
@@ -1002,26 +1000,27 @@ Fixpoint spn_class_fire_pre_aux
          (class_transs fired_pre_class : list trans_type)  
          (m_decreasing : marking_type) : (list trans_type) * marking_type :=
   match class_transs with
-  | t :: tail => if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
-                 then (* change and inductive progress *)  
-                   let new_decreasing := (update_marking_pre t pre m_decreasing places)
-                   in (spn_class_fire_pre_aux places
-                                              pre
-                                              test
-                                              inhib
-                                              m_steady
-                                              tail
-                                              (fired_pre_class ++ [t])
-                                              new_decreasing)
-                 else (* no change but inductive progress *)
-                   (spn_class_fire_pre_aux places
-                                           pre
-                                           test
-                                           inhib
-                                           m_steady   
-                                           tail
-                                           fired_pre_class
-                                           m_decreasing)
+  | t :: tail =>
+    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+    then (* change and inductive progress *)  
+      let new_decreasing := (update_marking_pre t pre m_decreasing places) in
+      (spn_class_fire_pre_aux places
+                              pre
+                              test
+                              inhib
+                              m_steady
+                              tail
+                              (fired_pre_class ++ [t])
+                              new_decreasing)
+    else (* no change but inductive progress *)
+      (spn_class_fire_pre_aux places
+                              pre
+                              test
+                              inhib
+                              m_steady   
+                              tail
+                              fired_pre_class
+                              m_decreasing)
   | []  => (fired_pre_class, m_decreasing)
   end.
 
@@ -1041,14 +1040,14 @@ Functional Scheme spn_class_fire_pre_aux_ind :=
 (*** Correctness proof : spn_class_fire_pre_aux ***)
 Theorem spn_class_fire_pre_aux_correct :
   forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady      m_decreasing      m_final : marking_type)
-         (class_transs  fired_pre_class  fpc_final : list trans_type),
+         (pre test inhib : weight_type)
+         (m_steady m_decreasing m_final : marking_type)
+         (class_transs fired_pre_class fpc_final : list trans_type),
     spn_class_fire_pre_aux
-      places    pre   test   inhib   m_steady
+      places pre test inhib m_steady
       class_transs
-      fired_pre_class     m_decreasing 
-    = (fpc_final,         m_final)
+      fired_pre_class m_decreasing 
+    = (fpc_final, m_final)
     ->
     spn_class_fire_pre_aux_spec
       places    pre   test   inhib   m_steady                 
@@ -1135,8 +1134,7 @@ Definition spn_class_fire_pre
            (m_steady : marking_type) 
            (class_transs : list trans_type)
            (m_decreasing : marking_type) : (list trans_type) * marking_type :=
-  (spn_class_fire_pre_aux
-     places pre test inhib m_steady class_transs [] m_decreasing).
+  spn_class_fire_pre_aux places pre test inhib m_steady class_transs [] m_decreasing.
 
 Functional Scheme spn_class_fire_pre_ind :=
   Induction for spn_class_fire_pre Sort Prop.
@@ -1144,20 +1142,13 @@ Functional Scheme spn_class_fire_pre_ind :=
 (*** Correctness proof : spn_class_fire_pre ***)
 Theorem spn_class_fire_pre_correct :
   forall (places : list place_type)
-         (pre  test  inhib : weight_type)
-         (m_steady   m_decreasing     m_decreased : marking_type)
-         (class_transs     fired_pre_class  : list trans_type),
-    spn_class_fire_pre
-      places        pre test inhib    m_steady             
-      class_transs
-                         m_decreasing
-    = (fired_pre_class,  m_decreased)
-    ->
-    spn_class_fire_pre_spec
-      places        pre test inhib    m_steady               
-      class_transs
-                         m_decreasing
-      fired_pre_class    m_decreased.
+         (pre test inhib : weight_type)
+         (m_steady m_decreasing m_decreased : marking_type)
+         (class_transs fired_pre_class : list trans_type),
+  spn_class_fire_pre places pre test inhib m_steady class_transs m_decreasing =
+  (fired_pre_class,  m_decreased) ->
+  spn_class_fire_pre_spec places pre test inhib m_steady
+                          class_transs m_decreasing fired_pre_class m_decreased.
 Proof.
   intros places pre test inhib m_steady m_decreasing m_decreased
          class_transs  fired_pre_class.
@@ -1195,25 +1186,27 @@ Qed.
 (********** spn_class_fire_pre ---> spn_fire_pre(_aux) ***********)
 (*** ici on gere l'ensemble des classes **************************)
 
+
 (*** Formal specification : spn_fire_pre_aux ***)
 Inductive spn_fire_pre_aux_spec
           (places : list place_type)
           (pre test inhib : weight_type)
-          (m_steady  : marking_type)
-  : list (list trans_type)   ->  (* classes   *)
-    list (list trans_type)   ->  (* fired_pre_classes *)
-    marking_type             ->  (* m_decreasing *)
-    list (list trans_type)   ->  (* fired_pre_classes *)
-    marking_type             ->  (* m_decreasing *)
-    Prop :=
+          (m_steady  : marking_type) :
+  list (list trans_type)   ->  (* classes   *)
+  list (list trans_type)   ->  (* fired_pre_classes *)
+  marking_type             ->  (* m_decreasing *)
+  list (list trans_type)   ->  (* fired_pre_classes *)
+  marking_type             ->  (* m_decreasing *)
+  Prop :=
+  
 | classes_nil :
     forall
       (classes_fired_pre : list (list trans_type))
       (m_decreased : marking_type),
-    (spn_fire_pre_aux_spec
-       places pre test inhib m_steady []
-       classes_fired_pre m_decreased
-       classes_fired_pre m_decreased)
+    spn_fire_pre_aux_spec
+      places pre test inhib m_steady []
+      classes_fired_pre m_decreased
+      classes_fired_pre m_decreased
       
 | classes_cons :
     forall
@@ -1252,12 +1245,12 @@ Fixpoint spn_fire_pre_aux
   | class :: classes_tail => let (class_fired_pre, m_decreased_class) :=
                                  (spn_class_fire_pre
                                     places pre test inhib m_steady
-                                    class m_decreasing)
-                             in (spn_fire_pre_aux
-                                   places pre test inhib m_steady   
-                                   classes_tail
-                                   (class_fired_pre :: classes_fired_pre)
-                                   m_decreased_class)
+                                    class m_decreasing) in
+                             (spn_fire_pre_aux
+                                places pre test inhib m_steady   
+                                classes_tail
+                                (class_fired_pre :: classes_fired_pre)
+                                m_decreased_class)
   end.
 
 Functional Scheme spn_fire_pre_aux_ind :=
@@ -1266,9 +1259,9 @@ Functional Scheme spn_fire_pre_aux_ind :=
 (*** Correctness proof : spn_fire_pre_aux ***)
 Theorem spn_fire_pre_aux_correct :
   forall (places : list place_type)
-         (pre   test  inhib : weight_type)
-         (m_steady  m_decreasing  m_decreased : marking_type)
-         (classes_transs   classes_fired_pre_growing
+         (pre  test inhib : weight_type)
+         (m_steady m_decreasing m_decreased : marking_type)
+         (classes_transs classes_fired_pre_growing
                            classes_fired_pre : list (list trans_type)),
     spn_fire_pre_aux
       places             pre   test  inhib   m_steady
@@ -1332,8 +1325,8 @@ Qed.
 
 (******* spn_fire_pre_aux   --->  spn_fire_pre ******************)
 (***** just apply  ..._aux  with good arguments 
-*********  that is an empty list    for fired_pre_classes
-*********  and m_steady             for m_decreasing  *) 
+ *********  that is an empty list for fired_pre_classes
+ *********  and m_steady for m_decreasing  *) 
 
 (*** Formal specification : spn_fire_pre ***)
 Inductive spn_fire_pre_spec
@@ -1366,11 +1359,7 @@ Definition spn_fire_pre
          (m_steady : marking_type)
          (classes_transs  : list (list trans_type)) :
   (list (list trans_type)) * marking_type :=
-  
-  (spn_fire_pre_aux
-     places pre test inhib m_steady
-     classes_transs
-     [] m_steady).
+  spn_fire_pre_aux places pre test inhib m_steady classes_transs [] m_steady.
 
 Functional Scheme spn_fire_pre_ind :=
   Induction for spn_fire_pre   Sort Prop.
@@ -1472,7 +1461,7 @@ Fixpoint class_fire_post
   end.
 
 Functional Scheme class_fire_post_ind :=
-  Induction for class_fire_post   Sort Prop.
+  Induction for class_fire_post Sort Prop.
 
 (*** Correctness proof : class_fire_post ***)
 Theorem class_fire_post_sound :
@@ -1562,11 +1551,9 @@ Fixpoint fire_post
          (fired_pre_classes : list (list trans_type)) : marking_type := 
   match fired_pre_classes with
   | []  => m_increasing
-  | class :: tail  => let greater_m := (class_fire_post
-                                          places post
-                                          m_increasing
-                                          class)
-                      in (fire_post places post greater_m tail)                     
+  | class :: tail  =>
+    let greater_m := (class_fire_post places post m_increasing class) in
+    (fire_post places post greater_m tail)                     
   end. 
 
 Functional Scheme fire_post_ind :=
@@ -1631,24 +1618,16 @@ Inductive spn_fire_spec
           (places : list place_type)
           (pre test inhib post : weight_type)
           (m_steady : marking_type)
-          (classes_transs : list (list trans_type))
-  : (list (list trans_type))   ->
-    marking_type               ->
-    Prop :=
+          (classes_transs : list (list trans_type)) :
+  (list (list trans_type)) ->
+  marking_type             ->
+  Prop :=
 | spn_fire_mk :
     forall (sub_Lol : list (list trans_type))
            (m_inter m : marking_type),
-    (sub_Lol, m_inter) = spn_fire_pre
-                           places  pre test inhib 
-                           m_steady   classes_transs
-    ->
-    m = fire_post
-          places post   m_inter  sub_Lol
-    ->
-    spn_fire_spec   
-      places         pre test inhib post
-      m_steady       classes_transs
-      sub_Lol    m.
+    (sub_Lol, m_inter) = spn_fire_pre places pre test inhib m_steady classes_transs ->
+    m = fire_post places post m_inter sub_Lol ->
+    spn_fire_spec places pre test inhib post m_steady classes_transs sub_Lol m.
 
 (*  
  * Function : Returns  "transitions fired (Lol)" + "final marking",
@@ -1658,18 +1637,14 @@ Definition spn_fire
            (places : list place_type)
            (pre test inhib post : weight_type)
            (m_steady : marking_type)
-           (classes_transs : list (list trans_type))
-  : (list (list trans_type)) * marking_type :=
-  let (sub_Lol, m_inter) := (spn_fire_pre places
-                                          pre
-                                          test
-                                          inhib 
-                                          m_steady
-                                          classes_transs)
-  in (sub_Lol, (fire_post places post m_inter sub_Lol)).
+           (classes_transs : list (list trans_type)) :
+  (list (list trans_type)) * marking_type :=
+
+  let (sub_Lol, m_inter) := (spn_fire_pre places pre test inhib m_steady classes_transs) in
+  (sub_Lol, (fire_post places post m_inter sub_Lol)).
 
 Functional Scheme spn_fire_ind :=
-  Induction for  spn_fire   Sort Prop.
+  Induction for spn_fire Sort Prop.
 
 (*** Correctness proof : spn_fire ***)
 Theorem spn_fire_correct :
@@ -1743,8 +1718,7 @@ Definition spn_print_fire_pre (spn : SPN) :
 (************************************************************)
 
 (*** Formal specification : spn_cycle ***)
-Inductive spn_cycle_spec (spn : SPN) :
-  list (list trans_type) -> SPN -> Prop :=
+Inductive spn_cycle_spec (spn : SPN) : list (list trans_type) -> SPN -> Prop :=
 | spn_cycle_mk :
     forall (sub_Lol Lol : list (list trans_type))
            (next_m m : marking_type)
@@ -1766,8 +1740,8 @@ Inductive spn_cycle_spec (spn : SPN) :
 Definition spn_cycle (spn : SPN) : (list (list trans_type)) * SPN :=
   match spn with
   | (mk_SPN places transs pre post test inhib m (mk_prior Lol)) =>
-    let (sub_Lol, next_m) := (spn_fire places pre test inhib post m Lol)
-    in (sub_Lol, (mk_SPN places transs pre post test inhib next_m (mk_prior Lol)))
+    let (sub_Lol, next_m) := (spn_fire places pre test inhib post m Lol) in
+    (sub_Lol, (mk_SPN places transs pre post test inhib next_m (mk_prior Lol)))
   end.
 
 Functional Scheme spn_cycle_ind :=
@@ -1775,22 +1749,19 @@ Functional Scheme spn_cycle_ind :=
 
 (*** Correctness proof : spn_cycle ***)
 Theorem spn_cycle_correct :
-  forall (spn  next_spn : SPN)
+  forall (spn next_spn : SPN)
          (sub_Lol : list (list trans_type)),
-    spn_cycle
-      spn    =  (sub_Lol, next_spn)
-    ->
-    spn_cycle_spec
-      spn        sub_Lol  next_spn.
+    spn_cycle spn = (sub_Lol, next_spn) ->
+    spn_cycle_spec spn sub_Lol next_spn.
 Proof.
-  intros  spn  next_spn  sub_Lol.
+  intros spn next_spn sub_Lol.
   functional induction (spn_cycle spn)
              using spn_cycle_ind.
   intro Heq.
   apply spn_cycle_mk
-    with (Lol:=Lol0) (next_m:=next_m) (m:=m)
-         (places:=places0) (transs:=transs0)
-         (pre:=pre0) (post:=post0) (test:=test0) (inhib:=inhib0).
+    with (Lol := Lol0) (next_m := next_m) (m := m)
+         (places := places0) (transs := transs0)
+         (pre := pre0) (post := post0) (test := test0) (inhib := inhib0).
   - reflexivity.
   - rewrite e1. inversion Heq. reflexivity.
   - inversion Heq. reflexivity.
@@ -1815,7 +1786,8 @@ Qed.
 (*** Formal specification : spn_animate ***)
 Inductive spn_animate_spec (spn : SPN) :
   nat -> list (list (list trans_type) * list (place_type * nat)) -> Prop :=
-| animate_spn_O : spn_animate_spec spn O [ ([], []) ]
+| animate_spn_O :
+    spn_animate_spec spn O [ ([], []) ]
 | animate_spn_S :
     forall (next_spn : SPN)
            (Lol_fired : list (list trans_type))
@@ -1836,9 +1808,9 @@ Fixpoint spn_animate (spn : SPN) (n : nat) :
   list ((list (list trans_type)) * (list (place_type * nat))) :=
   match n with
   | O => [ ([], []) ]
-  | S n' => let (Lol_fired, next_spn) := (spn_cycle spn) 
-            in (Lol_fired, (marking2list (marking next_spn) (places next_spn))) ::
-               (spn_animate next_spn n')
+  | S n' => let (Lol_fired, next_spn) := (spn_cycle spn) in
+            (Lol_fired, (marking2list (marking next_spn) (places next_spn)))
+              :: (spn_animate next_spn n')
   end.
 
 Functional Scheme spn_animate_ind :=

@@ -111,16 +111,16 @@ Fixpoint sitpn_class_fire_pre_aux
     if
       (synchro_check_arcs places (pre t) (test t) 
                           (inhib t)  m_steady  m_decreasing)
-        && (time_check (chronos t))
+        && (check_chrono (chronos t))
         && (condition_check conditions t)
     then
       let new_decreasing :=
           update_marking_pre
             t pre m_decreasing places  in
       let new_chronos :=
-          reset_time_disabled0
-            (reset_time_trans0 chronos t)    (* ! reset de t *)
-            (not_synchro_check_list
+          reset_all_chronos0
+            (reset_chrono0 chronos t)    (* ! reset de t *)
+            (list_disabled
                full_class   places pre test
                inhib m_steady new_decreasing) in
       sitpn_class_fire_pre_aux
@@ -177,16 +177,16 @@ Inductive sitpn_class_fire_pre_aux_spec
     synchro_check_arcs
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing_high               = true   /\
-    time_check (chronos  t)                     = true   /\
+    check_chrono (chronos  t)                     = true   /\
     (condition_check conditions t)              = true
     -> 
     m_decreasing_low = (update_marking_pre
                           t   pre   m_decreasing_high places)
     ->
      new_chronos =
-     (reset_time_disabled0
-        (reset_time_trans0 chronos t)    (* ! reset de t *)
-        (not_synchro_check_list
+     (reset_all_chronos0
+        (reset_chrono0 chronos t)    (* ! reset de t *)
+        (list_disabled
            whole_class   places     pre    test    inhib
            m_steady       m_decreasing_low))
     ->    
@@ -211,7 +211,7 @@ Inductive sitpn_class_fire_pre_aux_spec
     synchro_check_arcs
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing                   = false   \/
-    time_check (chronos  t)                    = false   \/
+    check_chrono (chronos  t)                    = false   \/
     (condition_check conditions t)             = false
     ->
     sitpn_class_fire_pre_aux_spec
@@ -285,9 +285,9 @@ Proof.
       with (m_decreasing_low := (update_marking_pre
                                    t pre m_decreasing  places))
            (new_chronos :=
-              (reset_time_disabled0
-                 (reset_time_trans0 chronos t)    (* ! reset de t *)
-                 (not_synchro_check_list
+              (reset_all_chronos0
+                 (reset_chrono0 chronos t)    (* ! reset de t *)
+                 (list_disabled
                     whole_class   places     pre    test    inhib
                     m_steady    (update_marking_pre
                                    t pre m_decreasing  places)))).
@@ -327,7 +327,7 @@ Proof.
     assert (H0' : synchro_check_arcs
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing_high &&
-                    time_check (chronos0 t)               &&
+                    check_chrono (chronos0 t)               &&
                     (condition_check conditions t) = true).
       { apply andb3_true_iff. assumption. }  
       rewrite H0'. rewrite <- H1. rewrite <- H2. rewrite H4.
@@ -336,7 +336,7 @@ Proof.
     assert (H0' : synchro_check_arcs
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing0 &&
-                    time_check (chronos0 t)           &&
+                    check_chrono (chronos0 t)           &&
                     (condition_check conditions t) = false).
       { apply andb3_false_iff. assumption. } 
     rewrite H0'. rewrite H2.  reflexivity. 
@@ -725,7 +725,7 @@ Qed.
 (*********************************************************)
 (******* for  DEBUGGING  only  ..  ***********************)
 Search SPN.
-Print stpn_debug1. 
+Print stpn_print_fire_pre. 
 Definition sitpn_debug1
            (places : list place_type)
            (transs : list trans_type)
@@ -903,12 +903,10 @@ Qed.
    are evolving !!  
 but we want to see also the fired transitions ! *)
 (******************************* CYCLE **********************)
-Print list_enabled. Print SITPN. Print STPN. Print SPN.
-Print stpn_cycle.
 
 (* wait a minute *)
 
-Definition list_enabled_sitpn
+Definition list_sensitized_sitpn
            (sitpn : SITPN)
   : list trans_type :=
   match sitpn with
@@ -918,14 +916,14 @@ Definition list_enabled_sitpn
          chronos)
       scenario
     =>
-    list_enabled_spn
+    list_sensitized_spn
       spn
   end.
 Print SITPN. 
-Inductive list_enabled_sitpn_spec
+Inductive list_sensitized_sitpn_spec
            (sitpn : SITPN)
   : list trans_type  ->  Prop  :=
-| list_enabled_sitpn_mk : forall
+| list_sensitized_sitpn_mk : forall
     (spn : SPN)
     (enabled_transs : list trans_type)
     (chronos : trans_type -> option chrono_type)
@@ -936,45 +934,45 @@ Inductive list_enabled_sitpn_spec
                  chronos)
               scenario
     ->
-    list_enabled_spn 
+    list_sensitized_spn 
       spn
     = enabled_transs
     ->
-    list_enabled_sitpn_spec
+    list_sensitized_sitpn_spec
       sitpn 
       enabled_transs.
-Functional Scheme list_enabled_sitpn_ind :=
-  Induction for list_enabled_sitpn Sort Prop.
-Theorem list_enabled_sitpn_correct :  forall
+Functional Scheme list_sensitized_sitpn_ind :=
+  Induction for list_sensitized_sitpn Sort Prop.
+Theorem list_sensitized_sitpn_correct :  forall
     (sitpn : SITPN) (enabled : list trans_type),
-    list_enabled_sitpn
+    list_sensitized_sitpn
       sitpn = enabled        ->
-    list_enabled_sitpn_spec
+    list_sensitized_sitpn_spec
       sitpn  enabled.
 Proof.
   intros sitpn  enabled.
-  functional induction (list_enabled_sitpn
+  functional induction (list_sensitized_sitpn
                           sitpn)
-             using list_enabled_sitpn_ind.
-  intro H. apply list_enabled_sitpn_mk with
+             using list_sensitized_sitpn_ind.
+  intro H. apply list_sensitized_sitpn_mk with
                (spn := spn) (chronos := _x0) (scenario := _x).
   + reflexivity.
   + assumption.   
 Qed.
-Theorem list_enabled_sitpn_complete : forall
+Theorem list_sensitized_sitpn_complete : forall
     (sitpn : SITPN) (enabled : list trans_type),
-    list_enabled_sitpn_spec
+    list_sensitized_sitpn_spec
       sitpn  enabled                  -> 
-    list_enabled_sitpn
+    list_sensitized_sitpn
       sitpn = enabled.
 Proof.
   intros sitpn  enabled H. elim H.
-  intros. unfold list_enabled_sitpn. rewrite H0. rewrite H1.
+  intros. unfold list_sensitized_sitpn. rewrite H0. rewrite H1.
   reflexivity. 
 Qed.
 
 (*  now it's easier *)
-Print list_enabled. 
+Print list_sensitized. 
 Definition sitpn_cycle (sitpn : SITPN)
   : (list (list trans_type)) * SITPN  :=
   match sitpn with
@@ -994,9 +992,9 @@ Definition sitpn_cycle (sitpn : SITPN)
     | [] => ([], sitpn)   (* dangerous ? 
 freeze !  or continue with no more constraints ?  *)
     | C :: tail =>
-      let chronos_incr := increment_time_enabled
+      let chronos_incr := increment_all_chronos
                             chronos
-                            (list_enabled_spn
+                            (list_sensitized_spn
                                (mk_SPN
                                   places  transs
                                   (* nodup_places  nodup_transitions *)  
@@ -1024,7 +1022,7 @@ freeze !  or continue with no more constraints ?  *)
     end
   end.
 
-Print list_enabled_sitpn. Print scenar_type. 
+Print list_sensitized_sitpn. Print scenar_type. 
 
 Inductive sitpn_cycle_spec
           (sitpn : SITPN) :
@@ -1081,10 +1079,10 @@ Inductive sitpn_cycle_spec
     ->
     scenario = C :: Tail
     ->    
-    enabled = list_enabled_spn
+    enabled = list_sensitized_spn
                 spn
     ->
-    chronos_incr = increment_time_enabled
+    chronos_incr = increment_all_chronos
                      chronos      enabled
     -> 
     (sub_Lol, next_m, next_chronos ) =
@@ -1159,7 +1157,7 @@ Proof.
                                      {| Lol := Lol |} |} ;
                            all_chronos := chronos |})
                                  
-                 (enabled := list_enabled_spn
+                 (enabled := list_sensitized_spn
                                {|
                                  places := places;
                                  transs := transs;
@@ -1170,9 +1168,9 @@ Proof.
                                  marking := marking;
                                  priority :=
                                    {| Lol := Lol |} |})    
-                 (chronos_incr := increment_time_enabled
+                 (chronos_incr := increment_all_chronos
                                     chronos
-                                    (list_enabled_spn
+                                    (list_sensitized_spn
                                        {|
                                          places := places;
                                          transs := transs;
@@ -1186,9 +1184,9 @@ Proof.
                  (next_chronos :=
                     troiz (sitpn_fire
                              places  pre  test  inhib  post marking
-                             (increment_time_enabled
+                             (increment_all_chronos
                                 chronos
-                                (list_enabled_spn
+                                (list_sensitized_spn
                                        {|
                                          places := places;
                                          transs := transs;
@@ -1237,7 +1235,7 @@ Proof.
 
     rewrite  H2. rewrite H1. rewrite H0. simpl.
     rewrite H3. simpl.
-    unfold list_enabled_spn in H4. rewrite H0 in H4.
+    unfold list_sensitized_spn in H4. rewrite H0 in H4.
 
     rewrite <- H4.
     rewrite <- H5. rewrite  <- H6. rewrite H7. reflexivity. 

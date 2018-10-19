@@ -63,7 +63,6 @@ Definition ex_nodup_transs : NoDup ex_transs :=
 
 (**********************************************)
 Print nat_star. Print weight_type.
-Lemma one_positive : 1 > 0. Proof. omega. Qed.
 Lemma two_positive : 2 > 0. Proof. omega. Qed.
 (* one lemma for each arc weight ... *)
 
@@ -294,71 +293,76 @@ Lemma ex_spn1_debugpre :
 Proof. compute. reflexivity. Qed.
 
 Search SPN. (* spn_fired    spn_debug_pre  spn_animate  *)
-Compute (spn_animate ex_spn1 10).  (* 11 markings *)
 
-Lemma ex_spn1_animate : (spn_animate
-                           ex_spn1
-                           10) =
-     [([[]; []; []; [tr 0]; [tr 1]],
-       [(pl 0, 1); (pl 1, 0); 
-        (pl 2, 1); (pl 3, 0); (pl 4, 1);
-        (pl 5, 1); (pl 7, 0); (pl 8, 0);
-        (pl 9, 0); (pl 10, 0); 
-        (pl 11, 0); (pl 12, 1)]);
-       ([[]; [tr 4]; []; [tr 5]; []],
-       [(pl 0, 1); (pl 1, 0); (pl 2, 1);
-       (pl 3, 0); (pl 4, 0); (pl 5, 0);
-       (pl 7, 0); (pl 8, 1); (pl 9, 1);
-       (pl 10, 0); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[tr 6]; []; []; [tr 2]; []],
-       [(pl 0, 1); (pl 1, 0); (pl 2, 0);
-       (pl 3, 1); (pl 4, 0); (pl 5, 0);
-       (pl 7, 1); (pl 8, 0); (pl 9, 0);
-       (pl 10, 1); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[]; []; [tr 3]; [tr 0]; []],
-       [(pl 0, 0); (pl 1, 1); (pl 2, 0);
-       (pl 3, 0); (pl 4, 1); (pl 5, 1);
-       (pl 7, 0); (pl 8, 0); (pl 9, 0);
-       (pl 10, 1); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[]; [tr 4]; []; []; [tr 1]],
-       [(pl 0, 0); (pl 1, 0); (pl 2, 1);
-       (pl 3, 0); (pl 4, 0); (pl 5, 1);
-       (pl 7, 0); (pl 8, 1); (pl 9, 0);
-       (pl 10, 1); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[]; []; []; [tr 5]; []],
-       [(pl 0, 0); (pl 1, 0); (pl 2, 1);
-       (pl 3, 0); (pl 4, 0); (pl 5, 0);
-       (pl 7, 0); (pl 8, 1); (pl 9, 1);
-       (pl 10, 1); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[tr 6]; []; []; [tr 2]; []],
-       [(pl 0, 0); (pl 1, 0); (pl 2, 0);
-       (pl 3, 1); (pl 4, 0); (pl 5, 0);
-       (pl 7, 1); (pl 8, 0); (pl 9, 0);
-       (pl 10, 2); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[]; []; [tr 3; tr 8]; []; []],
-       [(pl 0, 0); (pl 1, 1); (pl 2, 0);
-       (pl 3, 0); (pl 4, 0); (pl 5, 0);
-       (pl 7, 1); (pl 8, 0); (pl 9, 0);
-       (pl 10, 0); (pl 11, 1); 
-       (pl 12, 1)]);
-       ([[]; [tr 9]; []; []; [tr 1]],
-       [(pl 0, 2); (pl 1, 0); (pl 2, 1);
-       (pl 3, 0); (pl 4, 0); (pl 5, 0);
-       (pl 7, 1); (pl 8, 0); (pl 9, 0);
-       (pl 10, 0); (pl 11, 0); 
-       (pl 12, 1)]);
-       ([[]; []; []; [tr 0; tr 2]; []],
-       [(pl 0, 1); (pl 1, 0); (pl 2, 0);
-       (pl 3, 1); (pl 4, 1); (pl 5, 1);
-       (pl 7, 0); (pl 8, 0); (pl 9, 0);
-       (pl 10, 0); (pl 11, 0); 
-       (pl 12, 1)]); ([], [])].
+(* ~7 secs with 200 cycles *)
+(* ~15 secs with 300 cycles *)
+(* ~27 secs with 400 cycles *)
+Time Compute (spn_animate ex_spn1 200).
+
+Lemma ex_spn1_animate : (spn_animate ex_spn1 10) =
+                        [
+                          ([[]; []; []; [tr 0]; [tr 1]],
+                           [(pl 0, 1); (pl 1, 0); 
+                              (pl 2, 1); (pl 3, 0); (pl 4, 1);
+                                (pl 5, 1); (pl 7, 0); (pl 8, 0);
+                                  (pl 9, 0); (pl 10, 0); 
+                                    (pl 11, 0); (pl 12, 1)]);
+                            ([[]; [tr 4]; []; [tr 5]; []],
+                            [(pl 0, 1); (pl 1, 0); (pl 2, 1);
+                               (pl 3, 0); (pl 4, 0); (pl 5, 0);
+                                 (pl 7, 0); (pl 8, 1); (pl 9, 1);
+                                   (pl 10, 0); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[tr 6]; []; []; [tr 2]; []],
+                            [(pl 0, 1); (pl 1, 0); (pl 2, 0);
+                               (pl 3, 1); (pl 4, 0); (pl 5, 0);
+                                 (pl 7, 1); (pl 8, 0); (pl 9, 0);
+                                   (pl 10, 1); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[]; []; [tr 3]; [tr 0]; []],
+                            [(pl 0, 0); (pl 1, 1); (pl 2, 0);
+                               (pl 3, 0); (pl 4, 1); (pl 5, 1);
+                                 (pl 7, 0); (pl 8, 0); (pl 9, 0);
+                                   (pl 10, 1); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[]; [tr 4]; []; []; [tr 1]],
+                            [(pl 0, 0); (pl 1, 0); (pl 2, 1);
+                               (pl 3, 0); (pl 4, 0); (pl 5, 1);
+                                 (pl 7, 0); (pl 8, 1); (pl 9, 0);
+                                   (pl 10, 1); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[]; []; []; [tr 5]; []],
+                            [(pl 0, 0); (pl 1, 0); (pl 2, 1);
+                               (pl 3, 0); (pl 4, 0); (pl 5, 0);
+                                 (pl 7, 0); (pl 8, 1); (pl 9, 1);
+                                   (pl 10, 1); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[tr 6]; []; []; [tr 2]; []],
+                            [(pl 0, 0); (pl 1, 0); (pl 2, 0);
+                               (pl 3, 1); (pl 4, 0); (pl 5, 0);
+                                 (pl 7, 1); (pl 8, 0); (pl 9, 0);
+                                   (pl 10, 2); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[]; []; [tr 3; tr 8]; []; []],
+                            [(pl 0, 0); (pl 1, 1); (pl 2, 0);
+                               (pl 3, 0); (pl 4, 0); (pl 5, 0);
+                                 (pl 7, 1); (pl 8, 0); (pl 9, 0);
+                                   (pl 10, 0); (pl 11, 1); 
+                                     (pl 12, 1)]);
+                           ([[]; [tr 9]; []; []; [tr 1]],
+                            [(pl 0, 2); (pl 1, 0); (pl 2, 1);
+                               (pl 3, 0); (pl 4, 0); (pl 5, 0);
+                                 (pl 7, 1); (pl 8, 0); (pl 9, 0);
+                                   (pl 10, 0); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([[]; []; []; [tr 0; tr 2]; []],
+                            [(pl 0, 1); (pl 1, 0); (pl 2, 0);
+                               (pl 3, 1); (pl 4, 1); (pl 5, 1);
+                                 (pl 7, 0); (pl 8, 0); (pl 9, 0);
+                                   (pl 10, 0); (pl 11, 0); 
+                                     (pl 12, 1)]);
+                           ([], [])
+                        ].
 Proof. compute. reflexivity. Qed.
 
 (** **  Second  example (permutation des sous-listes)  *)
