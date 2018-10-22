@@ -27,61 +27,60 @@ Definition conditions_type := trans_type -> option bool.
 Definition scenar_type := list conditions_type.
 (***  a list of size n allows one to compute up to n cycles  ***) 
 
-Structure SITPN : Set := mk_SITPN
-                           { 
-                             stpn : STPN  ;
+Structure SITPN : Set := mk_SITPN { 
+                             stpn : STPN;
                              scenario : scenar_type
-                           }.
+                         }.
 
-Definition condition_check
+Definition check_condition
            (conditions : conditions_type)
-           (t : trans_type)
-  : bool :=
+           (t : trans_type) : bool :=
   match (conditions t) with
-  | None  =>  true
-  | Some b  => b
+  | None => true
+  | Some b => b
   end.
-Inductive condition_check_spec
+
+Inductive check_condition_spec
           (conditions : conditions_type)
           (t : trans_type)
   : Prop :=
-| condition_check_none : 
+| check_condition_none : 
     (conditions t) = None                             -> 
-    condition_check_spec
+    check_condition_spec
       conditions  t
-| condition_check_some_if : 
+| check_condition_some_if : 
     (conditions t) = Some true 
     ->
-    condition_check_spec
+    check_condition_spec
       conditions  t.
-Functional Scheme condition_check_ind :=
-  Induction for condition_check Sort Prop.
-Theorem condition_check_correct : forall
+Functional Scheme check_condition_ind :=
+  Induction for check_condition Sort Prop.
+Theorem check_condition_correct : forall
     (conditions : conditions_type)
     (t : trans_type),
-    (condition_check
+    (check_condition
       conditions t)  = true
     ->
-    (condition_check_spec
+    (check_condition_spec
        conditions t).
 Proof.
   intros conditions t.
-  functional induction (condition_check  conditions t) using condition_check_ind.
-  - intro H. apply condition_check_some_if. rewrite e. rewrite H.
+  functional induction (check_condition  conditions t) using check_condition_ind.
+  - intro H. apply check_condition_some_if. rewrite e. rewrite H.
     reflexivity.
-  - intro H. apply condition_check_none. assumption.
+  - intro H. apply check_condition_none. assumption.
 Qed.
-Theorem condition_check_complete : forall
+Theorem check_condition_complete : forall
     (conditions : conditions_type)
     (t : trans_type),
-    (condition_check_spec
+    (check_condition_spec
        conditions t)                    ->
-    (condition_check
+    (check_condition
       conditions t)  = true.    
 Proof.
   intros conditions t H. elim H.
-  - intro H'. unfold condition_check. rewrite H'. reflexivity.
-  - intro H'. unfold condition_check. rewrite H'. reflexivity.
+  - intro H'. unfold check_condition. rewrite H'. reflexivity.
+  - intro H'. unfold check_condition. rewrite H'. reflexivity.
 Qed.
 
 
@@ -94,6 +93,7 @@ Qed.
 Print SITPN.
 Print stpn_class_fire_pre_aux.
 (** compared with STPN it just add an "if clause"  : *) 
+
 Fixpoint sitpn_class_fire_pre_aux
          (full_class : list trans_type)
          (places : list place_type)
@@ -108,29 +108,19 @@ Fixpoint sitpn_class_fire_pre_aux
   match class_transs with
   | [] => (subclass_half_fired, m_decreasing, chronos)
   | t :: tail =>
-    if
-      (synchro_check_arcs places (pre t) (test t) 
-                          (inhib t)  m_steady  m_decreasing)
+    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
         && (check_chrono (chronos t))
-        && (condition_check conditions t)
+        && (check_condition conditions t)
     then
-      let new_decreasing :=
-          update_marking_pre
-            t pre m_decreasing places  in
+      let new_decreasing := update_marking_pre t pre m_decreasing places in
       let new_chronos :=
-          reset_all_chronos0
-            (reset_chrono0 chronos t)    (* ! reset de t *)
-            (list_disabled
-               full_class   places pre test
-               inhib m_steady new_decreasing) in
-      sitpn_class_fire_pre_aux
-        full_class   places pre test inhib     m_steady
-        new_decreasing     new_chronos     tail
-        (subclass_half_fired ++ [t])    conditions
+          reset_all_chronos0 (reset_chrono0 chronos t)
+                             (list_disabled full_class places pre test inhib m_steady new_decreasing) in
+      sitpn_class_fire_pre_aux full_class places pre test inhib m_steady new_decreasing new_chronos
+                               tail (subclass_half_fired ++ [t]) conditions
     else
-      sitpn_class_fire_pre_aux
-        full_class   places pre test inhib     m_steady
-        m_decreasing  chronos  tail  subclass_half_fired  conditions
+      sitpn_class_fire_pre_aux full_class places pre test inhib m_steady
+                               m_decreasing chronos tail subclass_half_fired conditions
   end.
 (* 
 there are 3 parallel calculus in this function : 
@@ -148,17 +138,17 @@ Inductive sitpn_class_fire_pre_aux_spec
           (places : list place_type)
           (pre   test   inhib : weight_type)  
           (m_steady     : marking_type)
-          (conditions : conditions_type)
-  : marking_type                          ->   (* m_decreasing *)
-    (trans_type -> option chrono_type)    ->  (* chronos *)
-    (list trans_type)                     ->   (* class *)
-    (list trans_type)               ->   (* subclass_fired_pre *)
-    
-      
-    (list trans_type)           ->   (* subclass_fired_pre *)
-    marking_type                       ->   (* m_decreasing *)
-    (trans_type -> option chrono_type)    ->  (* chronos *)
-    Prop :=
+          (conditions : conditions_type) :
+  marking_type                          ->   (* m_decreasing *)
+  (trans_type -> option chrono_type)    ->  (* chronos *)
+  (list trans_type)                     ->   (* class *)
+  (list trans_type)               ->   (* subclass_fired_pre *)
+        
+  (list trans_type)           ->   (* subclass_fired_pre *)
+  marking_type                       ->   (* m_decreasing *)
+  (trans_type -> option chrono_type)    ->  (* chronos *)
+  Prop :=
+  
 | class_nil : forall
     (m_decreased : marking_type)
     (subclass_fired_pre : list trans_type)
@@ -178,7 +168,7 @@ Inductive sitpn_class_fire_pre_aux_spec
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing_high               = true   /\
     check_chrono (chronos  t)                     = true   /\
-    (condition_check conditions t)              = true
+    (check_condition conditions t)              = true
     -> 
     m_decreasing_low = (update_marking_pre
                           t   pre   m_decreasing_high places)
@@ -212,7 +202,7 @@ Inductive sitpn_class_fire_pre_aux_spec
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing                   = false   \/
     check_chrono (chronos  t)                    = false   \/
-    (condition_check conditions t)             = false
+    (check_condition conditions t)             = false
     ->
     sitpn_class_fire_pre_aux_spec
       whole_class     places      pre  test  inhib
@@ -328,7 +318,7 @@ Proof.
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing_high &&
                     check_chrono (chronos0 t)               &&
-                    (condition_check conditions t) = true).
+                    (check_condition conditions t) = true).
       { apply andb3_true_iff. assumption. }  
       rewrite H0'. rewrite <- H1. rewrite <- H2. rewrite H4.
       reflexivity.
@@ -337,7 +327,7 @@ Proof.
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing0 &&
                     check_chrono (chronos0 t)           &&
-                    (condition_check conditions t) = false).
+                    (check_condition conditions t) = false).
       { apply andb3_false_iff. assumption. } 
     rewrite H0'. rewrite H2.  reflexivity. 
 Qed.
@@ -1353,8 +1343,5 @@ Proof.
     reflexivity.
 Qed. 
 
-
-
-
 Recursive Extraction  sitpn_animate.
-Extraction            "animator" sitpn_animate.
+Extraction "animator" sitpn_animate.

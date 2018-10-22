@@ -1,6 +1,5 @@
 Require Export Arith Omega List Bool FunInd.
 Export ListNotations.
-Search nat. Search list.
 
 (******************************************************************)
 (* Syntax of generalized (weight on transitions > or equal to 1), *)
@@ -97,13 +96,13 @@ Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
            (In x l) -> (In l list_lists) }. *)
 
 (* Defines a function taking a transition
- * and returning a 4-uplet corresponding to its
- * associated pre, test, inhib and post places. 
+ * and returning a 5-uplet corresponding to its
+ * associated pre, test, inhib and post places.
  *)
-Definition incidence_type := trans_type -> (list place_type *
-                                            list place_type *
-                                            list place_type *
-                                            list place_type). 
+Definition incidence_type := list (nat, (list place_type *
+                                         list place_type *
+                                         list place_type *
+                                         list place_type)). 
 
 (**************************************************************)
 (************ Are 2 nat/places/transitions equal ? ************)
@@ -249,11 +248,11 @@ Structure SPN : Set :=
        * test places, inhib places and post places associated
        * with each transition of the SPN.
        *)
-      incidence : incidence_type;
+      (* incidence : incidence_type; *)
 
       (* Properties on places and transitions *)
-      nodup_places : NoDup places;
-      nodup_transs : NoDup transs;
+      (* nodup_places : NoDup places; *)
+      (* nodup_transs : NoDup transs; *)
       
   }.
 
@@ -630,34 +629,29 @@ Qed.
 (*** Checks that there are enough tokens in predecessor places. ***)
 (******************************************************************)
 
-Search bool.
-Print modif_mark_spec.
-
-(**** uphill (input set, preset) ***)
-
-(*** Formal specification : pre_or_test_check ***)
-Inductive pre_or_test_check_spec
+(*** Formal specification : check_pre_or_test ***)
+Inductive check_pre_or_test_spec
           (pre_or_test_arcs_t : place_type -> option nat_star)
           (m : marking_type) : list place_type -> Prop :=
-| pre_or_test_check_nil :
-    pre_or_test_check_spec pre_or_test_arcs_t m []
+| check_pre_or_test_nil :
+    check_pre_or_test_spec pre_or_test_arcs_t m []
                            
-| pre_or_test_check_cons_none :
+| check_pre_or_test_cons_none :
     forall (p : place_type)
            (tail : list place_type),
     pre_or_test_arcs_t p = None ->
-    pre_or_test_check_spec pre_or_test_arcs_t m tail ->
-    pre_or_test_check_spec pre_or_test_arcs_t m (p :: tail)
+    check_pre_or_test_spec pre_or_test_arcs_t m tail ->
+    check_pre_or_test_spec pre_or_test_arcs_t m (p :: tail)
                            
-| pre_or_test_check_cons_some :
+| check_pre_or_test_cons_some :
     forall (p : place_type)
            (tail : list place_type)
            (n : nat)
            (pf : n > 0),
     pre_or_test_arcs_t p = Some {| int := n; posi := pf |} ->
     (n <= (m p)) -> (* marquage suffisant en place p *)           
-    pre_or_test_check_spec pre_or_test_arcs_t m tail ->
-    pre_or_test_check_spec pre_or_test_arcs_t m (p :: tail).
+    check_pre_or_test_spec pre_or_test_arcs_t m tail ->
+    check_pre_or_test_spec pre_or_test_arcs_t m (p :: tail).
 
 (*
  * Function : Returns true if all places in the places list
@@ -669,56 +663,56 @@ Inductive pre_or_test_check_spec
  *                            from some place p towards transition t.
  *                            
  *)
-Fixpoint pre_or_test_check
+Fixpoint check_pre_or_test
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type)
          (places : list place_type) : bool :=
   match places with
   | nil => true
   | h :: tail => match pre_or_test_arcs_t h with
-                 | None => pre_or_test_check pre_or_test_arcs_t m tail 
+                 | None => check_pre_or_test pre_or_test_arcs_t m tail 
                  | Some (mk_nat_star int posi) =>
-                   (int <=? (m h)) && (pre_or_test_check pre_or_test_arcs_t m tail)
+                   (int <=? (m h)) && (check_pre_or_test pre_or_test_arcs_t m tail)
                  end
   end.
 
-Functional Scheme pre_or_test_check_ind :=
-  Induction for pre_or_test_check Sort Prop.
+Functional Scheme check_pre_or_test_ind :=
+  Induction for check_pre_or_test Sort Prop.
 
-(*** Correctness proof : pre_or_test_check ***)
-Theorem pre_or_test_check_correct :
+(*** Correctness proof : check_pre_or_test ***)
+Theorem check_pre_or_test_correct :
   forall (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-    (pre_or_test_check pre_or_test_arcs_t m places = true) ->
-    (pre_or_test_check_spec pre_or_test_arcs_t m places).
+    (check_pre_or_test pre_or_test_arcs_t m places = true) ->
+    (check_pre_or_test_spec pre_or_test_arcs_t m places).
 Proof.
   intros places pre_or_test_arcs_t m.
-  functional induction (pre_or_test_check
+  functional induction (check_pre_or_test
                           pre_or_test_arcs_t   m  places)
-             using pre_or_test_check_ind.
-  - intro Htrue. apply pre_or_test_check_nil.
+             using check_pre_or_test_ind.
+  - intro Htrue. apply check_pre_or_test_nil.
   - intro Hconj.
     SearchPattern ( ?a = true /\ ?b = true ). (* and_prop *)
-    assert (Hconjb : int0 <=? m h = true /\ pre_or_test_check pre_or_test_arcs_t m tail = true).
+    assert (Hconjb : int0 <=? m h = true /\ check_pre_or_test pre_or_test_arcs_t m tail = true).
     { apply andb_prop. apply Hconj. }    
-    apply pre_or_test_check_cons_some with (n := int0) (pf := _x).
+    apply check_pre_or_test_cons_some with (n := int0) (pf := _x).
     + assumption.
     + SearchPattern ( _ <=? _ = true).
       elim Hconjb. intros. apply leb_complete. auto.
     + apply (IHb (proj2 Hconjb)).
-  - intro Htail. apply pre_or_test_check_cons_none.
+  - intro Htail. apply check_pre_or_test_cons_none.
     + assumption.
     + apply (IHb Htail).    
 Qed.
 
-(*** Completeness proof : pre_or_test_check ***)
-Theorem pre_or_test_check_complete :
+(*** Completeness proof : check_pre_or_test ***)
+Theorem check_pre_or_test_complete :
   forall (places : list place_type)
          (pre_or_test_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-    (pre_or_test_check_spec pre_or_test_arcs_t m places) ->
-    (pre_or_test_check pre_or_test_arcs_t m places) = true.
+    (check_pre_or_test_spec pre_or_test_arcs_t m places) ->
+    (check_pre_or_test pre_or_test_arcs_t m places) = true.
 Proof.
   intros places  pre_or_test_arcs_t  m  H. elim H.
   - simpl. reflexivity.
@@ -732,32 +726,32 @@ Proof.
     + assumption.
 Qed.
 
-Print pre_or_test_check_spec.
+Print check_pre_or_test_spec.
 
 (**************************************************)
 (**************************************************)
 
-(*** Formal specification : inhib_check ***)
-Inductive inhib_check_spec
+(*** Formal specification : check_inhib ***)
+Inductive check_inhib_spec
           (inhib_arcs_t : place_type -> option nat_star)
           (m : marking_type) : list place_type -> Prop :=
-| inhib_check_nil : inhib_check_spec inhib_arcs_t m []
+| check_inhib_nil : check_inhib_spec inhib_arcs_t m []
 
-| inhib_check_cons_none :
+| check_inhib_cons_none :
     forall (p:place_type)
            (tail:list place_type),
     inhib_arcs_t p = None ->
-    inhib_check_spec inhib_arcs_t m tail ->
-    inhib_check_spec inhib_arcs_t m (p::tail)
+    check_inhib_spec inhib_arcs_t m tail ->
+    check_inhib_spec inhib_arcs_t m (p::tail)
 
-| inhib_check_cons_some :
+| check_inhib_cons_some :
     forall (p : place_type)
            (tail : list place_type)
            (n : nat) (pf : n > 0),
     inhib_arcs_t p = Some {| int := n; posi := pf |} ->
     (m p < n) ->
-    inhib_check_spec inhib_arcs_t m tail -> 
-    inhib_check_spec inhib_arcs_t m (p :: tail).
+    check_inhib_spec inhib_arcs_t m tail -> 
+    check_inhib_spec inhib_arcs_t m (p :: tail).
 
 (*
  * Function : Returns true if all places in the places list
@@ -766,54 +760,54 @@ Inductive inhib_check_spec
  *            a weight to a inhibiting edge coming from place
  *            p to transition t. 
  *)
-Fixpoint inhib_check
+Fixpoint check_inhib
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type)
          (places : list place_type) : bool :=
   match places with
   | nil => true
-  | cons h tail => match inhib_arcs_t h with
-                   | None => (inhib_check inhib_arcs_t m tail)
-                   | Some (mk_nat_star int posi) => 
-                     ((m h) <? int) && (inhib_check inhib_arcs_t m tail)
-                   end
+  | h :: tail => match inhib_arcs_t h with
+                 | None => (check_inhib inhib_arcs_t m tail)
+                 | Some (mk_nat_star int posi) => 
+                   ((m h) <? int) && (check_inhib inhib_arcs_t m tail)
+                 end
   end.
 
-Functional Scheme inhib_check_ind :=
-  Induction for inhib_check Sort Prop.
+Functional Scheme check_inhib_ind :=
+  Induction for check_inhib Sort Prop.
 
-(*** Correctness proof : inhib_check ***)
-Theorem inhib_check_correct :
+(*** Correctness proof : check_inhib ***)
+Theorem check_inhib_correct :
   forall (places : list place_type)
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-  inhib_check inhib_arcs_t m places = true ->
-  inhib_check_spec inhib_arcs_t m places.
+  check_inhib inhib_arcs_t m places = true ->
+  check_inhib_spec inhib_arcs_t m places.
 Proof.
   intros places inhib_arcs_t m.
-  functional induction (inhib_check inhib_arcs_t m places)
-             using inhib_check_ind.
-  - intro H. apply inhib_check_nil.
+  functional induction (check_inhib inhib_arcs_t m places)
+             using check_inhib_ind.
+  - intro H. apply check_inhib_nil.
   - intro Hconj. SearchPattern ( ?a = true /\ ?b = true ).
-    assert (Hconjb : m h <? int0 = true /\ inhib_check inhib_arcs_t m tail = true).
+    assert (Hconjb : m h <? int0 = true /\ check_inhib inhib_arcs_t m tail = true).
     { apply andb_prop. apply Hconj. }    
-    apply inhib_check_cons_some with (n := int0) (pf := _x).
+    apply check_inhib_cons_some with (n := int0) (pf := _x).
     + assumption.
     + unfold Nat.ltb in Hconjb. unfold lt.
       apply leb_complete. apply (proj1 Hconjb). 
     + apply (IHb (proj2 Hconjb)).
-  - intro Htail. apply inhib_check_cons_none.
+  - intro Htail. apply check_inhib_cons_none.
     + assumption.
     + apply (IHb Htail).    
 Qed.
 
-(*** Completeness proof inhib_check ***)
-Theorem inhib_check_complete :
+(*** Completeness proof check_inhib ***)
+Theorem check_inhib_complete :
   forall (places : list place_type)
          (inhib_arcs_t : place_type -> option nat_star)
          (m : marking_type),
-  inhib_check_spec inhib_arcs_t m places ->
-  inhib_check inhib_arcs_t m places = true.
+  check_inhib_spec inhib_arcs_t m places ->
+  check_inhib inhib_arcs_t m places = true.
 Proof.
   intros places inhib_arcs_t m Hspec. elim Hspec.
   - simpl. reflexivity.
@@ -829,7 +823,7 @@ Qed.
 (*****************************************************)
 (*****************************************************)
 
-Print pre_or_test_check.
+Print check_pre_or_test.
 Inductive synchro_check_arcs_spec
           (places : list place_type)
           (pre_arcs_t : place_type -> option nat_star)
@@ -837,24 +831,10 @@ Inductive synchro_check_arcs_spec
           (inhib_arcs_t : place_type -> option nat_star)
           (m_steady m_decreasing : marking_type) : Prop :=
 | synchro_check_arcs_mk : 
-    (pre_or_test_check
-       pre_arcs_t
-       m_decreasing
-       places) &&
-    (pre_or_test_check
-       test_arcs_t
-       m_steady
-       places) &&
-    (inhib_check
-       inhib_arcs_t
-       m_steady
-       places) = true ->
-    (synchro_check_arcs_spec places
-                             pre_arcs_t
-                             test_arcs_t
-                             inhib_arcs_t
-                             m_steady
-                             m_decreasing).
+    (check_pre_or_test pre_arcs_t m_decreasing places) &&
+    (check_pre_or_test test_arcs_t m_steady places) &&
+    (check_inhib inhib_arcs_t m_steady places) = true ->
+    (synchro_check_arcs_spec places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing).
 
 (* 
  * Function : Returns true if a certain transition t
@@ -869,9 +849,18 @@ Definition synchro_check_arcs
            (test_arcs_t : place_type -> option nat_star)
            (inhib_arcs_t : place_type -> option nat_star)
            (m_steady m_decreasing : marking_type) : bool :=
-  (pre_or_test_check pre_arcs_t m_decreasing places) &&
-  (pre_or_test_check test_arcs_t m_steady places) &&
-  (inhib_check inhib_arcs_t m_steady places).
+  (check_pre_or_test pre_arcs_t m_decreasing places) &&
+  (check_pre_or_test test_arcs_t m_steady places) &&
+  (check_inhib inhib_arcs_t m_steady places).
+
+(* Definition check_uphill_edges *)
+(*            (places : list place_type) *)
+(*            (pre_arcs_t : place_type -> option nat_star) *)
+(*            (test_arcs_t : place_type -> option nat_star) *)
+(*            (inhib_arcs_t : place_type -> option nat_star) *)
+(*            (m_steady m_decreasing : marking_type) : bool := *)
+(*   match places with *)
+(*   | p :: tail => match (pre_arcs_t p). *)
 
 Functional Scheme synchro_check_arcs_ind :=
   Induction for synchro_check_arcs Sort Prop.  (* warning *)
@@ -1001,26 +990,13 @@ Fixpoint spn_class_fire_pre_aux
          (m_decreasing : marking_type) : (list trans_type) * marking_type :=
   match class_transs with
   | t :: tail =>
-    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
-    then (* change and inductive progress *)  
+    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing) then
+      (* change and inductive progress *)  
       let new_decreasing := (update_marking_pre t pre m_decreasing places) in
-      (spn_class_fire_pre_aux places
-                              pre
-                              test
-                              inhib
-                              m_steady
-                              tail
-                              (fired_pre_class ++ [t])
-                              new_decreasing)
-    else (* no change but inductive progress *)
-      (spn_class_fire_pre_aux places
-                              pre
-                              test
-                              inhib
-                              m_steady   
-                              tail
-                              fired_pre_class
-                              m_decreasing)
+      (spn_class_fire_pre_aux places pre test inhib m_steady tail (fired_pre_class ++ [t]) new_decreasing)
+    else
+      (* no change but inductive progress *)
+      (spn_class_fire_pre_aux places pre test inhib m_steady tail fired_pre_class m_decreasing)
   | []  => (fired_pre_class, m_decreasing)
   end.
 
@@ -1242,15 +1218,16 @@ Fixpoint spn_fire_pre_aux
          (m_decreasing : marking_type) : (list (list trans_type)) * marking_type :=
   match classes with
   | [] => (classes_fired_pre, m_decreasing)
-  | class :: classes_tail => let (class_fired_pre, m_decreased_class) :=
-                                 (spn_class_fire_pre
-                                    places pre test inhib m_steady
-                                    class m_decreasing) in
-                             (spn_fire_pre_aux
-                                places pre test inhib m_steady   
-                                classes_tail
-                                (class_fired_pre :: classes_fired_pre)
-                                m_decreased_class)
+  (* Loops over all class of transitions (priority group) and
+   * calls spn_class_fire_pre.
+   *)
+  | class :: classes_tail =>
+    let (class_fired_pre, m_decreased_class) :=
+        (spn_class_fire_pre places pre test inhib m_steady class m_decreasing) in
+    (spn_fire_pre_aux places pre test inhib m_steady   
+                      classes_tail
+                      (class_fired_pre :: classes_fired_pre)
+                      m_decreased_class)
   end.
 
 Functional Scheme spn_fire_pre_aux_ind :=
@@ -1453,9 +1430,8 @@ Fixpoint class_fire_post
          (class_fired_pre : list trans_type) : marking_type := 
   match class_fired_pre with
   | []  => m_increasing
-  | t :: tail  => (class_fire_post
-                     places
-                     post
+  | t :: tail  =>
+    (class_fire_post places post
                      (update_marking_post t post m_increasing places)
                      tail)
   end.
@@ -1835,8 +1811,9 @@ Qed.
 
 (*** Completeness proof : spn_animate ***)
 Theorem spn_animate_complete :
-  forall (spn : SPN) (n : nat) (couples : list (list (list trans_type)  *
-                                                list (place_type * nat))),
+  forall (spn : SPN)
+         (n : nat)
+         (couples : list (list (list trans_type)  * list (place_type * nat))),
   (spn_animate_spec spn n couples) -> spn_animate spn n = couples.
 Proof.
   intros spn n couples H. elim H.
@@ -2011,16 +1988,15 @@ Section effective_conflicts.
   Print SITPN.
   Fixpoint conforming_data_ordering
            (firable_transs : list (list trans_type)) (* better *)
-           (priority : prior_type2)
-    : list (list trans_type) :=
+           (priority : prior_type2) : 
+    list (list trans_type) :=
     [].
   (* il suffit d'ordonner chacune des listes *)
 
 
   Definition to_be_fired
              (conformed_firable : list (list trans_type))
-             (sitpn : SITPN)
-    : SITPN :=
+             (sitpn : SITPN) : SITPN :=
     sitpn.
   (* on peut tirer les transitions autant que possible 
  il suffit de tirer les premières de listes (updating le marking)

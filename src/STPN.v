@@ -178,9 +178,9 @@ Definition is_sensitized
            (pre test inhib : weight_type)
            (m_steady : marking_type)
            (t : trans_type) : bool :=
-  (pre_or_test_check (pre t) m_steady places)
-  && (pre_or_test_check (test t) m_steady places)
-  && (inhib_check (inhib t) m_steady  places).
+  (check_pre_or_test (pre t) m_steady places)
+  && (check_pre_or_test (test t) m_steady places)
+  && (check_inhib (inhib t) m_steady  places).
 
 Functional Scheme is_sensitized_ind :=
   Induction for is_sensitized Sort Prop.
@@ -191,16 +191,10 @@ Inductive is_sensitized_spec
           (pre   test  inhib : weight_type)
           (m_steady : marking_type) (t : trans_type) : Prop :=
 | is_enabled_mk :   
-    (pre_or_test_check
-       (pre t) m_steady places)
-      &&
-      (pre_or_test_check
-         (test t) m_steady  places)
-      &&
-      (inhib_check
-         (inhib t) m_steady  places) = true   ->
-    is_sensitized_spec
-      places   pre   test  inhib   m_steady    t.
+    check_pre_or_test (pre t) m_steady places
+    && check_pre_or_test (test t) m_steady places
+    && check_inhib (inhib t) m_steady places = true ->
+    is_sensitized_spec places pre test inhib m_steady t.
 
 (*** Correctness proof : is_sensitized ***)
 Theorem is_sensitized_correct :
@@ -2226,4 +2220,3 @@ Proof.
     reflexivity.
 Qed.
 
-Recursive Extraction  stpn_animate.

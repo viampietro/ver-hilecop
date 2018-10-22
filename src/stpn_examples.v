@@ -31,8 +31,6 @@ Definition ex_stpn := mk_STPN ex_spn1 ex_chronos.
 
 Definition test_ex_stpn := (stpn_animate ex_stpn 3).
 
-Recursive Extraction test_ex_stpn.
-
 Compute (list_sensitized_spn ex_spn1).
 Compute (marking ex_spn1).
 

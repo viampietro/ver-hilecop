@@ -1,49 +1,6 @@
 Require Export SPN.
-
-(*** Tests on conficts resolution ***)
-Lemma one_positive : 1 > 0. Proof. omega. Qed.
-
-Definition places_ex : (list place_type) := [pl 0; pl 1; pl 2].
-Definition transitions_ex : (list trans_type) := [tr 0; tr 1].
-Definition pre_ex (t : trans_type) (p : place_type) : option nat_star :=
-  match (t, p) with
-  | (tr 0, pl 0) | (tr 1, pl 1) => Some (mk_nat_star 1 one_positive)
-  | _ => None
-  end.
-Definition post_ex (t : trans_type) (p : place_type) : option nat_star :=
-  match (t, p) with
-  | (tr 0, pl 2) | (tr 1, pl 2) => Some (mk_nat_star 1 one_positive)
-  | _ => None
-  end.
-
-Definition test_ex (t : trans_type) (p : place_type) : option nat_star :=
-  match (t, p) with
-  | (tr 0, pl 1) => Some (mk_nat_star 1 one_positive)
-  | _ => None
-  end.
-Definition marking_ex (p : place_type): nat :=
-  match p with
-  | (pl 2) => 0
-  | _ => 1
-  end.
-Definition prior_ex : prior_type := {| Lol := [ [tr 1; tr 0] ] |}.
-
-Definition spn_ex : SPN := {| places := places_ex;
-                              transs := transitions_ex;
-                              pre := pre_ex;
-                              post := post_ex;
-                              test := test_ex;
-                              inhib := (fun t p => None);
-                              marking := marking_ex;
-                              priority := prior_ex
-                           |}.
-
-Compute spn_animate spn_ex 2.
                                
 (** * example 1 *)
-
-Print NoDup. Print nodup. Print NoDup_nodup. (* opaque proof ? *)
-(* 3 places *)
 Definition ex_places : (list place_type) := (* 6 is missing *)
   nodup places_eq_dec [ pl 0; pl 1; pl 2; pl 3; pl 4; pl 5; 
                         pl 7; pl 8; pl 9; pl 10; pl 11; pl 12 ].
@@ -63,6 +20,7 @@ Definition ex_nodup_transs : NoDup ex_transs :=
 
 (**********************************************)
 Print nat_star. Print weight_type.
+Lemma one_positive : 1 > 0. Proof. omega. Qed.
 Lemma two_positive : 2 > 0. Proof. omega. Qed.
 (* one lemma for each arc weight ... *)
 
@@ -209,7 +167,6 @@ Definition ex_marking (p : place_type) :=
   end. Print ex_marking. Check marking_type.
 (* ? reductions, simplifications ? *)
 
-Print SPN.
 Definition ex_test (t : trans_type) (p : place_type) :=
   (* transitions 7, 10, 11, 15  missing *)
   (* place 6 missing *)
@@ -277,10 +234,6 @@ Definition ex_spn1 := mk_SPN
                         ex_marking
                         ex_prior.
 
-Compute (marking ex_spn1). (* initial marking *)
-(* functions / lists *)
-
-Compute (spn_print_fire_pre ex_spn1).
 
 Lemma ex_spn1_debugpre :              
   (spn_print_fire_pre ex_spn1) =
@@ -292,12 +245,10 @@ Lemma ex_spn1_debugpre :
             (pl 12, 0)]).
 Proof. compute. reflexivity. Qed.
 
-Search SPN. (* spn_fired    spn_debug_pre  spn_animate  *)
-
 (* ~7 secs with 200 cycles *)
 (* ~15 secs with 300 cycles *)
 (* ~27 secs with 400 cycles *)
-Time Compute (spn_animate ex_spn1 200).
+(* Time Compute (spn_animate ex_spn1 200). *)
 
 Lemma ex_spn1_animate : (spn_animate ex_spn1 10) =
                         [
@@ -394,9 +345,6 @@ Definition ex_spn2 := mk_SPN
                         ex_marking
                         ex_prior2.
 
-Compute (spn_print_fire_pre ex_spn2).
-Compute (spn_animate ex_spn2 10).  (* 11 markings *)
-
 (**  **  SPN numero 3  (apres permuation des sous-listes)  *)
 Definition ex_prior_aux3 :=
   [
@@ -424,23 +372,6 @@ Definition ex_spn3 := mk_SPN
                         
                         ex_marking
                         ex_prior3.
-
-Compute
-  (
-    spn_print_fire_pre
-      (*     (
-        snd (spn_fired 
-          (snd (spn_fired *)
-      ex_spn3)
-.
-
-Compute (spn_animate
-           ex_spn3
-           10).  (* 11 markings *)
-
-
-Search SPN. Print SPN.
-
 
 (** *  example 2 *)
 
@@ -578,36 +509,17 @@ Definition ex2_marking (p : place_type) :=
 
 Definition ex2_prior : prior_type :=
   (* se restreindre aux conflits structurels ! *)
-  mk_prior
-    [
-      [tr 1 ; tr 2 ; tr 5] ;
-      [tr 3] ;
-      [tr 4] ;
-      [tr 6]
-    ].
+  mk_prior [[tr 1 ; tr 2 ; tr 5]; [tr 3]; [tr 4]; [tr 6]].
  
-    
-Print pre. Print weight_type. 
 Definition ex2_spn := mk_SPN
                         ex2_places
                         ex2_transs
-                        (*  ex2_nodup_places'
-                           ex2_nodup_transs' *)
-                        
                         ex2_pre
                         ex2_post
                         ex2_test
                         ex2_inhib                 
-                        
                         ex2_marking
                         ex2_prior.
-
-
-
-Compute (spn_animate
-           ex2_spn
-           10).  (* 11 markings *)
-
       
 Lemma ex2_spn_animate : (spn_animate
                            ex2_spn
@@ -634,3 +546,15 @@ Lemma ex2_spn_animate : (spn_animate
         [(pl 1, 1); (pl 2, 1); (pl 3, 0); (pl 4, 0); (pl 5, 0); (pl 6, 0); (pl 7, 0)]);
        ([], [])].
 Proof. compute. reflexivity. Qed.
+
+
+Definition test_spn1_100 := (spn_animate ex_spn1 100).
+Definition test_spn1_200 := (spn_animate ex_spn1 200).
+Definition test_spn1_300 := (spn_animate ex_spn1 300).
+Definition test_spn1_400 := (spn_animate ex_spn1 400).
+Definition test_spn1_500 := (spn_animate ex_spn1 500).
+Definition test_spn1_1000 := (spn_animate ex_spn1 1000).
+Definition test_spn1_2000 := (spn_animate ex_spn1 2000).
+Definition test_spn1_5000 := (spn_animate ex_spn1 5000).
+
+Extraction "ml/test_spn1_500" test_spn1_500.
