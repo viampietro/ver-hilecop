@@ -520,7 +520,7 @@ Definition ex2_spn := mk_SPN
                         ex2_inhib                 
                         ex2_marking
                         ex2_prior.
-      
+
 Lemma ex2_spn_animate : (spn_animate
                            ex2_spn
                            10) =
@@ -547,7 +547,6 @@ Lemma ex2_spn_animate : (spn_animate
        ([], [])].
 Proof. compute. reflexivity. Qed.
 
-
 Definition test_spn1_100 := (spn_animate ex_spn1 100).
 Definition test_spn1_200 := (spn_animate ex_spn1 200).
 Definition test_spn1_300 := (spn_animate ex_spn1 300).
@@ -557,4 +556,3 @@ Definition test_spn1_1000 := (spn_animate ex_spn1 1000).
 Definition test_spn1_2000 := (spn_animate ex_spn1 2000).
 Definition test_spn1_5000 := (spn_animate ex_spn1 5000).
 
-Extraction "ml/test_spn1_500" test_spn1_500.

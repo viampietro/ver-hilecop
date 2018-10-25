@@ -8,13 +8,7 @@ Print two_positive.
 Lemma four_positive : 4 > 0. Proof. omega. Qed.
 
 Lemma preuve2le4 : 2 <= 4. Proof. omega. Qed.
-Lemma preuve1le2 : 1 <= 2. Proof. omega. Qed.
-
-Compute (transs ex_spn1). 
-
-(* no 7 no 10 no 15 ;   0-indexed *)
-Compute (places ex_spn1). (* no 6  ; 0-indexed *)
-Compute (transs ex2_spn). Compute (places ex2_spn). (* 1-indexed *)
+Lemma preuve1le2 : 1 <= 2. Proof. omega. Qed. 
 
 Definition int_1_2 := mk_chrono 1 2 preuve1le2 0.
 Definition int_2_4 := mk_chrono 2 4 preuve2le4 0.
@@ -31,10 +25,8 @@ Definition ex_stpn := mk_STPN ex_spn1 ex_chronos.
 
 Definition test_ex_stpn := (stpn_animate ex_stpn 3).
 
-Compute (list_sensitized_spn ex_spn1).
-Compute (marking ex_spn1).
-
-Time Compute (stpn_animate ex_stpn 9). (* 9 steps takes 19.843 secs! *)
+(* 9 steps takes 19.843 secs! *)
+(* Time Eval compute in (stpn_animate ex_stpn 9). *)
 
 Lemma ex_stpn_animate : (stpn_animate ex_stpn 3) =
                         [([[]; []; []; [tr 0]; [tr 1]],
@@ -82,7 +74,6 @@ Proof. vm_compute. reflexivity. Qed.
 (**************** example 2 *****************************)
 (********************************************************)
 
-Print STPN. Print chrono_type. Print nat_star.
 (****  intervals need lemmas and structures .... ****) 
 Lemma three_positive : 3 > 0. Proof. omega. Qed.
 Lemma five_positive : 5 > 0. Proof. omega. Qed.
@@ -120,48 +111,12 @@ Definition ex2_chronos :
   trans_type -> option chrono_type :=
   fun trans => 
     match trans with
-    | tr 3  =>  Some int_3_5
-    | tr 5  =>  Some int_2_256
+    | (tr 3)  =>  Some int_3_5
+    | (tr 5)  =>  Some int_2_256
     | _ => None
     end.
     
-Print pre. Print weight_type. Print STPN.
 Definition ex2_stpn := mk_STPN ex2_spn ex2_chronos.
-
-Check ex2_stpn. 
-Search STPN.
-Check stpn_cycle.
-Check stpn_debug2.
-Check stpn_animate.
-
-Compute
-  (
-    stpn_debug2
-    (*  (        snd (stpn_cycle  
-
-        (snd (stpn_cycle 
-                (snd (stpn_cycle   *)
-                        (snd (stpn_cycle      
-                                ex2_stpn)
-                        )).
-
-(*
-Lemma stpn_ok : stpn_debug2
-                  (snd (stpn_cycle  
-                          (snd (stpn_cycle 
-                                  (snd (stpn_cycle   
-                                          (snd (stpn_cycle      
-                                                  ex2_stpn)
-                  ))))))) =
-.*)
-
-
-
-
-
-Compute (stpn_animate
-           ex2_stpn
-           10).  (* 9 markings but the last one is dub. It works. *)
 
 Lemma ex2_stpn_animate : (stpn_animate
                            ex2_stpn
@@ -231,30 +186,3 @@ Lemma ex2_stpn_animate : (stpn_animate
        (tr 5, Some (2, 0, 256)); (tr 6, None)]);
        ([], [], [])].
 Proof. vm_compute. reflexivity. Qed.
-
-       
-Compute (all_chronos
-           (snd (stpn_cycle
-                   (snd (stpn_cycle
-                           (snd (stpn_cycle
-                                   (snd (stpn_cycle  
-                                           ex2_stpn))))))))). 
-
-Compute
-  (
-    list_sensitized_stpn
-(*      (snd (stpn_cycle *) 
-              ex2_stpn
-  ).
-
-Compute (marking
-           (spn
-              ex2_stpn)). (* initial marking *)
-Check marking2list.
-Compute (marking2list
-           (marking (spn
-                       (snd (stpn_cycle  
-                               ex2_stpn))))
-           (places (spn
-                      (snd (stpn_cycle  
-                              ex2_stpn))))).

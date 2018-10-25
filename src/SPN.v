@@ -60,9 +60,7 @@ Inductive prior_type0 : Set :=
 
 (* transitive + asymmetric -> irreflexive ? 
    no cycle *)
-
-Search list.
-Print Equivalence. 
+ 
 Definition prio_over0
            (t1 t2 : trans_type)
            (prior : prior_type1)
@@ -94,15 +92,6 @@ Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
          (In x transs) ->
          exists (l : list trans_type),
            (In x l) -> (In l list_lists) }. *)
-
-(* Defines a function taking a transition
- * and returning a 5-uplet corresponding to its
- * associated pre, test, inhib and post places.
- *)
-Definition incidence_type := list (nat, (list place_type *
-                                         list place_type *
-                                         list place_type *
-                                         list place_type)). 
 
 (**************************************************************)
 (************ Are 2 nat/places/transitions equal ? ************)
@@ -242,18 +231,7 @@ Structure SPN : Set :=
       test : weight_type;
       inhib : weight_type;
       marking : marking_type;                     
-      priority : prior_type;
-
-      (* Contains the list of pre places, 
-       * test places, inhib places and post places associated
-       * with each transition of the SPN.
-       *)
-      (* incidence : incidence_type; *)
-
-      (* Properties on places and transitions *)
-      (* nodup_places : NoDup places; *)
-      (* nodup_transs : NoDup transs; *)
-      
+      priority : prior_type
   }.
 
 (*********************************************************)
@@ -824,17 +802,17 @@ Qed.
 (*****************************************************)
 
 Print check_pre_or_test.
-Inductive synchro_check_arcs_spec
+Inductive check_all_edges_spec
           (places : list place_type)
           (pre_arcs_t : place_type -> option nat_star)
           (test_arcs_t : place_type -> option nat_star)
           (inhib_arcs_t : place_type -> option nat_star)
           (m_steady m_decreasing : marking_type) : Prop :=
-| synchro_check_arcs_mk : 
+| check_all_edges_mk : 
     (check_pre_or_test pre_arcs_t m_decreasing places) &&
     (check_pre_or_test test_arcs_t m_steady places) &&
     (check_inhib inhib_arcs_t m_steady places) = true ->
-    (synchro_check_arcs_spec places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing).
+    (check_all_edges_spec places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing).
 
 (* 
  * Function : Returns true if a certain transition t
@@ -843,7 +821,7 @@ Inductive synchro_check_arcs_spec
  *            to some weight functions pre_arcs_t, test_arcs_t
  *            and inhib_arcs_t.
  *)
-Definition synchro_check_arcs
+Definition check_all_edges
            (places : list place_type)
            (pre_arcs_t : place_type -> option nat_star)
            (test_arcs_t : place_type -> option nat_star)
@@ -862,43 +840,43 @@ Definition synchro_check_arcs
 (*   match places with *)
 (*   | p :: tail => match (pre_arcs_t p). *)
 
-Functional Scheme synchro_check_arcs_ind :=
-  Induction for synchro_check_arcs Sort Prop.  (* warning *)
+Functional Scheme check_all_edges_ind :=
+  Induction for check_all_edges Sort Prop.  (* warning *)
 
-(*** Correctness proof : synchro_check_arcs ***)
-Theorem synchro_check_arcs_correct :
+(*** Correctness proof : check_all_edges ***)
+Theorem check_all_edges_correct :
   forall (places : list place_type)
          (pre_arcs_t : place_type -> option nat_star)
          (test_arcs_t : place_type -> option nat_star)
          (inhib_arcs_t : place_type -> option nat_star)
          (m_steady     m_decreasing    : marking_type),
-    synchro_check_arcs places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing = true ->
-    synchro_check_arcs_spec places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing.
+    check_all_edges places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing = true ->
+    check_all_edges_spec places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing.
 Proof.
   intros places pre_arcs_t test_arcs_t inhib_arcs_t m_steady m_decreasing H.
-  unfold synchro_check_arcs in H. 
-  apply synchro_check_arcs_mk. assumption.
+  unfold check_all_edges in H. 
+  apply check_all_edges_mk. assumption.
 Qed.
 
-(*** Completeness proof synchro_check_arcs ***)
-Theorem synchro_check_arcs_complete :
+(*** Completeness proof check_all_edges ***)
+Theorem check_all_edges_complete :
   forall (places : list place_type)
          (pre_arcs_t : place_type -> option nat_star)
          (test_arcs_t : place_type -> option nat_star)
          (inhib_arcs_t : place_type -> option nat_star)
          (m_steady     m_decreasing    : marking_type),
-    synchro_check_arcs_spec
+    check_all_edges_spec
       places    pre_arcs_t     test_arcs_t    inhib_arcs_t
       m_steady    m_decreasing   
     ->
-    synchro_check_arcs
+    check_all_edges
       places    pre_arcs_t     test_arcs_t    inhib_arcs_t
       m_steady    m_decreasing    
                                           = true.
 Proof.
   intros places pre_arcs_t test_arcs_t inhib_arcs_t
   m_steady   m_decreasing   Hspec. elim Hspec.
-  intros H3true. unfold synchro_check_arcs. assumption.
+  intros H3true. unfold check_all_edges. assumption.
 Qed.
 
 (*****************************************************************)
@@ -930,7 +908,7 @@ Inductive spn_class_fire_pre_aux_spec
       (t : trans_type)
       (tail    fired_pre_class  fpc : list trans_type)
       (m_decreasing_low  m_decreasing_high  m : marking_type),
-    synchro_check_arcs
+    check_all_edges
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing_high
     = true
@@ -954,7 +932,7 @@ Inductive spn_class_fire_pre_aux_spec
       (t : trans_type)
       (tail   fired_pre_class   fpc : list trans_type)
       (m_decreasing   m : marking_type),
-    synchro_check_arcs
+    check_all_edges
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing
     = false
@@ -990,7 +968,7 @@ Fixpoint spn_class_fire_pre_aux
          (m_decreasing : marking_type) : (list trans_type) * marking_type :=
   match class_transs with
   | t :: tail =>
-    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing) then
+    if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing) then
       (* change and inductive progress *)  
       let new_decreasing := (update_marking_pre t pre m_decreasing places) in
       (spn_class_fire_pre_aux places pre test inhib m_steady tail (fired_pre_class ++ [t]) new_decreasing)

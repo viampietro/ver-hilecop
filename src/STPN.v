@@ -257,21 +257,10 @@ Fixpoint list_sensitized_aux
          (sometranss : list trans_type) : list trans_type :=
   match sometranss with
   | [] => sensitized_transs 
-  | t :: tail => if (is_sensitized places pre test inhib m_steady t)
-                 then (list_sensitized_aux places
-                                           pre
-                                           test
-                                           inhib
-                                           m_steady
-                                           (t :: sensitized_transs)
-                                           tail)   
-                 else (list_sensitized_aux places
-                                           pre
-                                           test
-                                           inhib
-                                           m_steady
-                                           sensitized_transs
-                                           tail)  
+  | t :: tail => if (is_sensitized places pre test inhib m_steady t) then
+                   (list_sensitized_aux places pre test inhib m_steady (t :: sensitized_transs) tail)   
+                 else
+                   (list_sensitized_aux places pre test inhib m_steady sensitized_transs tail)  
   end.
 
 (*** Formal specification : list_sensitized_aux ***)
@@ -436,7 +425,7 @@ Proof.
 Qed.
 
 (*
- * Function : Returns the list of currently sensitized
+ * Function : Returns the list of the currently sensitized
  *            transitions contained in spn.
  *)
 Definition list_sensitized_spn (spn : SPN) : list trans_type :=
@@ -446,31 +435,17 @@ Definition list_sensitized_spn (spn : SPN) : list trans_type :=
   end.
 
 (*** Formal specification : list_sensitized_spn ***)
-Inductive list_sensitized_spn_spec
-           (spn : SPN)
-  : list trans_type  ->
-    Prop  :=
-| list_sensitized_spn_mk : forall
-    (Lol: list (list trans_type))
-    (m : marking_type)
-    (places : list place_type)
-    (transs : list trans_type)
-    (pre  post test inhib : weight_type)
-    (sensitized_transs : list trans_type),
-    spn = (mk_SPN
-             places  transs  
-             pre  post test inhib
-             m
-             (mk_prior
-               Lol))
-    ->
-    list_sensitized
-      transs    places    pre    test   inhib    m
-    = sensitized_transs
-    ->
-    list_sensitized_spn_spec
-         spn 
-         sensitized_transs.
+Inductive list_sensitized_spn_spec (spn : SPN) : list trans_type -> Prop :=
+| list_sensitized_spn_mk :
+    forall (Lol: list (list trans_type))
+           (m : marking_type)
+           (places : list place_type)
+           (transs : list trans_type)
+           (pre  post test inhib : weight_type)
+           (sensitized_transs : list trans_type),
+    spn = (mk_SPN places transs pre post test inhib m (mk_prior Lol)) ->
+    list_sensitized transs places pre test inhib m = sensitized_transs ->
+    list_sensitized_spn_spec spn sensitized_transs.
 
 Functional Scheme list_sensitized_spn_ind :=
   Induction for list_sensitized_spn Sort Prop.
@@ -516,24 +491,14 @@ Definition list_sensitized_stpn (stpn : STPN) : list trans_type :=
   end.
 
 (*** Formal specification : list_sensitized_stpn ***)
-Inductive list_sensitized_stpn_spec
-           (stpn : STPN)
-  : list trans_type  ->  Prop  :=
-| list_sensitized_stpn_mk : forall
-    (spn : SPN)
-    (sensitized_transs : list trans_type)
-    (chronos : trans_type -> option chrono_type),
-    stpn = mk_STPN
-             spn
-             chronos
-    ->
-    list_sensitized_spn 
-      spn
-    = sensitized_transs
-    ->
-    list_sensitized_stpn_spec
-      stpn 
-      sensitized_transs.
+Inductive list_sensitized_stpn_spec (stpn : STPN) : list trans_type -> Prop :=
+| list_sensitized_stpn_mk :
+    forall (spn : SPN)
+           (sensitized_transs : list trans_type)
+           (chronos : trans_type -> option chrono_type),
+    stpn = mk_STPN spn chronos ->
+    list_sensitized_spn spn = sensitized_transs ->
+    list_sensitized_stpn_spec stpn sensitized_transs.
 
 Functional Scheme list_sensitized_stpn_ind :=
   Induction for list_sensitized_stpn Sort Prop.
@@ -541,17 +506,12 @@ Functional Scheme list_sensitized_stpn_ind :=
 (*** Correctness proof : list_sensitized_stpn ***)
 Theorem list_sensitized_stpn_correct :  forall
     (stpn : STPN) (sensitized : list trans_type),
-    list_sensitized_stpn
-      stpn = sensitized        ->
-    list_sensitized_stpn_spec
-      stpn  sensitized.
+    list_sensitized_stpn stpn = sensitized ->
+    list_sensitized_stpn_spec stpn sensitized.
 Proof.
   intros stpn  sensitized.
-  functional induction (list_sensitized_stpn
-                          stpn)
-             using list_sensitized_stpn_ind.
-  intro H. apply list_sensitized_stpn_mk with
-               (spn := spn0) (chronos := _x).
+  functional induction (list_sensitized_stpn stpn) using list_sensitized_stpn_ind.
+  intro H. apply list_sensitized_stpn_mk with (spn := spn0) (chronos := _x).
   + reflexivity.
   + assumption.   
 Qed.
@@ -567,10 +527,6 @@ Proof.
   reflexivity. 
 Qed.
 
-
-(********* same as "list_sensitized_(aux)"  (so 2 markings) ***********)
-Print synchro_check_arcs.
-
 (* 
  * Function : Returns the list of disabled (unsensitized)
  *            transitions contained in sometranss according
@@ -585,7 +541,7 @@ Fixpoint list_disabled_aux
          (sometranss : list trans_type) : list trans_type :=
   match sometranss with
   | [] => disabled_transs 
-  | t :: tail => if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+  | t :: tail => if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
                  then list_disabled_aux places pre test inhib m_steady m_decreasing
                                         disabled_transs tail 
                  else list_disabled_aux places pre test inhib m_steady m_decreasing
@@ -612,7 +568,7 @@ Inductive list_disabled_aux_spec
       places     pre   test   inhib     m_steady   m_decreasing
       disabled_transs     tail       any_transs
     ->
-     synchro_check_arcs
+     check_all_edges
        places  (pre t) (test t) (inhib t) m_steady  m_decreasing
      = true 
     ->
@@ -627,7 +583,7 @@ Inductive list_disabled_aux_spec
       m_steady   m_decreasing   (t::disabled_transs)
       tail       any_transs
     ->
-     synchro_check_arcs
+     check_all_edges
        places  (pre t) (test t) (inhib t) m_steady  m_decreasing
      = false
     ->
@@ -1121,12 +1077,14 @@ Proof.
 Qed.
 
 (* 
-le reset de compteur est plus subtil : 
- 1) quand faut-il le faire ?  
-   ----> a la fin du cycle ou plutot dans stpn_sub_fire_pre !
- 2) pour quelles transitions faut-il le faire ?
-   ----> celles desensibilisees durant le cycle. meme transitoirement
-*)
+ * Reseting the counter ought to be smarter :
+ *
+ * 1) When should it be done ?  
+ *  ----> at the end of a cycle or rather in stpn_sub_fire_pre !
+ * 2) Which transitions are concerned ?
+ *  ----> The ones disabled during the cycle, even in a transitive way
+ *
+ *)
     
 (* 
  * Function : Resets chrono counters for all transitions in
@@ -1210,9 +1168,9 @@ Proof.
   - simpl. rewrite <- H. rewrite IHreset_all_chronos_spec. auto.
 Qed.
     
-(*****************************************************************
-**********   FIRING ALGORITHM    for STPN      *******************
-******************************************************************)
+(*****************************************************
+ ********** FIRING ALGORITHM for STPN ****************
+ *****************************************************)
 
 (*
  * Function : Given 1 ordered class of transitions 
@@ -1222,6 +1180,12 @@ Qed.
  *            a marking, obtained after the update of the tokens in the pre-condition 
  *            places of the fired_pre_class's transitions, 
  *            and a new chrono function (of type trans_type -> option chrono_type).
+ * 
+ * Param whole_class : Steady class of transitions. We need it to reset
+ *                     the chronos, in a global way, for all the transitions disabled
+ *                     by the firing of some transition t, which belongs
+ *                     to the class being processed.
+ *                      
  *)
 Fixpoint stpn_class_fire_pre_aux
          (whole_class : list trans_type)
@@ -1236,7 +1200,7 @@ Fixpoint stpn_class_fire_pre_aux
   match class_transs with
   | t :: tail =>
     (* t is sensitized, even w.r.t. to the others *)
-    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+    if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
        && (check_chrono (chronos t))
     then
       (* (Half-)Fires t by updating the marking in its pre-condition places *)
@@ -1304,7 +1268,7 @@ Inductive stpn_class_fire_pre_aux_spec
            (tail subclass_fired_pre sub : list trans_type)
            (m_decreasing_low m_decreasing_high m : marking_type)
            (chronos new_chronos final_chronos : trans_type -> option chrono_type),
-    synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing_high = true /\
+    check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing_high = true /\
     check_chrono (chronos t) = true -> 
     m_decreasing_low = (update_marking_pre t pre m_decreasing_high places) ->
     new_chronos = (reset_all_chronos0
@@ -1323,7 +1287,7 @@ Inductive stpn_class_fire_pre_aux_spec
            (tail subclass_half_fired sub : list trans_type)
            (m_decreasing m : marking_type)
            (chronos final_chronos : trans_type -> option chrono_type),
-   synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing = false \/
+   check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing = false \/
    check_chrono (chronos t) = false ->
    (stpn_class_fire_pre_aux_spec
       whole_class places pre test inhib m_steady tail subclass_half_fired
@@ -1416,7 +1380,7 @@ Proof.
             chronos0 new_chronos  final_chronos0
             Hsynchro  Hlow Hnew  Htailspec Htail.
     simpl.
-    assert (Hsynchro' : synchro_check_arcs
+    assert (Hsynchro' : check_all_edges
                           places (pre t) (test t) 
                           (inhib t) m_steady m_decreasing_high &&
                           check_chrono (chronos0 t) = true).
@@ -1427,7 +1391,7 @@ Proof.
             m_decreasing0  m
             chronos0   final_chronos0
             Hsynchro   Htailspec Htail. simpl.
-    assert (Hsynchro' : synchro_check_arcs
+    assert (Hsynchro' : check_all_edges
                           places (pre t) (test t) 
                           (inhib t) m_steady m_decreasing0 &&
                           check_chrono (chronos0 t) = false).
@@ -1564,7 +1528,6 @@ End Tuplet.
  *            Begins with initial marking, end with half fired marking. 
  *            "fired_pre_classes" is meant to be empty at first 
  *)
-
 Fixpoint stpn_fire_pre_aux
          (places : list place_type)
          (pre test inhib : weight_type)
@@ -1958,8 +1921,8 @@ but we want to see also the fired transitions *)
 
 (*  
  * Function : Returns the resulting Petri net after all the sensitized
- *            transitions in stpn have been fired, and returns
- *            the list of lists containing these transitions.
+ *            transitions - with right chrono value - in stpn have been fired, and 
+ *            returns the list of lists containing these transitions.
  *            
  *)
 Definition stpn_cycle (stpn : STPN) : (list (list trans_type)) * STPN  :=

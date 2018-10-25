@@ -4,39 +4,21 @@ Require Import SITPN stpn_examples.
 (********   example (1)   *********)
 (**********************************)
 
-
-Definition ex_eval_conds_cycle1 (t : trans_type)
-  : option bool :=
+Definition ex_eval_conds_cycle1 (t : trans_type) : option bool :=
   match t with
   | mk_trans 0  => Some true
   | mk_trans 2  => Some false
   | _ => None
   end.
-Definition ex_eval_conds_cycle2 (t : trans_type)
-  : option bool :=
+
+Definition ex_eval_conds_cycle2 (t : trans_type) : option bool :=
   match t with
   | mk_trans 0  => Some true
   | mk_trans 2  => Some true
   | _ => None
   end.
-Definition ex_eval_conds_cycle3 (t : trans_type)
-  : option bool :=
-  match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
-  | _ => None
-  end.
-Definition ex_eval_conds_cycle4 (t : trans_type)
-  : option bool :=
-  match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
-  | _ => None
-  end.
-Definition ex_eval_conds_cycle5 (t : trans_type)
-  : option bool :=
+
+Definition ex_eval_conds_cycle3 (t : trans_type) : option bool :=
   match t with
   | mk_trans 0  => Some true
   | mk_trans 2  => Some true
@@ -44,41 +26,31 @@ Definition ex_eval_conds_cycle5 (t : trans_type)
   | _ => None
   end.
 
+Definition ex_eval_conds_cycle4 (t : trans_type) : option bool :=
+  match t with
+  | mk_trans 0  => Some true
+  | mk_trans 2  => Some true
+  | mk_trans 3  => Some false
+  | _ => None
+  end.
 
+Definition ex_eval_conds_cycle5 (t : trans_type) : option bool :=
+  match t with
+  | mk_trans 0  => Some true
+  | mk_trans 2  => Some true
+  | mk_trans 3  => Some false
+  | _ => None
+  end.
 
-Definition ex_scenar := [ex_eval_conds_cycle1 ;
-                           ex_eval_conds_cycle2 ;
-                           ex_eval_conds_cycle3 ;
-                           ex_eval_conds_cycle4 ;
+Definition ex_scenar := [ex_eval_conds_cycle1;
+                           ex_eval_conds_cycle2;
+                           ex_eval_conds_cycle3;
+                           ex_eval_conds_cycle4;
                            ex_eval_conds_cycle5].
 
+Definition ex_sitpn := mk_SITPN ex_stpn ex_scenar.
 
-Print ex_stpn.
-Definition ex_sitpn := mk_SITPN
-                         ex_stpn
-                         ex_scenar.
-
-Compute (sitpn_animate
-           ex_sitpn
-           5).    (* faster than STPN because of false conditions *)
-
-Print SITPN.
-Compute
-  (scenario
-     (snd (sitpn_cycle  
-             (snd (sitpn_cycle 
-                     (snd (sitpn_cycle   
-                             ex_sitpn)
-                                    
-                      )))))).
-Compute
-  (sitpn_debug2
-     (snd (sitpn_cycle  
-             (snd (sitpn_cycle               
-                     (snd (sitpn_cycle   
-                             ex_sitpn)
-  )))))).
-
+Time Eval compute in (sitpn_animate ex_sitpn 9).
 
 Lemma ex_sitpn_animate : (sitpn_animate
                              ex_sitpn
@@ -124,45 +96,41 @@ Lemma ex_sitpn_animate : (sitpn_animate
        (mk_trans 16, None)]); ([], [], [])].
 Proof. vm_compute. reflexivity. Qed.
 
-
-
 (********************************************************)
 (**************** example 2 *****************************)
 (********************************************************)
 
-Compute (transs ex2_spn). 
-Definition ex2_conds_cycle1 (t : trans_type)
-  : option bool :=
+Definition ex2_conds_cycle1 (t : trans_type) : option bool :=
   match t with
   | mk_trans 1  => Some true
   | mk_trans 2  => Some false
   | _ => None
   end.
-Definition ex2_conds_cycle2 (t : trans_type)
-  : option bool :=
+
+Definition ex2_conds_cycle2 (t : trans_type) : option bool :=
   match t with
   | mk_trans 1  => Some true
   | mk_trans 6  => Some true
   | _ => None
   end.
-Definition ex2_conds_cycle3 (t : trans_type)
-  : option bool :=
+
+Definition ex2_conds_cycle3 (t : trans_type) : option bool :=
   match t with
   | mk_trans 1  => Some true
   | mk_trans 2  => Some true
   | mk_trans 5  => Some false
   | _ => None
   end.
-Definition ex2_conds_cycle4 (t : trans_type)
-  : option bool :=
+
+Definition ex2_conds_cycle4 (t : trans_type) : option bool :=
   match t with
   | mk_trans 1  => Some true
   | mk_trans 2  => Some true
   | mk_trans 3  => Some false
   | _ => None
   end.
-Definition ex2_conds_cycle5 (t : trans_type)
-  : option bool :=
+
+Definition ex2_conds_cycle5 (t : trans_type) : option bool :=
   match t with
   | mk_trans 5  => Some true
   | mk_trans 2  => Some true
@@ -170,27 +138,12 @@ Definition ex2_conds_cycle5 (t : trans_type)
   | _ => None
   end.
 
-Definition ex2_scenar := [ex2_conds_cycle1 ;
-                           ex2_conds_cycle2 ;
-                           ex2_conds_cycle3 ;
-                           ex2_conds_cycle4 ;
-                           ex2_conds_cycle5].
+Definition ex2_scenar := [ex2_conds_cycle1; ex2_conds_cycle2; ex2_conds_cycle3;
+                           ex2_conds_cycle4; ex2_conds_cycle5].
 
+Definition ex2_sitpn := mk_SITPN ex2_stpn ex2_scenar.
 
-Print ex_stpn.
-Definition ex2_sitpn := mk_SITPN
-                         ex2_stpn
-                         ex2_scenar.
-
-
-Compute (marking ex2_spn).
-Compute (sitpn_animate
-           ex2_sitpn
-           13).
-
-Lemma ex2_sitpn_animate : (sitpn_animate
-                             ex2_sitpn
-                             13) =
+Lemma ex2_sitpn_animate : (sitpn_animate ex2_sitpn 13) =
       [([[]; []; []; [mk_trans 1]],
         [(mk_place 1, 0); (mk_place 2, 1); 
         (mk_place 3, 2); (mk_place 4, 1); (mk_place 5, 0);
