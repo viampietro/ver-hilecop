@@ -108,7 +108,7 @@ Fixpoint sitpn_class_fire_pre_aux
   match class_transs with
   | [] => (subclass_half_fired, m_decreasing, chronos)
   | t :: tail =>
-    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+    if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
         && (check_chrono (chronos t))
         && (check_condition conditions t)
     then
@@ -132,7 +132,7 @@ and 2 markings are recorded :
 2) a floating (decreasing) intermediate marking to check classic arcs
  *)
 
-Print synchro_check_arcs. 
+Print check_all_edges. 
 Inductive sitpn_class_fire_pre_aux_spec
           (whole_class : list trans_type)
           (places : list place_type)
@@ -164,7 +164,7 @@ Inductive sitpn_class_fire_pre_aux_spec
     (tail    subclass_fired_pre  sub : list trans_type)
     (m_decreasing_low  m_decreasing_high  m : marking_type)
     (chronos  new_chronos   chronos_final : trans_type -> option chrono_type),
-    synchro_check_arcs
+    check_all_edges
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing_high               = true   /\
     check_chrono (chronos  t)                     = true   /\
@@ -198,7 +198,7 @@ Inductive sitpn_class_fire_pre_aux_spec
     (tail   subclass_half_fired   sub : list trans_type)
     (m_decreasing   m : marking_type)
     (chronos     chronos_final : trans_type -> option chrono_type),
-    synchro_check_arcs
+    check_all_edges
       places    (pre t) (test t) (inhib t)
       m_steady  m_decreasing                   = false   \/
     check_chrono (chronos  t)                    = false   \/
@@ -314,7 +314,7 @@ Proof.
   intros. elim H.
   - simpl. reflexivity.
   - intros. simpl.
-    assert (H0' : synchro_check_arcs
+    assert (H0' : check_all_edges
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing_high &&
                     check_chrono (chronos0 t)               &&
@@ -323,7 +323,7 @@ Proof.
       rewrite H0'. rewrite <- H1. rewrite <- H2. rewrite H4.
       reflexivity.
   - intros. simpl.
-    assert (H0' : synchro_check_arcs
+    assert (H0' : check_all_edges
                     places (pre t) (test t) 
                     (inhib t) m_steady m_decreasing0 &&
                     check_chrono (chronos0 t)           &&

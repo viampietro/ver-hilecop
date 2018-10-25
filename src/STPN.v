@@ -569,7 +569,7 @@ Qed.
 
 
 (********* same as "list_sensitized_(aux)"  (so 2 markings) ***********)
-Print synchro_check_arcs.
+Print check_all_edges.
 
 (* 
  * Function : Returns the list of disabled (unsensitized)
@@ -585,7 +585,7 @@ Fixpoint list_disabled_aux
          (sometranss : list trans_type) : list trans_type :=
   match sometranss with
   | [] => disabled_transs 
-  | t :: tail => if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+  | t :: tail => if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
                  then list_disabled_aux places pre test inhib m_steady m_decreasing
                                         disabled_transs tail 
                  else list_disabled_aux places pre test inhib m_steady m_decreasing
@@ -612,7 +612,7 @@ Inductive list_disabled_aux_spec
       places     pre   test   inhib     m_steady   m_decreasing
       disabled_transs     tail       any_transs
     ->
-     synchro_check_arcs
+     check_all_edges
        places  (pre t) (test t) (inhib t) m_steady  m_decreasing
      = true 
     ->
@@ -627,7 +627,7 @@ Inductive list_disabled_aux_spec
       m_steady   m_decreasing   (t::disabled_transs)
       tail       any_transs
     ->
-     synchro_check_arcs
+     check_all_edges
        places  (pre t) (test t) (inhib t) m_steady  m_decreasing
      = false
     ->
@@ -1236,7 +1236,7 @@ Fixpoint stpn_class_fire_pre_aux
   match class_transs with
   | t :: tail =>
     (* t is sensitized, even w.r.t. to the others *)
-    if (synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing)
+    if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
        && (check_chrono (chronos t))
     then
       (* (Half-)Fires t by updating the marking in its pre-condition places *)
@@ -1304,7 +1304,7 @@ Inductive stpn_class_fire_pre_aux_spec
            (tail subclass_fired_pre sub : list trans_type)
            (m_decreasing_low m_decreasing_high m : marking_type)
            (chronos new_chronos final_chronos : trans_type -> option chrono_type),
-    synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing_high = true /\
+    check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing_high = true /\
     check_chrono (chronos t) = true -> 
     m_decreasing_low = (update_marking_pre t pre m_decreasing_high places) ->
     new_chronos = (reset_all_chronos0
@@ -1323,7 +1323,7 @@ Inductive stpn_class_fire_pre_aux_spec
            (tail subclass_half_fired sub : list trans_type)
            (m_decreasing m : marking_type)
            (chronos final_chronos : trans_type -> option chrono_type),
-   synchro_check_arcs places (pre t) (test t) (inhib t) m_steady m_decreasing = false \/
+   check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing = false \/
    check_chrono (chronos t) = false ->
    (stpn_class_fire_pre_aux_spec
       whole_class places pre test inhib m_steady tail subclass_half_fired
@@ -1416,7 +1416,7 @@ Proof.
             chronos0 new_chronos  final_chronos0
             Hsynchro  Hlow Hnew  Htailspec Htail.
     simpl.
-    assert (Hsynchro' : synchro_check_arcs
+    assert (Hsynchro' : check_all_edges
                           places (pre t) (test t) 
                           (inhib t) m_steady m_decreasing_high &&
                           check_chrono (chronos0 t) = true).
@@ -1427,7 +1427,7 @@ Proof.
             m_decreasing0  m
             chronos0   final_chronos0
             Hsynchro   Htailspec Htail. simpl.
-    assert (Hsynchro' : synchro_check_arcs
+    assert (Hsynchro' : check_all_edges
                           places (pre t) (test t) 
                           (inhib t) m_steady m_decreasing0 &&
                           check_chrono (chronos0 t) = false).
