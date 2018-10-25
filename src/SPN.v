@@ -241,7 +241,7 @@ Structure SPN : Set :=
       (* Properties on places and transitions *)
       (* nodup_places : NoDup places; *)
       (* nodup_transs : NoDup transs; *)
-      
+
   }.
 
 
