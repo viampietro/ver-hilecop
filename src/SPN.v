@@ -35,27 +35,88 @@ Structure nat_star : Set := mk_nat_star { int : nat ; posi : int > 0 }.
  *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
 
-(* The marking in a Petri net is represented as
- * a list of couples (index, nboftokens), where index is
- * the index of a place in the Petri net, and nboftokens
- * is the number of tokens currently assoicated to the place.
- *)
-Definition marking_type := list (nat * nat).
+Section MarkingType.
+  
+  (* The marking in a Petri net is represented as
+   * a list of couples (index, nboftokens), where index is
+   * the index of a place in the Petri net, and nboftokens
+   * is the number of tokens currently assoicated to the place.
+   *)
+  Definition marking_type := list (nat * nat).
 
-(*  
- * Function : Returns the number of tokens
- *            associated with the place of index "index"
- *            in marking "marking".
- *            Returns None if "index" doesn't belong
- *            to the marking.
- *)
-Fixpoint get_m (marking : marking_type) (index : nat) : option nat :=
-  match marking with
-  | [] => None
-  | (i, nboftokens) :: tail => if i =? index then
-                                 Some nboftokens
-                               else get_m tail index
-  end.
+  (*  
+   * Function : Returns the number of tokens
+   *            associated with the place of index "index"
+   *            in marking "marking".
+   *            Returns None if "index" doesn't belong
+   *            to the marking.
+   *)
+  Fixpoint get_m (marking : marking_type) (index : nat) : nat :=
+    match marking with
+    | [] => 0 (* Default marking is zero, if index not found. *)
+    | (i, nboftokens) :: tail => if i =? index then
+                                   nboftokens
+                                 else get_m tail index
+    end.
+
+  Functional Scheme get_m_ind := Induction for get_m Sort Prop.
+
+  (*** Formal specification : get_m ***)
+  Inductive get_m_spec : marking_type -> nat -> nat -> Prop :=
+  | get_m_0 :
+      forall (i : nat), get_m_spec [] i 0
+  | get_m_if :
+      forall (m m' : marking_type) (index i nboftokens : nat),
+        m = (i, nboftokens) :: m' ->
+        index = i ->
+        get_m_spec m index nboftokens
+  | get_m_else :
+      forall (m m' : marking_type) (index i nboftokens n : nat),
+        m = (i, n) :: m' ->
+        index <> i ->
+        get_m_spec m' index nboftokens -> get_m_spec m index nboftokens.
+
+  (*** Correctness proof : get_m ***)
+  Theorem get_m_correct :
+    forall (m : marking_type) (index nboftokens : nat),
+      get_m m index = nboftokens -> get_m_spec m index nboftokens.
+  Proof.
+    do 2 intro; functional induction (get_m m index) using get_m_ind; intros.
+    (* Case m = []. *)
+    - rewrite <- H; apply get_m_0.
+    (* Case if is true. *)
+    - rewrite <- H.
+      apply get_m_if with (m' := tail) (i := i);
+      [auto | rewrite Nat.eqb_sym in e1; apply beq_nat_true in e1; auto].
+    (* Case else *)
+    - apply get_m_else with (i := i) (n := nboftokens) (m' := tail).
+      + auto.
+      + rewrite Nat.eqb_sym in e1. apply beq_nat_false in e1. assumption.
+      + rewrite <- H. apply IHn with (nboftokens := (get_m tail index)). auto.
+  Qed.
+
+  (*** Completeness proof : get_m ***)
+  Theorem get_m_compl :
+    forall (m : marking_type) (index nboftokens : nat),
+      get_m_spec m index nboftokens -> get_m m index = nboftokens.
+  Proof.
+    intros. induction H.
+    (* Case get_m_0 *)
+    - simpl; auto.
+    (* Case get_m_if *)
+    - rewrite H. simpl.
+      rewrite Nat.eqb_sym.
+      rewrite H0.
+      rewrite Nat.eqb_refl.
+      auto.
+    (* Case get_m_else *)
+    - rewrite H. simpl.
+      apply Nat.eqb_neq in H0.
+      rewrite Nat.eqb_sym. rewrite H0.
+      assumption.
+  Qed.
+
+End MarkingType.
 
 (*******************************************************************)
 (**********************  Priority relation *************************)
@@ -65,34 +126,106 @@ Fixpoint get_m (marking : marking_type) (index : nat) : option nat :=
 (* Inductive or Definition  ?? *) 
 Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
 
-(* Defines a structure,
- * where index corresponds to a transition index
- * and the other attributes correspond to its
- * pre, test, inhib and post neighbour places.
- *)
-Structure neighbours_type : Set := mk_neighbours {
-                                      index : nat;
-                                      pre_pl : list place_type;
-                                      test_pl : list place_type;
-                                      inhib_pl : list place_type;
-                                      post_pl : list place_type
-                                  }. 
-(*  
- * Function : Returns the element of type neighbours_type
- *            included in the list neighbours having an
- *            index attribute equal to idx.
- *            Returns None if no element have an index
- *            attribute equal to idx.
- *)
-Fixpoint get_neighbours
-         (lneighbours : list neighbours_type)
-         (idx : nat) {struct lneighbours} : option neighbours_type :=
-  match lneighbours with
-  | [] => None 
-  | neighbours :: tail => if (index neighbours) =? idx then
-                            Some neighbours
-                          else get_neighbours tail idx
-  end.
+Section NeighboursType.
+  
+  (* Defines a structure,
+   * where index corresponds to a transition index
+   * and the other attributes correspond to its
+   * pre, test, inhib and post neighbour places.
+   *)
+  Structure neighbours_type : Set := mk_neighbours {
+                                         index : nat;
+                                         pre_pl : list place_type;
+                                         test_pl : list place_type;
+                                         inhib_pl : list place_type;
+                                         post_pl : list place_type
+                                       }. 
+  (*  
+   * Function : Returns the element of type neighbours_type
+   *            included in the list neighbours having an
+   *            index attribute equal to idx.
+   *            Returns None if no element have an index
+   *            attribute equal to idx.
+   *)
+  Fixpoint get_neighbours
+           (lneighbours : list neighbours_type)
+           (idx : nat) {struct lneighbours} : option neighbours_type :=
+    match lneighbours with
+    | [] => None 
+    | neighbours :: tail => if (index neighbours) =? idx then
+                              Some neighbours
+                            else get_neighbours tail idx
+    end.
+
+  (*** Formal specification : get_neighbours ***)
+  Inductive get_neighbours_spec :
+    list neighbours_type -> nat -> option neighbours_type -> Prop :=
+  | get_neighbours_none :
+      forall (idx : nat), get_neighbours_spec [] idx None
+  | get_neighbours_if :
+      forall (lneighbours lneighbours' : list neighbours_type)
+             (idx : nat)
+             (neighbours : neighbours_type),
+      lneighbours = neighbours :: lneighbours' ->
+      (index neighbours) = idx ->
+      get_neighbours_spec lneighbours idx (Some neighbours)
+  | get_neighbours_else :
+      forall (lneighbours lneighbours' : list neighbours_type)
+             (idx : nat)
+             (neighbours : neighbours_type)
+             (opt_neighbours : option neighbours_type),
+      lneighbours = neighbours :: lneighbours' ->
+      (index neighbours) <> idx ->
+      get_neighbours_spec lneighbours' idx opt_neighbours ->
+      get_neighbours_spec lneighbours idx opt_neighbours.
+
+  Functional Scheme get_neighbours_ind := Induction for get_neighbours Sort Prop.
+  
+  (*** Correctness proof : get_neighbours ***)
+  Theorem get_neighbours_correct :
+    forall (lneighbours : list neighbours_type)
+           (idx : nat)
+           (opt_neighbours : option neighbours_type),
+    get_neighbours lneighbours idx = opt_neighbours ->
+    get_neighbours_spec lneighbours idx opt_neighbours.
+  Proof.
+    do 3 intro;
+    functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
+    - rewrite <- H; apply get_neighbours_none with (idx := idx).
+    - rewrite <- H; apply get_neighbours_if with (lneighbours' := tail) (idx := idx);
+      [auto | apply beq_nat_true in e0; auto].
+    - rewrite <- H. apply get_neighbours_else with (neighbours := neighbours)
+                                                   (lneighbours' := tail)
+                                                   (idx := idx).
+      + auto.
+      + apply beq_nat_false in e0. auto.
+      + rewrite H. apply IHo. auto.
+  Qed.
+
+  (*** Completeness proof : get_neighbours ***)
+  Theorem get_neighbours_compl :
+    forall (lneighbours : list neighbours_type)
+           (idx : nat)
+           (opt_neighbours : option neighbours_type),
+    get_neighbours_spec lneighbours idx opt_neighbours ->
+    get_neighbours lneighbours idx = opt_neighbours.
+  Proof.
+     intros. induction H.
+    (* Case get_neighbours_none *)
+    - simpl; auto.
+    (* Case get_neighbours_if *)
+    - rewrite H. simpl.
+      rewrite H0.
+      rewrite Nat.eqb_refl.
+      auto.
+    (* Case get_neighbours_else *)
+    - rewrite H. simpl.
+      apply Nat.eqb_neq in H0.
+      rewrite H0.
+      assumption.
+  Qed.
+  
+End NeighboursType.
 
 (**************************************************************)
 (************ Are 2 nat/places/transitions equal ? ************)
@@ -294,16 +427,11 @@ Section Marking.
              (nboftokens : option nat_star)     
              (op : nat -> nat -> nat) : marking_type :=
     match p with
-    | (pl i) => match get_m m i with
-                (* if no place of index i, returns the current marking *)
+    | (pl i) => match nboftokens with
                 | None => m
-                (* else removes the old couple and adds the new *)
-                | Some n => match nboftokens with
-                            | None => m
-                            | Some (mk_nat_star n' _) =>
-                              (* The couple (i, n) to remove must be unique. *)
-                              (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
-                            end
+                | Some (mk_nat_star n' _) => let n := get_m m i in
+                                             (* The couple (i, n) to remove must be unique. *)
+                                             (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
                 end
     end.
 
@@ -388,13 +516,8 @@ Section Edges.
                         | None => check_pre_or_test pre_or_test_arcs_t m tail
                         (* Else some pre or test edge exists. *)
                         | Some (mk_nat_star edge_weight _) =>
-                          match (get_m m i) with
-                          (* If there is no marking for place of index i
-                           * then return false. *)
-                          | None => false
-                          | Some nboftokens => (edge_weight <=? nboftokens)
-                                                 && (check_pre_or_test pre_or_test_arcs_t m tail)
-                          end
+                          let nboftokens := (get_m m i) in (edge_weight <=? nboftokens)
+                                                           && (check_pre_or_test pre_or_test_arcs_t m tail)
                         end
     end.
 
@@ -419,13 +542,9 @@ Section Edges.
                         | None => (check_inhib inhib_arcs_t m tail)
                         (* Else some inhib edge exists. *)
                         | Some (mk_nat_star edge_weight _) =>
-                          match (get_m m i) with
-                          (* If there is no marking for place of index i
-                           * then return false. *)
-                          | None => false
-                          | Some nboftokens => (nboftokens <? edge_weight)
-                                                 && (check_inhib inhib_arcs_t m tail)
-                          end
+                          let nboftokens := (get_m m i) in (nboftokens <? edge_weight)
+                                                           && (check_inhib inhib_arcs_t m tail)
+                          
                         end
     end.
 

@@ -49,7 +49,7 @@ Theorem check_chrono_correct :
     check_chrono maybe_chrono = true -> check_chrono_spec maybe_chrono.
 Proof.
   intros maybe_chrono.
-  functional induction (check_chrono  maybe_chrono)
+  functional induction (check_chrono maybe_chrono)
              using check_chrono_ind.
   - intro Htrue.
     apply check_chrono_some with (min_t:=min_t0) (max_t:=max_t0)
