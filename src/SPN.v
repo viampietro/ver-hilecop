@@ -1,4 +1,4 @@
-Require Export Arith Omega List Bool FunInd Coq.Lists.ListDec.
+Require Export Arith Omega List Bool Bool.Sumbool FunInd Coq.Lists.ListDec.
 Export ListNotations.
 
 (******************************************************************)
@@ -51,39 +51,39 @@ Section MarkingType.
    *            Returns None if "index" doesn't belong
    *            to the marking.
    *)
-  Fixpoint get_m (marking : marking_type) (index : nat) : nat :=
+  Fixpoint get_m (marking : marking_type) (index : nat) : option nat :=
     match marking with
-    | [] => 0 (* Default marking is zero, if index not found. *)
+    | [] => None (* Default marking is zero, if index not found. *)
     | (i, nboftokens) :: tail => if i =? index then
-                                   nboftokens
+                                   Some nboftokens
                                  else get_m tail index
     end.
 
   Functional Scheme get_m_ind := Induction for get_m Sort Prop.
 
   (*** Formal specification : get_m ***)
-  Inductive get_m_spec : marking_type -> nat -> nat -> Prop :=
-  | get_m_0 :
-      forall (i : nat), get_m_spec [] i 0
+  Inductive get_m_spec : marking_type -> nat -> option nat -> Prop :=
+  | get_m_none :
+      forall (i : nat), get_m_spec [] i None
   | get_m_if :
       forall (m m' : marking_type) (index i nboftokens : nat),
-        m = (i, nboftokens) :: m' ->
-        index = i ->
-        get_m_spec m index nboftokens
+      m = (i, nboftokens) :: m' ->
+      index = i ->
+      get_m_spec m index (Some nboftokens)
   | get_m_else :
-      forall (m m' : marking_type) (index i nboftokens n : nat),
-        m = (i, n) :: m' ->
-        index <> i ->
-        get_m_spec m' index nboftokens -> get_m_spec m index nboftokens.
+      forall (m m' : marking_type) (index i  n : nat) (opt_nboftokens : option nat),
+      m = (i, n) :: m' ->
+      index <> i ->
+      get_m_spec m' index opt_nboftokens -> get_m_spec m index opt_nboftokens.
 
   (*** Correctness proof : get_m ***)
   Theorem get_m_correct :
-    forall (m : marking_type) (index nboftokens : nat),
-      get_m m index = nboftokens -> get_m_spec m index nboftokens.
+    forall (m : marking_type) (index : nat) (opt_nboftokens : option nat),
+    get_m m index = opt_nboftokens -> get_m_spec m index opt_nboftokens.
   Proof.
     do 2 intro; functional induction (get_m m index) using get_m_ind; intros.
     (* Case m = []. *)
-    - rewrite <- H; apply get_m_0.
+    - rewrite <- H; apply get_m_none.
     (* Case if is true. *)
     - rewrite <- H.
       apply get_m_if with (m' := tail) (i := i);
@@ -92,13 +92,13 @@ Section MarkingType.
     - apply get_m_else with (i := i) (n := nboftokens) (m' := tail).
       + auto.
       + rewrite Nat.eqb_sym in e1. apply beq_nat_false in e1. assumption.
-      + rewrite <- H. apply IHn with (nboftokens := (get_m tail index)). auto.
+      + rewrite <- H. apply IHo with (opt_nboftokens := (get_m tail index)). auto.
   Qed.
 
   (*** Completeness proof : get_m ***)
   Theorem get_m_compl :
-    forall (m : marking_type) (index nboftokens : nat),
-      get_m_spec m index nboftokens -> get_m m index = nboftokens.
+    forall (m : marking_type) (index : nat) (opt_nboftokens : option nat),
+    get_m_spec m index opt_nboftokens -> get_m m index = opt_nboftokens.
   Proof.
     intros. induction H.
     (* Case get_m_0 *)
@@ -190,10 +190,13 @@ Section NeighboursType.
     get_neighbours_spec lneighbours idx opt_neighbours.
   Proof.
     do 3 intro;
-    functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
+      functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
+    (* Case neighbours = None *)
     - rewrite <- H; apply get_neighbours_none with (idx := idx).
+    (* Case neighbour is head *)
     - rewrite <- H; apply get_neighbours_if with (lneighbours' := tail) (idx := idx);
-      [auto | apply beq_nat_true in e0; auto].
+        [auto | apply beq_nat_true in e0; auto].
+    (* Case neighbour is not head *)
     - rewrite <- H. apply get_neighbours_else with (neighbours := neighbours)
                                                    (lneighbours' := tail)
                                                    (idx := idx).
@@ -245,8 +248,7 @@ Definition beq_places (p p' : place_type) : bool :=
   | (mk_place n, mk_place n') => beq_nat n n'
   end.
 
-Functional Scheme beq_places_ind :=
-  Induction for beq_places Sort Prop.
+Functional Scheme beq_places_ind := Induction for beq_places Sort Prop.
 
 (*** Correctness proof : beq_places ***)
 Theorem beq_places_correct :
@@ -287,8 +289,7 @@ Definition beq_transs (t t' : trans_type) : bool :=
   | (mk_trans n, mk_trans n') => beq_nat n n'
   end.
 
-Functional Scheme beq_transs_ind :=
-  Induction for beq_transs Sort Prop.
+Functional Scheme beq_transs_ind := Induction for beq_transs Sort Prop.
 
 (*** Correctness prooof : beq_transs ***)
 Theorem beq_transs_correct :
@@ -396,8 +397,8 @@ Section Marking.
   Defined.
 
   (*
-   * Function : Replaces every occurence of occ
-   *            in list l by repl.
+   * Function : Replaces every occurence of occ by repl
+   *            in list l.
    *            Inspired from the remove function. 
    *)
   Fixpoint replace_occ
@@ -409,10 +410,62 @@ Section Marking.
            {struct l} : list A :=
     match l with
     | [] => l
+    (* eq_dec is evaluated into a boolean expr
+     * thanks to the def Bool.Sumbool.bool_of_sumbool *)
     | x :: tl => if eq_dec x occ then
                    repl :: (replace_occ eq_dec occ repl tl)
                  else x :: (replace_occ eq_dec occ repl tl)
     end.
+
+  Functional Scheme replace_occ_ind := Induction for replace_occ Sort Prop.
+
+  (*** Formal specification : replace_occ ***)
+  Inductive replace_occ_spec
+            {A : Type}
+            (eq_dec : forall x y : A, {x = y} + {x <> y})
+            (occ : A)
+            (repl : A) :
+    list A -> list A -> Prop :=
+  | replace_occ_nil :
+      replace_occ_spec eq_dec occ repl [] []
+  | replace_occ_if :
+      forall (l l' : list A),
+      replace_occ_spec eq_dec occ repl l l' ->
+      replace_occ_spec eq_dec occ repl (occ :: l) (repl :: l')
+  | replace_occ_else :
+      forall (l l' : list A) (x : A),
+      x <> occ ->
+      replace_occ_spec eq_dec occ repl l l' ->
+      replace_occ_spec eq_dec occ repl (x :: l) (x :: l').
+
+  (*** Correctness proof : replace_occ ***)
+  Theorem replace_occ_correct {A : Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l l' : list A),
+    replace_occ eq_dec occ repl l = l' -> replace_occ_spec eq_dec occ repl l l'.
+  Proof.
+    do 4 intro; functional induction (replace_occ eq_dec occ repl l)
+                           using replace_occ_ind; intros.
+    (* Case l = nil *)
+    - rewrite <- H; apply replace_occ_nil.
+    (* Case occ is head *)
+    - rewrite <- H; apply replace_occ_if; apply IHl0; auto.
+    (* Case occ is not head *)
+    - rewrite <- H; apply replace_occ_else; [auto |apply IHl0; auto].
+  Qed.
+
+  (*** Completeness proof : replace_occ ***)
+  Theorem replace_occ_compl {A : Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l l' : list A),
+    replace_occ_spec eq_dec occ repl l l' -> replace_occ eq_dec occ repl l = l'.
+  Proof.
+    intros; induction H.
+    (* Case replace_occ_nil *)
+    - simpl; auto.
+    (* Case replace_occ_if *)
+    - simpl. elim eq_dec; [intro; rewrite IHreplace_occ_spec; auto | intro; contradiction].
+    (* Case replace_occ_else *)
+    - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHreplace_occ_spec; auto].
+  Qed.
   
   (* Function : Given a marking m, add/remove nboftokens tokens (if not None)
    *            inside place p and returns the new marking.
@@ -424,17 +477,97 @@ Section Marking.
   Definition modify_m
              (m : marking_type)
              (p : place_type)
-             (nboftokens : option nat_star)     
-             (op : nat -> nat -> nat) : marking_type :=
+             (op : nat -> nat -> nat)
+             (nboftokens : option nat_star) : marking_type :=
     match p with
     | (pl i) => match nboftokens with
                 | None => m
-                | Some (mk_nat_star n' _) => let n := get_m m i in
+                | Some (mk_nat_star n' _) => let opt_n := get_m m i in
+                                             match opt_n with
+                                             (* If couple with first member i doesn't exist
+                                              * in m, then add such a couple in m. *)
+                                             | None => (i, (op 0 n')) :: m 
                                              (* The couple (i, n) to remove must be unique. *)
-                                             (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
+                                             | Some n =>
+                                               (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
+                                             end
                 end
     end.
 
+  Functional Scheme modify_m_ind := Induction for modify_m Sort Prop.
+
+  (*** Formal specification : modify_m ***)
+  Inductive modify_m_spec
+            (m : marking_type)
+            (p : place_type)
+            (op : nat -> nat -> nat) :
+    option nat_star -> marking_type -> Prop :=
+  | modify_m_none :
+      modify_m_spec m p op None m
+  (* Case place of index i is not in the marking. *)
+  | modify_m_some_add :
+      forall (nboftokens : option nat_star)
+             (i n' : nat)
+             (is_positive : n' > 0),
+      p = (pl i) ->
+      nboftokens = Some (mk_nat_star n' is_positive) ->
+      get_m_spec m i None ->
+      modify_m_spec m p op nboftokens ((i, (op 0 n')) :: m)
+  (* Case place of index i exists in the marking *)
+  | modify_m_some_repl :
+      forall (nboftokens : option nat_star)
+             (i n n' : nat)
+             (is_positive : n' > 0)
+             (m' : marking_type),
+      p = (pl i) ->
+      nboftokens = Some (mk_nat_star n' is_positive) ->
+      get_m_spec m i (Some n) ->
+      replace_occ_spec prodnat_eq_dec (i, n) (i, (op n n')) m m' ->
+      modify_m_spec m p op nboftokens m'.
+
+  (*** Correctness proof : modify_m ***)
+  Theorem modify_m_correct :
+    forall (m m' : marking_type)
+           (p : place_type)
+           (op : nat -> nat -> nat)
+           (nboftokens : option nat_star),
+    modify_m m p op nboftokens = m' -> modify_m_spec m p op nboftokens m'.
+  Proof.
+    do 5 intro; functional induction (modify_m m p op nboftokens)
+                           using modify_m_ind; intros.
+    (* Case (pl i) exists in marking m *)
+    - apply modify_m_some_repl with (i := i)
+                                    (n := n0)
+                                    (n' := n')
+                                    (is_positive := _x).
+      + auto.
+      + auto.
+      + apply get_m_correct in e2; auto.
+      + apply replace_occ_correct in H; auto.
+    (* Case (pl i) doesn't exist in marking m *)
+    - rewrite <- H; apply modify_m_some_add with (is_positive := _x).
+      + auto.
+      + auto.
+      + apply get_m_correct in e2; auto.
+    (* Case nboftokens is None *)
+    - rewrite <- H; apply modify_m_none.
+  Qed.
+
+  (*** Completeness proof : modify_m ***)
+  Theorem modify_m_compl :
+    forall (m m' : marking_type)
+           (p : place_type)
+           (op : nat -> nat -> nat)
+           (nboftokens : option nat_star),
+    modify_m_spec m p op nboftokens m' -> modify_m m p op nboftokens = m'.
+  Proof.
+    intros; induction H.
+    - unfold modify_m; elim p; auto.
+    - unfold modify_m; rewrite H; rewrite H0; apply get_m_compl in H1; rewrite H1; auto.
+    - unfold modify_m; rewrite H; rewrite H0; apply get_m_compl in H1; rewrite H1.
+      apply replace_occ_compl in H2; auto.      
+  Qed.
+  
   (*=================================================*)
   (*=============== UPDATE MARKING ==================*)
   (*=================================================*)
@@ -451,7 +584,7 @@ Section Marking.
            (places : list place_type) : marking_type :=
     match places with
     | [] => m
-    | p :: tail => update_marking_pre t pre (modify_m m p (pre t p) Nat.sub) tail
+    | p :: tail => update_marking_pre t pre (modify_m m p Nat.sub (pre t p)) tail
     end.
 
   (* 
@@ -466,7 +599,7 @@ Section Marking.
            (places : list place_type) : marking_type :=
     match places with
     | [] => m
-    | p :: tail => update_marking_post t post (modify_m m p (post t p) Nat.add) tail
+    | p :: tail => update_marking_post t post (modify_m m p Nat.add (post t p)) tail
     end.
 
 
@@ -516,8 +649,13 @@ Section Edges.
                         | None => check_pre_or_test pre_or_test_arcs_t m tail
                         (* Else some pre or test edge exists. *)
                         | Some (mk_nat_star edge_weight _) =>
-                          let nboftokens := (get_m m i) in (edge_weight <=? nboftokens)
-                                                           && (check_pre_or_test pre_or_test_arcs_t m tail)
+                          let nboftokens := (get_m m i) in
+                          match nboftokens with
+                          | None => (edge_weight <=? 0)
+                                    && (check_pre_or_test pre_or_test_arcs_t m tail)
+                          | Some n => (edge_weight <=? n)
+                                      && (check_pre_or_test pre_or_test_arcs_t m tail)
+                          end
                         end
     end.
 
@@ -542,8 +680,12 @@ Section Edges.
                         | None => (check_inhib inhib_arcs_t m tail)
                         (* Else some inhib edge exists. *)
                         | Some (mk_nat_star edge_weight _) =>
-                          let nboftokens := (get_m m i) in (nboftokens <? edge_weight)
-                                                           && (check_inhib inhib_arcs_t m tail)
+                          let nboftokens := (get_m m i) in
+                          match nboftokens with
+                          | None => (check_inhib inhib_arcs_t m tail)
+                          | Some n => (n <? edge_weight)
+                                      && (check_inhib inhib_arcs_t m tail)
+                          end
                           
                         end
     end.
