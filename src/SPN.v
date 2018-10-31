@@ -53,10 +53,10 @@ Section MarkingType.
    *)
   Fixpoint get_m (marking : marking_type) (index : nat) : option nat :=
     match marking with
-    | [] => None (* Default marking is zero, if index not found. *)
     | (i, nboftokens) :: tail => if i =? index then
                                    Some nboftokens
                                  else get_m tail index
+    | [] => None
     end.
 
   Functional Scheme get_m_ind := Induction for get_m Sort Prop.
@@ -151,10 +151,10 @@ Section NeighboursType.
            (lneighbours : list neighbours_type)
            (idx : nat) {struct lneighbours} : option neighbours_type :=
     match lneighbours with
-    | [] => None 
     | neighbours :: tail => if (index neighbours) =? idx then
                               Some neighbours
                             else get_neighbours tail idx
+    | [] => None 
     end.
 
   (*** Formal specification : get_neighbours ***)
@@ -378,7 +378,6 @@ Structure SPN : Set :=
 
   }.
 
-
 (*====================================================*)
 (*=============== MARKING SECTION  ===================*)
 (*====================================================*)
@@ -409,12 +408,12 @@ Section Marking.
            (l : list A)
            {struct l} : list A :=
     match l with
-    | [] => l
     (* eq_dec is evaluated into a boolean expr
      * thanks to the def Bool.Sumbool.bool_of_sumbool *)
     | x :: tl => if eq_dec x occ then
                    repl :: (replace_occ eq_dec occ repl tl)
                  else x :: (replace_occ eq_dec occ repl tl)
+    | [] => l
     end.
 
   Functional Scheme replace_occ_ind := Induction for replace_occ Sort Prop.
@@ -583,10 +582,63 @@ Section Marking.
            (m : marking_type)
            (places : list place_type) : marking_type :=
     match places with
-    | [] => m
     | p :: tail => update_marking_pre t pre (modify_m m p Nat.sub (pre t p)) tail
+    | [] => m
     end.
 
+  Functional Scheme update_marking_pre_ind := Induction for update_marking_pre Sort Prop.
+  
+  (*** Formal specification : update_marking_pre ***)
+  Inductive update_marking_pre_spec
+            (t : trans_type)
+            (pre : weight_type)
+            (m : marking_type) :
+    list place_type -> marking_type -> Prop :=
+  | update_marking_pre_nil :
+      update_marking_pre_spec t pre m [] m
+  | update_marking_pre_cons :
+      forall (places : list place_type)
+             (m' finalm: marking_type)
+             (p : place_type),
+      modify_m_spec m p Nat.sub (pre t p) m' ->
+      update_marking_pre_spec t pre m' places finalm ->
+      update_marking_pre_spec t pre m (p :: places) finalm.
+
+  (*** Correctness proof : update_marking_pre ***)
+  Theorem update_marking_pre_correct :
+    forall (t : trans_type)
+           (pre : weight_type)
+           (places : list place_type)
+           (m finalm : marking_type),
+    update_marking_pre t pre m places = finalm -> update_marking_pre_spec t pre m places finalm.
+  Proof.
+    intros t pre places m finalm;
+    functional induction (update_marking_pre t pre m places)
+               using update_marking_pre_ind;
+    intros.
+    (* Case places is nil *)
+    - rewrite <- H; apply update_marking_pre_nil.
+    (* General case *)
+    - apply update_marking_pre_cons with (m' := (modify_m m p Nat.sub (pre t p))).
+      + apply modify_m_correct; auto.
+      + apply (IHm0 H); auto.
+  Qed.
+
+  (*** Completeness proof : update_marking_pre ***)
+  Theorem update_marking_pre_compl :
+    forall (t : trans_type)
+           (pre : weight_type)
+           (places : list place_type)
+           (m finalm : marking_type),
+    update_marking_pre_spec t pre m places finalm -> update_marking_pre t pre m places = finalm.
+  Proof.
+    intros t pre places m finalm Hspec; induction Hspec.
+    (* Case update_marking_pre_nil *)
+    - simpl; auto.
+    (* Case update_marking_pre_cons *)
+    - simpl; apply modify_m_compl in H; rewrite H; rewrite IHHspec; auto.
+  Qed.
+  
   (* 
    * Function : Adds some tokens from post places, according 
    *            to the firing of t.
@@ -598,33 +650,55 @@ Section Marking.
            (m : marking_type)
            (places : list place_type) : marking_type :=
     match places with
-    | [] => m
     | p :: tail => update_marking_post t post (modify_m m p Nat.add (post t p)) tail
+    | [] => m
     end.
 
+  Functional Scheme update_marking_post_ind := Induction for update_marking_post Sort Prop.
 
-  (****************************************************)
-  (***          Update marking post and pre.        ***)
-  (*** (only useful for asynchronous Petri nets...) ***)
-  (****************************************************)
+  (*** Formal specification : update_marking_post ***)
+  Inductive update_marking_post_spec
+            (t : trans_type)
+            (post : weight_type)
+            (m : marking_type) :
+    list place_type -> marking_type -> Prop :=
+  | update_marking_post_nil :
+      update_marking_post_spec t post m [] m
+  | update_marking_post_cons :
+      forall (p : place_type)
+             (m' finalm : marking_type)
+             (places : list place_type),
+      modify_m_spec m p Nat.add (post t p) m' ->
+      update_marking_post_spec t post m' places finalm ->
+      update_marking_post_spec t post m (p :: places) finalm.
 
-  (* Function : Updates the marking for all the places in
-   *            the list places, resulting of the firing
-   *            of transition t.
-   *            Returns an updated marking application.
-   *)
-  Definition update_marking
-             (places : list place_type) 
-             (t : trans_type)
-             (pre post : weight_type)
-             (m : marking_type) : marking_type :=
-    update_marking_post t post (update_marking_pre t pre m places) places.
+  (*** Correctness proof : update_marking_post ***)
+  Theorem update_marking_post_correct :
+    forall (t : trans_type)
+           (post : weight_type)
+           (places : list place_type)
+           (m finalm : marking_type),
+    update_marking_post t post m places = finalm ->
+    update_marking_post_spec t post m places finalm.
+  Proof.
+    intros t post places m finalm;
+    functional induction (update_marking_post t post m places)
+               using update_marking_post_ind;
+    intros.
+    (* Case places is nil *)
+    - rewrite <- H; apply update_marking_post_nil.
+    (* General case *)
+    - apply update_marking_post_cons with (m' := (modify_m m p Nat.add (post t p))).
+      + apply modify_m_correct; auto.
+      + apply (IHm0 H); auto.
+  Qed.
 
 End Marking.
 
-(*==================================================*)
-(*== CHECKS NEIGHBOUR PLACES WITH ADJACENT EDGES. ==*)
-(*==================================================*)
+(*===============================================================*)
+(*== CHECKS NB OF TOKENS IN NEIGHBOUR PLACES OF A TRANSITION T ==*)
+(*== WITH WEIGHT OF ITS ADJACENT EDGES.                        ==*)
+(*===============================================================*)
 
 Section Edges.
   
@@ -643,7 +717,6 @@ Section Edges.
            (m : marking_type)
            (places : list place_type) : bool :=
     match places with
-    | nil => true
     | (pl i) :: tail => match pre_or_test_arcs_t (pl i) with
                         (* If there is no pre or test edge between (pl i) and t. *)
                         | None => check_pre_or_test pre_or_test_arcs_t m tail
@@ -657,8 +730,102 @@ Section Edges.
                                       && (check_pre_or_test pre_or_test_arcs_t m tail)
                           end
                         end
+    | [] => true
     end.
 
+  Functional Scheme check_pre_or_test_ind := Induction for check_pre_or_test Sort Prop. 
+  
+  (*** Formal specification : check_pre_or_test ***)
+  Inductive check_pre_or_test_spec
+            (pre_or_test_arcs_t : place_type -> option nat_star)
+            (m : marking_type) :
+    list place_type -> Prop :=
+  | check_pre_or_test_nil :
+      check_pre_or_test_spec pre_or_test_arcs_t m []
+  | check_pre_or_test_edge_none :
+      forall (places : list place_type)
+             (i : nat),
+      pre_or_test_arcs_t (pl i) = None ->
+      check_pre_or_test_spec pre_or_test_arcs_t m places ->
+      check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places)
+  | check_pre_or_test_tokens_none :
+      forall (places : list place_type) 
+             (i edge_weight : nat)
+             (is_positive : edge_weight > 0),
+        pre_or_test_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
+        get_m_spec m i None ->
+        edge_weight <= 0 ->
+        check_pre_or_test_spec pre_or_test_arcs_t m places ->
+        check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places)
+  | check_pre_or_test_tokens_some :
+      forall (places : list place_type) 
+             (i n edge_weight : nat)
+             (is_positive : edge_weight > 0),
+      pre_or_test_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
+      get_m_spec m i (Some n) ->
+      edge_weight <= n ->
+      check_pre_or_test_spec pre_or_test_arcs_t m places ->
+      check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places).
+
+  (*** Correctness proof : check_pre_or_test ***)
+  Theorem check_pre_or_test_correct :
+    forall (pre_or_test_arcs_t : place_type -> option nat_star)
+           (m : marking_type)
+           (places : list place_type),
+    check_pre_or_test pre_or_test_arcs_t m places = true ->
+    check_pre_or_test_spec pre_or_test_arcs_t m places.
+  Proof.
+    intros pre_or_test_arcs_t m places;
+    functional induction (check_pre_or_test pre_or_test_arcs_t m places)
+               using check_pre_or_test_ind;
+    intros.
+    (* Case places = [] *)
+    - apply check_pre_or_test_nil.
+    (* Case edge and tokens exist *)
+    - apply check_pre_or_test_tokens_some with (i := i)
+                                               (n := n0)
+                                               (edge_weight := edge_weight)
+                                               (is_positive := _x).
+      + rewrite e1; auto.
+      + apply get_m_correct; auto.
+      + apply andb_prop in H; elim H; intros; apply leb_complete in H0; auto.
+      + apply IHb; apply andb_prop in H; elim H; intros; auto.
+    (* Case edge exists but no tokens *)
+    - apply check_pre_or_test_tokens_none with (i := i)
+                                               (edge_weight := edge_weight)
+                                               (is_positive := _x).
+      + rewrite e1; auto.
+      + apply get_m_correct; auto.
+      + apply andb_prop in H; elim H; intros; apply leb_complete in H0; auto.
+      + apply IHb; apply andb_prop in H; elim H; intros; auto.
+    (* Case edge doesn't exist *)
+    - apply check_pre_or_test_edge_none.
+      + auto.
+      + apply IHb; auto.
+  Qed.
+
+
+  (*** Completeness proof : check_pre_or_test ***)
+  Theorem check_pre_or_test_compl :
+   forall (pre_or_test_arcs_t : place_type -> option nat_star)
+          (m : marking_type)
+          (places : list place_type),
+   check_pre_or_test_spec pre_or_test_arcs_t m places ->
+   check_pre_or_test pre_or_test_arcs_t m places = true.
+  Proof.
+    intros pre_or_test_arcs_t m places H; induction H.
+    (* Case check_pre_or_test_nil *)
+    - simpl; auto.
+    (* Case check_pre_or_test_edge_none *)
+    - simpl; rewrite H; auto.
+    (* Case check_pre_or_test_tokens_none *)
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; apply andb_true_intro.
+      split; [apply leb_correct in H1; rewrite H1; auto | auto].
+    (* Case check_pre_or_test_tokens_some *)
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; apply andb_true_intro.
+      split; [apply leb_correct in H1; rewrite H1; auto | auto].
+  Qed.
+  
   (**************************************************)
   (**************************************************)
 
@@ -674,7 +841,6 @@ Section Edges.
            (m : marking_type)
            (places : list place_type) : bool :=
     match places with
-    | nil => true
     | (pl i) :: tail => match inhib_arcs_t (pl i) with
                         (* If there is inhib edge between (pl i) and t. *)
                         | None => (check_inhib inhib_arcs_t m tail)
@@ -688,15 +854,105 @@ Section Edges.
                           end
                           
                         end
+    | [] => true
     end.
 
+  Functional Scheme check_inhib_ind := Induction for check_inhib Sort Prop.
+
+  (*** Formal specification ***)
+  Inductive check_inhib_spec
+            (inhib_arcs_t : place_type -> option nat_star)
+            (m : marking_type) :
+    list place_type -> Prop :=
+  | check_inhib_nil :
+      check_inhib_spec inhib_arcs_t m []
+  | check_inhib_edge_none :
+      forall (places : list place_type)
+             (i : nat),
+      inhib_arcs_t (pl i) = None ->
+      check_inhib_spec inhib_arcs_t m places ->
+      check_inhib_spec inhib_arcs_t m ((pl i) :: places)
+  | check_inhib_tokens_none :
+      forall (places : list place_type) 
+             (i edge_weight : nat)
+             (is_positive : edge_weight > 0),
+        inhib_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
+        get_m_spec m i None ->
+        check_inhib_spec inhib_arcs_t m places ->
+        check_inhib_spec inhib_arcs_t m ((pl i) :: places)
+  | check_inhib_tokens_some :
+      forall (places : list place_type) 
+             (i n edge_weight : nat)
+             (is_positive : edge_weight > 0),
+      inhib_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
+      get_m_spec m i (Some n) ->
+      n < edge_weight ->
+      check_inhib_spec inhib_arcs_t m places ->
+      check_inhib_spec inhib_arcs_t m ((pl i) :: places).
+
+  (*** Correctness proof : check_inhib ***)
+   Theorem check_inhib_correct :
+    forall (inhib_arcs_t : place_type -> option nat_star)
+           (m : marking_type)
+           (places : list place_type),
+    check_inhib inhib_arcs_t m places = true ->
+    check_inhib_spec inhib_arcs_t m places.
+  Proof.
+    intros inhib_arcs_t m places;
+    functional induction (check_inhib inhib_arcs_t m places)
+               using check_inhib_ind;
+    intros.
+    (* Case places = [] *)
+    - apply check_inhib_nil.
+    (* Case edge and tokens exist *)
+    - apply check_inhib_tokens_some with (i := i)
+                                               (n := n0)
+                                               (edge_weight := edge_weight)
+                                               (is_positive := _x).
+      + rewrite e1; auto.
+      + apply get_m_correct; auto.
+      + apply andb_prop in H; elim H; intros; apply leb_complete in H0; auto.
+      + apply IHb; apply andb_prop in H; elim H; intros; auto.
+    (* Case edge exists but no tokens *)
+    - apply check_inhib_tokens_none with (i := i)
+                                               (edge_weight := edge_weight)
+                                               (is_positive := _x).
+      + rewrite e1; auto.
+      + apply get_m_correct; auto.
+      + apply IHb; auto.
+    (* Case edge doesn't exist *)
+    - apply check_inhib_edge_none.
+      + auto.
+      + apply IHb; auto.
+  Qed.
+
+  (*** Completeness proof : check_inhib ***)
+  Theorem check_inhib_compl :
+   forall (inhib_arcs_t : place_type -> option nat_star)
+          (m : marking_type)
+          (places : list place_type),
+   check_inhib_spec inhib_arcs_t m places ->
+   check_inhib inhib_arcs_t m places = true.
+  Proof.
+    intros inhib_arcs_t m places H; induction H.
+    (* Case check_inhib_nil *)
+    - simpl; auto.
+    (* Case check_inhib_edge_none *)
+    - simpl; rewrite H; auto.
+    (* Case check_inhib_tokens_none *)
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
+    (* Case check_inhib_tokens_some *)
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; apply andb_true_intro.
+      split; [apply <- Nat.ltb_lt in H1; rewrite H1; auto | auto].
+  Qed.
+  
   (*****************************************************)
   (*****************************************************)
 
   (* 
    * Function : Returns true if a certain transition t
-   *            is sensitized according to a marking m_steady
-   *            (or m_decreasing) on the neighbour places of t and
+   *            is sensitized according to a marking steadym
+   *            (or decreasingm) on the neighbour places of t and
    *            to some weight functions pre_arcs_t, test_arcs_t
    *            and inhib_arcs_t.
    *)
@@ -705,11 +961,63 @@ Section Edges.
              (pre_arcs_t : place_type -> option nat_star)
              (test_arcs_t : place_type -> option nat_star)
              (inhib_arcs_t : place_type -> option nat_star)
-             (m_steady m_decreasing : marking_type) : bool :=
-    (check_pre_or_test pre_arcs_t m_decreasing (pre_pl neighbours_t))
-    && (check_pre_or_test test_arcs_t m_steady (test_pl neighbours_t))
-    && (check_inhib inhib_arcs_t m_steady (inhib_pl neighbours_t)).
+             (steadym decreasingm : marking_type) : bool :=
+    (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t))
+    && (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t))
+    && (check_inhib inhib_arcs_t steadym (inhib_pl neighbours_t)).
 
+  Functional Scheme check_all_edges_ind := Induction for check_all_edges Sort Prop.
+
+  (*** Formal specification : check_all_edges ***)
+  Inductive check_all_edges_spec
+            (neighbours_t : neighbours_type)
+            (pre_arcs_t : place_type -> option nat_star)
+            (test_arcs_t : place_type -> option nat_star)
+            (inhib_arcs_t : place_type -> option nat_star)
+            (steadym decreasingm : marking_type) : Prop :=
+  | check_all_edges_cons :
+      check_pre_or_test_spec pre_arcs_t decreasingm (pre_pl neighbours_t) ->
+      check_pre_or_test_spec test_arcs_t steadym (test_pl neighbours_t) ->
+      check_inhib_spec inhib_arcs_t steadym (inhib_pl neighbours_t) ->
+      check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t
+                           steadym decreasingm.
+
+  (*** Correctness proof : check_all_edges *)
+  Theorem check_all_edges_correct :
+    forall (neighbours_t : neighbours_type)
+           (pre_arcs_t : place_type -> option nat_star)
+           (test_arcs_t : place_type -> option nat_star)
+           (inhib_arcs_t : place_type -> option nat_star)
+           (steadym decreasingm : marking_type),
+    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = true ->
+    check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
+  Proof.
+    intros.
+    unfold check_all_edges in H. do 2 (apply andb_prop in H; elim H; clear H; intros).
+    apply check_all_edges_cons.
+    - apply check_pre_or_test_correct in H; auto.
+    - apply check_pre_or_test_correct in H1; auto.
+    - apply check_inhib_correct in H0; auto.
+  Qed.
+
+  (*** Completeness proof : check_all_edges ***)
+  Theorem check_all_edges_compl :
+    forall (neighbours_t : neighbours_type)
+           (pre_arcs_t : place_type -> option nat_star)
+           (test_arcs_t : place_type -> option nat_star)
+           (inhib_arcs_t : place_type -> option nat_star)
+           (steadym decreasingm : marking_type),
+    check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm ->
+    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = true.
+  Proof.
+    intros. induction H.
+    unfold check_all_edges.
+    repeat (apply andb_true_intro; intros; split);
+      [apply check_pre_or_test_compl in H; auto |
+       apply check_pre_or_test_compl in H0; auto |
+       apply check_inhib_compl in H1; auto].    
+  Qed.
+  
 End Edges.
 
 (*==============================================================*)
@@ -720,7 +1028,7 @@ Section FireSpn.
 
   (* 
    * There are 2 parallel calculus in spn_class_fire_pre_aux : 
-   * 1. pumping tokens to get "m_decreasing" (fired pre)
+   * 1. pumping tokens to get "decreasingm" (fired pre)
    * 2. returning subclass of transitions (fired_pre_class)
    *
    * and 2 markings are recorded : 
@@ -731,53 +1039,53 @@ Section FireSpn.
   (* Function : Given 1 ordered class of transitions 
    *            in structural conflict (a list class_transs), 
    *            returns 1 list of transitions "fired_pre_class" 
-   *            and marking "m_decreasing" accordingly ...
+   *            and marking "decreasingm" accordingly ...
    *
    *            Returns a couple (list of transitions, marking)
    *            For each sensitized transition of the list,
    *            the marking of the pre-condition places are updated (the 
-   *            transition is fired). "m_decreasing" is then the resulting marking.
+   *            transition is fired). "decreasingm" is then the resulting marking.
    *)
   Fixpoint spn_class_fire_pre_aux
            (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)  
-           (m_steady : marking_type)
+           (steadym : marking_type)
            (* "fired_pre_class" meant  to be empty at first *)
            (class_transs fired_pre_class : list trans_type)  
-           (m_decreasing : marking_type) : (list trans_type) * marking_type :=
+           (decreasingm : marking_type) : (list trans_type) * marking_type :=
     match class_transs with
     | (tr i) :: tail =>
       match get_neighbours lneighbours i with
       (* If transition t have no neighbours, then continues. *)
-      | None => (spn_class_fire_pre_aux lneighbours pre test inhib m_steady tail
-                                        fired_pre_class m_decreasing)
+      | None => (spn_class_fire_pre_aux lneighbours pre test inhib steadym tail
+                                        fired_pre_class decreasingm)
       (* Else checks neighbours of t. *)
       | Some neighbours_t =>
         (* If t is sensitized. *)
         if (check_all_edges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i))
-                            m_steady m_decreasing) then
+                            steadym decreasingm) then
           (* Updates the marking for the pre places neighbours of t. *)
-          let new_decreasing := (update_marking_pre (tr i) pre m_decreasing
+          let new_decreasing := (update_marking_pre (tr i) pre decreasingm
                                                     (pre_pl neighbours_t)) in
-          (spn_class_fire_pre_aux lneighbours pre test inhib m_steady tail
+          (spn_class_fire_pre_aux lneighbours pre test inhib steadym tail
                                   (fired_pre_class ++ [(tr i)]) new_decreasing)
         (* Else no changes but inductive progress. *)
-        else (spn_class_fire_pre_aux lneighbours pre test inhib m_steady tail
-                                     fired_pre_class m_decreasing)
+        else (spn_class_fire_pre_aux lneighbours pre test inhib steadym tail
+                                     fired_pre_class decreasingm)
       end
-    | []  => (fired_pre_class, m_decreasing)
+    | []  => (fired_pre_class, decreasingm)
     end.
-
+  
   (*  
    * Function : Wrapper function around spn_class_fire_pre_aux.
    *)
   Definition spn_class_fire_pre
              (lneighbours : list neighbours_type)
              (pre test inhib : weight_type) 
-             (m_steady : marking_type) 
+             (steadym : marking_type) 
              (class_transs : list trans_type)
-             (m_decreasing : marking_type) : (list trans_type) * marking_type :=
-    spn_class_fire_pre_aux lneighbours pre test inhib m_steady class_transs [] m_decreasing.
+             (decreasingm : marking_type) : (list trans_type) * marking_type :=
+    spn_class_fire_pre_aux lneighbours pre test inhib steadym class_transs [] decreasingm.
 
   (*
    * Function : Apply spn_class_fire_pre over ALL classes of transitions. 
@@ -787,18 +1095,18 @@ Section FireSpn.
   Fixpoint spn_fire_pre_aux
            (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
-           (m_steady : marking_type)
+           (steadym : marking_type)
            (classes classes_fired_pre : list (list trans_type))
-           (m_decreasing : marking_type) : (list (list trans_type)) * marking_type :=
+           (decreasingm : marking_type) : (list (list trans_type)) * marking_type :=
     match classes with
-    | [] => (classes_fired_pre, m_decreasing)
+    | [] => (classes_fired_pre, decreasingm)
     (* Loops over all classes of transitions (priority group) and
      * calls spn_class_fire_pre.
      *)
     | class :: classes_tail =>
       let (class_fired_pre, m_decreased_class) :=
-          (spn_class_fire_pre lneighbours pre test inhib m_steady class m_decreasing) in
-      (spn_fire_pre_aux lneighbours pre test inhib m_steady   
+          (spn_class_fire_pre lneighbours pre test inhib steadym class decreasingm) in
+      (spn_fire_pre_aux lneighbours pre test inhib steadym   
                         classes_tail
                         (class_fired_pre :: classes_fired_pre)
                         m_decreased_class)
@@ -811,10 +1119,10 @@ Section FireSpn.
   Definition spn_fire_pre
              (lneighbours : list neighbours_type)
              (pre test inhib : weight_type)
-             (m_steady : marking_type)
+             (steadym : marking_type)
              (classes_transs  : list (list trans_type)) :
     (list (list trans_type)) * marking_type :=
-    spn_fire_pre_aux lneighbours pre test inhib m_steady classes_transs [] m_steady.
+    spn_fire_pre_aux lneighbours pre test inhib steadym classes_transs [] steadym.
 
 
   (* 
@@ -874,10 +1182,10 @@ Section FireSpn.
   Definition spn_fire
              (lneighbours : list neighbours_type)
              (pre test inhib post : weight_type)
-             (m_steady : marking_type)
+             (steadym : marking_type)
              (classes_transs : list (list trans_type)) :
     (list (list trans_type)) * marking_type :=
-    let (sub_Lol, m_inter) := (spn_fire_pre lneighbours pre test inhib m_steady classes_transs) in
+    let (sub_Lol, m_inter) := (spn_fire_pre lneighbours pre test inhib steadym classes_transs) in
     (sub_Lol, (fire_post lneighbours post m_inter sub_Lol)).
 
 End FireSpn.
