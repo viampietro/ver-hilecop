@@ -1,4 +1,4 @@
-Require Export Arith Omega List Bool Bool.Sumbool FunInd Coq.Lists.ListDec.
+Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool FunInd Coq.Lists.ListDec.
 Export ListNotations.
 
 (******************************************************************)
@@ -123,7 +123,7 @@ End MarkingType.
 (* to DETERMINE the Petri net (along with the imperative semantic) *)
 (*******************************************************************)
 
-(* Inductive or Definition  ?? *) 
+(* Inductive or Definition ?? *) 
 Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
 
 Section NeighboursType.
@@ -976,11 +976,10 @@ Section Edges.
             (inhib_arcs_t : place_type -> option nat_star)
             (steadym decreasingm : marking_type) : Prop :=
   | check_all_edges_cons :
-      check_pre_or_test_spec pre_arcs_t decreasingm (pre_pl neighbours_t) ->
-      check_pre_or_test_spec test_arcs_t steadym (test_pl neighbours_t) ->
-      check_inhib_spec inhib_arcs_t steadym (inhib_pl neighbours_t) ->
-      check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t
-                           steadym decreasingm.
+      (check_pre_or_test_spec pre_arcs_t decreasingm (pre_pl neighbours_t) /\
+       check_pre_or_test_spec test_arcs_t steadym (test_pl neighbours_t) /\
+       check_inhib_spec inhib_arcs_t steadym (inhib_pl neighbours_t)) ->
+      check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
 
   (*** Correctness proof : check_all_edges *)
   Theorem check_all_edges_correct :
@@ -995,9 +994,10 @@ Section Edges.
     intros.
     unfold check_all_edges in H. do 2 (apply andb_prop in H; elim H; clear H; intros).
     apply check_all_edges_cons.
-    - apply check_pre_or_test_correct in H; auto.
-    - apply check_pre_or_test_correct in H1; auto.
-    - apply check_inhib_correct in H0; auto.
+    repeat
+      split; (apply check_pre_or_test_correct in H; auto ||
+              apply check_pre_or_test_correct in H1; auto ||
+              apply check_inhib_correct in H0; auto).
   Qed.
 
   (*** Completeness proof : check_all_edges ***)
@@ -1012,10 +1012,31 @@ Section Edges.
   Proof.
     intros. induction H.
     unfold check_all_edges.
-    repeat (apply andb_true_intro; intros; split);
-      [apply check_pre_or_test_compl in H; auto |
-       apply check_pre_or_test_compl in H0; auto |
-       apply check_inhib_compl in H1; auto].    
+    elim H; intros; elim H1; intros; clear H H1.
+    repeat (apply andb_true_intro; intros; split); 
+    repeat (apply check_pre_or_test_compl in H0; auto ||
+            apply check_pre_or_test_compl in H2; auto ||
+            apply check_inhib_compl in H3; auto).    
+  Qed.
+  
+  Theorem prop_bool_true_false :
+    forall (b :bool) (P : Prop), ((b = true) <-> P) -> ((b = false) <-> ~P).
+  Proof.
+  Admitted.
+  
+  Theorem check_all_edges_false :
+    forall (neighbours_t : neighbours_type)
+           (pre_arcs_t : place_type -> option nat_star)
+           (test_arcs_t : place_type -> option nat_star)
+           (inhib_arcs_t : place_type -> option nat_star)
+           (steadym decreasingm : marking_type),
+    ~check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm ->
+    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = false.
+  Proof.
+    intros neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm. apply prop_bool_true_false.
+    split.
+    - intro; apply check_all_edges_correct; auto.
+    - intro; apply check_all_edges_compl; auto.
   Qed.
   
 End Edges.
@@ -1050,31 +1071,135 @@ Section FireSpn.
            (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)  
            (steadym : marking_type)
+           (decreasingm : marking_type)
            (* "fired_pre_class" meant  to be empty at first *)
-           (class_transs fired_pre_class : list trans_type)  
-           (decreasingm : marking_type) : (list trans_type) * marking_type :=
+           (fired_pre_class class_transs : list trans_type) :
+    (list trans_type) * marking_type :=
     match class_transs with
     | (tr i) :: tail =>
       match get_neighbours lneighbours i with
       (* If transition t have no neighbours, then continues. *)
-      | None => (spn_class_fire_pre_aux lneighbours pre test inhib steadym tail
-                                        fired_pre_class decreasingm)
+      | None => (spn_class_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_class tail)
       (* Else checks neighbours of t. *)
       | Some neighbours_t =>
         (* If t is sensitized. *)
-        if (check_all_edges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i))
-                            steadym decreasingm) then
-          (* Updates the marking for the pre places neighbours of t. *)
-          let new_decreasing := (update_marking_pre (tr i) pre decreasingm
-                                                    (pre_pl neighbours_t)) in
-          (spn_class_fire_pre_aux lneighbours pre test inhib steadym tail
-                                  (fired_pre_class ++ [(tr i)]) new_decreasing)
+        if (check_all_edges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm) then
+          (* Updates the marking for the pre places, neighbours of t. *)
+          let new_decreasing := (update_marking_pre (tr i) pre decreasingm (pre_pl neighbours_t)) in
+          (spn_class_fire_pre_aux lneighbours pre test inhib steadym new_decreasing (fired_pre_class ++ [(tr i)]) tail)
         (* Else no changes but inductive progress. *)
-        else (spn_class_fire_pre_aux lneighbours pre test inhib steadym tail
-                                     fired_pre_class decreasingm)
+        else (spn_class_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_class tail)
       end
     | []  => (fired_pre_class, decreasingm)
     end.
+
+  Functional Scheme spn_class_fire_pre_aux_ind := Induction for spn_class_fire_pre_aux Sort Prop. 
+  
+  (*** Formal specification : spn_class_fire_pre_aux ***)
+  Inductive spn_class_fire_pre_aux_spec
+            (lneighbours : list neighbours_type)
+            (pre test inhib : weight_type) 
+            (steadym : marking_type) 
+            (decreasingm : marking_type)
+            (fired_pre_class : list trans_type) :
+    list trans_type -> (list trans_type * marking_type) -> Prop :=
+  | spn_class_fire_pre_aux_nil :
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class []
+                                  (fired_pre_class, decreasingm)
+  | spn_class_fire_pre_aux_neighbours_none :
+      forall (i : nat) (class : list trans_type) (finalfired : list trans_type) (finalm : marking_type),
+      get_neighbours_spec lneighbours i None ->
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class class
+                                  (finalfired, finalm) ->
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class ((tr i) :: class)
+                                  (finalfired, finalm)
+  | spn_class_fire_pre_aux_if :
+      forall (i : nat)
+             (neighbours_t : neighbours_type)
+             (class : list trans_type)
+             (finalfired : list trans_type)
+             (modifiedm finalm : marking_type),
+      get_neighbours_spec lneighbours i (Some neighbours_t) ->
+      check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm ->
+      update_marking_pre_spec (tr i) pre decreasingm (pre_pl neighbours_t) modifiedm ->
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym modifiedm (fired_pre_class ++ [(tr i)]) class
+                                  (finalfired, finalm) ->
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class ((tr i) :: class)
+                                  (finalfired, finalm)
+  | spn_class_fire_pre_aux_else :
+      forall (i : nat)
+             (neighbours_t : neighbours_type)
+             (class : list trans_type)
+             (finalfired : list trans_type)
+             (finalm : marking_type),
+      get_neighbours_spec lneighbours i (Some neighbours_t) ->
+      ~check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm ->
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class class
+                                  (finalfired, finalm) ->
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class ((tr i) :: class)
+                                  (finalfired, finalm).
+  
+  (*** Correctness proof : spn_class_fire_pre_aux ***)
+  Theorem spn_class_fire_pre_aux_correct :
+  forall (lneighbours : list neighbours_type)
+         (pre test inhib : weight_type) 
+         (steadym : marking_type) 
+         (finalm decreasingm : marking_type)
+         (finalfired fired_pre_class : list trans_type)
+         (class : list trans_type),
+  spn_class_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_class class = (finalfired, finalm) ->
+  spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class class (finalfired, finalm).
+  Proof.
+    intros lneighbours pre test inhib steadym finalm decreasingm finalfired fired_pre_class class.
+    functional induction (spn_class_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_class class)
+               using spn_class_fire_pre_aux_ind; intros.
+    (* Case class = [] *)
+    - rewrite <- H; apply spn_class_fire_pre_aux_nil.
+    (* Case t is sensitized, check_all_edges = true *)
+    - apply spn_class_fire_pre_aux_if with (modifiedm := (update_marking_pre (tr i) pre decreasingm (pre_pl neighbours_t)))
+                                           (neighbours_t := neighbours_t).
+      + apply get_neighbours_correct; auto.
+      + apply check_all_edges_correct; auto.
+      + apply update_marking_pre_correct; auto.
+      + apply IHp; auto.
+    (* Case t is disabled, check_all_edges = false *)
+    - apply spn_class_fire_pre_aux_else with (neighbours_t := neighbours_t).
+      + apply get_neighbours_correct; auto.
+      + intro; apply check_all_edges_compl in H0; rewrite H0 in e2; apply diff_true_false in e2; elim e2.
+      + apply IHp; auto.
+    (* Case no neighbours for t *)
+    - apply spn_class_fire_pre_aux_neighbours_none.
+      + apply get_neighbours_correct; auto.
+      + apply IHp; auto.
+  Qed.
+
+  (*** Completeness proof : spn_class_fire_pre_aux ***)
+  Theorem spn_class_fire_pre_aux_compl :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (finalm decreasingm : marking_type)
+           (finalfired fired_pre_class : list trans_type)
+           (class : list trans_type),
+    spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_class class (finalfired, finalm) ->
+    spn_class_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_class class = (finalfired, finalm).
+  Proof.
+    intros lneighbours pre test inhib steadym finalm decreasingm finalfired fired_pre_class class Hspec.
+    induction Hspec.
+    (* Case spn_class_fire_pre_aux_nil *)
+    - simpl; auto.
+    (* Case spn_class_fire_pre_aux_neighbours_none *)
+    - simpl; apply get_neighbours_compl in H; rewrite H; rewrite IHHspec; auto.
+    (* Case spn_class_fire_pre_aux_if *)
+    - simpl.
+      apply get_neighbours_compl in H; rewrite H.
+      apply check_all_edges_compl in H0; rewrite H0.
+      apply update_marking_pre_compl in H1; rewrite H1; auto.
+    (* Case spn_class_fire_pre_aux_else *)
+    - simpl.
+      apply get_neighbours_compl in H; rewrite H.
+      apply check_all_edges_false in H0. rewrite H0. rewrite IHHspec; auto.
+  Qed.
   
   (*  
    * Function : Wrapper function around spn_class_fire_pre_aux.
@@ -1083,10 +1208,54 @@ Section FireSpn.
              (lneighbours : list neighbours_type)
              (pre test inhib : weight_type) 
              (steadym : marking_type) 
-             (class_transs : list trans_type)
-             (decreasingm : marking_type) : (list trans_type) * marking_type :=
-    spn_class_fire_pre_aux lneighbours pre test inhib steadym class_transs [] decreasingm.
+             (decreasingm : marking_type)
+             (class_transs : list trans_type) : (list trans_type) * marking_type :=
+    spn_class_fire_pre_aux lneighbours pre test inhib steadym decreasingm [] class_transs.
 
+  Functional Scheme spn_class_fire_pre_ind := Induction for spn_class_fire_pre Sort Prop.
+
+  (*** Formal specification : spn_class_fire_pre ***)
+  Inductive spn_class_fire_pre_spec
+            (lneighbours : list neighbours_type)
+            (pre test inhib : weight_type) 
+            (steadym : marking_type) 
+            (decreasingm : marking_type)
+            (class_transs : list trans_type) : (list trans_type) * marking_type -> Prop :=
+  | spn_class_fire_pre_cons :
+      forall (finalfired : list trans_type) (finalm : marking_type),
+      spn_class_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm [] class_transs
+                                  (finalfired, finalm) ->
+      spn_class_fire_pre_spec lneighbours pre test inhib steadym decreasingm class_transs
+                              (finalfired, finalm).
+
+  (*** Correctness proof : spn_class_fire_pre ***)
+  Theorem spn_class_fire_pre_correct :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib : weight_type) 
+           (steadym decreasingm finalm : marking_type) 
+           (finalfired class_transs : list trans_type),
+      spn_class_fire_pre lneighbours pre test inhib steadym decreasingm class_transs = (finalfired, finalm) ->
+      spn_class_fire_pre_spec lneighbours pre test inhib steadym decreasingm class_transs (finalfired, finalm).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm finalm finalfired class_transs;
+    functional induction (spn_class_fire_pre lneighbours pre test inhib steadym decreasingm class_transs)
+               using spn_class_fire_pre_ind; intros.
+    apply spn_class_fire_pre_cons; apply spn_class_fire_pre_aux_correct in H; auto.
+  Qed.
+
+  (*** Completeness proof : spn_class_fire_pre ***)
+  Theorem spn_class_fire_pre_compl :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib : weight_type) 
+           (steadym decreasingm finalm : marking_type) 
+           (finalfired class_transs : list trans_type),
+    spn_class_fire_pre_spec lneighbours pre test inhib steadym decreasingm class_transs (finalfired, finalm) ->
+    spn_class_fire_pre lneighbours pre test inhib steadym decreasingm class_transs = (finalfired, finalm).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm finalm finalfired class_transs Hspec; elim Hspec; intros.
+    unfold spn_class_fire_pre; apply spn_class_fire_pre_aux_compl in H; auto. 
+  Qed.
+  
   (*
    * Function : Apply spn_class_fire_pre over ALL classes of transitions. 
    *            Begin with initial marking; End with half fired marking.  
@@ -1095,23 +1264,78 @@ Section FireSpn.
   Fixpoint spn_fire_pre_aux
            (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
-           (steadym : marking_type)
-           (classes classes_fired_pre : list (list trans_type))
-           (decreasingm : marking_type) : (list (list trans_type)) * marking_type :=
+           (steadym decreasingm : marking_type)
+           (classes_fired_pre classes : list (list trans_type)) :
+    (list (list trans_type)) * marking_type :=
     match classes with
-    | [] => (classes_fired_pre, decreasingm)
     (* Loops over all classes of transitions (priority group) and
-     * calls spn_class_fire_pre.
-     *)
+     * calls spn_class_fire_pre. *)
     | class :: classes_tail =>
       let (class_fired_pre, m_decreased_class) :=
-          (spn_class_fire_pre lneighbours pre test inhib steadym class decreasingm) in
-      (spn_fire_pre_aux lneighbours pre test inhib steadym   
-                        classes_tail
-                        (class_fired_pre :: classes_fired_pre)
-                        m_decreased_class)
+          (spn_class_fire_pre lneighbours pre test inhib steadym decreasingm class) in
+      spn_fire_pre_aux lneighbours pre test inhib steadym m_decreased_class
+                       (class_fired_pre :: classes_fired_pre) classes_tail
+    | [] => (classes_fired_pre, decreasingm)
     end.
- 
+
+  Functional Scheme spn_fire_pre_aux_ind := Induction for spn_fire_pre_aux Sort Prop.
+  
+  (*** Formal specification : spn_fire_pre_aux ***)
+  Inductive spn_fire_pre_aux_spec
+            (lneighbours : list neighbours_type)
+            (pre test inhib : weight_type)
+            (steadym decreasingm : marking_type)
+            (classes_fired_pre : list (list trans_type)) :
+    list (list trans_type) -> (list (list trans_type)) * marking_type -> Prop :=
+  | spn_fire_pre_aux_nil :
+      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm classes_fired_pre []
+                            (classes_fired_pre, decreasingm)
+  | spn_fire_pre_aux_cons :
+      forall (class finalfired : list trans_type)
+             (modifiedm finalm : marking_type)
+             (classes final_classes : list (list trans_type)),
+        spn_class_fire_pre_spec lneighbours pre test inhib steadym decreasingm class (finalfired, modifiedm) ->
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym modifiedm (finalfired :: classes_fired_pre) classes
+                              (final_classes, finalm) ->
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm classes_fired_pre (class :: classes)
+                              (final_classes, finalm).
+
+  (*** Correctness proof : spn_fire_pre_aux ***)
+  Theorem spn_fire_pre_aux_correct :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib : weight_type)
+           (steadym decreasingm finalm : marking_type)
+           (classes_fired_pre classes final_classes : list (list trans_type)),
+    spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm classes_fired_pre classes = (final_classes, finalm) ->
+    spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm classes_fired_pre classes (final_classes, finalm).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm finalm classes_fired_pre classes final_classes;
+    functional induction (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm classes_fired_pre classes)
+               using spn_fire_pre_aux_ind; intros.
+    (* Case classes = [] *)
+    - rewrite <- H; apply spn_fire_pre_aux_nil.
+    (* General case *)
+    - apply spn_fire_pre_aux_cons with (finalfired := class_fired_pre) (modifiedm := m_decreased_class).
+      + apply spn_class_fire_pre_correct; auto.
+      + apply IHp; rewrite H; auto.
+  Qed.
+
+  (*** Completeness proof : spn_fire_pre_aux ***)
+  Theorem spn_fire_pre_aux_compl :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib : weight_type)
+           (steadym decreasingm finalm : marking_type)
+           (classes_fired_pre classes final_classes : list (list trans_type)),
+    spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm classes_fired_pre classes (final_classes, finalm) ->
+    spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm classes_fired_pre classes = (final_classes, finalm).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm finalm classes_fired_pre classes final_classes Hspec; elim Hspec; intros.
+    (* Case spn_fire_pre_aux_nil *)
+    - simpl; auto.
+    (* Case spn_fire_pre_aux_cons *)
+    - simpl; apply spn_class_fire_pre_compl in H; rewrite H; rewrite H1; auto.
+  Qed.
+  
   (*
    * Function : Update the marking by consuming
    *            the tokens in pre-condition places.            
@@ -1122,8 +1346,7 @@ Section FireSpn.
              (steadym : marking_type)
              (classes_transs  : list (list trans_type)) :
     (list (list trans_type)) * marking_type :=
-    spn_fire_pre_aux lneighbours pre test inhib steadym classes_transs [] steadym.
-
+    spn_fire_pre_aux lneighbours pre test inhib steadym steadym classes_transs [].
 
   (* 
    * Function : Given a marking "m_intermediate", resulting of the call

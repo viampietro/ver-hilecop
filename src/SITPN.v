@@ -106,8 +106,7 @@ Fixpoint sitpn_class_fire_pre_aux
   | t :: tail =>
     if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
         && (check_chrono (chronos t))
-        && (check_condition conditions t)
-    then
+        && (check_condition conditions t) then
       let new_decreasing := update_marking_pre t pre m_decreasing places in
       let new_chronos := reset_all_chronos0 (reset_chrono0 chronos t)
                                             (list_disabled full_class places pre test inhib m_steady new_decreasing) in
@@ -807,8 +806,7 @@ Definition sitpn_cycle (sitpn : SITPN) : (list (list trans_type)) * SITPN :=
     | C :: tail =>
       let chronos_incr :=
           increment_all_chronos chronos (list_sensitized_spn (mk_SPN places transs pre post test inhib marking (mk_prior Lol))) in
-      let '(transs_fired, new_m, new_chro) :=
-          sitpn_fire places pre test inhib post marking chronos_incr Lol C in
+      let '(transs_fired, new_m, new_chro) := sitpn_fire places pre test inhib post marking chronos_incr Lol C in
       (transs_fired, (mk_SITPN (mk_STPN (mk_SPN places transs pre post test inhib new_m (mk_prior Lol)) new_chro) (tl scenario)))
     end
   end. 

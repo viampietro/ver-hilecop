@@ -38,7 +38,8 @@ Inductive check_chrono_spec (maybe_chrono : option chrono_type) : Prop :=
     forall (min_t max_t cnt : nat)
            (min_t_le_max_t : min_t <= max_t),
     maybe_chrono = Some (mk_chrono min_t max_t min_t_le_max_t cnt ) ->
-    (min_t <=? cnt) && (cnt <=? max_t) = true -> check_chrono_spec maybe_chrono.
+    (min_t <=? cnt) && (cnt <=? max_t) = true ->
+    check_chrono_spec maybe_chrono.
 
 Functional Scheme check_chrono_ind :=
   Induction for check_chrono Sort Prop.
@@ -62,7 +63,7 @@ Qed.
 (*** Completeness proof : check_chrono ***)
 Theorem check_chrono_complete : forall
     (maybe_chrono : option chrono_type),
-    check_chrono_spec  maybe_chrono            ->
+    check_chrono_spec  maybe_chrono ->
     check_chrono       maybe_chrono = true.     
 Proof.
   intros maybe_chrono Hspec. elim Hspec.
@@ -171,6 +172,9 @@ Qed.
  * Function : Returns true if transition t is 
  *            sensitized, regarding the other parameters, 
  *            false otherwise.
+ *            The difference with the check_all_edges function (SPN.v)
+ *            is that only one marking "m_steady" is considered instead
+ *            of two (one steady an done decreasing).
  *)
 (** "sensitized" <=> "arcs_classic" + "arcs_test" + "arcs_inhi" OK **)
 Definition is_sensitized
@@ -188,7 +192,7 @@ Functional Scheme is_sensitized_ind :=
 (*** Formal specification : is_sensitized ***)
 Inductive is_sensitized_spec
           (places : list place_type)
-          (pre   test  inhib : weight_type)
+          (pre test inhib : weight_type)
           (m_steady : marking_type) (t : trans_type) : Prop :=
 | is_enabled_mk :   
     check_pre_or_test (pre t) m_steady places
@@ -202,11 +206,11 @@ Theorem is_sensitized_correct :
           (pre   test  inhib : weight_type)
           (m_steady : marking_type) (t : trans_type),
     is_sensitized
-      places      pre   test  inhib
-      m_steady    t   = true        ->
+      places pre test inhib
+      m_steady t = true        ->
     is_sensitized_spec
-      places      pre   test  inhib
-      m_steady    t.
+      places pre test  inhib
+      m_steady t.
 Proof.
   intros places pre test inhib m_steady t.
   functional induction (is_sensitized
@@ -1201,8 +1205,7 @@ Fixpoint stpn_class_fire_pre_aux
   | t :: tail =>
     (* t is sensitized, even w.r.t. to the others *)
     if (check_all_edges places (pre t) (test t) (inhib t) m_steady m_decreasing)
-       && (check_chrono (chronos t))
-    then
+       && (check_chrono (chronos t)) then
       (* (Half-)Fires t by updating the marking in its pre-condition places *)
       let new_decreasing := (update_marking_pre t pre m_decreasing places) in
       
@@ -1236,8 +1239,8 @@ Fixpoint stpn_class_fire_pre_aux
  * 2) returning subclass of transitions (half fired)
  * 3) resting local counters of any "sensitized transition no more sensitized". 
  * and 2 markings are recorded : 
- * 1) the initial one to check with inhib and test arcs
- * 2) a floating (decreasing) intermediate marking to check classic arcs
+ *    1) the initial one to check with inhib and test arcs
+ *    2) a floating (decreasing) intermediate marking to check classic arcs
  *)
 
 (*** Formal specification : stpn_class_fire_pre_aux ***)
@@ -1689,8 +1692,7 @@ Definition stpn_fire_pre
          (classes_transs : list (list trans_type))
          (chronos : trans_type -> option chrono_type) :
   (list (list trans_type)) * marking_type * (trans_type -> option chrono_type) :=
-  stpn_fire_pre_aux places pre test inhib m_steady
-                    classes_transs [] m_steady chronos.
+  stpn_fire_pre_aux places pre test inhib m_steady classes_transs [] m_steady chronos.
 
 (*** Formal specification : stpn_fire_pre ***)
 Inductive stpn_fire_pre_spec
