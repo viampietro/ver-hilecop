@@ -1637,8 +1637,14 @@ Section FireSpn.
     intros.
     apply spn_fire_cons with (intermediatem := intermediatem).
     (* Case spn_fire_pre *)
+    Search (fst _).
     - apply spn_fire_pre_correct. rewrite e.
-  Admitted.
+      injection H; intros.
+      rewrite H1; auto.
+    (* Case fire_post *)
+    - injection H; intros; apply fire_post_correct.
+      rewrite <- H1; rewrite <- H0; auto.                             
+  Qed.
   
 End FireSpn.
 
