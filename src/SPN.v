@@ -1049,7 +1049,8 @@ Section Edges.
     ~check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm ->
     check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = false.
   Proof.
-    intros neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm. apply prop_bool_true_false.
+    intros neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
+    apply prop_bool_true_false.
     split.
     - intro; apply check_all_edges_correct; auto.
     - intro; apply check_all_edges_compl; auto.
@@ -1397,7 +1398,7 @@ Section FireSpn.
   Qed.
 
   (*** Completeness proof : spn_fire_pre ***)
-  Theorem spn_fire_pre_comlp :
+  Theorem spn_fire_pre_compl :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
            (steadym finalm : marking_type)
@@ -1594,7 +1595,7 @@ Section FireSpn.
   (*************************************************)
 
   (*
-   * Function : Returns  "transitions fired (Lol)" + "final marking",
+   * Function : Returns  "transitions fired (fire_groups)" + "final marking",
    *            composing spn_fire_post with spn_fire_pre
    *)
   Definition spn_fire
@@ -1645,6 +1646,22 @@ Section FireSpn.
     - injection H; intros; apply fire_post_correct.
       rewrite <- H1; rewrite <- H0; auto.                             
   Qed.
+
+  (*** Completeness proof : spn_fire ***)
+  Theorem spn_fire_compl :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib post : weight_type)
+           (steadym finalm : marking_type)
+           (priority_groups fired_groups : list (list trans_type)),
+    spn_fire_spec lneighbours pre test inhib post steadym priority_groups (fired_groups, finalm) ->
+    spn_fire lneighbours pre test inhib post steadym priority_groups = (fired_groups, finalm).
+  Proof.
+    intros lneighbours pre test inhib post steadym finalm priority_groups fired_groups Hspec;
+      elim Hspec; intros.
+    unfold spn_fire.
+    apply spn_fire_pre_compl in H; rewrite H.
+    apply fire_post_compl in H0; rewrite H0; auto.
+  Qed.
   
 End FireSpn.
 
@@ -1662,10 +1679,50 @@ Section AnimateSpn.
    *)
   Definition spn_cycle (spn : SPN) : (list (list trans_type)) * SPN :=
     match spn with
-    | (mk_SPN places transs pre post test inhib m (mk_prior Lol) lneighbours) =>
-      let (sub_Lol, next_m) := (spn_fire lneighbours pre test inhib post m Lol) in
-      (sub_Lol, (mk_SPN places transs pre post test inhib next_m (mk_prior Lol) lneighbours))
+    | (mk_SPN places transs pre post test inhib m (mk_prior priority_groups) lneighbours) =>
+      let (fired_groups, nextm) := (spn_fire lneighbours pre test inhib post m priority_groups) in
+      (fired_groups, (mk_SPN places transs pre post test inhib nextm (mk_prior priority_groups) lneighbours))
     end.
+
+  (*** Formal specification : spn_cycle_spec ***)
+  Inductive spn_cycle_spec (spn : SPN) :
+    (list (list trans_type)) * SPN -> Prop :=
+  | spn_cycle_cons :
+      forall (places : list place_type)
+             (transs : list trans_type)
+             (pre post test inhib : weight_type)
+             (m nextm : marking_type)
+             (fired_groups priority_groups : list (list trans_type))
+             (lneighbours : list neighbours_type),
+        spn = (mk_SPN places transs pre post test inhib m (mk_prior priority_groups) lneighbours) ->
+        spn_fire_spec lneighbours pre test inhib post m priority_groups (fired_groups, nextm) ->
+        spn_cycle_spec spn (fired_groups, (mk_SPN places transs pre post test inhib nextm
+                                                  (mk_prior priority_groups) lneighbours)).
+
+  Functional Scheme spn_cycle_ind := Induction for spn_cycle Sort Prop.
+  
+  (*** Correctness proof : spn_cycle ***)
+  Theorem spn_cycle_correct :
+    forall (spn spn' : SPN)
+           (fired_groups : list (list trans_type)),
+    spn_cycle spn = (fired_groups, spn') -> spn_cycle_spec spn (fired_groups, spn').
+  Proof.
+    intros; functional induction (spn_cycle spn) using spn_cycle_ind; intros.
+    rewrite <- H; apply spn_cycle_cons with (m := m).
+    - auto.
+    - apply spn_fire_correct; auto.
+  Qed.
+
+  (*** Completeness proof : spn_cycle ***)
+  Theorem spn_cycle_compl :
+    forall (spn spn' : SPN)
+           (fired_groups : list (list trans_type)),
+    spn_cycle_spec spn (fired_groups, spn') -> spn_cycle spn = (fired_groups, spn').
+  Proof.
+    intros; elim H; intros.
+    unfold spn_cycle; rewrite H0.
+    apply spn_fire_compl in H1; rewrite H1; auto.
+  Qed.
 
   (*******************************************)
   (******** ANIMATING DURING N CYCLES ********)
@@ -1677,12 +1734,43 @@ Section AnimateSpn.
    *            of the Petri net spn.
    *)
   Fixpoint spn_animate (spn : SPN) (n : nat) :
-    list ((list (list trans_type)) * (list (nat * nat))) :=
+    list ((list (list trans_type)) * marking_type) :=
     match n with
     | O => [ ([], []) ]
-    | S n' => let (Lol_fired, next_spn) := (spn_cycle spn) in
-              (Lol_fired, (marking next_spn)) :: (spn_animate next_spn n')
+    | S n' => let (fired_groups_at_n, spn_at_n) := (spn_cycle spn) in
+             (fired_groups_at_n, (marking spn_at_n)) :: (spn_animate spn_at_n n')
     end.
+
+  Functional Scheme spn_animate_ind := Induction for spn_animate Sort Prop.
+  
+  (*** Formal specification : spn_animate ***)
+  Inductive spn_animate_spec (spn : SPN) :
+    nat -> list ((list (list trans_type)) * marking_type) -> Prop :=
+  | spn_animate_0 : spn_animate_spec spn 0 [([], [])]
+  | spn_animate_cons :
+      forall (n : nat)
+             (fired_groups_at_n : list (list trans_type))
+             (spn_at_n : SPN)
+             (marking_evolution : list ((list (list trans_type)) * marking_type)),
+      spn_cycle_spec spn (fired_groups_at_n, spn_at_n) ->
+      spn_animate_spec spn_at_n n marking_evolution ->
+      spn_animate_spec spn (S n) ((fired_groups_at_n, (marking spn_at_n)) :: marking_evolution).
+  
+  (*** Correctness proof : spn_animate***)
+  Theorem spn_animate_correct :
+    forall (spn :SPN)
+           (n : nat)
+           (marking_evolution : list ((list (list trans_type)) * marking_type)),
+    spn_animate spn n = marking_evolution -> spn_animate_spec spn n marking_evolution.
+  Proof.                                                                                
+    intros spn n; functional induction (spn_animate spn n) using spn_animate_ind.
+    (* Case n = 0 *)
+    - intros; rewrite <- H; apply spn_animate_0.
+    (* General case *)
+    - intros; rewrite <- H; apply spn_animate_cons.
+      + apply spn_cycle_correct in e0; auto.
+      + apply IHl; auto.
+  Qed.
   
 End AnimateSpn.
 
