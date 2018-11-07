@@ -1034,11 +1034,7 @@ Section Edges.
             apply check_inhib_compl in H3; auto).    
   Qed.
   
-  Theorem prop_bool_true_false :
-    forall (b :bool) (P : Prop), ((b = true) <-> P) -> ((b = false) <-> ~P).
-  Proof.
-  Admitted.
-  
+  (*** Useful to prove spn_fire_pre_aux_compl ***)
   Theorem check_all_edges_false :
     forall (neighbours_t : neighbours_type)
            (pre_arcs_t : place_type -> option nat_star)
@@ -1049,7 +1045,9 @@ Section Edges.
     check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = false.
   Proof.
     intros neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
-    apply prop_bool_true_false.
+    Search (?b = false).
+    rewrite <- not_true_iff_false.
+    apply not_iff_compat.
     split.
     - intro; apply check_all_edges_correct; auto.
     - intro; apply check_all_edges_compl; auto.
