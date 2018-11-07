@@ -1045,7 +1045,6 @@ Section Edges.
     check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = false.
   Proof.
     intros neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
-    Search (?b = false).
     rewrite <- not_true_iff_false.
     apply not_iff_compat.
     split.
