@@ -176,8 +176,7 @@ Qed.
 
 (*  
  * Function : Returns true if transition t is 
- *            sensitized in marking m, 
- *            false otherwise.
+ *            sensitized by marking m, false otherwise.
  *            The difference with the check_all_edges function (SPN.v)
  *            is that only one marking "m" is considered instead
  *            of two (one steady and one decreasing).
@@ -247,6 +246,19 @@ Proof.
   - apply check_inhib_compl in H3; auto.
 Qed.
 
+Lemma not_is_sensitized_iff :
+  forall (neighbours_t : neighbours_type)
+         (pre test inhib : weight_type)
+         (m : marking_type)
+         (t : trans_type),
+  ~is_sensitized_spec neighbours_t pre test inhib m t <->
+  is_sensitized neighbours_t pre test inhib m t = false.
+Proof.
+  intros. rewrite <- not_true_iff_false. apply not_iff_compat. split.
+  - intro; apply is_sensitized_complete; auto.
+  -intro; apply is_sensitized_correct; auto.
+Qed.
+
 (* Useless fonction for SPN but useful for 
  *
  * -  _asynchronous_ Petri nets
@@ -262,115 +274,143 @@ Qed.
  *)
 
 (*  
- * Function :  Returns the list of the sensitized transitions
+ * Function :  Returns the list of sensitized transitions
  *             contained in sometranss.
  *)
 Fixpoint list_sensitized_aux 
-         (places : list place_type)
+         (lneighbours : list neighbours_type)
          (pre test inhib : weight_type) 
-         (m_steady : marking_type)
+         (m : marking_type)
          (sensitized_transs : list trans_type)
          (sometranss : list trans_type) : list trans_type :=
   match sometranss with
   | [] => sensitized_transs 
-  | t :: tail =>
-    if (is_sensitized places pre test inhib m_steady t) then
-      (list_sensitized_aux places pre test inhib m_steady (t :: sensitized_transs) tail)   
-    else
-      (list_sensitized_aux places pre test inhib m_steady sensitized_transs tail)  
+  | (tr i) :: tail =>
+    (* Checks if tr i has neighbours *)
+    match (get_neighbours lneighbours i) with
+    (* If no neighbours, (tr i) is an isolated trans
+     * and cannot be sensitized anyway. *)
+    | None => list_sensitized_aux lneighbours pre test inhib m sensitized_transs tail
+    | Some neighbours_t => if (is_sensitized neighbours_t pre test inhib m (tr i)) then
+                             list_sensitized_aux lneighbours pre test inhib m ((tr i) :: sensitized_transs) tail   
+                           else
+                             list_sensitized_aux lneighbours pre test inhib m sensitized_transs tail
+    end
   end.
 
 (*** Formal specification : list_sensitized_aux ***)
 Inductive list_sensitized_aux_spec
-          (places : list place_type)
+          (lneighbours : list neighbours_type)
           (pre test inhib : weight_type) 
-          (m_steady : marking_type)
-          (sensitized_transs_rec : list trans_type)  (* ? modified *) :
-  list trans_type  ->   (* sometranss *)
-  list trans_type  ->   (* sensitized_transs *)
+          (m : marking_type)
+          (sensitized_transs_rec : list trans_type) :
+  list trans_type -> (* sometranss *)
+  list trans_type -> (* sensitized_transs *)
   Prop :=
 
 | list_sensitized_aux_nil :
-    (list_sensitized_aux_spec
-       places pre test inhib m_steady
-       sensitized_transs_rec [] sensitized_transs_rec)
-      
-| list_sensitized_aux_cons_if :
-    forall (tail sensitized_transs : list trans_type)
-           (t : trans_type),
-    (list_sensitized_aux_spec
-       places pre test inhib m_steady
-       (t :: sensitized_transs_rec) tail sensitized_transs) ->
-    (is_sensitized places pre test inhib m_steady t) = true ->
-    (list_sensitized_aux_spec 
-      places pre test inhib m_steady
-      sensitized_transs_rec (t :: tail) sensitized_transs)
-      
-| list_sensitized_aux_cons_else :
-    forall (tail sensitized_transs : list trans_type)
-           (t : trans_type),
-    (list_sensitized_aux_spec 
-      places pre test inhib m_steady
-      sensitized_transs_rec tail sensitized_transs) ->
-    (is_sensitized places pre test inhib m_steady t) = false ->
-    (list_sensitized_aux_spec 
-       places pre test inhib m_steady
-       sensitized_transs_rec (t :: tail) sensitized_transs).
-
+    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec []
+                             sensitized_transs_rec      
+| list_sensitized_aux_none :
+    forall (transs sensitized_transs : list trans_type)
+           (i : nat),
+    get_neighbours_spec lneighbours i None ->
+    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec transs
+                             sensitized_transs ->
+    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec ((tr i) :: transs)
+                             sensitized_transs      
+| list_sensitized_aux_if :
+    forall (transs sensitized_transs : list trans_type)
+           (i : nat)
+           (neighbours_t : neighbours_type),
+    get_neighbours_spec lneighbours i (Some neighbours_t) ->
+    is_sensitized_spec neighbours_t pre test inhib m (tr i) ->
+    list_sensitized_aux_spec lneighbours pre test inhib m ((tr i) :: sensitized_transs_rec) transs
+                             sensitized_transs ->
+    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec ((tr i) :: transs)
+                             sensitized_transs
+| list_sensitized_aux_else :
+    forall (transs sensitized_transs : list trans_type)
+           (i : nat)
+           (neighbours_t : neighbours_type),
+    get_neighbours_spec lneighbours i (Some neighbours_t) ->
+    ~is_sensitized_spec neighbours_t pre test inhib m (tr i) ->
+    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec transs
+                             sensitized_transs ->
+    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec ((tr i) :: transs)
+                             sensitized_transs.
+    
 Functional Scheme list_sensitized_aux_ind :=
   Induction for list_sensitized_aux Sort Prop.
 
 (*** Correctness proof : list_sensitized_aux ***)
 Theorem list_sensitized_aux_correct :
-  forall
-    (sometranss sensitized_transs_rec sensitized_transs : list trans_type)
-    (places : list place_type)
-    (pre   test  inhib : weight_type)
-    (m_steady : marking_type),
-  list_sensitized_aux
-    places     pre   test  inhib   m_steady
-    sensitized_transs_rec    sometranss     = sensitized_transs   ->
-  list_sensitized_aux_spec
-    places     pre   test  inhib   m_steady
-    sensitized_transs_rec    sometranss       sensitized_transs.
+  forall (sometranss sensitized_transs_rec sensitized_transs : list trans_type)
+         (lneighbours : list neighbours_type)
+         (pre test inhib : weight_type)
+         (m : marking_type),
+  list_sensitized_aux lneighbours pre test inhib m
+                      sensitized_transs_rec sometranss = sensitized_transs ->
+  list_sensitized_aux_spec lneighbours pre test inhib m
+                           sensitized_transs_rec sometranss sensitized_transs.
 Proof.
   intros sometranss sensitized_transs_rec sensitized_transs
-         places pre test inhib m_steady.
-  functional induction (list_sensitized_aux
-                          places pre test inhib  m_steady
-                          sensitized_transs_rec  sometranss)
+         lneighbours pre test inhib m.
+  functional induction (list_sensitized_aux lneighbours pre test inhib m
+                                            sensitized_transs_rec sometranss)
              using list_sensitized_aux_ind.
+  (* Case sometranss = [] *)
   - intro Heq. rewrite Heq. apply list_sensitized_aux_nil.
-  - intro Htail. apply list_sensitized_aux_cons_if.
+  (* Case is_sensitized = true *)
+  - intro Htail. apply list_sensitized_aux_if with (neighbours_t := neighbours_t).
+    + apply get_neighbours_correct; auto.
+    + apply is_sensitized_correct; auto.
     + apply (IHl Htail).
-    + assumption. 
-  - intro Htail. apply list_sensitized_aux_cons_else.
+  (* Case is_sensitized = false *)
+  - intro Htail. apply list_sensitized_aux_else with (neighbours_t := neighbours_t).
+    + apply get_neighbours_correct; auto.
+    + apply not_is_sensitized_iff; auto. 
     + apply (IHl Htail).
-    + assumption.
+  (* Case get_neighbours = None *)
+  - intro; apply list_sensitized_aux_none;
+      [apply get_neighbours_correct; auto | apply IHl; auto].
 Qed.
 
 (*** Completeness proof : list_sensitized_aux ***)
-Theorem list_sensitized_aux_complete : forall
-    (sometranss sensitized_transs_rec sensitized_transs : list trans_type)
-    (places : list place_type)
-    (pre   test  inhib : weight_type)
-    (m_steady : marking_type),
-    list_sensitized_aux_spec
-      places     pre   test  inhib  m_steady
-      sensitized_transs_rec  sometranss      sensitized_transs  ->
-    list_sensitized_aux
-      places     pre   test  inhib  m_steady
-      sensitized_transs_rec  sometranss    = sensitized_transs.
+Theorem list_sensitized_aux_complete :
+  forall (sometranss sensitized_transs_rec sensitized_transs : list trans_type)
+         (lneighbours : list neighbours_type)
+         (pre test inhib : weight_type)
+         (m : marking_type),
+  list_sensitized_aux_spec lneighbours pre test inhib m
+                           sensitized_transs_rec sometranss sensitized_transs  ->
+  list_sensitized_aux lneighbours pre test inhib  m
+                      sensitized_transs_rec sometranss = sensitized_transs.
 Proof.
   intros sometranss sensitized_transs_rec sensitized_transs
-         places  pre   test  inhib   m_steady Hspec. elim Hspec.
-  - simpl.  reflexivity.
-  - intros sensitized_transs_rec0 tail sensitized_transs0 t
-           Hspectail Htail Hsensitized.
-    simpl. rewrite Hsensitized. rewrite Htail. reflexivity.
-  - intros sensitized_transs_rec0 tail sensitized_transs0 t
-           Hspectail Htail Hnotsensitized.
-    simpl. rewrite Hnotsensitized. rewrite Htail. reflexivity.
+         lneighbours pre test inhib m Hspec.
+  elim Hspec.
+  (* Case list_sensitized_aux_nil *)
+  - simpl; auto.
+  (* Case list_sensitized_aux_none *)
+  - intros sensitized_transs_rec0 tail sensitized_transs0 i Hspectail Htail Hsensitized.
+    simpl;
+      apply get_neighbours_compl in Hspectail;
+      rewrite Hspectail;
+      rewrite Hsensitized; auto.
+  (* Case list_sensitized_aux_if *)
+  - intros sensitized_transs_rec0 tail sensitized_transs0 i neighbours_t; intros.
+    simpl;
+      apply get_neighbours_compl in H;
+      rewrite H;
+      apply is_sensitized_complete in H0;
+      rewrite H0;
+      rewrite H2; auto.
+  (* Case list_sensitized_aux_else *)
+  - intros sensitized_transs_rec0 tail sensitized_transs0 i neighbours_t; intros.
+    simpl.
+    apply get_neighbours_compl in H; rewrite H.
+    apply not_is_sensitized_iff in H0; rewrite H0; auto.    
 Qed.
 
 (*
@@ -378,65 +418,56 @@ Qed.
  *)
 Definition list_sensitized 
            (sometranss : list trans_type)
-           (places : list place_type)
+           (lneighbours : list neighbours_type)
            (pre test inhib : weight_type) 
-           (m_steady : marking_type) : list trans_type :=
-  (list_sensitized_aux places pre test inhib m_steady [] sometranss).
+           (m : marking_type) : list trans_type :=
+  list_sensitized_aux lneighbours pre test inhib m [] sometranss.
 
 (*** Formal specification : list_sensitized ***)
 Inductive list_sensitized_spec
           (sometranss : list trans_type)
-          (places : list place_type)
+          (lneighbours : list neighbours_type)
           (pre test inhib : weight_type) 
-          (m_steady : marking_type) : list trans_type -> Prop :=
+          (m : marking_type) : list trans_type -> Prop :=
 | list_sensitized_mk :
     forall (sensitized_transs : list trans_type),
-      list_sensitized_aux
-        places   pre   test  inhib    m_steady   [] sometranss
-      = sensitized_transs
-      ->
-      list_sensitized_spec
-        sometranss    places    pre    test   inhib    m_steady
-        sensitized_transs.
+    list_sensitized_aux_spec lneighbours pre test inhib m [] sometranss sensitized_transs ->
+    list_sensitized_spec sometranss lneighbours pre test inhib m sensitized_transs.
 
 Functional Scheme list_sensitized_ind :=
   Induction for list_sensitized Sort Prop.
 
 (*** Correctness proof : list_sensitized ***)
-Theorem list_sensitized_correct :  forall
-    (sometranss  sensitized : list trans_type)
-    (places : list place_type)
-    (pre   test  inhib : weight_type)
-    (m_steady : marking_type),
-    list_sensitized
-      sometranss  places    pre   test  inhib
-      m_steady      =   sensitized        ->
-    list_sensitized_spec
-      sometranss  places    pre   test  inhib
-      m_steady          sensitized.
+Theorem list_sensitized_correct :
+  forall (sometranss sensitized : list trans_type)
+         (lneighbours : list neighbours_type)
+         (pre test inhib : weight_type)
+         (m : marking_type),
+  list_sensitized sometranss lneighbours pre test inhib m = sensitized ->
+  list_sensitized_spec sometranss lneighbours pre test inhib m sensitized.
 Proof.
-  intros sometranss  sensitized places pre test inhib m_steady.
-  functional induction (list_sensitized
-                          sometranss  places pre test inhib
-                          m_steady)
+  intros sometranss sensitized lneighbours pre test inhib m.
+  functional induction (list_sensitized sometranss lneighbours pre test inhib m)
              using list_sensitized_ind.
-  intro H. apply list_sensitized_mk. assumption.  
+  intro H.
+  apply list_sensitized_mk.
+  apply list_sensitized_aux_correct; auto.  
 Qed.
 
 (*** Completeness proof : list_sensitized ***)
 Theorem list_sensitized_complete : forall
     (sometranss  sensitized : list trans_type)
-    (places : list place_type)
+    (lneighbours : list place_type)
     (pre   test  inhib : weight_type)
-    (m_steady : marking_type),
+    (m : marking_type),
     list_sensitized_spec
-      sometranss  places    pre   test  inhib
-      m_steady   sensitized     ->
+      sometranss  lneighbours    pre   test  inhib
+      m   sensitized     ->
     list_sensitized
-      sometranss  places    pre   test  inhib
-      m_steady      =   sensitized.
+      sometranss  lneighbours    pre   test  inhib
+      m      =   sensitized.
 Proof.
-  intros  sometranss  sensitized places pre test inhib m_steady H.
+  intros  sometranss  sensitized lneighbours pre test inhib m H.
   elim H. intros sensitized_transs H0. simpl. unfold list_sensitized.
   rewrite H0. reflexivity. 
 Qed.
