@@ -20,7 +20,7 @@ Inductive trans_type : Set :=
 (* Simpler notation for mk_transition, strong binding level. *)
 Notation "'tr' nat" := (mk_trans nat) (at level 100, no associativity).
 
-(* There are 4 kinds of edges : pred, post, pred_inhib, pred_test 
+(* There are 4 kinds of edges : pre, post, inhib, test 
  * along with "some" positive weight (default is 1 usually).       
  *)
 
@@ -35,14 +35,244 @@ Structure nat_star : Set := mk_nat_star { int : nat ; posi : int > 0 }.
  *)
 Definition weight_type := trans_type -> place_type -> option nat_star.
 
-Section MarkingType.
-  
-  (* The marking in a Petri net is represented as
-   * a list of couples (index, nboftokens), where index is
-   * the index of a place in the Petri net, and nboftokens
-   * is the number of tokens currently assoicated to the place.
-   *)
-  Definition marking_type := list (nat * nat).
+(* The marking in a Petri net is represented as
+ * a list of couples (index, nboftokens), where index is
+ * the index of a place in the Petri net, and nboftokens
+ * is the number of tokens currently assoicated to the place.
+ *)
+Definition marking_type := list (nat * nat).
+
+(* Defines a structure,
+ * where index corresponds to a transition index
+ * and the other attributes correspond to its
+ * pre, test, inhib and post neighbour places.
+ *)
+Structure neighbours_type : Set := mk_neighbours {
+                                       index : nat;
+                                       pre_pl : list place_type;
+                                       test_pl : list place_type;
+                                       inhib_pl : list place_type;
+                                       post_pl : list place_type
+                                     }.
+
+(*******************************************************)
+(*** Defines the structure of Synchronous Petri Nets ***)
+(*******************************************************)
+Structure SPN : Set :=
+  mk_SPN {
+      
+      (*==== ATTRIBUTES ====*)
+      
+      places : list place_type;
+      transs : list trans_type;
+      pre : weight_type;
+      post : weight_type;
+      test : weight_type;
+      inhib : weight_type;
+      marking : marking_type;
+
+      (* Each list of transitions contained in priority_groups is 
+       * a priority-ordered list of transitions.
+       * Defines priority relations between transitions,
+       * necessary to obtain a deterministic Petri net.*)
+      priority_groups : list (list trans_type);
+
+      (* Contains the list of pre, test, inhib and post places 
+       * associated with each transition of the SPN. *)
+      lneighbours : list neighbours_type;
+
+      (*==== LEMMAS ====*)
+      
+      (*** Properties on places and transitions ***)
+      nodup_places : NoDup places;
+      nodup_transs : NoDup transs;
+
+      (*** Properties on priority_groups ***)
+
+      (* For all transition t, t is in transs iff 
+       * there exists a group in priority_groups containing t. *)
+      no_unknown_in_priority_groups :
+        forall (t : trans_type),
+          In t transs <->
+          exists group : list trans_type,
+            In group priority_groups /\ In t group;
+
+      (* For all transition t in one of the group of
+       * priority_groups, t is contained in only one
+       * group of priority_groups. *)
+      no_intersect_in_priority_groups :
+        forall (group group' : list trans_type),
+          In group priority_groups /\
+          In group' priority_groups /\
+          group <> group' ->
+          forall (t : trans_type), In t group -> ~In t group';
+      
+      (*** Properties on lneighbours ***)
+      nodup_lneighbours : NoDup lneighbours;
+      
+      (* For all place p, p is in places iff 
+       * p is in the neighbourhood of at least one transition. *)
+      no_isolated_or_unknown_place : 
+        forall (p : place_type),
+          In p places <->
+          exists (neighbours : neighbours_type),
+            In neighbours lneighbours /\  
+            (In p (pre_pl neighbours)) \/
+            (In p (test_pl neighbours)) \/
+            (In p (inhib_pl neighbours)) \/
+            (In p (post_pl neighbours));
+
+      (* For all transition (tr i), (tr i) is in transs iff 
+       * t is connected to at least one place. *)
+      no_isolated_or_unknown_trans :
+        forall (i : nat),
+          In (tr i) transs <->
+          exists (pre_pl test_pl inhib_pl post_pl : list place_type),
+            In (mk_neighbours i pre_pl test_pl inhib_pl post_pl) lneighbours /\
+            (pre_pl <> [] \/ test_pl <> [] \/ inhib_pl <> [] \/ post_pl <> []);
+
+      (* For all neighbours, if neighbours is in lneighbours then
+       * there is no neighbours' in lneighbours with the same index
+       * as neighbours. *)
+      uniq_index_lneighbours :
+        forall (neighbours : neighbours_type),
+          In neighbours lneighbours ->
+          ~exists (neighbours' : neighbours_type),
+              In neighbours' lneighbours /\
+              neighbours.(index) = neighbours'.(index) /\
+              neighbours <> neighbours';
+      
+      (*** Properties on marking ***)
+      nodup_marking : NoDup marking;
+      
+      (* For all place (pl i), (pl i) is in places iff
+       * (pl i) is referenced in marking. *)
+      no_unmarked_or_unknown_place :
+        forall (i : nat), In (pl i) places -> exists (n : nat), In (i, n) marking;
+
+      (* For all couple of nat (i, n), if (i, n) is in marking 
+       * then there is no couple (i, n') in marking with n' different from n. *)
+      uniq_index_marking :
+        forall (i n : nat),
+          In (i, n) marking -> ~exists (n' : nat), In (i, n') marking /\ n <> n';
+      
+    }.
+
+(**************************************************************)
+(************ Are 2 nat/places/transitions equal ? ************)
+(**************************************************************)
+
+(*** Formal specification : beq_places ***)
+Inductive beq_places_spec : place_type -> place_type -> Prop :=
+| beq_places_mk :
+    forall (p p' : place_type) (n : nat), 
+      p = mk_place n /\ p' = mk_place n -> beq_places_spec p p'.
+
+(* Function : Returns true if p and p' have the same index. 
+ *            false otherwise.
+ *)
+Definition beq_places (p p' : place_type) : bool :=
+  match (p, p') with
+  | (mk_place n, mk_place n') => beq_nat n n'
+  end.
+
+Functional Scheme beq_places_ind := Induction for beq_places Sort Prop.
+
+(*** Correctness proof : beq_places ***)
+Theorem beq_places_correct :
+  forall (p p' : place_type),
+    beq_places p p' = true -> beq_places_spec p p'.
+Proof.
+  intros p p'.
+  functional induction (beq_places  p p') using beq_places_ind.
+  intro H. rewrite beq_nat_true_iff in H. rewrite H.
+  apply beq_places_mk with (n:=n').
+  split; reflexivity. 
+Qed.
+
+(*** Completeness proof : beq_places ***)
+Theorem beq_places_complete :
+  forall (p p' : place_type),
+    beq_places_spec p p' -> beq_places p p' = true. 
+Proof.
+  intros p p' H. elim H.
+  intros  p0 p1  n  H01.
+  assert (H0 : p0 = mk_place n).  { firstorder. }  
+                                  assert (H1 : p1 = mk_place n).  { firstorder. }                   
+                                                                  unfold beq_places. rewrite H1. rewrite H0.
+  rewrite beq_nat_true_iff. reflexivity.
+Qed.
+
+(*** Formal specification : beq_transs ***)
+Inductive beq_transs_spec : trans_type -> trans_type -> Prop :=
+| beq_transs_mk :
+    forall (t t' : trans_type) (n : nat), 
+      t = mk_trans n /\ t' = mk_trans n -> beq_transs_spec t t'.
+
+(* Function : Returns true if t and t' have the same index.
+ *            false otherwise.
+ *)
+Definition beq_transs (t t' : trans_type) : bool :=
+  match (t, t') with
+  | (mk_trans n, mk_trans n') => beq_nat n n'
+  end.
+
+Functional Scheme beq_transs_ind := Induction for beq_transs Sort Prop.
+
+(*** Correctness prooof : beq_transs ***)
+Theorem beq_transs_correct :
+  forall (t t' : trans_type),
+    beq_transs t t' = true -> beq_transs_spec t t'.
+Proof.
+  intros t t'.
+  functional induction (beq_transs  t t') using beq_transs_ind.
+  intro H. rewrite beq_nat_true_iff in H. rewrite H.
+  apply beq_transs_mk with (n:=n').
+  split; reflexivity. 
+Qed.
+
+(*** Completeness proof : beq_transs ***)
+Theorem beq_transs_complete :
+  forall (t t' : trans_type),
+    beq_transs_spec t t' -> beq_transs t t' = true. 
+Proof.
+  intros t t' H. elim H.
+  intros  t0 t1  n  H01.
+  assert (H0 : t0 = mk_trans n).
+  - firstorder.   
+  - assert (H1 : t1 = mk_trans n).
+    + firstorder.                   
+    + unfold beq_transs. rewrite H1. rewrite H0.
+      rewrite beq_nat_true_iff. reflexivity.
+Qed.
+
+(*** Equality decidability for place_type. ***)
+Definition places_eq_dec :
+  forall x y : place_type, {x = y} + {x <> y}.
+Proof.
+  decide equality.
+  decide equality.
+Defined.
+
+(*** Equality decidability for trans_type. ***)
+Definition transs_eq_dec :
+  forall x y : trans_type, {x = y} + {x <> y}.
+Proof.
+  decide equality.
+  decide equality.
+Defined.
+
+(*** Equality decidability for neighbours_type ***)
+Definition neighbours_eq_dec :
+  forall x y : neighbours_type, {x = y} + {x <> y}.
+Proof.
+  repeat decide equality.    
+Defined.
+
+(*====================================================*)
+(*=============== MARKING SECTION  ===================*)
+(*====================================================*)
+Section Marking.
 
   (*  
    * Function : Returns the number of tokens
@@ -67,38 +297,38 @@ Section MarkingType.
       forall (i : nat), get_m_spec [] i None
   | get_m_if :
       forall (m m' : marking_type) (index i nboftokens : nat),
-      m = (i, nboftokens) :: m' ->
-      index = i ->
-      get_m_spec m index (Some nboftokens)
+        m = (i, nboftokens) :: m' ->
+        index = i ->
+        get_m_spec m index (Some nboftokens)
   | get_m_else :
       forall (m m' : marking_type) (index i  n : nat) (opt_nboftokens : option nat),
-      m = (i, n) :: m' ->
-      index <> i ->
-      get_m_spec m' index opt_nboftokens -> get_m_spec m index opt_nboftokens.
+        m = (i, n) :: m' ->
+        index <> i ->
+        get_m_spec m' index opt_nboftokens -> get_m_spec m index opt_nboftokens.
 
   (*** Correctness proof : get_m ***)
   Theorem get_m_correct :
     forall (m : marking_type) (index : nat) (opt_nboftokens : option nat),
-    get_m m index = opt_nboftokens -> get_m_spec m index opt_nboftokens.
+      get_m m index = opt_nboftokens -> get_m_spec m index opt_nboftokens.
   Proof.
-    do 2 intro; functional induction (get_m m index) using get_m_ind; intros.
+    do 2 intro; functional induction (get_m m index0) using get_m_ind; intros.
     (* Case m = []. *)
     - rewrite <- H; apply get_m_none.
     (* Case if is true. *)
     - rewrite <- H.
       apply get_m_if with (m' := tail) (i := i);
-      [auto | rewrite Nat.eqb_sym in e1; apply beq_nat_true in e1; auto].
+        [auto | rewrite Nat.eqb_sym in e1; apply beq_nat_true in e1; auto].
     (* Case else *)
     - apply get_m_else with (i := i) (n := nboftokens) (m' := tail).
       + auto.
       + rewrite Nat.eqb_sym in e1. apply beq_nat_false in e1. assumption.
-      + rewrite <- H. apply IHo with (opt_nboftokens := (get_m tail index)). auto.
+      + rewrite <- H. apply IHo with (opt_nboftokens := (get_m tail index0)). auto.
   Qed.
 
   (*** Completeness proof : get_m ***)
   Theorem get_m_compl :
     forall (m : marking_type) (index : nat) (opt_nboftokens : option nat),
-    get_m_spec m index opt_nboftokens -> get_m m index = opt_nboftokens.
+      get_m_spec m index opt_nboftokens -> get_m m index = opt_nboftokens.
   Proof.
     intros. induction H.
     (* Case get_m_0 *)
@@ -115,273 +345,7 @@ Section MarkingType.
       rewrite Nat.eqb_sym. rewrite H0.
       assumption.
   Qed.
-
-End MarkingType.
-
-(*******************************************************************)
-(**********************  Priority relation *************************)
-(* to DETERMINE the Petri net (along with the imperative semantic) *)
-(*******************************************************************)
-
-(* Inductive or Definition ?? *) 
-Inductive prior_type : Set := mk_prior { Lol : list (list trans_type); }.
-
-Section NeighboursType.
   
-  (* Defines a structure,
-   * where index corresponds to a transition index
-   * and the other attributes correspond to its
-   * pre, test, inhib and post neighbour places.
-   *)
-  Structure neighbours_type : Set := mk_neighbours {
-                                         index : nat;
-                                         pre_pl : list place_type;
-                                         test_pl : list place_type;
-                                         inhib_pl : list place_type;
-                                         post_pl : list place_type
-                                       }. 
-  (*  
-   * Function : Returns the element of type neighbours_type
-   *            included in the list neighbours having an
-   *            index attribute equal to idx.
-   *            Returns None if no element have an index
-   *            attribute equal to idx.
-   *)
-  Fixpoint get_neighbours
-           (lneighbours : list neighbours_type)
-           (idx : nat) {struct lneighbours} : option neighbours_type :=
-    match lneighbours with
-    | neighbours :: tail => if (index neighbours) =? idx then
-                              Some neighbours
-                            else get_neighbours tail idx
-    | [] => None 
-    end.
-
-  (*** Formal specification : get_neighbours ***)
-  Inductive get_neighbours_spec :
-    list neighbours_type -> nat -> option neighbours_type -> Prop :=
-  | get_neighbours_none :
-      forall (idx : nat), get_neighbours_spec [] idx None
-  | get_neighbours_if :
-      forall (lneighbours lneighbours' : list neighbours_type)
-             (idx : nat)
-             (neighbours : neighbours_type),
-      lneighbours = neighbours :: lneighbours' ->
-      (index neighbours) = idx ->
-      get_neighbours_spec lneighbours idx (Some neighbours)
-  | get_neighbours_else :
-      forall (lneighbours lneighbours' : list neighbours_type)
-             (idx : nat)
-             (neighbours : neighbours_type)
-             (opt_neighbours : option neighbours_type),
-      lneighbours = neighbours :: lneighbours' ->
-      (index neighbours) <> idx ->
-      get_neighbours_spec lneighbours' idx opt_neighbours ->
-      get_neighbours_spec lneighbours idx opt_neighbours.
-
-  Functional Scheme get_neighbours_ind := Induction for get_neighbours Sort Prop.
-  
-  (*** Correctness proof : get_neighbours ***)
-  Theorem get_neighbours_correct :
-    forall (lneighbours : list neighbours_type)
-           (idx : nat)
-           (opt_neighbours : option neighbours_type),
-    get_neighbours lneighbours idx = opt_neighbours ->
-    get_neighbours_spec lneighbours idx opt_neighbours.
-  Proof.
-    do 3 intro;
-      functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
-    (* Case neighbours = None *)
-    - rewrite <- H; apply get_neighbours_none with (idx := idx).
-    (* Case neighbour is head *)
-    - rewrite <- H; apply get_neighbours_if with (lneighbours' := tail) (idx := idx);
-        [auto | apply beq_nat_true in e0; auto].
-    (* Case neighbour is not head *)
-    - rewrite <- H. apply get_neighbours_else with (neighbours := neighbours)
-                                                   (lneighbours' := tail)
-                                                   (idx := idx).
-      + auto.
-      + apply beq_nat_false in e0. auto.
-      + rewrite H. apply IHo. auto.
-  Qed.
-
-  (*** Completeness proof : get_neighbours ***)
-  Theorem get_neighbours_compl :
-    forall (lneighbours : list neighbours_type)
-           (idx : nat)
-           (opt_neighbours : option neighbours_type),
-    get_neighbours_spec lneighbours idx opt_neighbours ->
-    get_neighbours lneighbours idx = opt_neighbours.
-  Proof.
-     intros. induction H.
-    (* Case get_neighbours_none *)
-    - simpl; auto.
-    (* Case get_neighbours_if *)
-    - rewrite H. simpl.
-      rewrite H0.
-      rewrite Nat.eqb_refl.
-      auto.
-    (* Case get_neighbours_else *)
-    - rewrite H. simpl.
-      apply Nat.eqb_neq in H0.
-      rewrite H0.
-      assumption.
-  Qed.
-  
-End NeighboursType.
-
-(**************************************************************)
-(************ Are 2 nat/places/transitions equal ? ************)
-(**************************************************************)
-
-(*** Formal specification : beq_places ***)
-Inductive beq_places_spec : place_type -> place_type -> Prop :=
-| beq_places_mk :
-    forall (p p' : place_type) (n : nat), 
-    p = mk_place n /\ p' = mk_place n -> beq_places_spec p p'.
-
-(* Function : Returns true if p and p' have the same index. 
- *            false otherwise.
- *)
-Definition beq_places (p p' : place_type) : bool :=
-  match (p, p') with
-  | (mk_place n, mk_place n') => beq_nat n n'
-  end.
-
-Functional Scheme beq_places_ind := Induction for beq_places Sort Prop.
-
-(*** Correctness proof : beq_places ***)
-Theorem beq_places_correct :
-  forall (p p' : place_type),
-  beq_places p p' = true -> beq_places_spec p p'.
-Proof.
-  intros p p'.
-  functional induction (beq_places  p p') using beq_places_ind.
-  intro H. rewrite beq_nat_true_iff in H. rewrite H.
-  apply beq_places_mk with (n:=n').
-  split; reflexivity. 
-Qed.
-
-(*** Completeness proof : beq_places ***)
-Theorem beq_places_complete :
-  forall (p p' : place_type),
-  beq_places_spec p p' -> beq_places p p' = true. 
-Proof.
-  intros p p' H. elim H.
-  intros  p0 p1  n  H01.
-  assert (H0 : p0 = mk_place n).  { firstorder. }  
-  assert (H1 : p1 = mk_place n).  { firstorder. }                   
-  unfold beq_places. rewrite H1. rewrite H0.
-  rewrite beq_nat_true_iff. reflexivity.
-Qed.
-
-(*** Formal specification : beq_transs ***)
-Inductive beq_transs_spec : trans_type -> trans_type -> Prop :=
-| beq_transs_mk :
-    forall (t t' : trans_type) (n : nat), 
-      t = mk_trans n /\ t' = mk_trans n -> beq_transs_spec t t'.
-
-(* Function : Returns true if t and t' have the same index.
- *            false otherwise.
- *)
-Definition beq_transs (t t' : trans_type) : bool :=
-  match (t, t') with
-  | (mk_trans n, mk_trans n') => beq_nat n n'
-  end.
-
-Functional Scheme beq_transs_ind := Induction for beq_transs Sort Prop.
-
-(*** Correctness prooof : beq_transs ***)
-Theorem beq_transs_correct :
-  forall (t t' : trans_type),
-  beq_transs t t' = true -> beq_transs_spec t t'.
-Proof.
-  intros t t'.
-  functional induction (beq_transs  t t') using beq_transs_ind.
-  intro H. rewrite beq_nat_true_iff in H. rewrite H.
-  apply beq_transs_mk with (n:=n').
-  split; reflexivity. 
-Qed.
-
-(*** Completeness proof : beq_transs ***)
-Theorem beq_transs_complete :
-  forall (t t' : trans_type),
-  beq_transs_spec t t' -> beq_transs t t' = true. 
-Proof.
-  intros t t' H. elim H.
-  intros  t0 t1  n  H01.
-  assert (H0 : t0 = mk_trans n). { firstorder. }  
-  assert (H1 : t1 = mk_trans n). { firstorder. }                   
-  unfold beq_transs. rewrite H1. rewrite H0.
-  rewrite beq_nat_true_iff. reflexivity.
-Qed.
-
-(*** Equality decidability for place_type. ***)
-Definition places_eq_dec :
-  forall x y : place_type, {x = y} + {x <> y}.
-Proof.
-  decide equality.
-  decide equality.
-Defined.
-
-(*** Equality decidability for trans_type. ***)
-Definition transs_eq_dec :
-  forall x y : trans_type, {x = y} + {x <> y}.
-Proof.
-  decide equality.
-  decide equality.
-Defined.
-
-(*******************************************************)
-(*** Defines the structure of Synchronous Petri Nets ***)
-(*******************************************************)
-
-(* Let's suppose 
- * 1) some properties on the places
- *    - all places have different index (NoDup)
- *   
- * 2) some properties on the transitions
- *    - all transitions are different (NoDup ...)
- *
- * 3) priority/prior_type, list of sublists of transs 
- *    A sublist in priority denotes a group of transitions
- *    being in structural conflict.
- *
- * 4) some properties on the neighbours list :
- *    - no isolated transitions are possible =>
- *      ~exists t, ((pre t) = None /\ (test t) = None /\ (inhib t) = None) \/ (post t) = None ->
- *      ((fst (neighbours t)) <> [] \/ (snd (neighbours t)) <> [] \/ (trd (neighbours t)) <> [])
- *      /\ ((fth (neighbours t)) <> [])
- *)
-
-
-Structure SPN : Set :=
-  mk_SPN {
-      places : list place_type;
-      transs : list trans_type;
-      pre : weight_type;
-      post : weight_type;
-      test : weight_type;
-      inhib : weight_type;
-      marking : marking_type;                     
-      priority : prior_type;
-
-      (* Contains the list of pre places, 
-       * test places, inhib places and post places associated
-       * with each transition of the SPN. *)
-      lneighbours : list neighbours_type;
-
-      (* Properties on places and transitions *)
-      (* nodup_places : NoDup places; *)
-      (* nodup_transs : NoDup transs; *)
-
-  }.
-
-(*====================================================*)
-(*=============== MARKING SECTION  ===================*)
-(*====================================================*)
-Section Marking.
- 
   (*
    * Equality decidability between two pairs of nat. 
    * Necessary to use the replace_occ function.
@@ -476,19 +440,20 @@ Section Marking.
              (m : marking_type)
              (p : place_type)
              (op : nat -> nat -> nat)
-             (nboftokens : option nat_star) : marking_type :=
+             (nboftokens : option nat_star) : option marking_type :=
     match p with
     | (pl i) => match nboftokens with
-                | None => m
-                | Some (mk_nat_star n' _) => let opt_n := get_m m i in
-                                             match opt_n with
-                                             (* If couple with first member i doesn't exist
-                                              * in m, then add such a couple in m. *)
-                                             | None => (i, (op 0 n')) :: m 
-                                             (* The couple (i, n) to remove must be unique. *)
-                                             | Some n =>
-                                               (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
-                                             end
+                | None => Some m
+                | Some (mk_nat_star n' _) =>
+                  let opt_n := get_m m i in
+                  match opt_n with
+                  (* If couple with first member i doesn't exist
+                   * in m, then returns None (it's an exception). *)
+                  | None => None 
+                  (* The couple (i, n) to remove must be unique. *)
+                  | Some n =>
+                    Some (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
+                  end
                 end
     end.
 
@@ -499,71 +464,75 @@ Section Marking.
             (m : marking_type)
             (p : place_type)
             (op : nat -> nat -> nat) :
-    option nat_star -> marking_type -> Prop :=
-  | modify_m_none :
-      modify_m_spec m p op None m
-  (* Case place of index i is not in the marking. *)
-  | modify_m_some_add :
-      forall (nboftokens : option nat_star)
-             (i n' : nat)
-             (is_positive : n' > 0),
-      p = (pl i) ->
-      nboftokens = Some (mk_nat_star n' is_positive) ->
-      get_m_spec m i None ->
-      modify_m_spec m p op nboftokens ((i, (op 0 n')) :: m)
+    option nat_star -> option marking_type -> Prop :=
+  | modify_m_tokens_none :
+      modify_m_spec m p op None (Some m)
+  (* Case place of index i is not in the marking,
+   * which is a exception case. *)
+  | modify_m_err :
+      forall (i : nat)
+             (n : nat_star),
+        p = (pl i) ->
+        get_m_spec m i None ->
+        modify_m_spec m p op (Some n) None
   (* Case place of index i exists in the marking *)
   | modify_m_some_repl :
       forall (nboftokens : option nat_star)
              (i n n' : nat)
              (is_positive : n' > 0)
              (m' : marking_type),
-      p = (pl i) ->
-      nboftokens = Some (mk_nat_star n' is_positive) ->
-      get_m_spec m i (Some n) ->
-      replace_occ_spec prodnat_eq_dec (i, n) (i, (op n n')) m m' ->
-      modify_m_spec m p op nboftokens m'.
+        (pl i) = p ->
+        nboftokens = Some (mk_nat_star n' is_positive) ->
+        get_m_spec m i (Some n) ->
+        replace_occ_spec prodnat_eq_dec (i, n) (i, (op n n')) m m' ->
+        modify_m_spec m p op nboftokens (Some m').
 
   (*** Correctness proof : modify_m ***)
   Theorem modify_m_correct :
-    forall (m m' : marking_type)
+    forall (m : marking_type)
+           (optionm : option marking_type)
            (p : place_type)
            (op : nat -> nat -> nat)
            (nboftokens : option nat_star),
-    modify_m m p op nboftokens = m' -> modify_m_spec m p op nboftokens m'.
+    modify_m m p op nboftokens = optionm -> modify_m_spec m p op nboftokens optionm.
   Proof.
     do 5 intro; functional induction (modify_m m p op nboftokens)
                            using modify_m_ind; intros.
     (* Case (pl i) exists in marking m *)
-    - apply modify_m_some_repl with (i := i)
+    - rewrite <- H. apply modify_m_some_repl with (i := i)
                                     (n := n0)
                                     (n' := n')
                                     (is_positive := _x).
       + auto.
       + auto.
       + apply get_m_correct in e2; auto.
-      + apply replace_occ_correct in H; auto.
-    (* Case (pl i) doesn't exist in marking m *)
-    - rewrite <- H; apply modify_m_some_add with (is_positive := _x).
+      + apply replace_occ_correct; auto.
+    (* Case (pl i) doesn't exist in marking m (error) *)
+    - rewrite <- H. apply modify_m_err with (i := i).
       + auto.
-      + auto.
-      + apply get_m_correct in e2; auto.
+      + apply get_m_correct; auto.
     (* Case nboftokens is None *)
-    - rewrite <- H; apply modify_m_none.
+    - rewrite <- H; apply modify_m_tokens_none.
   Qed.
 
   (*** Completeness proof : modify_m ***)
   Theorem modify_m_compl :
-    forall (m m' : marking_type)
+    forall (m : marking_type)
+           (optionm : option marking_type)
            (p : place_type)
            (op : nat -> nat -> nat)
            (nboftokens : option nat_star),
-    modify_m_spec m p op nboftokens m' -> modify_m m p op nboftokens = m'.
+    modify_m_spec m p op nboftokens optionm -> modify_m m p op nboftokens = optionm.
   Proof.
     intros; induction H.
+    (* Case  modify_m_tokens_none *)
     - unfold modify_m; elim p; auto.
-    - unfold modify_m; rewrite H; rewrite H0; apply get_m_compl in H1; rewrite H1; auto.
-    - unfold modify_m; rewrite H; rewrite H0; apply get_m_compl in H1; rewrite H1.
-      apply replace_occ_compl in H2; auto.      
+    (* Case modify_m_err *)
+    - unfold modify_m; rewrite H; elim n; intros.
+      apply get_m_compl in H0; rewrite H0; auto.
+    (* Case modify_m_some_repl *)
+    - unfold modify_m; rewrite <- H; rewrite H0; apply get_m_compl in H1; rewrite H1.
+      apply replace_occ_compl in H2; rewrite H2; auto.      
   Qed.
   
   (*=================================================*)
@@ -579,10 +548,14 @@ Section Marking.
            (t : trans_type)
            (pre : weight_type)
            (m : marking_type)
-           (places : list place_type) : marking_type :=
+           (places : list place_type) : option marking_type :=
     match places with
-    | p :: tail => update_marking_pre t pre (modify_m m p Nat.sub (pre t p)) tail
-    | [] => m
+    | p :: tail => match modify_m m p Nat.sub (pre t p) with
+                   | Some m' => update_marking_pre t pre m' tail
+                   (* It's a case of error! *)
+                   | None => None
+                   end
+    | [] => Some m
     end.
 
   Functional Scheme update_marking_pre_ind := Induction for update_marking_pre Sort Prop.
@@ -1060,6 +1033,94 @@ End Edges.
 
 Section FireSpn.
 
+  (*  
+   * Function : Returns the element of type neighbours_type
+   *            included in the list neighbours having an
+   *            index attribute equal to idx.
+   *            Returns None if no element have an index
+   *            attribute equal to idx.
+   *)
+  Fixpoint get_neighbours
+           (lneighbours : list neighbours_type)
+           (idx : nat) {struct lneighbours} : option neighbours_type :=
+    match lneighbours with
+    | neighbours :: tail => if (index neighbours) =? idx then
+                              Some neighbours
+                            else get_neighbours tail idx
+    | [] => None 
+    end.
+
+  (*** Formal specification : get_neighbours ***)
+  Inductive get_neighbours_spec :
+    list neighbours_type -> nat -> option neighbours_type -> Prop :=
+  | get_neighbours_none :
+      forall (idx : nat), get_neighbours_spec [] idx None
+  | get_neighbours_if :
+      forall (lneighbours lneighbours' : list neighbours_type)
+             (idx : nat)
+             (neighbours : neighbours_type),
+      lneighbours = neighbours :: lneighbours' ->
+      (index neighbours) = idx ->
+      get_neighbours_spec lneighbours idx (Some neighbours)
+  | get_neighbours_else :
+      forall (lneighbours lneighbours' : list neighbours_type)
+             (idx : nat)
+             (neighbours : neighbours_type)
+             (opt_neighbours : option neighbours_type),
+      lneighbours = neighbours :: lneighbours' ->
+      (index neighbours) <> idx ->
+      get_neighbours_spec lneighbours' idx opt_neighbours ->
+      get_neighbours_spec lneighbours idx opt_neighbours.
+
+  Functional Scheme get_neighbours_ind := Induction for get_neighbours Sort Prop.
+  
+  (*** Correctness proof : get_neighbours ***)
+  Theorem get_neighbours_correct :
+    forall (lneighbours : list neighbours_type)
+           (idx : nat)
+           (opt_neighbours : option neighbours_type),
+    get_neighbours lneighbours idx = opt_neighbours ->
+    get_neighbours_spec lneighbours idx opt_neighbours.
+  Proof.
+    do 3 intro;
+      functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
+    (* Case neighbours = None *)
+    - rewrite <- H; apply get_neighbours_none with (idx := idx).
+    (* Case neighbour is head *)
+    - rewrite <- H; apply get_neighbours_if with (lneighbours' := tail) (idx := idx);
+        [auto | apply beq_nat_true in e0; auto].
+    (* Case neighbour is not head *)
+    - rewrite <- H. apply get_neighbours_else with (neighbours := neighbours)
+                                                   (lneighbours' := tail)
+                                                   (idx := idx).
+      + auto.
+      + apply beq_nat_false in e0. auto.
+      + rewrite H. apply IHo. auto.
+  Qed.
+
+  (*** Completeness proof : get_neighbours ***)
+  Theorem get_neighbours_compl :
+    forall (lneighbours : list neighbours_type)
+           (idx : nat)
+           (opt_neighbours : option neighbours_type),
+    get_neighbours_spec lneighbours idx opt_neighbours ->
+    get_neighbours lneighbours idx = opt_neighbours.
+  Proof.
+     intros. induction H.
+    (* Case get_neighbours_none *)
+    - simpl; auto.
+    (* Case get_neighbours_if *)
+    - rewrite H. simpl.
+      rewrite H0.
+      rewrite Nat.eqb_refl.
+      auto.
+    (* Case get_neighbours_else *)
+    - rewrite H. simpl.
+      apply Nat.eqb_neq in H0.
+      rewrite H0.
+      assumption.
+  Qed.
+  
   (* 
    * There are 2 parallel calculus in spn_fire_pre_aux : 
    * 1. pumping tokens to get "decreasingm" (fired pre)
