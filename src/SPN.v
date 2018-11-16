@@ -286,6 +286,7 @@ Section Marking.
     | (i, nboftokens) :: tail => if i =? index then
                                    Some nboftokens
                                  else get_m tail index
+    (* Exception : index is not in marking. *)
     | [] => None
     end.
 
@@ -552,7 +553,7 @@ Section Marking.
     match places with
     | p :: tail => match modify_m m p Nat.sub (pre t p) with
                    | Some m' => update_marking_pre t pre m' tail
-                   (* It's a case of error! *)
+                   (* It's a exception, p is not referenced in m. *)
                    | None => None
                    end
     | [] => Some m
@@ -565,35 +566,45 @@ Section Marking.
             (t : trans_type)
             (pre : weight_type)
             (m : marking_type) :
-    list place_type -> marking_type -> Prop :=
+    list place_type -> option marking_type -> Prop :=
   | update_marking_pre_nil :
-      update_marking_pre_spec t pre m [] m
-  | update_marking_pre_cons :
+      update_marking_pre_spec t pre m [] (Some m)
+  | update_marking_pre_some :
       forall (places : list place_type)
-             (m' finalm: marking_type)
+             (m' : marking_type)
+             (optionm : option marking_type)
              (p : place_type),
-      modify_m_spec m p Nat.sub (pre t p) m' ->
-      update_marking_pre_spec t pre m' places finalm ->
-      update_marking_pre_spec t pre m (p :: places) finalm.
+        modify_m_spec m p Nat.sub (pre t p) (Some m') ->
+        update_marking_pre_spec t pre m' places optionm ->
+        update_marking_pre_spec t pre m (p :: places) optionm
+  | update_marking_pre_none :
+      forall (p : place_type) (places : list place_type),
+        modify_m_spec m p Nat.sub (pre t p) None ->
+        update_marking_pre_spec t pre m (p :: places) None.
 
   (*** Correctness proof : update_marking_pre ***)
   Theorem update_marking_pre_correct :
     forall (t : trans_type)
            (pre : weight_type)
            (places : list place_type)
-           (m finalm : marking_type),
-    update_marking_pre t pre m places = finalm -> update_marking_pre_spec t pre m places finalm.
+           (m : marking_type)
+           (optionm : option marking_type),
+      update_marking_pre t pre m places = optionm ->
+      update_marking_pre_spec t pre m places optionm.
   Proof.
-    intros t pre places m finalm;
+    intros t pre places m optionm;
     functional induction (update_marking_pre t pre m places)
                using update_marking_pre_ind;
     intros.
     (* Case places is nil *)
     - rewrite <- H; apply update_marking_pre_nil.
-    (* General case *)
-    - apply update_marking_pre_cons with (m' := (modify_m m p Nat.sub (pre t p))).
+    (* Case p is referenced in m *)
+    - apply update_marking_pre_some with (m' := m').
       + apply modify_m_correct; auto.
-      + apply (IHm0 H); auto.
+      + apply IHo; auto.
+    (* Case p is not in m *)
+    - rewrite <- H; apply update_marking_pre_none;
+        [apply modify_m_correct; auto].      
   Qed.
 
   (*** Completeness proof : update_marking_pre ***)
@@ -601,14 +612,18 @@ Section Marking.
     forall (t : trans_type)
            (pre : weight_type)
            (places : list place_type)
-           (m finalm : marking_type),
-    update_marking_pre_spec t pre m places finalm -> update_marking_pre t pre m places = finalm.
+           (m : marking_type)
+           (optionm : option marking_type),
+      update_marking_pre_spec t pre m places optionm ->
+      update_marking_pre t pre m places = optionm.
   Proof.
-    intros t pre places m finalm Hspec; induction Hspec.
+    intros t pre places m optionm Hspec; induction Hspec.
     (* Case update_marking_pre_nil *)
     - simpl; auto.
-    (* Case update_marking_pre_cons *)
+    (* Case update_marking_pre_some *)
     - simpl; apply modify_m_compl in H; rewrite H; rewrite IHHspec; auto.
+    (* Case update_marking_pre_none *)
+    - simpl; apply modify_m_compl in H; rewrite H; auto.
   Qed.
   
   (* 
