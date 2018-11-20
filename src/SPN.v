@@ -148,7 +148,7 @@ Structure SPN : Set :=
       (* For all place (pl i), (pl i) is in places iff
        * (pl i) is referenced in marking. *)
       no_unmarked_or_unknown_place :
-        forall (i : nat), In (pl i) places -> exists (n : nat), In (i, n) marking;
+        forall (i : nat), In (pl i) places <-> exists (n : nat), In (i, n) marking;
 
       (* For all couple of nat (i, n), if (i, n) is in marking 
        * then there is no couple (i, n') in marking with n' different from n. *)
@@ -294,7 +294,7 @@ Section Marking.
 
   (*** Formal specification : get_m ***)
   Inductive get_m_spec : marking_type -> nat -> option nat -> Prop :=
-  | get_m_none :
+  | get_m_err :
       forall (i : nat), get_m_spec [] i None
   | get_m_if :
       forall (m m' : marking_type) (index i nboftokens : nat),
@@ -314,7 +314,7 @@ Section Marking.
   Proof.
     do 2 intro; functional induction (get_m m index0) using get_m_ind; intros.
     (* Case m = []. *)
-    - rewrite <- H; apply get_m_none.
+    - rewrite <- H; apply get_m_err.
     (* Case if is true. *)
     - rewrite <- H.
       apply get_m_if with (m' := tail) (i := i);
@@ -448,12 +448,12 @@ Section Marking.
                 | Some (mk_nat_star n' _) =>
                   let opt_n := get_m m i in
                   match opt_n with
-                  (* If couple with first member i doesn't exist
-                   * in m, then returns None (it's an exception). *)
-                  | None => None 
                   (* The couple (i, n) to remove must be unique. *)
                   | Some n =>
                     Some (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
+                  (* If couple with first member i doesn't exist
+                   * in m, then returns None (it's an exception). *)
+                  | None => None 
                   end
                 end
     end.
@@ -577,7 +577,7 @@ Section Marking.
         modify_m_spec m p Nat.sub (pre t p) (Some m') ->
         update_marking_pre_spec t pre m' places optionm ->
         update_marking_pre_spec t pre m (p :: places) optionm
-  | update_marking_pre_none :
+  | update_marking_pre_err :
       forall (p : place_type) (places : list place_type),
         modify_m_spec m p Nat.sub (pre t p) None ->
         update_marking_pre_spec t pre m (p :: places) None.
@@ -603,7 +603,7 @@ Section Marking.
       + apply modify_m_correct; auto.
       + apply IHo; auto.
     (* Case p is not in m *)
-    - rewrite <- H; apply update_marking_pre_none;
+    - rewrite <- H; apply update_marking_pre_err;
         [apply modify_m_correct; auto].      
   Qed.
 
@@ -622,7 +622,7 @@ Section Marking.
     - simpl; auto.
     (* Case update_marking_pre_some *)
     - simpl; apply modify_m_compl in H; rewrite H; rewrite IHHspec; auto.
-    (* Case update_marking_pre_none *)
+    (* Case update_marking_pre_err *)
     - simpl; apply modify_m_compl in H; rewrite H; auto.
   Qed.
   
@@ -635,10 +635,14 @@ Section Marking.
            (t : trans_type)
            (post : weight_type)
            (m : marking_type)
-           (places : list place_type) : marking_type :=
+           (places : list place_type) : option marking_type :=
     match places with
-    | p :: tail => update_marking_post t post (modify_m m p Nat.add (post t p)) tail
-    | [] => m
+    | p :: tail => match modify_m m p Nat.add (post t p) with
+                   | Some m' => update_marking_post t post m' tail
+                   (* It's a exception, p is not referenced in m. *)
+                   | None => None
+                   end
+    | [] => Some m
     end.
 
   Functional Scheme update_marking_post_ind := Induction for update_marking_post Sort Prop.
@@ -648,36 +652,47 @@ Section Marking.
             (t : trans_type)
             (post : weight_type)
             (m : marking_type) :
-    list place_type -> marking_type -> Prop :=
+    list place_type -> option marking_type -> Prop :=
   | update_marking_post_nil :
-      update_marking_post_spec t post m [] m
-  | update_marking_post_cons :
+      update_marking_post_spec t post m [] (Some m)
+  | update_marking_post_some :
       forall (p : place_type)
-             (m' finalm : marking_type)
+             (m' : marking_type)
+             (optionm : option marking_type)
              (places : list place_type),
-      modify_m_spec m p Nat.add (post t p) m' ->
-      update_marking_post_spec t post m' places finalm ->
-      update_marking_post_spec t post m (p :: places) finalm.
+        modify_m_spec m p Nat.add (post t p) (Some m') ->
+        update_marking_post_spec t post m' places optionm ->
+        update_marking_post_spec t post m (p :: places) optionm
+  | update_marking_post_err :
+      forall (p : place_type)
+             (places : list place_type),
+        modify_m_spec m p Nat.add (post t p) None ->
+        update_marking_post_spec t post m (p :: places) None.
 
   (*** Correctness proof : update_marking_post ***)
   Theorem update_marking_post_correct :
     forall (t : trans_type)
            (post : weight_type)
            (places : list place_type)
-           (m finalm : marking_type),
-    update_marking_post t post m places = finalm ->
-    update_marking_post_spec t post m places finalm.
+           (m : marking_type)
+           (optionm : option marking_type),
+    update_marking_post t post m places = optionm ->
+    update_marking_post_spec t post m places optionm.
   Proof.
-    intros t post places m finalm;
+    intros t post places m optionm;
     functional induction (update_marking_post t post m places)
                using update_marking_post_ind;
     intros.
     (* Case places is nil *)
     - rewrite <- H; apply update_marking_post_nil.
-    (* General case *)
-    - apply update_marking_post_cons with (m' := (modify_m m p Nat.add (post t p))).
+    (* Case p is referenced in m. *)
+    - apply update_marking_post_some with (m' := m').
       + apply modify_m_correct; auto.
-      + apply (IHm0 H); auto.
+      + apply (IHo H); auto.
+    (* Case p not referenced in m, error! *)
+    - rewrite <- H;
+        apply update_marking_post_err;
+        apply modify_m_correct; auto.
   Qed.
 
   (*** Completeness proof : update_marking_post ***)
@@ -685,14 +700,17 @@ Section Marking.
     forall (t : trans_type)
            (post : weight_type)
            (places : list place_type)
-           (m finalm : marking_type),
-    update_marking_post_spec t post m places finalm ->
-    update_marking_post t post m places = finalm.
+           (m : marking_type)
+           (optionm : option marking_type),
+      update_marking_post_spec t post m places optionm ->
+      update_marking_post t post m places = optionm.
   Proof.
-    intros t post places m finalm H; elim H; intros.
+    intros t post places m optionm H; elim H; intros.
     (* Case update_marking_post_nil *)
     - simpl; auto.
-    (* Case update_marking_post_cons *)
+    (* Case update_marking_post_some *)
+    - simpl; apply modify_m_compl in H0; rewrite H0; auto.
+    (* Case update_marking_post_err *)
     - simpl; apply modify_m_compl in H0; rewrite H0; auto.
   Qed.
 
@@ -718,72 +736,83 @@ Section Edges.
   Fixpoint check_pre_or_test
            (pre_or_test_arcs_t : place_type -> option nat_star)
            (m : marking_type)
-           (places : list place_type) : bool :=
+           (places : list place_type)
+           (check_result : bool) : option bool :=
     match places with
     | (pl i) :: tail => match pre_or_test_arcs_t (pl i) with
                         (* If there is no pre or test edge between (pl i) and t. *)
-                        | None => check_pre_or_test pre_or_test_arcs_t m tail
+                        | None => check_pre_or_test pre_or_test_arcs_t m tail check_result
                         (* Else some pre or test edge exists. *)
                         | Some (mk_nat_star edge_weight _) =>
+                          (* Retrieves the number of tokens associated 
+                           * with place i. *)
                           let nboftokens := (get_m m i) in
                           match nboftokens with
-                          | None => (edge_weight <=? 0)
-                                    && (check_pre_or_test pre_or_test_arcs_t m tail)
-                          | Some n => (edge_weight <=? n)
-                                      && (check_pre_or_test pre_or_test_arcs_t m tail)
+                          | Some n =>
+                            check_pre_or_test pre_or_test_arcs_t m tail ((edge_weight <=? n)
+                                                                           && check_result)
+                          (* If number of tokens is None, then it's an error. *)
+                          | None => None
                           end
                         end
-    | [] => true
+    (* check_result must be initialized to true. *)
+    | [] => Some check_result
     end.
-
+  
   Functional Scheme check_pre_or_test_ind := Induction for check_pre_or_test Sort Prop. 
   
   (*** Formal specification : check_pre_or_test ***)
   Inductive check_pre_or_test_spec
             (pre_or_test_arcs_t : place_type -> option nat_star)
             (m : marking_type) :
-    list place_type -> Prop :=
+    list place_type -> bool -> option bool -> Prop :=
   | check_pre_or_test_nil :
-      check_pre_or_test_spec pre_or_test_arcs_t m []
+      forall (b : bool),
+        check_pre_or_test_spec pre_or_test_arcs_t m [] b (Some b)
   | check_pre_or_test_edge_none :
       forall (places : list place_type)
-             (i : nat),
-      pre_or_test_arcs_t (pl i) = None ->
-      check_pre_or_test_spec pre_or_test_arcs_t m places ->
-      check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places)
-  | check_pre_or_test_tokens_none :
+             (i : nat)
+             (check_result : bool)
+             (optionb : option bool),
+        pre_or_test_arcs_t (pl i) = None ->
+        check_pre_or_test_spec pre_or_test_arcs_t m places check_result optionb ->
+        check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places) check_result optionb
+  | check_pre_or_test_err :
       forall (places : list place_type) 
              (i edge_weight : nat)
+             (check_result : bool)
              (is_positive : edge_weight > 0),
         pre_or_test_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
         get_m_spec m i None ->
-        edge_weight <= 0 ->
-        check_pre_or_test_spec pre_or_test_arcs_t m places ->
-        check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places)
+        check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places) check_result None
   | check_pre_or_test_tokens_some :
       forall (places : list place_type) 
              (i n edge_weight : nat)
-             (is_positive : edge_weight > 0),
+             (is_positive : edge_weight > 0)
+             (check_result : bool)
+             (optionb : option bool),
       pre_or_test_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
       get_m_spec m i (Some n) ->
-      edge_weight <= n ->
-      check_pre_or_test_spec pre_or_test_arcs_t m places ->
-      check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places).
+      check_pre_or_test_spec pre_or_test_arcs_t m places ((edge_weight <=? n) && check_result)
+                             optionb ->
+      check_pre_or_test_spec pre_or_test_arcs_t m ((pl i) :: places) check_result optionb.
 
   (*** Correctness proof : check_pre_or_test ***)
   Theorem check_pre_or_test_correct :
     forall (pre_or_test_arcs_t : place_type -> option nat_star)
            (m : marking_type)
-           (places : list place_type),
-    check_pre_or_test pre_or_test_arcs_t m places = true ->
-    check_pre_or_test_spec pre_or_test_arcs_t m places.
+           (places : list place_type)
+           (check_result : bool)
+           (optionb : option bool),
+    check_pre_or_test pre_or_test_arcs_t m places check_result = optionb ->
+    check_pre_or_test_spec pre_or_test_arcs_t m places check_result optionb.
   Proof.
-    intros pre_or_test_arcs_t m places;
-    functional induction (check_pre_or_test pre_or_test_arcs_t m places)
+    intros pre_or_test_arcs_t m places check_result optionb;
+    functional induction (check_pre_or_test pre_or_test_arcs_t m places check_result)
                using check_pre_or_test_ind;
     intros.
     (* Case places = [] *)
-    - apply check_pre_or_test_nil.
+    - rewrite <- H; apply check_pre_or_test_nil.
     (* Case edge and tokens exist *)
     - apply check_pre_or_test_tokens_some with (i := i)
                                                (n := n0)
@@ -791,42 +820,38 @@ Section Edges.
                                                (is_positive := _x).
       + rewrite e1; auto.
       + apply get_m_correct; auto.
-      + apply andb_prop in H; elim H; intros; apply leb_complete in H0; auto.
-      + apply IHb; apply andb_prop in H; elim H; intros; auto.
-    (* Case edge exists but no tokens *)
-    - apply check_pre_or_test_tokens_none with (i := i)
+      + apply IHo; auto. 
+    (* Case of error, get_m returns None *)
+    - rewrite <- H; apply check_pre_or_test_err with (i := i)
                                                (edge_weight := edge_weight)
                                                (is_positive := _x).
       + rewrite e1; auto.
       + apply get_m_correct; auto.
-      + apply andb_prop in H; elim H; intros; apply leb_complete in H0; auto.
-      + apply IHb; apply andb_prop in H; elim H; intros; auto.
     (* Case edge doesn't exist *)
     - apply check_pre_or_test_edge_none.
       + auto.
-      + apply IHb; auto.
+      + apply IHo; auto.
   Qed.
-
 
   (*** Completeness proof : check_pre_or_test ***)
   Theorem check_pre_or_test_compl :
    forall (pre_or_test_arcs_t : place_type -> option nat_star)
           (m : marking_type)
-          (places : list place_type),
-   check_pre_or_test_spec pre_or_test_arcs_t m places ->
-   check_pre_or_test pre_or_test_arcs_t m places = true.
+          (places : list place_type)
+          (check_result : bool)
+          (optionb : option bool),
+     check_pre_or_test_spec pre_or_test_arcs_t m places check_result optionb ->
+     check_pre_or_test pre_or_test_arcs_t m places check_result = optionb.
   Proof.
-    intros pre_or_test_arcs_t m places H; induction H.
+    intros pre_or_test_arcs_t m places check_result optionb H; induction H.
     (* Case check_pre_or_test_nil *)
     - simpl; auto.
     (* Case check_pre_or_test_edge_none *)
     - simpl; rewrite H; auto.
-    (* Case check_pre_or_test_tokens_none *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; apply andb_true_intro.
-      split; [apply leb_correct in H1; rewrite H1; auto | auto].
+    (* Case check_pre_or_test_err *)
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
     (* Case check_pre_or_test_tokens_some *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; apply andb_true_intro.
-      split; [apply leb_correct in H1; rewrite H1; auto | auto].
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
   Qed.
   
   (**************************************************)
@@ -842,22 +867,24 @@ Section Edges.
   Fixpoint check_inhib
            (inhib_arcs_t : place_type -> option nat_star)
            (m : marking_type)
-           (places : list place_type) : bool :=
+           (places : list place_type)
+           (check_result : bool) : option bool :=
     match places with
     | (pl i) :: tail => match inhib_arcs_t (pl i) with
                         (* If there is inhib edge between (pl i) and t. *)
-                        | None => (check_inhib inhib_arcs_t m tail)
+                        | None => check_inhib inhib_arcs_t m tail check_result
                         (* Else some inhib edge exists. *)
                         | Some (mk_nat_star edge_weight _) =>
                           let nboftokens := (get_m m i) in
                           match nboftokens with
-                          | None => (check_inhib inhib_arcs_t m tail)
-                          | Some n => (n <? edge_weight)
-                                      && (check_inhib inhib_arcs_t m tail)
+                          | Some n => check_inhib inhib_arcs_t m tail (check_result
+                                                                         && (n <? edge_weight))
+                          (* Case of error, place i is not in m. *)
+                          | None => None
                           end
                           
                         end
-    | [] => true
+    | [] => Some check_result
     end.
 
   Functional Scheme check_inhib_ind := Induction for check_inhib Sort Prop.
@@ -866,47 +893,53 @@ Section Edges.
   Inductive check_inhib_spec
             (inhib_arcs_t : place_type -> option nat_star)
             (m : marking_type) :
-    list place_type -> Prop :=
+    list place_type -> bool -> option bool -> Prop :=
   | check_inhib_nil :
-      check_inhib_spec inhib_arcs_t m []
+      forall (b : bool),
+        check_inhib_spec inhib_arcs_t m [] b (Some b)
   | check_inhib_edge_none :
       forall (places : list place_type)
-             (i : nat),
+             (i : nat)
+             (check_result : bool)
+             (optionb : option bool),
       inhib_arcs_t (pl i) = None ->
-      check_inhib_spec inhib_arcs_t m places ->
-      check_inhib_spec inhib_arcs_t m ((pl i) :: places)
-  | check_inhib_tokens_none :
+      check_inhib_spec inhib_arcs_t m places check_result optionb->
+      check_inhib_spec inhib_arcs_t m ((pl i) :: places) check_result optionb
+  | check_inhib_err :
       forall (places : list place_type) 
              (i edge_weight : nat)
-             (is_positive : edge_weight > 0),
+             (is_positive : edge_weight > 0)
+             (check_result : bool),
         inhib_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
         get_m_spec m i None ->
-        check_inhib_spec inhib_arcs_t m places ->
-        check_inhib_spec inhib_arcs_t m ((pl i) :: places)
+        check_inhib_spec inhib_arcs_t m ((pl i) :: places) check_result None
   | check_inhib_tokens_some :
       forall (places : list place_type) 
              (i n edge_weight : nat)
-             (is_positive : edge_weight > 0),
+             (is_positive : edge_weight > 0)
+             (check_result : bool)
+             (optionb : option bool),
       inhib_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
       get_m_spec m i (Some n) ->
-      n < edge_weight ->
-      check_inhib_spec inhib_arcs_t m places ->
-      check_inhib_spec inhib_arcs_t m ((pl i) :: places).
+      check_inhib_spec inhib_arcs_t m places (check_result && (n <? edge_weight)) optionb ->
+      check_inhib_spec inhib_arcs_t m ((pl i) :: places) check_result optionb.
 
   (*** Correctness proof : check_inhib ***)
    Theorem check_inhib_correct :
     forall (inhib_arcs_t : place_type -> option nat_star)
            (m : marking_type)
-           (places : list place_type),
-    check_inhib inhib_arcs_t m places = true ->
-    check_inhib_spec inhib_arcs_t m places.
+           (places : list place_type)
+           (check_result : bool)
+           (optionb : option bool),
+    check_inhib inhib_arcs_t m places check_result = optionb ->
+    check_inhib_spec inhib_arcs_t m places check_result optionb.
   Proof.
-    intros inhib_arcs_t m places;
-    functional induction (check_inhib inhib_arcs_t m places)
+    intros inhib_arcs_t m places check_result optionb;
+    functional induction (check_inhib inhib_arcs_t m places check_result)
                using check_inhib_ind;
     intros.
     (* Case places = [] *)
-    - apply check_inhib_nil.
+    - rewrite <- H; apply check_inhib_nil.
     (* Case edge and tokens exist *)
     - apply check_inhib_tokens_some with (i := i)
                                                (n := n0)
@@ -914,39 +947,38 @@ Section Edges.
                                                (is_positive := _x).
       + rewrite e1; auto.
       + apply get_m_correct; auto.
-      + apply andb_prop in H; elim H; intros; apply leb_complete in H0; auto.
-      + apply IHb; apply andb_prop in H; elim H; intros; auto.
-    (* Case edge exists but no tokens *)
-    - apply check_inhib_tokens_none with (i := i)
-                                               (edge_weight := edge_weight)
-                                               (is_positive := _x).
+      + apply IHo; auto.
+    (* Case edge exists but no tokens, case of error! *)
+    - rewrite <- H; apply check_inhib_err with (i := i)
+                                                       (edge_weight := edge_weight)
+                                                       (is_positive := _x).
       + rewrite e1; auto.
       + apply get_m_correct; auto.
-      + apply IHb; auto.
     (* Case edge doesn't exist *)
     - apply check_inhib_edge_none.
       + auto.
-      + apply IHb; auto.
+      + apply IHo; auto.
   Qed.
 
   (*** Completeness proof : check_inhib ***)
   Theorem check_inhib_compl :
    forall (inhib_arcs_t : place_type -> option nat_star)
           (m : marking_type)
-          (places : list place_type),
-   check_inhib_spec inhib_arcs_t m places ->
-   check_inhib inhib_arcs_t m places = true.
+          (places : list place_type)
+          (check_result : bool)
+          (optionb : option bool),
+     check_inhib_spec inhib_arcs_t m places check_result optionb ->
+     check_inhib inhib_arcs_t m places check_result = optionb.
   Proof.
-    intros inhib_arcs_t m places H; induction H.
+    intros inhib_arcs_t m places check_result optionb H; induction H.
     (* Case check_inhib_nil *)
     - simpl; auto.
     (* Case check_inhib_edge_none *)
     - simpl; rewrite H; auto.
-    (* Case check_inhib_tokens_none *)
+    (* Case check_inhib_err *)
     - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
     (* Case check_inhib_tokens_some *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; apply andb_true_intro.
-      split; [apply <- Nat.ltb_lt in H1; rewrite H1; auto | auto].
+    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
   Qed.
   
   (*****************************************************)
@@ -964,10 +996,24 @@ Section Edges.
              (pre_arcs_t : place_type -> option nat_star)
              (test_arcs_t : place_type -> option nat_star)
              (inhib_arcs_t : place_type -> option nat_star)
-             (steadym decreasingm : marking_type) : bool :=
-    (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t))
-    && (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t))
-    && (check_inhib inhib_arcs_t steadym (inhib_pl neighbours_t)).
+             (steadym decreasingm : marking_type) : option bool :=
+    match (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t) true) with
+    | Some check_pre_result =>  
+      match (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t) true) with
+      | Some check_test_result =>
+        match check_inhib inhib_arcs_t steadym (inhib_pl neighbours_t) true with
+        | Some check_inhib_result => Some (check_pre_result
+                                             && check_test_result
+                                             && check_inhib_result)
+        (* Case of error!! *)
+        | None => None
+        end
+      (* Case of error!! *)
+      | None => None
+      end
+    (* Case of error!! *)
+    | None => None
+    end.
 
   Functional Scheme check_all_edges_ind := Induction for check_all_edges Sort Prop.
 
@@ -977,12 +1023,19 @@ Section Edges.
             (pre_arcs_t : place_type -> option nat_star)
             (test_arcs_t : place_type -> option nat_star)
             (inhib_arcs_t : place_type -> option nat_star)
-            (steadym decreasingm : marking_type) : Prop :=
-  | check_all_edges_cons :
-      (check_pre_or_test_spec pre_arcs_t decreasingm (pre_pl neighbours_t) /\
-       check_pre_or_test_spec test_arcs_t steadym (test_pl neighbours_t) /\
-       check_inhib_spec inhib_arcs_t steadym (inhib_pl neighbours_t)) ->
-      check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
+            (steadym decreasingm : marking_type) : option bool -> Prop :=
+  | check_all_edges_some :
+      forall (check_pre_result check_test_result check_inhib_result : bool),
+        check_pre_or_test_spec pre_arcs_t decreasingm (pre_pl neighbours_t) true (Some check_pre_result) /\
+        check_pre_or_test_spec test_arcs_t steadym (test_pl neighbours_t) true (Some check_test_result) /\
+        check_inhib_spec inhib_arcs_t steadym (inhib_pl neighbours_t) true (Some check_inhib_result) ->
+        check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm
+                             (Some (check_pre_result && check_test_result && check_inhib_result))
+  | check_all_edges_err :
+      check_pre_or_test_spec pre_arcs_t decreasingm (pre_pl neighbours_t) true None \/
+      check_pre_or_test_spec test_arcs_t steadym (test_pl neighbours_t) true None \/
+      check_inhib_spec inhib_arcs_t steadym (inhib_pl neighbours_t) true None ->
+      check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm None.
 
   (*** Correctness proof : check_all_edges *)
   Theorem check_all_edges_correct :
@@ -990,17 +1043,29 @@ Section Edges.
            (pre_arcs_t : place_type -> option nat_star)
            (test_arcs_t : place_type -> option nat_star)
            (inhib_arcs_t : place_type -> option nat_star)
-           (steadym decreasingm : marking_type),
-    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = true ->
-    check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
+           (steadym decreasingm : marking_type)
+           (optionb : option bool),
+    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = optionb ->
+    check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm optionb.
   Proof.
-    intros.
-    unfold check_all_edges in H. do 2 (apply andb_prop in H; elim H; clear H; intros).
-    apply check_all_edges_cons.
-    repeat
-      split; (apply check_pre_or_test_correct in H; auto ||
-              apply check_pre_or_test_correct in H1; auto ||
-              apply check_inhib_correct in H0; auto).
+    intros;
+      functional induction (check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm)
+                 using check_all_edges_ind;
+      intros.
+    (* Case check_pre, check_test and check_inhib returned some value. *)
+    - rewrite <- H; apply check_all_edges_some.
+      split; [apply check_pre_or_test_correct; auto |
+              split; [apply check_pre_or_test_correct; auto |
+                      apply check_inhib_correct; auto]].            
+    (* Case of error 1. check_inhib returns None. *)
+    - rewrite <- H; apply check_all_edges_err.
+      apply check_inhib_correct in e1; auto.
+    (* Case of error 2. check_test returns None.  *)
+    - rewrite <- H; apply check_all_edges_err.
+      apply check_pre_or_test_correct in e0; auto.
+    (* Case of error 3. check_pre returns None. *)
+    - rewrite <- H; apply check_all_edges_err.
+      apply check_pre_or_test_correct in e; auto.
   Qed.
 
   (*** Completeness proof : check_all_edges ***)
@@ -1009,35 +1074,32 @@ Section Edges.
            (pre_arcs_t : place_type -> option nat_star)
            (test_arcs_t : place_type -> option nat_star)
            (inhib_arcs_t : place_type -> option nat_star)
-           (steadym decreasingm : marking_type),
-    check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm ->
-    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = true.
+           (steadym decreasingm : marking_type)
+           (optionb : option bool),
+      check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm optionb ->
+      check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = optionb.
   Proof.
     intros. induction H.
-    unfold check_all_edges.
-    elim H; intros; elim H1; intros; clear H H1.
-    repeat (apply andb_true_intro; intros; split); 
-    repeat (apply check_pre_or_test_compl in H0; auto ||
-            apply check_pre_or_test_compl in H2; auto ||
-            apply check_inhib_compl in H3; auto).    
-  Qed.
-  
-  (*** Useful to prove spn_fire_pre_aux_compl ***)
-  Theorem check_all_edges_false :
-    forall (neighbours_t : neighbours_type)
-           (pre_arcs_t : place_type -> option nat_star)
-           (test_arcs_t : place_type -> option nat_star)
-           (inhib_arcs_t : place_type -> option nat_star)
-           (steadym decreasingm : marking_type),
-    ~check_all_edges_spec neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm ->
-    check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = false.
-  Proof.
-    intros neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm.
-    rewrite <- not_true_iff_false.
-    apply not_iff_compat.
-    split.
-    - intro; apply check_all_edges_correct; auto.
-    - intro; apply check_all_edges_compl; auto.
+    (* Case check_all_edges_some *)
+    - unfold check_all_edges.
+      elim H; clear H; intros.
+      elim H0; clear H0; intros.
+      repeat (((apply check_pre_or_test_compl in H; rewrite H) ||
+               (apply check_pre_or_test_compl in H0; rewrite H0) ||
+               (apply check_inhib_compl in H1; rewrite H1));
+              auto).
+    (* Case check_all_edges_err *)
+    - unfold check_all_edges.
+      elim H; clear H; intros.
+      + apply check_pre_or_test_compl in H; rewrite H; auto.
+      + elim H; clear H; intros.
+        -- case (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t) true).
+           ++ intro; apply check_pre_or_test_compl in H; rewrite H; auto.
+           ++ auto.
+        -- case (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t) true).
+           +++ case (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t) true);
+                 [ apply check_inhib_compl in H; rewrite H; auto | intro; auto ].
+           +++ auto.
   Qed.
   
 End Edges.
@@ -1068,7 +1130,7 @@ Section FireSpn.
   (*** Formal specification : get_neighbours ***)
   Inductive get_neighbours_spec :
     list neighbours_type -> nat -> option neighbours_type -> Prop :=
-  | get_neighbours_none :
+  | get_neighbours_err :
       forall (idx : nat), get_neighbours_spec [] idx None
   | get_neighbours_if :
       forall (lneighbours lneighbours' : list neighbours_type)
@@ -1097,10 +1159,10 @@ Section FireSpn.
     get_neighbours lneighbours idx = opt_neighbours ->
     get_neighbours_spec lneighbours idx opt_neighbours.
   Proof.
-    do 3 intro;
+    intros lneighbours idx opt_neighbours;
       functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
     (* Case neighbours = None *)
-    - rewrite <- H; apply get_neighbours_none with (idx := idx).
+    - rewrite <- H; apply get_neighbours_err with (idx := idx).
     (* Case neighbour is head *)
     - rewrite <- H; apply get_neighbours_if with (lneighbours' := tail) (idx := idx);
         [auto | apply beq_nat_true in e0; auto].
@@ -1122,7 +1184,7 @@ Section FireSpn.
     get_neighbours lneighbours idx = opt_neighbours.
   Proof.
      intros. induction H.
-    (* Case get_neighbours_none *)
+    (* Case get_neighbours_err *)
     - simpl; auto.
     (* Case get_neighbours_if *)
     - rewrite H. simpl.
@@ -1146,7 +1208,7 @@ Section FireSpn.
    * 2. a floating (decreasing) intermediate marking to check classic arcs
    *)
   
-  (* Function : Given 1 conflict-free group of transitions (a list cfgroup), 
+  (* Function : Given 1 priority group of transitions (a list pgroup), 
    *            returns 1 list of transitions "fired_pre_group" 
    *            and marking "decreasingm" accordingly ...
    *
@@ -1161,24 +1223,33 @@ Section FireSpn.
            (steadym : marking_type)
            (decreasingm : marking_type)
            (* "fired_pre_group" meant  to be empty at first *)
-           (fired_pre_group cfgroup : list trans_type) :
-    (list trans_type) * marking_type :=
-    match cfgroup with
+           (fired_pre_group pgroup : list trans_type) :
+    option (list trans_type * marking_type) :=
+    match pgroup with
     | (tr i) :: tail =>
       match get_neighbours lneighbours i with
-      (* If transition t have no neighbours, then continues. *)
-      | None => (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group tail)
-      (* Else checks neighbours of t. *)
+      (* Checks neighbours of t. *)
       | Some neighbours_t =>
         (* If t is sensitized. *)
-        if (check_all_edges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm) then
+        match check_all_edges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm with
+        | Some true =>
           (* Updates the marking for the pre places, neighbours of t. *)
-          let new_decreasing := (update_marking_pre (tr i) pre decreasingm (pre_pl neighbours_t)) in
-          (spn_fire_pre_aux lneighbours pre test inhib steadym new_decreasing (fired_pre_group ++ [(tr i)]) tail)
-        (* Else no changes but inductive progress. *)
-        else (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group tail)
+          match update_marking_pre (tr i) pre decreasingm (pre_pl neighbours_t) with
+          | Some marking' =>
+            (spn_fire_pre_aux lneighbours pre test inhib steadym marking' (fired_pre_group ++ [(tr i)]) tail)
+          (* Something went wrong, error! *)
+          | None => None
+          end
+        | Some false =>
+          (* Else no changes but inductive progress. *)
+          (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group tail)
+        (* Something went wrong, error! *)
+        | None => None
+        end
+      (* If transition t have no neighbours, then error! *)
+      | None => None
       end
-    | []  => (fired_pre_group, decreasingm)
+    | []  => Some (fired_pre_group, decreasingm)
     end.
 
   Functional Scheme spn_fire_pre_aux_ind := Induction for spn_fire_pre_aux Sort Prop. 
@@ -1190,75 +1261,103 @@ Section FireSpn.
             (steadym : marking_type) 
             (decreasingm : marking_type)
             (fired_pre_group : list trans_type) :
-    list trans_type -> (list trans_type * marking_type) -> Prop :=
+    list trans_type -> option (list trans_type * marking_type) -> Prop :=
   | spn_fire_pre_aux_nil :
       spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group []
-                                  (fired_pre_group, decreasingm)
-  | spn_fire_pre_aux_neighbours_none :
-      forall (i : nat) (cfgroup : list trans_type) (finalfired : list trans_type) (finalm : marking_type),
-      get_neighbours_spec lneighbours i None ->
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup
-                                  (finalfired, finalm) ->
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: cfgroup)
-                                  (finalfired, finalm)
-  | spn_fire_pre_aux_if :
+                            (Some (fired_pre_group, decreasingm))
+  (* Case get_neighbours returns an error. *)
+  | spn_fire_pre_aux_neighbours_err :
+      forall (i : nat) (pgroup : list trans_type),
+        get_neighbours_spec lneighbours i None ->
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
+                              None
+  (* Case check_all_edges returns an error. *)
+  | spn_fire_pre_aux_edges_err :
+      forall (i : nat) (pgroup : list trans_type) (neighbours_t : neighbours_type),
+        get_neighbours_spec lneighbours i (Some neighbours_t) ->
+        check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm
+                             None ->
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
+                              None
+  (* Case check_all_edges returns false. *)
+  | spn_fire_pre_aux_edges_false :
+      forall (i : nat)
+             (pgroup : list trans_type)
+             (neighbours_t : neighbours_type)
+             (option_final_couple : option (list trans_type * marking_type)),
+        get_neighbours_spec lneighbours i (Some neighbours_t) ->
+        check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm
+                             (Some false) ->
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup
+                              option_final_couple ->
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
+                              option_final_couple
+  (* Case update_marking_pre returns an error. *)
+  | spn_fire_pre_aux_update_err :
       forall (i : nat)
              (neighbours_t : neighbours_type)
-             (cfgroup : list trans_type)
-             (finalfired : list trans_type)
-             (modifiedm finalm : marking_type),
+             (pgroup : list trans_type),
       get_neighbours_spec lneighbours i (Some neighbours_t) ->
-      check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm ->
-      update_marking_pre_spec (tr i) pre decreasingm (pre_pl neighbours_t) modifiedm ->
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym modifiedm (fired_pre_group ++ [(tr i)]) cfgroup
-                                  (finalfired, finalm) ->
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: cfgroup)
-                                  (finalfired, finalm)
-  | spn_fire_pre_aux_else :
+      check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm (Some true) ->
+      update_marking_pre_spec (tr i) pre decreasingm (pre_pl neighbours_t) None ->
+      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup) None
+  (* General case, all went well. *)
+  | spn_fire_pre_aux_cons :
       forall (i : nat)
              (neighbours_t : neighbours_type)
-             (cfgroup : list trans_type)
-             (finalfired : list trans_type)
-             (finalm : marking_type),
+             (pgroup : list trans_type)
+             (modifiedm : marking_type)
+             (option_final_couple : option (list trans_type * marking_type)),
       get_neighbours_spec lneighbours i (Some neighbours_t) ->
-      ~check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm ->
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup
-                                  (finalfired, finalm) ->
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: cfgroup)
-                                  (finalfired, finalm).
+      check_all_edges_spec neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm
+                           (Some true) ->
+      update_marking_pre_spec (tr i) pre decreasingm (pre_pl neighbours_t) (Some modifiedm) ->
+      spn_fire_pre_aux_spec lneighbours pre test inhib steadym modifiedm (fired_pre_group ++ [(tr i)]) pgroup
+                            option_final_couple ->
+      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
+                            option_final_couple.
   
   (*** Correctness proof : spn_fire_pre_aux ***)
   Theorem spn_fire_pre_aux_correct :
-  forall (lneighbours : list neighbours_type)
-         (pre test inhib : weight_type) 
-         (steadym : marking_type) 
-         (finalm decreasingm : marking_type)
-         (finalfired fired_pre_group : list trans_type)
-         (cfgroup : list trans_type),
-  spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup = (finalfired, finalm) ->
-  spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup (finalfired, finalm).
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup = option_final_couple ->
+      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym finalm decreasingm finalfired fired_pre_group cfgroup.
-    functional induction (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup)
+    intros lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup option_final_couple.
+    functional induction (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup)
                using spn_fire_pre_aux_ind; intros.
-    (* Case cfgroup = [] *)
+    (* Case pgroup = [] *)
     - rewrite <- H; apply spn_fire_pre_aux_nil.
-    (* Case t is sensitized, check_all_edges = true *)
-    - apply spn_fire_pre_aux_if with (modifiedm := (update_marking_pre (tr i) pre decreasingm (pre_pl neighbours_t)))
-                                           (neighbours_t := neighbours_t).
+    (* General case, all went well. *)
+    - apply spn_fire_pre_aux_cons with (modifiedm := marking')
+                                       (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
       + apply check_all_edges_correct; auto.
       + apply update_marking_pre_correct; auto.
-      + apply IHp; auto.
-    (* Case t is disabled, check_all_edges = false *)
-    - apply spn_fire_pre_aux_else with (neighbours_t := neighbours_t).
+      + apply IHo; auto.
+    (* Case update_marking_pre error. *)
+    - rewrite <- H; apply spn_fire_pre_aux_update_err with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + intro; apply check_all_edges_compl in H0; rewrite H0 in e2; apply diff_true_false in e2; elim e2.
-      + apply IHp; auto.
-    (* Case no neighbours for t *)
-    - apply spn_fire_pre_aux_neighbours_none.
+      + apply check_all_edges_correct; auto.
+      + apply update_marking_pre_correct; auto.
+    (* Case check_all_edges returns false. *)
+    - apply spn_fire_pre_aux_edges_false with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + apply IHp; auto.
+      + apply check_all_edges_correct; auto.
+      + apply IHo; auto.
+    (* Case check_all_edges returns an error. *)
+    - rewrite <- H; apply spn_fire_pre_aux_edges_err with (neighbours_t := neighbours_t).
+      + apply get_neighbours_correct; auto.
+      + apply check_all_edges_correct; auto.
+    (* Case get_neighbours returns an error. *)
+    - rewrite <- H; apply spn_fire_pre_aux_neighbours_err.
+      apply get_neighbours_correct; auto.
   Qed.
 
   (*** Completeness proof : spn_fire_pre_aux ***)
@@ -1266,27 +1365,38 @@ Section FireSpn.
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type) 
            (steadym : marking_type) 
-           (finalm decreasingm : marking_type)
-           (finalfired fired_pre_group : list trans_type)
-           (cfgroup : list trans_type),
-    spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup (finalfired, finalm) ->
-    spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group cfgroup = (finalfired, finalm).
+           (decreasingm : marking_type)
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup option_final_couple ->
+      spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup = option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym finalm decreasingm finalfired fired_pre_group cfgroup Hspec.
+    intros lneighbours pre test inhib steadym decreasingm fired_pre_group
+           pgroup option_final_couple Hspec.
     induction Hspec.
     (* Case spn_fire_pre_aux_nil *)
     - simpl; auto.
-    (* Case spn_fire_pre_aux_neighbours_none *)
-    - simpl; apply get_neighbours_compl in H; rewrite H; rewrite IHHspec; auto.
-    (* Case spn_fire_pre_aux_if *)
+    (* Case spn_fire_pre_aux_neighbours_err *)
+    - simpl; apply get_neighbours_compl in H; rewrite H; auto.
+    (* Case spn_fire_pre_aux_edges_err *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
-      apply check_all_edges_compl in H0; rewrite H0.
+      apply check_all_edges_compl in H0; rewrite H0; auto.
+    (* Case spn_fire_pre_aux_edges_false *)
+    - simpl.
+      apply get_neighbours_compl in H; rewrite H.
+      apply check_all_edges_compl in H0; rewrite H0; rewrite IHHspec; auto.
+    (* Case spn_fire_pre_aux_update_err *)
+    - simpl.
+      apply get_neighbours_compl in H; rewrite H.
+      apply check_all_edges_compl in H0; rewrite H0; auto.
       apply update_marking_pre_compl in H1; rewrite H1; auto.
-    (* Case spn_fire_pre_aux_else *)
+    (* Case spn_fire_pre_aux_cons *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
-      apply check_all_edges_false in H0. rewrite H0. rewrite IHHspec; auto.
+      apply check_all_edges_compl in H0; rewrite H0; auto.
+      apply update_marking_pre_compl in H1; rewrite H1; auto.
   Qed.
   
   (*  
@@ -1297,7 +1407,7 @@ Section FireSpn.
              (pre test inhib : weight_type) 
              (steadym : marking_type) 
              (decreasingm : marking_type)
-             (cfgroup : list trans_type) : (list trans_type) * marking_type :=
+             (cfgroup : list trans_type) : option (list trans_type * marking_type) :=
     spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm [] cfgroup.
 
   Functional Scheme spn_fire_pre_ind := Induction for spn_fire_pre Sort Prop.
@@ -1308,25 +1418,26 @@ Section FireSpn.
             (pre test inhib : weight_type) 
             (steadym : marking_type) 
             (decreasingm : marking_type)
-            (cfgroup : list trans_type) : (list trans_type) * marking_type -> Prop :=
+            (pgroup : list trans_type) : option (list trans_type * marking_type) -> Prop :=
   | spn_fire_pre_cons :
-      forall (finalfired : list trans_type) (finalm : marking_type),
-      spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm [] cfgroup
-                                  (finalfired, finalm) ->
-      spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm cfgroup
-                              (finalfired, finalm).
+      forall (option_final_couple : option (list trans_type * marking_type)),
+        spn_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm [] pgroup
+                              option_final_couple ->
+        spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm pgroup
+                          option_final_couple.
 
   (*** Correctness proof : spn_fire_pre ***)
   Theorem spn_fire_pre_correct :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type) 
-           (steadym decreasingm finalm : marking_type) 
-           (finalfired cfgroup : list trans_type),
-      spn_fire_pre lneighbours pre test inhib steadym decreasingm cfgroup = (finalfired, finalm) ->
-      spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm cfgroup (finalfired, finalm).
+           (steadym decreasingm : marking_type) 
+           (pgroup : list trans_type)
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup = option_final_couple ->
+      spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm pgroup option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym decreasingm finalm finalfired cfgroup;
-    functional induction (spn_fire_pre lneighbours pre test inhib steadym decreasingm cfgroup)
+    intros lneighbours pre test inhib steadym decreasingm pgroup option_final_couple;
+    functional induction (spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup)
                using spn_fire_pre_ind; intros.
     apply spn_fire_pre_cons; apply spn_fire_pre_aux_correct in H; auto.
   Qed.
@@ -1335,35 +1446,45 @@ Section FireSpn.
   Theorem spn_fire_pre_compl :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type) 
-           (steadym decreasingm finalm : marking_type) 
-           (finalfired cfgroup : list trans_type),
-    spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm cfgroup (finalfired, finalm) ->
-    spn_fire_pre lneighbours pre test inhib steadym decreasingm cfgroup = (finalfired, finalm).
+           (steadym decreasingm : marking_type) 
+           (pgroup : list trans_type)
+           (option_final_couple : option (list trans_type * marking_type)),
+    spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm pgroup option_final_couple ->
+    spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup = option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym decreasingm finalm finalfired cfgroup Hspec; elim Hspec; intros.
+    intros lneighbours pre test inhib steadym decreasingm pgroup option_final_couple Hspec;
+      elim Hspec;
+      intros.
     unfold spn_fire_pre; apply spn_fire_pre_aux_compl in H; auto. 
   Qed.
   
   (*
-   * Function : Apply spn_fire_pre over ALL cfgroups of transitions. 
+   * Function : Returns the list of pre
+   *            Apply spn_fire_pre over ALL priority group of transitions. 
    *            Begin with initial marking; End with half fired marking.  
-   *            "fired_pre_groups" is empty at first 
+   *            "fired_pre_transitions" is empty at first. 
    *)
   Fixpoint spn_map_fire_pre_aux
            (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
            (steadym decreasingm : marking_type)
-           (fired_pre_groups cfgroups : list (list trans_type)) :
-    (list (list trans_type)) * marking_type :=
-    match cfgroups with
-    (* Loops over all cfgroups of transitions (priority group) and
+           (pre_fired_transitions : list trans_type)
+           (priority_groups : list (list trans_type)) :
+    option (list trans_type * marking_type) :=
+    match priority_groups with
+    (* Loops over all priority group of transitions (prgroup) and
      * calls spn_fire_pre. *)
-    | cfgroup :: cfgroups_tail =>
-      let (fired_pre_group, m_decreased) :=
-          (spn_fire_pre lneighbours pre test inhib steadym decreasingm cfgroup) in
-      spn_map_fire_pre_aux lneighbours pre test inhib steadym m_decreased
-                           (fired_pre_group :: fired_pre_groups) cfgroups_tail
-    | [] => (fired_pre_groups, decreasingm)
+    | pgroup :: pgroups_tail =>
+      match (spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup) with
+      (* If spn_fire_pre succeeds, then adds the fired transitions
+       * in pre_fired_transitions list. *)
+      | Some (pre_fired_trs, decreasedm) =>
+        spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasedm
+                             (pre_fired_transitions ++ pre_fired_trs) pgroups_tail
+      (* Case of error! *)
+      | None => None
+      end
+    | [] => Some (pre_fired_transitions, decreasingm)
     end.
 
   Functional Scheme spn_map_fire_pre_aux_ind := Induction for spn_map_fire_pre_aux Sort Prop.
@@ -1373,97 +1494,126 @@ Section FireSpn.
             (lneighbours : list neighbours_type)
             (pre test inhib : weight_type)
             (steadym decreasingm : marking_type)
-            (fired_pre_groups : list (list trans_type)) :
-    list (list trans_type) -> (list (list trans_type)) * marking_type -> Prop :=
+            (pre_fired_transitions : list trans_type) :
+    list (list trans_type) -> option (list trans_type * marking_type) -> Prop :=
   | spn_map_fire_pre_aux_nil :
-      spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_groups []
-                            (fired_pre_groups, decreasingm)
+      spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm pre_fired_transitions []
+                                (Some (pre_fired_transitions, decreasingm))
   | spn_map_fire_pre_aux_cons :
-      forall (cfgroup finalfired : list trans_type)
-             (modifiedm finalm : marking_type)
-             (cfgroups final_groups : list (list trans_type)),
-        spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm cfgroup (finalfired, modifiedm) ->
-        spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym modifiedm (finalfired :: fired_pre_groups) cfgroups
-                              (final_groups, finalm) ->
-        spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_groups (cfgroup :: cfgroups)
-                              (final_groups, finalm).
+      forall (pgroup pre_fired_trs : list trans_type)
+             (decreasedm : marking_type)
+             (priority_groups : list (list trans_type))
+             (option_final_couple : option (list trans_type * marking_type)),
+        spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm pgroup
+                          (Some (pre_fired_trs, decreasedm)) ->
+        spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasedm (pre_fired_transitions ++ pre_fired_trs)
+                                  priority_groups
+                                  option_final_couple ->
+        spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm pre_fired_transitions
+                                  (pgroup :: priority_groups)
+                                  option_final_couple
+  | spn_map_fire_pre_aux_err :
+      forall (pgroup : list trans_type)
+             (priority_groups : list (list trans_type)),
+        spn_fire_pre_spec lneighbours pre test inhib steadym decreasingm pgroup None ->
+        spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm pre_fired_transitions
+                                  (pgroup :: priority_groups) None.
 
   (*** Correctness proof : spn_map_fire_pre_aux ***)
   Theorem spn_map_fire_pre_aux_correct :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
-           (steadym decreasingm finalm : marking_type)
-           (fired_pre_groups cfgroups final_groups : list (list trans_type)),
-   spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_groups cfgroups =
-   (final_groups, finalm) ->
-   spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_groups cfgroups
-                         (final_groups, finalm).
+           (steadym decreasingm : marking_type)
+           (priority_groups : list (list trans_type))
+           (pre_fired_transitions : list trans_type)
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                           pre_fired_transitions priority_groups = option_final_couple ->
+      spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm
+                                pre_fired_transitions priority_groups option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym decreasingm finalm fired_pre_groups cfgroups final_groups;
-    functional induction (spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_groups cfgroups)
-               using spn_map_fire_pre_aux_ind; intros.
-    (* Case cfgroups = [] *)
+    intros lneighbours pre test inhib steadym decreasingm priority_groups
+           pre_fired_transitions option_final_couple;
+    functional induction (spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                                               pre_fired_transitions priority_groups)
+               using spn_map_fire_pre_aux_ind;
+    intros.
+    (* Case priority_groups = [] *)
     - rewrite <- H; apply spn_map_fire_pre_aux_nil.
     (* General case *)
-    - apply spn_map_fire_pre_aux_cons with (finalfired := fired_pre_group) (modifiedm := m_decreased).
+    - apply spn_map_fire_pre_aux_cons with (pre_fired_trs := pre_fired_trs)
+                                           (decreasedm := decreasedm).
       + apply spn_fire_pre_correct; auto.
-      + apply IHp; rewrite H; auto.
+      + apply IHo; rewrite H; auto.
+    (* Case of error *)
+    - rewrite <- H; apply spn_map_fire_pre_aux_err.
+      apply spn_fire_pre_correct; auto.
   Qed.
 
   (*** Completeness proof : spn_map_fire_pre_aux ***)
   Theorem spn_map_fire_pre_aux_compl :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
-           (steadym decreasingm finalm : marking_type)
-           (fired_pre_groups cfgroups final_groups : list (list trans_type)),
-    spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm fired_pre_groups cfgroups (final_groups, finalm) ->
-    spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_groups cfgroups = (final_groups, finalm).
+           (steadym decreasingm : marking_type)
+           (priority_groups : list (list trans_type))
+           (pre_fired_transitions : list trans_type)
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym decreasingm
+                                pre_fired_transitions priority_groups option_final_couple ->
+      spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                           pre_fired_transitions priority_groups = option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym decreasingm finalm fired_pre_groups cfgroups final_groups Hspec; elim Hspec; intros.
+    intros lneighbours pre test inhib steadym decreasingm
+           priority_groups pre_fired_transitions option_final_couple Hspec;
+    elim Hspec;
+    intros.
     (* Case spn_map_fire_pre_aux_nil *)
     - simpl; auto.
     (* Case spn_map_fire_pre_aux_cons *)
     - simpl; apply spn_fire_pre_compl in H; rewrite H; rewrite H1; auto.
+    (* Case spn_map_fire_pre_aux_err *)
+    - simpl; apply spn_fire_pre_compl in H; rewrite H; auto.
   Qed.
   
   (*
-   * Function : Update the marking by consuming
+   * Function : Wrapper around spn_map_fire_pre_aux function. 
+   *            Update the marking by consuming
    *            the tokens in pre-condition places.            
    *)
   Definition spn_map_fire_pre
              (lneighbours : list neighbours_type)
              (pre test inhib : weight_type)
              (steadym : marking_type)
-             (cfgroups : list (list trans_type)) :
-    (list (list trans_type)) * marking_type :=
-    spn_map_fire_pre_aux lneighbours pre test inhib steadym steadym [] cfgroups.
+             (priority_groups : list (list trans_type)) :
+    option (list trans_type * marking_type) :=
+    spn_map_fire_pre_aux lneighbours pre test inhib steadym steadym [] priority_groups.
 
   (*** Formal specification : spn_map_fire_pre ***)
   Inductive spn_map_fire_pre_spec
             (lneighbours : list neighbours_type)
             (pre test inhib : weight_type)
             (steadym : marking_type)
-            (cfgroups : list (list trans_type)) :
-    (list (list trans_type)) * marking_type -> Prop :=
+            (priority_groups : list (list trans_type)) :
+    option (list trans_type * marking_type) -> Prop :=
   | spn_map_fire_pre_cons :
-      forall (final_groups : (list (list trans_type))) (finalm : marking_type),
-      spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym steadym [] cfgroups
-                                (final_groups, finalm) ->
-      spn_map_fire_pre_spec lneighbours pre test inhib steadym cfgroups (final_groups, finalm).
+      forall (option_final_couple : option (list trans_type * marking_type)),
+      spn_map_fire_pre_aux_spec lneighbours pre test inhib steadym steadym [] priority_groups
+                                option_final_couple ->
+      spn_map_fire_pre_spec lneighbours pre test inhib steadym priority_groups option_final_couple.
 
   (*** Correctness proof : spn_map_fire_pre ***)
   Theorem spn_map_fire_pre_correct :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
-           (steadym finalm : marking_type)
-           (cfgroups final_groups : list (list trans_type)),
-    spn_map_fire_pre lneighbours pre test inhib steadym cfgroups = (final_groups, finalm) ->
-    spn_map_fire_pre_spec lneighbours pre test inhib steadym cfgroups
-                      (final_groups, finalm).  
+           (steadym : marking_type)
+           (priority_groups : list (list trans_type))
+           (option_final_couple : option (list trans_type * marking_type)),
+    spn_map_fire_pre lneighbours pre test inhib steadym priority_groups = option_final_couple ->
+    spn_map_fire_pre_spec lneighbours pre test inhib steadym priority_groups
+                          option_final_couple.  
   Proof.
-    intros lneighbours pre test inhib steadym finalm cfgroups final_groups H.
+    intros lneighbours pre test inhib steadym priority_groups option_final_couple H.
     apply spn_map_fire_pre_cons.
-    unfold spn_map_fire_pre in H.
     apply spn_map_fire_pre_aux_correct.
     auto.
   Qed.
@@ -1472,44 +1622,46 @@ Section FireSpn.
   Theorem spn_map_fire_pre_compl :
     forall (lneighbours : list neighbours_type)
            (pre test inhib : weight_type)
-           (steadym finalm : marking_type)
-           (cfgroups final_groups : list (list trans_type)),
-    spn_map_fire_pre_spec lneighbours pre test inhib steadym cfgroups (final_groups, finalm) ->
-    spn_map_fire_pre lneighbours pre test inhib steadym cfgroups = (final_groups, finalm).
+           (steadym : marking_type)
+           (priority_groups : list (list trans_type))
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_map_fire_pre_spec lneighbours pre test inhib steadym priority_groups
+                            option_final_couple ->
+      spn_map_fire_pre lneighbours pre test inhib steadym priority_groups = option_final_couple.
   Proof.
-    intros lneighbours pre test inhib steadym finalm cfgroups final_groups H.
-    unfold spn_map_fire_pre.
+    intros lneighbours pre test inhib steadym priority_groups option_final_couple H.
     elim H; intros.
-    apply spn_map_fire_pre_aux_compl.
-    auto.
+    unfold spn_map_fire_pre.
+    apply spn_map_fire_pre_aux_compl; auto.
   Qed.
   
   (* 
    * Function : Given a marking "m_intermediate", resulting of the call
    *            of the function spn_map_fire_pre, and after
    *            that a given group of transs has been pre-fired
-   *            (the "fired_pre_group" list of transitions),
+   *            (the "pre_fired_transitions" list),
    *            returns the marking increased by the post-condition edges.
    *)
   Fixpoint fire_post
            (lneighbours : list neighbours_type)
            (post : weight_type)
            (increasingm : marking_type)
-           (fired_pre_group : list trans_type) : marking_type :=
-    match fired_pre_group with
-    | []  => increasingm
+           (pre_fired_transitions : list trans_type) : option marking_type :=
+    match pre_fired_transitions with
     | (tr i) :: tail  =>
       match get_neighbours lneighbours i with
-      (* If transition (tr i) has no neighbours, then continues. *)
-      | None => (fire_post lneighbours post increasingm tail)
-      (* Else updates the marking
+      (* Updates the marking
        * for all neighbour post places of (tr i). *)
       | Some neighbours_t =>
-        (fire_post lneighbours
-                         post
-                         (update_marking_post (tr i) post increasingm (post_pl neighbours_t))
-                         tail)
+        match (update_marking_post (tr i) post increasingm (post_pl neighbours_t)) with
+        | Some new_marking => (fire_post lneighbours post new_marking tail)
+        (* Something went wrong, case of error. *)
+        | None => None
+        end
+      (* If transition (tr i) has no neighbours, then error. *)
+      | None => None
       end
+    | []  => Some increasingm
     end.
 
   (*** Formal specification : fire_post ***)
@@ -1517,23 +1669,34 @@ Section FireSpn.
             (lneighbours : list neighbours_type)
             (post : weight_type) 
             (increasingm : marking_type) :
-    list trans_type -> marking_type -> Prop :=
+    list trans_type -> option marking_type -> Prop :=
+  (* Case pre_fired_transitions = [] *)
   | fire_post_nil :
-      fire_post_spec lneighbours post increasingm [] increasingm
-  | fire_post_none :
-      forall (i : nat) (fired_pre_group : list trans_type) (finalm : marking_type),
-      get_neighbours_spec lneighbours i None ->
-      fire_post_spec lneighbours post increasingm fired_pre_group finalm ->
-      fire_post_spec lneighbours post increasingm ((tr i) :: fired_pre_group) finalm
-  | fire_post_some :
+      fire_post_spec lneighbours post increasingm [] (Some increasingm)
+  (* Case get_neighbours returns an error *)
+  | fire_post_neighbours_err :
+      forall (i : nat) (pre_fired_transitions : list trans_type),
+        get_neighbours_spec lneighbours i None ->
+        fire_post_spec lneighbours post increasingm ((tr i) :: pre_fired_transitions) None
+  (* General case *)
+  | fire_post_cons :
       forall (i : nat)
              (neighbours_t : neighbours_type)
-             (fired_pre_group : list trans_type)
-             (modifiedm finalm : marking_type),
-      get_neighbours_spec lneighbours i (Some neighbours_t) ->
-      update_marking_post_spec (tr i) post increasingm (post_pl neighbours_t) modifiedm ->
-      fire_post_spec lneighbours post modifiedm fired_pre_group finalm ->
-      fire_post_spec lneighbours post increasingm ((tr i) :: fired_pre_group) finalm.
+             (pre_fired_transitions : list trans_type)
+             (modifiedm : marking_type)
+             (optionm : option marking_type),
+        get_neighbours_spec lneighbours i (Some neighbours_t) ->
+        update_marking_post_spec (tr i) post increasingm (post_pl neighbours_t) (Some modifiedm) ->
+        fire_post_spec lneighbours post modifiedm pre_fired_transitions optionm ->
+        fire_post_spec lneighbours post increasingm ((tr i) :: pre_fired_transitions) optionm
+  (* Case update_marking_post returns an error. *)
+  | fire_post_update_err :
+      forall (i : nat)
+             (neighbours_t : neighbours_type)
+             (pre_fired_transitions : list trans_type),
+        get_neighbours_spec lneighbours i (Some neighbours_t) ->
+        update_marking_post_spec (tr i) post increasingm (post_pl neighbours_t) None ->
+        fire_post_spec lneighbours post increasingm ((tr i) :: pre_fired_transitions) None.
 
   Functional Scheme fire_post_ind := Induction for fire_post Sort Prop.
   
@@ -1541,123 +1704,58 @@ Section FireSpn.
   Theorem fire_post_correct :
     forall (lneighbours : list neighbours_type)
            (post : weight_type) 
-           (increasingm finalm : marking_type) 
-           (fired_pre_group : list trans_type),
-    fire_post lneighbours post increasingm fired_pre_group = finalm ->
-    fire_post_spec lneighbours post increasingm fired_pre_group finalm.
+           (increasingm : marking_type) 
+           (pre_fired_transitions : list trans_type)
+           (optionm : option marking_type),
+    fire_post lneighbours post increasingm pre_fired_transitions = optionm ->
+    fire_post_spec lneighbours post increasingm pre_fired_transitions optionm.
   Proof.
-    intros lneighbours post increasingm finalm fired_pre_group;
-    functional induction (fire_post lneighbours post increasingm fired_pre_group)
+    intros lneighbours post increasingm pre_fired_transitions optionm;
+    functional induction (fire_post lneighbours post increasingm pre_fired_transitions)
                using fire_post_ind;
     intros.
     (* Case fired_pre_group = [] *)
     - rewrite <- H; apply fire_post_nil; auto.
-    (* Case (tr i) has neighbours *)
-    - apply fire_post_some with (neighbours_t := neighbours_t)
-                                      (modifiedm := (update_marking_post (tr i) post increasingm (post_pl neighbours_t))).
+    (* General case. *)
+    - apply fire_post_cons with (neighbours_t := neighbours_t)
+                                (modifiedm := new_marking).
       + apply get_neighbours_correct; auto.
       + apply update_marking_post_correct; auto.
-      + apply IHm; rewrite <- H; auto.
-    (* Case (tr i) has no neighbours *)
-    - apply fire_post_none.
+      + apply IHo; rewrite <- H; auto.
+    (* Case update_marking_post returns an error. *)
+    - rewrite <- H; apply fire_post_update_err with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + apply IHm; rewrite <- H; auto.
+      + apply update_marking_post_correct; auto.
+    (* Case get_neighbours returns an error. *)
+    - rewrite <- H; apply fire_post_neighbours_err.
+      apply get_neighbours_correct; auto.
   Qed.
 
   (*** Completeness proof : fire_post ***)
   Theorem fire_post_compl :
     forall (lneighbours : list neighbours_type)
            (post : weight_type) 
-           (increasingm finalm : marking_type) 
-           (fired_pre_group : list trans_type),
-    fire_post_spec lneighbours post increasingm fired_pre_group finalm ->
-    fire_post lneighbours post increasingm fired_pre_group = finalm. 
+           (increasingm : marking_type) 
+           (pre_fired_transitions : list trans_type)
+           (optionm : option marking_type),
+      fire_post_spec lneighbours post increasingm pre_fired_transitions optionm ->
+      fire_post lneighbours post increasingm pre_fired_transitions = optionm.
   Proof.
-    intros lneighbours post increasingm finalm fired_pre_group H;
+    intros lneighbours post increasingm pre_fired_transitions optionm H;
     elim H;
     intros.
     (* Case fire_post_nil *)
     - simpl; auto.
-    (* Case fire_post_none *)
+    (* Case fire_post_neighbours_err *)
     - simpl; apply get_neighbours_compl in H0; rewrite H0; auto.
-    (*  *)
-    - simpl; apply get_neighbours_compl in H0; rewrite H0; simpl.
-      apply update_marking_post_compl in H1; rewrite H1; auto.
-  Qed.
-  
-  (*  
-   * Function : Meant to begin with intermediate marking
-   *            computed by "fire_pre", after half (pre arcs)
-   *            firing of ALL the chosen transitions.
-   *            Ends with the FINAL marking of the cycle !
-   *)
-  Fixpoint map_fire_post
-           (lneighbours : list neighbours_type)
-           (post : weight_type)
-           (increasingm : marking_type)
-           (fired_pre_groups : list (list trans_type)) : marking_type :=
-    match fired_pre_groups with
-    | []  => increasingm
-    | fired_pre_group :: tail  =>
-      let greater_m := (fire_post lneighbours post increasingm fired_pre_group) in
-      (map_fire_post lneighbours post greater_m tail)
-    end.
-
-  (*** Formal specification : map_fire_post ***)
-  Inductive map_fire_post_spec
-            (lneighbours : list neighbours_type)
-            (post : weight_type)
-            (increasingm : marking_type) :
-    list (list trans_type) -> marking_type -> Prop :=
-  | map_fire_post_nil :
-      map_fire_post_spec lneighbours post increasingm [] increasingm
-  | map_fire_post_cons :
-      forall (fired_pre_group : list trans_type)
-             (fired_pre_groups : list (list trans_type))
-             (modifiedm finalm : marking_type),
-      fire_post_spec lneighbours post increasingm fired_pre_group modifiedm ->
-      map_fire_post_spec lneighbours post modifiedm fired_pre_groups finalm ->  
-      map_fire_post_spec lneighbours post increasingm (fired_pre_group :: fired_pre_groups) finalm.
-
-  Functional Scheme map_fire_post_ind := Induction for map_fire_post Sort Prop.
-  
-  (*** Correctness proof : map_fire_post ***)
-  Theorem map_fire_post_correct :
-    forall (lneighbours : list neighbours_type)
-           (post : weight_type)
-           (increasingm finalm : marking_type)
-           (fired_pre_groups : list (list trans_type)),
-    map_fire_post lneighbours post increasingm fired_pre_groups = finalm ->
-    map_fire_post_spec lneighbours post increasingm fired_pre_groups finalm.
-  Proof.
-    intros lneighbours post increasingm finalm fired_pre_groups;
-    functional induction (map_fire_post lneighbours post increasingm fired_pre_groups)
-               using map_fire_post_ind;
-    intros.
-    (* Case fired_pre_groups = [] *)
-    - rewrite <- H; apply map_fire_post_nil.
     (* General case *)
-    - apply map_fire_post_cons with (modifiedm := (fire_post lneighbours post increasingm fired_pre_group)).
-      + apply fire_post_correct; auto.
-      + apply IHm; rewrite H; auto.
-  Qed.  
-
-  (*** Completeness proof : map_fire_post ***)
-  Theorem map_fire_post_compl :
-    forall (lneighbours : list neighbours_type)
-           (post : weight_type)
-           (increasingm finalm : marking_type)
-           (fired_pre_groups : list (list trans_type)),
-    map_fire_post_spec lneighbours post increasingm fired_pre_groups finalm ->
-    map_fire_post lneighbours post increasingm fired_pre_groups = finalm.
-  Proof.
-    intros lneighbours post increasingm finalm fired_pre_groups H;
-    elim H;
-    intros.
-    (* Case map_fire_post_nil *)
-    - simpl; auto.
-    (* Case map_fire_post_cons *)
-    - simpl; apply fire_post_compl in H0; rewrite H0; auto.
+    - simpl.
+      apply get_neighbours_compl in H0; rewrite H0.
+      apply update_marking_post_compl in H1; rewrite H1; auto.
+    (* Case fire_post_update_err *)
+    - simpl.
+      apply get_neighbours_compl in H0; rewrite H0.
+      apply update_marking_post_compl in H1; rewrite H1; auto.
   Qed.
   
   (*************************************************)
@@ -1665,17 +1763,27 @@ Section FireSpn.
   (*************************************************)
 
   (*
-   * Function : Returns  "transitions fired (fire_groups)" + "final marking",
-   *            composing spn_map_fire_post with spn_map_fire_pre
+   * Function : Returns  "fired transitions (pre_fired_transitions)" + "final marking",
+   *            composing fire_post with spn_map_fire_pre
    *)
   Definition spn_fire
              (lneighbours : list neighbours_type)
              (pre test inhib post : weight_type)
              (steadym : marking_type)
-             (cfgroups : list (list trans_type)) :
-    (list (list trans_type)) * marking_type :=
-    let (fired_groups, intermediatem) := (spn_map_fire_pre lneighbours pre test inhib steadym cfgroups) in
-    (fired_groups, (map_fire_post lneighbours post intermediatem fired_groups)).
+             (priority_groups : list (list trans_type)) :
+    option (list trans_type * marking_type) :=
+    (* Pre-fires the transitions in priority_groups. *)
+    match (spn_map_fire_pre lneighbours pre test inhib steadym priority_groups) with 
+    | Some (pre_fired_transitions, intermediatem) =>
+      (* Post-fires the pre-fired transitions. *)
+      match (fire_post lneighbours post intermediatem pre_fired_transitions) with
+      | Some finalm => Some (pre_fired_transitions, finalm)
+      (* If fire_post returned an error, then error. *)
+      | None => None
+      end
+    (* If spn_map_fire_pre returned an error, then error. *)
+    | None => None
+    end.
 
   Functional Scheme spn_fire_ind := Induction for spn_fire Sort Prop.
   
@@ -1684,53 +1792,79 @@ Section FireSpn.
             (lneighbours : list neighbours_type)
             (pre test inhib post : weight_type)
             (steadym : marking_type)
-            (cfgroups : list (list trans_type)) :
-    (list (list trans_type)) * marking_type -> Prop :=
+            (priority_groups : list (list trans_type)) :
+    option (list trans_type * marking_type) -> Prop :=
+  (* General case *)
   | spn_fire_cons :
-      forall (fired_groups : list (list trans_type))
+      forall (pre_fired_transitions : list trans_type)
              (intermediatem finalm : marking_type),
-      spn_map_fire_pre_spec lneighbours pre test inhib steadym cfgroups (fired_groups, intermediatem) ->
-      map_fire_post_spec lneighbours post intermediatem fired_groups finalm ->
-      spn_fire_spec lneighbours pre test inhib post steadym cfgroups (fired_groups, finalm).
+        spn_map_fire_pre_spec lneighbours pre test inhib steadym priority_groups
+                              (Some (pre_fired_transitions, intermediatem)) ->
+        fire_post_spec lneighbours post intermediatem pre_fired_transitions (Some finalm) ->
+        spn_fire_spec lneighbours pre test inhib post steadym priority_groups
+                      (Some (pre_fired_transitions, finalm))
+  (* Case spn_map_fire_pre returns an error. *)
+  | spn_fire_map_fire_pre_err :
+      spn_map_fire_pre_spec lneighbours pre test inhib steadym priority_groups None ->
+      spn_fire_spec lneighbours pre test inhib post steadym priority_groups None
+  (* Case fire_post returns an error. *)
+  | spn_fire_fire_post_err :
+      forall (pre_fired_transitions : list trans_type)
+             (intermediatem : marking_type),
+        spn_map_fire_pre_spec lneighbours pre test inhib steadym priority_groups
+                              (Some (pre_fired_transitions, intermediatem)) ->
+        fire_post_spec lneighbours post intermediatem pre_fired_transitions None ->
+        spn_fire_spec lneighbours pre test inhib post steadym priority_groups None.
 
   (*** Correctness proof : spn_fire ***)
   Theorem spn_fire_correct :
     forall (lneighbours : list neighbours_type)
            (pre test inhib post : weight_type)
-           (steadym finalm : marking_type)
-           (cfgroups fired_groups : list (list trans_type)),
-    spn_fire lneighbours pre test inhib post steadym cfgroups = (fired_groups, finalm) ->
-    spn_fire_spec lneighbours pre test inhib post steadym cfgroups (fired_groups, finalm).
+           (steadym : marking_type)
+           (priority_groups : list (list trans_type))
+           (option_final_couple : option (list trans_type * marking_type)),
+    spn_fire lneighbours pre test inhib post steadym priority_groups = option_final_couple ->
+    spn_fire_spec lneighbours pre test inhib post steadym priority_groups option_final_couple.
   Proof.
-    intros lneighbours pre test inhib post steadym finalm cfgroups fired_groups;
-    functional induction (spn_fire lneighbours pre test inhib post steadym cfgroups)
+    intros lneighbours pre test inhib post steadym priority_groups option_final_couple;
+    functional induction (spn_fire lneighbours pre test inhib post steadym priority_groups)
                using spn_fire_ind;
     intros.
-    apply spn_fire_cons with (intermediatem := intermediatem).
-    (* Case spn_map_fire_pre *)
-    Search (fst _).
-    - apply spn_map_fire_pre_correct. rewrite e.
-      injection H; intros.
-      rewrite H1; auto.
-    (* Case map_fire_post *)
-    - injection H; intros; apply map_fire_post_correct.
-      rewrite <- H1; rewrite <- H0; auto.                             
+    (* General case *)
+    - rewrite <- H; apply spn_fire_cons with (intermediatem := intermediatem).
+      + apply spn_map_fire_pre_correct; auto.
+      + apply fire_post_correct; auto.
+    (* Case fire_post returns an error. *)
+    - rewrite <- H; apply spn_fire_fire_post_err
+                      with (pre_fired_transitions := pre_fired_transitions)
+                           (intermediatem := intermediatem).
+      + apply spn_map_fire_pre_correct; auto.
+      + apply fire_post_correct; auto.
+    (* Case spn_map_fire_pre returns an error. *)
+    - rewrite <- H; apply spn_fire_map_fire_pre_err.
+      apply spn_map_fire_pre_correct; auto.                             
   Qed.
 
   (*** Completeness proof : spn_fire ***)
   Theorem spn_fire_compl :
     forall (lneighbours : list neighbours_type)
            (pre test inhib post : weight_type)
-           (steadym finalm : marking_type)
-           (cfgroups fired_groups : list (list trans_type)),
-    spn_fire_spec lneighbours pre test inhib post steadym cfgroups (fired_groups, finalm) ->
-    spn_fire lneighbours pre test inhib post steadym cfgroups = (fired_groups, finalm).
+           (steadym : marking_type)
+           (priority_groups : list (list trans_type))
+           (option_final_couple : option (list trans_type * marking_type)),
+      spn_fire_spec lneighbours pre test inhib post steadym priority_groups option_final_couple ->
+      spn_fire lneighbours pre test inhib post steadym priority_groups = option_final_couple.
   Proof.
-    intros lneighbours pre test inhib post steadym finalm cfgroups fired_groups Hspec;
-      elim Hspec; intros.
-    unfold spn_fire.
-    apply spn_map_fire_pre_compl in H; rewrite H.
-    apply map_fire_post_compl in H0; rewrite H0; auto.
+    intros lneighbours pre test inhib post steadym priority_groups option_final_couple Hspec.
+    elim Hspec; intros; unfold spn_fire.
+    (* Case spn_fire_cons *)
+    + apply spn_map_fire_pre_compl in H; rewrite H.
+      apply fire_post_compl in H0; rewrite H0; auto.
+    (* Case spn_fire_map_fire_pre_err *)
+    + apply spn_map_fire_pre_compl in H; rewrite H; auto.
+    (* Case spn_fire_fire_post_err *)
+    + apply spn_map_fire_pre_compl in H; rewrite H.
+      apply fire_post_compl in H0; rewrite H0; auto.
   Qed.
   
 End FireSpn.
