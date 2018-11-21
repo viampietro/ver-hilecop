@@ -109,7 +109,6 @@ Structure SPN : Set :=
       
       (*** Properties on lneighbours ***)
       nodup_lneighbours : NoDup lneighbours;
-      
       (* For all place p, p is in places iff 
        * p is in the neighbourhood of at least one transition. *)
       no_isolated_or_unknown_place : 
@@ -428,6 +427,52 @@ Section Marking.
     - simpl. elim eq_dec; [intro; rewrite IHreplace_occ_spec; auto | intro; contradiction].
     (* Case replace_occ_else *)
     - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHreplace_occ_spec; auto].
+  Qed.
+
+  Lemma replace_occ_no_change {A: Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
+      ~In occ l -> replace_occ eq_dec occ repl l = l.
+  Proof.
+    intros; functional induction (replace_occ eq_dec occ repl l)
+                       using replace_occ_ind.
+    - auto.
+    - apply not_in_cons in H; elim H; intros. elim H0; auto.
+    - cut (~In occ tl).
+      + intro. rewrite (IHl0 H0). auto.
+      + apply not_in_cons in H. elim H; auto.
+  Qed.
+
+  Lemma replace_occ_not_in {A :Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl a : A) (l : list A),
+      a <> repl /\ ~In a l -> ~In a (replace_occ eq_dec occ repl l).
+  Proof.
+  Admitted.
+
+  (*** Forall list l, if NoDup l then NoDup (replace_occ l) ***)
+  Lemma replace_occ_nodup {A : Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
+      NoDup l -> ~In repl l -> NoDup (replace_occ eq_dec occ repl l).
+  Proof.
+    intros; functional induction (replace_occ eq_dec occ repl l)
+                       using replace_occ_ind.
+    - apply NoDup_nil.
+    - Print NoDup_cons. apply NoDup_cons.
+      -- apply NoDup_cons_iff in H. elim H; intros.
+         apply replace_occ_no_change with (eq_dec0 := eq_dec) (repl0 := repl) in H1; rewrite H1.
+         apply not_in_cons in H0. elim H0. intros. auto.         
+      -- apply IHl0.
+         ++ apply NoDup_cons_iff in H; elim H; intros; auto.
+         ++ apply not_in_cons in H0; elim H0; intros; auto.
+    - apply NoDup_cons.
+      -- apply NoDup_cons_iff in H. elim H; intros.
+         apply replace_occ_no_change with (eq_dec0 := eq_dec) (repl0 := repl) in H1.
+         apply replace_occ_not_in.
+         split.
+         { apply not_in_cons in H0. elim H0; intros; auto. }
+         { elim H; intros; auto. }
+      -- apply IHl0.
+         ++ apply NoDup_cons_iff in H; elim H; intros; auto.
+         ++ apply not_in_cons in H0; elim H0; intros; auto.
   Qed.
   
   (* Function : Given a marking m, add/remove nboftokens tokens (if not None)
@@ -1866,6 +1911,21 @@ Section FireSpn.
     + apply spn_map_fire_pre_compl in H; rewrite H.
       apply fire_post_compl in H0; rewrite H0; auto.
   Qed.
+
+  Lemma nodup_after_spn_fire :
+    forall (lneighbours : list neighbours_type)
+           (pre test inhib post : weight_type)
+           (m m' : marking_type)
+           (priority_groups : list (list trans_type))
+           (fired_transitions : list trans_type)
+           (nodup_marking : NoDup m),
+      spn_fire lneighbours pre test inhib post m priority_groups = (Some (fired_transitions, m')) ->
+      NoDup m'.
+  Proof.
+    intros lneighbours pre test inhib post m m' priority_groups fired_transitions.
+    intros Hnodupm Hspnfire.
+    
+  Qed.
   
 End FireSpn.
 
@@ -1878,30 +1938,73 @@ Section AnimateSpn.
   (*  
    * Function : Returns the resulting Petri net after all the sensitized
    *            transitions in spn have been fired, and returns
-   *            the list of lists containing these transitions.
+   *            the list of transitions fired in this cycle.
    *
    *)
-  Definition spn_cycle (spn : SPN) : (list (list trans_type)) * SPN :=
+  Definition spn_cycle (spn : SPN) : option (list trans_type * SPN) :=
     match spn with
-    | (mk_SPN places transs pre post test inhib m (mk_prior cfgroups) lneighbours) =>
-      let (fired_groups, nextm) := (spn_fire lneighbours pre test inhib post m cfgroups) in
-      (fired_groups, (mk_SPN places transs pre post test inhib nextm (mk_prior cfgroups) lneighbours))
+    | (mk_SPN places transs pre post test inhib m priority_groups lneighbours
+              nodup_places
+              nodup_transs
+              no_unknown_in_priority_groups
+              no_intersect_in_priority_groups
+              nodup_lneighbours
+              no_isolated_or_unknown_place
+              no_isolated_or_unknown_trans
+              uniq_index_lneighbours
+              nodup_marking
+              no_unmarked_or_unknown_place
+              uniq_index_marking
+      ) =>
+      match (spn_fire lneighbours pre test inhib post m priority_groups) with
+      | Some (fired_transitions, nextm) =>
+        Some (fired_transitions,
+              (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours
+                      nodup_places
+                      nodup_transs
+                      no_unknown_in_priority_groups
+                      no_intersect_in_priority_groups
+                      nodup_lneighbours
+                      no_isolated_or_unknown_place
+                      no_isolated_or_unknown_trans
+                      uniq_index_lneighbours
+                      
+                      no_unmarked_or_unknown_place
+                      uniq_index_marking))
+      | None => None
+      end
     end.
 
   (*** Formal specification : spn_cycle_spec ***)
   Inductive spn_cycle_spec (spn : SPN) :
-    (list (list trans_type)) * SPN -> Prop :=
+    option (list trans_type * SPN) -> Prop :=
+  (* General case *)
   | spn_cycle_cons :
       forall (places : list place_type)
              (transs : list trans_type)
              (pre post test inhib : weight_type)
              (m nextm : marking_type)
-             (fired_groups cfgroups : list (list trans_type))
-             (lneighbours : list neighbours_type),
-        spn = (mk_SPN places transs pre post test inhib m (mk_prior cfgroups) lneighbours) ->
-        spn_fire_spec lneighbours pre test inhib post m cfgroups (fired_groups, nextm) ->
-        spn_cycle_spec spn (fired_groups, (mk_SPN places transs pre post test inhib nextm
-                                                  (mk_prior cfgroups) lneighbours)).
+             (priority_groups : list (list trans_type))
+             (lneighbours : list neighbours_type)
+             (fired_transitions : list trans_type),
+        spn = (mk_SPN places transs pre post test inhib m priority_groups lneighbours) ->
+        spn_fire_spec lneighbours pre test inhib post m priority_groups
+                      (Some (fired_transitions, nextm)) ->
+        spn_cycle_spec spn (Some (fired_groups,
+                                  (mk_SPN places transs pre post test inhib nextm
+                                          priority_groups lneighbours)))
+  (* Case spn_fire returns an error. *)
+  | spn_cycle_err :
+      forall (places : list place_type)
+             (transs : list trans_type)
+             (pre post test inhib : weight_type)
+             (m nextm : marking_type)
+             (priority_groups : list (list trans_type))
+             (lneighbours : list neighbours_type)
+             (fired_transitions : list trans_type),
+        spn = (mk_SPN places transs pre post test inhib m (mk_prior priority_groups) lneighbours) ->
+        spn_fire_spec lneighbours pre test inhib post m priority_groups None ->
+        spn_cycle_spec spn None.
 
   Functional Scheme spn_cycle_ind := Induction for spn_cycle Sort Prop.
   
