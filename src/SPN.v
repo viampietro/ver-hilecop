@@ -1,10 +1,9 @@
-Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool FunInd Coq.Lists.ListDec.
+Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool FunInd Coq.Lists.ListDec Program. 
 Export ListNotations.
 
-(******************************************************************)
-(* Syntax of generalized (weight on transitions > or equal to 1), *)
-(* extended (test and inhibiting edges) Petri nets.               *)
-(******************************************************************)
+(*===================================================================*)
+(*=== TYPES FOR GENERALIZED, EXTENDED AND SYNCHRONOUS PETRI NETS. ===*)
+(*===================================================================*)
 
 (* A place is identified by an index which is unique. *)
 Inductive place_type : Set :=
@@ -55,13 +54,12 @@ Structure neighbours_type : Set := mk_neighbours {
                                        post_pl : list place_type
                                      }.
 
-(*******************************************************)
-(*** Defines the structure of Synchronous Petri Nets ***)
-(*******************************************************)
+(*==================================================================*)
+(*============== STRUCTURE OF SYNCHRONOUS PETRI NETS ===============*)
+(*==================================================================*)
+
 Structure SPN : Set :=
   mk_SPN {
-      
-      (*==== ATTRIBUTES ====*)
       
       places : list place_type;
       transs : list trans_type;
@@ -80,170 +78,84 @@ Structure SPN : Set :=
       (* Contains the list of pre, test, inhib and post places 
        * associated with each transition of the SPN. *)
       lneighbours : list neighbours_type;
-
-      (*==== LEMMAS ====*)
-      
-      (*** Properties on places and transitions ***)
-      nodup_places : NoDup places;
-      nodup_transs : NoDup transs;
-
-      (*** Properties on priority_groups ***)
-
-      (* For all transition t, t is in transs iff 
-       * there exists a group in priority_groups containing t. *)
-      no_unknown_in_priority_groups :
-        forall (t : trans_type),
-          In t transs <->
-          exists group : list trans_type,
-            In group priority_groups /\ In t group;
-
-      (* For all transition t in one of the group of
-       * priority_groups, t is contained in only one
-       * group of priority_groups. *)
-      no_intersect_in_priority_groups :
-        forall (group group' : list trans_type),
-          In group priority_groups /\
-          In group' priority_groups /\
-          group <> group' ->
-          forall (t : trans_type), In t group -> ~In t group';
-      
-      (*** Properties on lneighbours ***)
-      nodup_lneighbours : NoDup lneighbours;
-      (* For all place p, p is in places iff 
-       * p is in the neighbourhood of at least one transition. *)
-      no_isolated_or_unknown_place : 
-        forall (p : place_type),
-          In p places <->
-          exists (neighbours : neighbours_type),
-            In neighbours lneighbours /\  
-            (In p (pre_pl neighbours)) \/
-            (In p (test_pl neighbours)) \/
-            (In p (inhib_pl neighbours)) \/
-            (In p (post_pl neighbours));
-
-      (* For all transition (tr i), (tr i) is in transs iff 
-       * t is connected to at least one place. *)
-      no_isolated_or_unknown_trans :
-        forall (i : nat),
-          In (tr i) transs <->
-          exists (pre_pl test_pl inhib_pl post_pl : list place_type),
-            In (mk_neighbours i pre_pl test_pl inhib_pl post_pl) lneighbours /\
-            (pre_pl <> [] \/ test_pl <> [] \/ inhib_pl <> [] \/ post_pl <> []);
-
-      (* For all neighbours, if neighbours is in lneighbours then
-       * there is no neighbours' in lneighbours with the same index
-       * as neighbours. *)
-      uniq_index_lneighbours :
-        forall (neighbours : neighbours_type),
-          In neighbours lneighbours ->
-          ~exists (neighbours' : neighbours_type),
-              In neighbours' lneighbours /\
-              neighbours.(index) = neighbours'.(index) /\
-              neighbours <> neighbours';
-      
-      (*** Properties on marking ***)
-      nodup_marking : NoDup marking;
-      
-      (* For all place (pl i), (pl i) is in places iff
-       * (pl i) is referenced in marking. *)
-      no_unmarked_or_unknown_place :
-        forall (i : nat), In (pl i) places <-> exists (n : nat), In (i, n) marking;
-
-      (* For all couple of nat (i, n), if (i, n) is in marking 
-       * then there is no couple (i, n') in marking with n' different from n. *)
-      uniq_index_marking :
-        forall (i n : nat),
-          In (i, n) marking -> ~exists (n' : nat), In (i, n') marking /\ n <> n';
       
     }.
 
-(**************************************************************)
-(************ Are 2 nat/places/transitions equal ? ************)
-(**************************************************************)
+(*==============================================*)
+(*============ PROPERTIES ON SPN ===============*)
+(*==============================================*)
 
-(*** Formal specification : beq_places ***)
-Inductive beq_places_spec : place_type -> place_type -> Prop :=
-| beq_places_mk :
-    forall (p p' : place_type) (n : nat), 
-      p = mk_place n /\ p' = mk_place n -> beq_places_spec p p'.
+(*** Properties on places and transitions ***)
 
-(* Function : Returns true if p and p' have the same index. 
- *            false otherwise.
- *)
-Definition beq_places (p p' : place_type) : bool :=
-  match (p, p') with
-  | (mk_place n, mk_place n') => beq_nat n n'
-  end.
+Definition nodup_places (spn : SPN) := NoDup spn.(places).  
+Definition nodup_transs (spn : SPN) := NoDup spn.(transs).
 
-Functional Scheme beq_places_ind := Induction for beq_places Sort Prop.
+(*** Properties on priority_groups ***)
 
-(*** Correctness proof : beq_places ***)
-Theorem beq_places_correct :
-  forall (p p' : place_type),
-    beq_places p p' = true -> beq_places_spec p p'.
-Proof.
-  intros p p'.
-  functional induction (beq_places  p p') using beq_places_ind.
-  intro H. rewrite beq_nat_true_iff in H. rewrite H.
-  apply beq_places_mk with (n:=n').
-  split; reflexivity. 
-Qed.
+(* For all transition t, t is in transs iff 
+ * there exists a group in priority_groups containing t. *)
+Definition no_unknown_in_priority_groups (spn : SPN) (t : trans_type) :=
+  In t spn.(transs) <-> exists group : list trans_type, In group spn.(priority_groups)
+                                                        /\ In t group.
 
-(*** Completeness proof : beq_places ***)
-Theorem beq_places_complete :
-  forall (p p' : place_type),
-    beq_places_spec p p' -> beq_places p p' = true. 
-Proof.
-  intros p p' H. elim H.
-  intros  p0 p1  n  H01.
-  assert (H0 : p0 = mk_place n).  { firstorder. }  
-                                  assert (H1 : p1 = mk_place n).  { firstorder. }                   
-                                                                  unfold beq_places. rewrite H1. rewrite H0.
-  rewrite beq_nat_true_iff. reflexivity.
-Qed.
+(* For all transition t in one of the group of
+ * priority_groups, t is contained in only one
+ * group of priority_groups. *)
+Definition no_intersect_in_priority_groups
+           (spn : SPN)
+           (group group' : list trans_type)
+           (t : trans_type) :=
+  In group spn.(priority_groups) /\
+  In group' spn.(priority_groups) /\
+  group <> group' ->
+  In t group -> ~In t group'.
+  
+(*** Properties on lneighbours ***)
+Definition nodup_lneighbours (spn : SPN) := NoDup spn.(lneighbours).
+  
+(* For all place p, p is in places iff 
+ * p is in the neighbourhood of at least one transition. *)
+Definition no_isolated_or_unknown_place (spn : SPN) (p : place_type) := 
+  In p spn.(places) <-> exists (neighbours : neighbours_type), In neighbours spn.(lneighbours) /\  
+                                                               (In p neighbours.(pre_pl) \/
+                                                                In p neighbours.(test_pl) \/
+                                                                In p neighbours.(inhib_pl) \/
+                                                                In p neighbours.(post_pl)).
 
-(*** Formal specification : beq_transs ***)
-Inductive beq_transs_spec : trans_type -> trans_type -> Prop :=
-| beq_transs_mk :
-    forall (t t' : trans_type) (n : nat), 
-      t = mk_trans n /\ t' = mk_trans n -> beq_transs_spec t t'.
+(* For all transition (tr i), (tr i) is in transs iff 
+ * t is connected to at least one place. *)
+Definition no_isolated_or_unknown_trans (spn : SPN) (i : nat) :=
+  In (tr i) spn.(transs) <->
+  exists (pre_pl test_pl inhib_pl post_pl : list place_type),
+    In (mk_neighbours i pre_pl test_pl inhib_pl post_pl) spn.(lneighbours) /\
+    (pre_pl <> [] \/ test_pl <> [] \/ inhib_pl <> [] \/ post_pl <> []).
 
-(* Function : Returns true if t and t' have the same index.
- *            false otherwise.
- *)
-Definition beq_transs (t t' : trans_type) : bool :=
-  match (t, t') with
-  | (mk_trans n, mk_trans n') => beq_nat n n'
-  end.
+(* For all neighbours, if neighbours is in lneighbours then
+ * there is no neighbours' in lneighbours with the same index
+ * as neighbours. *)
+Definition uniq_index_lneighbours (spn : SPN) (neighbours : neighbours_type) :=
+  In neighbours spn.(lneighbours) ->
+  ~exists (neighbours' : neighbours_type),
+      In neighbours' spn.(lneighbours) /\
+      neighbours.(index) = neighbours'.(index) /\
+      neighbours <> neighbours'.
+                                                                   
+(*** Properties on marking ***)
+Definition nodup_marking (spn : SPN) := NoDup spn.(marking).
 
-Functional Scheme beq_transs_ind := Induction for beq_transs Sort Prop.
+(* For all place (pl i), (pl i) is in places iff
+ * (pl i) is referenced in marking. *)
+Definition no_unmarked_or_unknown_place (spn : SPN) (i : nat) :=
+  In (pl i) spn.(places) <-> exists (n : nat), In (i, n) spn.(marking).
 
-(*** Correctness prooof : beq_transs ***)
-Theorem beq_transs_correct :
-  forall (t t' : trans_type),
-    beq_transs t t' = true -> beq_transs_spec t t'.
-Proof.
-  intros t t'.
-  functional induction (beq_transs  t t') using beq_transs_ind.
-  intro H. rewrite beq_nat_true_iff in H. rewrite H.
-  apply beq_transs_mk with (n:=n').
-  split; reflexivity. 
-Qed.
+(* For all couple of nat (i, n), if (i, n) is in marking 
+ * then there is no couple (i, n') in marking with n' different from n. *)
+Definition uniq_index_marking (spn : SPN) (i : nat) :=
+  exists n : nat, In (i, n) spn.(marking) -> ~exists (n' : nat), In (i, n') spn.(marking) /\ n <> n'.
 
-(*** Completeness proof : beq_transs ***)
-Theorem beq_transs_complete :
-  forall (t t' : trans_type),
-    beq_transs_spec t t' -> beq_transs t t' = true. 
-Proof.
-  intros t t' H. elim H.
-  intros  t0 t1  n  H01.
-  assert (H0 : t0 = mk_trans n).
-  - firstorder.   
-  - assert (H1 : t1 = mk_trans n).
-    + firstorder.                   
-    + unfold beq_transs. rewrite H1. rewrite H0.
-      rewrite beq_nat_true_iff. reflexivity.
-Qed.
+(*===============================================*)
+(*===== EQUALITY DECIDABILITY FOR SPN TYPES =====*)
+(*===============================================*)
 
 (*** Equality decidability for place_type. ***)
 Definition places_eq_dec :
@@ -345,6 +257,31 @@ Section Marking.
       rewrite Nat.eqb_sym. rewrite H0.
       assumption.
   Qed.
+
+  (* Lemma : Tells that (get_m spn.(marking) i) returns no error
+   *         if (pl i) is in the list of places spn.(places).
+   **)
+  Lemma get_m_no_error :
+    forall (spn : SPN)
+           (i : nat),
+      nodup_places spn ->
+      nodup_marking spn ->
+      no_unmarked_or_unknown_place spn i ->
+      uniq_index_marking spn i ->
+      In (pl i) spn.(places) ->
+      exists v : nat, get_m spn.(marking) i = Some v.
+  Proof.
+    intros.
+    (* We need this line, otherwise (marking spn) is directly
+     * replaced by its value in the subgoals created by "induction (marking spn)"
+     *)
+    remember (marking spn). 
+    induction (m).
+    - elim H1; intros. apply H4 in H3.
+      elim H3; intros.
+      rewrite <- Heqm in H6; elim H6.
+    - (*!!!!!!!!!! STUCK IN HERE !!!!!!!!!!!!!*)
+  Admitted.
   
   (*
    * Equality decidability between two pairs of nat. 
@@ -429,24 +366,45 @@ Section Marking.
     - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHreplace_occ_spec; auto].
   Qed.
 
+  (* Auxiliary lemma to prove replace_occ_nodup. *)
   Lemma replace_occ_no_change {A: Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
       ~In occ l -> replace_occ eq_dec occ repl l = l.
   Proof.
     intros; functional induction (replace_occ eq_dec occ repl l)
                        using replace_occ_ind.
+    (* Base case, l = [] *)
     - auto.
+    (* Case occ = hd l *)
     - apply not_in_cons in H; elim H; intros. elim H0; auto.
+    (* Case occ <> hd l *)
     - cut (~In occ tl).
       + intro. rewrite (IHl0 H0). auto.
       + apply not_in_cons in H. elim H; auto.
   Qed.
 
+  (* Auxiliary lemma to prove replace_occ_nodup. *)
   Lemma replace_occ_not_in {A :Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl a : A) (l : list A),
       a <> repl /\ ~In a l -> ~In a (replace_occ eq_dec occ repl l).
   Proof.
-  Admitted.
+    intros;
+    functional induction (replace_occ eq_dec occ repl l)
+               using replace_occ_ind;
+    intros.
+    (* Base case, l = [] *)
+    - auto.
+    (* Case occ = hd l *)
+    - apply not_in_cons; split.
+      + elim H; auto.
+      + apply IHl0; split; elim H; intros;
+          [auto | apply not_in_cons in H1; elim H1; auto ].
+    (* Case occ <> hd l *)
+    - apply not_in_cons; split.
+      + elim H; intros. apply not_in_cons in H1; elim H1; auto.
+      + apply IHl0; split; elim H; intros;
+          [ auto | apply not_in_cons in H1; elim H1; auto ].
+  Qed.
 
   (*** Forall list l, if NoDup l then NoDup (replace_occ l) ***)
   Lemma replace_occ_nodup {A : Type} :
@@ -455,14 +413,17 @@ Section Marking.
   Proof.
     intros; functional induction (replace_occ eq_dec occ repl l)
                        using replace_occ_ind.
+    (* Base case, l = []*)
     - apply NoDup_nil.
-    - Print NoDup_cons. apply NoDup_cons.
+    (* Case occ = hd l *)
+    - apply NoDup_cons.
       -- apply NoDup_cons_iff in H. elim H; intros.
          apply replace_occ_no_change with (eq_dec0 := eq_dec) (repl0 := repl) in H1; rewrite H1.
          apply not_in_cons in H0. elim H0. intros. auto.         
       -- apply IHl0.
          ++ apply NoDup_cons_iff in H; elim H; intros; auto.
          ++ apply not_in_cons in H0; elim H0; intros; auto.
+    (* Case occ <> hd l *)
     - apply NoDup_cons.
       -- apply NoDup_cons_iff in H. elim H; intros.
          apply replace_occ_no_change with (eq_dec0 := eq_dec) (repl0 := repl) in H1.
@@ -1911,21 +1872,6 @@ Section FireSpn.
     + apply spn_map_fire_pre_compl in H; rewrite H.
       apply fire_post_compl in H0; rewrite H0; auto.
   Qed.
-
-  Lemma nodup_after_spn_fire :
-    forall (lneighbours : list neighbours_type)
-           (pre test inhib post : weight_type)
-           (m m' : marking_type)
-           (priority_groups : list (list trans_type))
-           (fired_transitions : list trans_type)
-           (nodup_marking : NoDup m),
-      spn_fire lneighbours pre test inhib post m priority_groups = (Some (fired_transitions, m')) ->
-      NoDup m'.
-  Proof.
-    intros lneighbours pre test inhib post m m' priority_groups fired_transitions.
-    intros Hnodupm Hspnfire.
-    
-  Qed.
   
 End FireSpn.
 
@@ -1943,34 +1889,11 @@ Section AnimateSpn.
    *)
   Definition spn_cycle (spn : SPN) : option (list trans_type * SPN) :=
     match spn with
-    | (mk_SPN places transs pre post test inhib m priority_groups lneighbours
-              nodup_places
-              nodup_transs
-              no_unknown_in_priority_groups
-              no_intersect_in_priority_groups
-              nodup_lneighbours
-              no_isolated_or_unknown_place
-              no_isolated_or_unknown_trans
-              uniq_index_lneighbours
-              nodup_marking
-              no_unmarked_or_unknown_place
-              uniq_index_marking
-      ) =>
+    | (mk_SPN places transs pre post test inhib m priority_groups lneighbours) =>
       match (spn_fire lneighbours pre test inhib post m priority_groups) with
       | Some (fired_transitions, nextm) =>
         Some (fired_transitions,
-              (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours
-                      nodup_places
-                      nodup_transs
-                      no_unknown_in_priority_groups
-                      no_intersect_in_priority_groups
-                      nodup_lneighbours
-                      no_isolated_or_unknown_place
-                      no_isolated_or_unknown_trans
-                      uniq_index_lneighbours
-                      
-                      no_unmarked_or_unknown_place
-                      uniq_index_marking))
+              (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours))
       | None => None
       end
     end.
@@ -1990,7 +1913,7 @@ Section AnimateSpn.
         spn = (mk_SPN places transs pre post test inhib m priority_groups lneighbours) ->
         spn_fire_spec lneighbours pre test inhib post m priority_groups
                       (Some (fired_transitions, nextm)) ->
-        spn_cycle_spec spn (Some (fired_groups,
+        spn_cycle_spec spn (Some (fired_transitions,
                                   (mk_SPN places transs pre post test inhib nextm
                                           priority_groups lneighbours)))
   (* Case spn_fire returns an error. *)
@@ -1998,11 +1921,10 @@ Section AnimateSpn.
       forall (places : list place_type)
              (transs : list trans_type)
              (pre post test inhib : weight_type)
-             (m nextm : marking_type)
+             (m : marking_type)
              (priority_groups : list (list trans_type))
-             (lneighbours : list neighbours_type)
-             (fired_transitions : list trans_type),
-        spn = (mk_SPN places transs pre post test inhib m (mk_prior priority_groups) lneighbours) ->
+             (lneighbours : list neighbours_type),
+        spn = (mk_SPN places transs pre post test inhib m priority_groups lneighbours) ->
         spn_fire_spec lneighbours pre test inhib post m priority_groups None ->
         spn_cycle_spec spn None.
 
@@ -2010,27 +1932,94 @@ Section AnimateSpn.
   
   (*** Correctness proof : spn_cycle ***)
   Theorem spn_cycle_correct :
-    forall (spn spn' : SPN)
-           (fired_groups : list (list trans_type)),
-    spn_cycle spn = (fired_groups, spn') -> spn_cycle_spec spn (fired_groups, spn').
+    forall (spn : SPN)
+           (option_final_couple : option (list trans_type * SPN)),
+    spn_cycle spn = option_final_couple -> spn_cycle_spec spn option_final_couple.
   Proof.
     intros; functional induction (spn_cycle spn) using spn_cycle_ind; intros.
     rewrite <- H; apply spn_cycle_cons with (m := m).
+    (* Base case *)
     - auto.
+    (* General case, all went well. *)
     - apply spn_fire_correct; auto.
+    (* Error case. *)
+    - rewrite <- H; apply spn_cycle_err with (places := places0)
+                                             (transs := transs0)
+                                             (pre := pre0)
+                                             (post := post0)
+                                             (test := test0)
+                                             (inhib := inhib0)
+                                             (m := m)
+                                             (priority_groups := priority_groups0)
+                                             (lneighbours := lneighbours0).
+      + auto.
+      + apply spn_fire_correct; auto.
   Qed.
 
   (*** Completeness proof : spn_cycle ***)
   Theorem spn_cycle_compl :
-    forall (spn spn' : SPN)
-           (fired_groups : list (list trans_type)),
-    spn_cycle_spec spn (fired_groups, spn') -> spn_cycle spn = (fired_groups, spn').
+    forall (spn : SPN)
+           (option_final_couple : option (list trans_type * SPN)),
+      spn_cycle_spec spn option_final_couple -> spn_cycle spn = option_final_couple.
   Proof.
     intros; elim H; intros.
     unfold spn_cycle; rewrite H0.
-    apply spn_fire_compl in H1; rewrite H1; auto.
+    apply spn_fire_compl in H1; rewrite H1.
+    (* spn_cycle_cons *)
+    + auto.
+    (* spn_cycle_err *)
+    + unfold spn_cycle; rewrite H0.
+      apply spn_fire_compl in H1; rewrite H1; auto.
   Qed.
 
+  Theorem spn_cycle_no_error :
+    forall (spn : SPN)
+           (t : trans_type)
+           (p : place_type)
+           (i n : nat)
+           (neighbours : neighbours_type)
+           (group group' : list trans_type),
+      nodup_places spn ->
+      nodup_transs spn ->
+      no_unknown_in_priority_groups spn t ->
+      no_intersect_in_priority_groups spn group group' t ->
+      nodup_lneighbours spn ->
+      no_isolated_or_unknown_place spn p ->
+      no_isolated_or_unknown_trans spn i ->
+      uniq_index_lneighbours spn neighbours ->
+      nodup_marking spn ->
+      no_unmarked_or_unknown_place spn i ->
+      uniq_index_marking spn i n ->
+      exists value : list trans_type * SPN, spn_cycle spn = Some value.
+  Proof.
+    intros spn t p i n neighbours group group'
+           Hnodup_places
+           Hnodup_transs
+           Hno_unknown_in_priority_groups
+           Hno_intersect_in_priority_groups
+           Hnodup_lneighbours
+           Hno_isolated_or_unknown_place
+           Hno_isolated_or_unknown_trans
+           Huniq_index_lneighbours
+           Hnodup_marking
+           Hno_unmarked_or_unknown_place
+           Huniq_index_marking.
+    elim spn; intros places transs pre post test inhib marking priority_groups lneighbours.
+    unfold spn_fire. 
+    - intro; elim p0; intros. exists ((a, {| places := places;
+                                      transs := transs;
+                                      pre := pre;
+                                      post := post;
+                                      test := test;
+                                      inhib := inhib;
+                                      marking := b;
+                                      priority_groups := priority_groups;
+                                      lneighbours := lneighbours |})). auto.
+    - 
+      +
+  Qed.
+
+  
   (*******************************************)
   (******** ANIMATING DURING N CYCLES ********)
   (*******************************************)
