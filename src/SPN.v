@@ -143,15 +143,20 @@ Definition uniq_index_lneighbours (spn : SPN) (neighbours : neighbours_type) :=
 (*** Properties on marking ***)
 Definition nodup_marking (spn : SPN) := NoDup spn.(marking).
 
-(* For all place (pl i), (pl i) is in places iff
+(* For all place (pl i), (pl i) is in places if
  * (pl i) is referenced in marking. *)
-Definition no_unmarked_or_unknown_place (spn : SPN) (i : nat) :=
-  In (pl i) spn.(places) <-> exists (n : nat), In (i, n) spn.(marking).
+Definition no_unmarked_place (spn : SPN) (i : nat) :=
+  In (pl i) spn.(places) -> exists (n : nat), In (i, n) spn.(marking).
+
+(* For all couple (i, n), (i, n) is in marking if
+ * (pl i) is in places. *)
+Definition no_unknown_place_in_marking (spn : SPN) (i n : nat) :=
+  In (i, n) spn.(marking) -> In (pl i) spn.(places).
 
 (* For all couple of nat (i, n), if (i, n) is in marking 
  * then there is no couple (i, n') in marking with n' different from n. *)
-Definition uniq_index_marking (spn : SPN) (i : nat) :=
-  exists n : nat, In (i, n) spn.(marking) -> ~exists (n' : nat), In (i, n') spn.(marking) /\ n <> n'.
+Definition uniq_index_marking (spn : SPN) (i n : nat) :=
+  In (i, n) spn.(marking) -> ~exists (n' : nat), In (i, n') spn.(marking) /\ n <> n'.
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR SPN TYPES =====*)
@@ -258,30 +263,59 @@ Section Marking.
       assumption.
   Qed.
 
-  (* Lemma : Tells that (get_m spn.(marking) i) returns no error
-   *         if (pl i) is in the list of places spn.(places).
+  (* Lemma : For all marking "some_marking", (get_m some_marking i) returns no error
+   *         if (pl i) is in the list of places spn.(places)
+   *         and if some_marking verifies properties regarding spn.(marking).
+   *         In fact, get_m doesn't always receive a spn.(marking)
+   *         as a direct argument. Sometimes, it receives some
+   *         intermediate marking corresponding to a modified spn.(marking).
+   *         That's why proving that (get_m spn.(marking) i) returns no error
+   *         is not sufficient.
    **)
   Lemma get_m_no_error :
     forall (spn : SPN)
-           (i : nat),
-      nodup_places spn ->
-      nodup_marking spn ->
-      no_unmarked_or_unknown_place spn i ->
-      uniq_index_marking spn i ->
+           (i n n' : nat)
+           (some_marking : marking_type),
+      no_unmarked_place spn i ->
+      no_unknown_place_in_marking spn i n ->
+      (In (pl i) spn.(places) -> exists m : nat, In (i, m) some_marking) ->
+      (In (i, n') some_marking -> In (pl i) spn.(places)) ->
       In (pl i) spn.(places) ->
-      exists v : nat, get_m spn.(marking) i = Some v.
+      exists v : nat, get_m some_marking i = Some v.
   Proof.
-    intros.
-    (* We need this line, otherwise (marking spn) is directly
-     * replaced by its value in the subgoals created by "induction (marking spn)"
-     *)
-    remember (marking spn). 
-    induction (m).
-    - elim H1; intros. apply H4 in H3.
+    do 2 intro.
+    unfold nodup_places;
+      unfold nodup_marking;
+      unfold no_unmarked_place;
+      unfold no_unknown_place_in_marking;
+      unfold uniq_index_marking.
+    (* Induction on marking. *)
+    induction (some_marking). intros.
+    (* Base case (marking spn) = [], contradiction regarding the hypothesis *)
+    - apply H1 in H3.
       elim H3; intros.
-      rewrite <- Heqm in H6; elim H6.
-    - (*!!!!!!!!!! STUCK IN HERE !!!!!!!!!!!!!*)
-  Admitted.
+      elim H4.
+    (* Inductive case *)
+    - unfold get_m.
+      induction a; intros.
+      case_eq (a =? i); intros.
+      (* Case i is the index of the head couple. *)
+      + exists b; auto.
+      (* Case i is not the index of the head couple. *)
+      + apply IHm.
+        -- auto.
+        -- auto.
+        -- intros.
+           {
+             apply H1 in H3.
+             elim H3; intros.
+             apply in_inv in H6; elim H6; intros.
+             - injection H7; intros. apply beq_nat_false in H4. contradiction.
+             - exists x; auto.
+           }
+        -- auto.
+        -- auto.
+  Qed.
   
   (*
    * Equality decidability between two pairs of nat. 
@@ -541,6 +575,63 @@ Section Marking.
     - unfold modify_m; rewrite <- H; rewrite H0; apply get_m_compl in H1; rewrite H1.
       apply replace_occ_compl in H2; rewrite H2; auto.      
   Qed.
+
+  (* Lemma : For all spn, and marking "some_marking", 
+   *         (modify_m some_marking (pl i) op nboftokens) returns no error
+   *         if (pl i) is in the list of places spn.(places) and if
+   *         some_marking verifies properties regarding spn.(marking).
+   *)
+  Lemma modify_m_no_error :
+    forall (spn : SPN)
+           (some_marking : marking_type)
+           (nboftokens : option nat_star)
+           (op : nat -> nat -> nat)
+           (i n n' : nat),
+      no_unmarked_place spn i ->
+      no_unknown_place_in_marking spn i n ->
+      In (pl i) spn.(places) ->
+      (In (pl i) spn.(places) -> exists m : nat, In (i, m) some_marking) ->
+      (In (i, n') some_marking -> In (pl i) (spn.(places))) ->
+      exists v : marking_type, modify_m some_marking (pl i) op nboftokens = Some v /\
+                               (In (pl i) spn.(places) -> exists m : nat, In (i, m) v) /\
+                               (In (i, n') v -> In (pl i) spn.(places)).
+  Proof.
+    intros.
+    unfold nodup_places;
+      unfold nodup_marking;
+      unfold no_unmarked_place;
+      unfold no_unknown_place_in_marking;
+      unfold uniq_index_marking.
+    simpl.
+    case nboftokens.
+    - intro; elim n0.
+      intros.
+      (* Using get_m_no_error lemma. *)
+      cut (exists v : nat, get_m some_marking i = Some v).
+      + intro. elim H4; intros.
+        rewrite H5; exists (replace_occ prodnat_eq_dec (i, x) (i, op x int0) some_marking).
+        split.
+        -- auto.
+        -- split.
+           {
+             intro. exists (op x int0).
+             unfold replace_occ.
+             induction some_marking.
+             - simpl in H5. discriminate H5.
+             - elim (prodnat_eq_dec a (i, x)); intros.
+               + apply in_eq.
+               + apply in_cons. apply IHsome_marking.
+                 (* !!!! CAREFUL HERE, PROOF GAVE UP !!!! *)
+                 -- admit.
+                 -- admit.
+                 -- admit.
+                 -- admit.
+           }
+           { intro; auto. }
+      + apply (get_m_no_error spn i n n' some_marking).
+        auto. auto. auto. auto. auto.      
+    - exists some_marking. split; [ auto | split; [auto | auto]].
+  Admitted.
   
   (*=================================================*)
   (*=============== UPDATE MARKING ==================*)
@@ -631,6 +722,50 @@ Section Marking.
     (* Case update_marking_pre_err *)
     - simpl; apply modify_m_compl in H; rewrite H; auto.
   Qed.
+
+  (* Lemma : 
+   **)
+  Lemma update_marking_pre_no_error :
+    forall (spn : SPN)
+           (t : trans_type)
+           (some_places : list place_type)
+           (some_marking : marking_type)
+           (i n n' : nat),
+      no_unmarked_place spn i ->
+      no_unknown_place_in_marking spn i n ->
+      (In (pl i) spn.(places) -> exists m : nat, In (i, m) some_marking) ->
+      (In (i, n') some_marking -> In (pl i) spn.(places)) ->
+      (In (pl i) some_places -> In (pl i) spn.(places)) ->
+      exists v : marking_type,
+        update_marking_pre t spn.(pre) some_marking some_places = Some v.
+  Proof.
+    do 2 intro.
+    unfold nodup_places;
+      unfold nodup_marking;
+      unfold no_unmarked_place;
+      unfold no_unknown_place_in_marking;
+      unfold uniq_index_marking.
+    (* Induction on places. *)
+    induction (some_places).
+    (* Base case spn.(places) = [] *)
+    - intro; simpl; exists some_marking; auto.
+    (* Inductive case *)
+    - destruct a. do 4 intro.
+      unfold update_marking_pre.
+      (*  *)
+      cut (exists v : marking_type, modify_m some_marking (pl n) Nat.sub (pre spn t (pl n)) = Some v /\
+                                    (In (pl i) spn.(places) -> exists m : nat, In (i, m) v) /\
+                                    (In (i, n') v -> In (pl i) spn.(places))).
+      + intro; elim H; do 2 intro. elim H0; intros; rewrite H1; intros.
+        apply (IHl x i n0 n').
+        auto. auto. elim H2; intros. auto. auto. elim H2; intros; auto. auto.
+        intro. apply in_cons with (a := (pl n)) in H8. apply H7 in H8; auto.
+      (* !!! Need to prove the cut. !!! *)
+      + apply modify_m_no_error with (nboftokens := (pre spn t (pl n0)))
+                                     (op := Nat.sub)
+                                     (i := n0)
+                                     (n := n) in H0.
+  Admitted.
   
   (* 
    * Function : Adds some tokens from post places, according 
@@ -1872,6 +2007,41 @@ Section FireSpn.
     + apply spn_map_fire_pre_compl in H; rewrite H.
       apply fire_post_compl in H0; rewrite H0; auto.
   Qed.
+
+  (* Lemma : spn_fire always returns some value
+   *         if spn (which attributes are passed as arguments)
+   *         verifies certains properties. 
+   *)
+  Theorem spn_fire_no_error :
+    forall (spn : SPN)
+           (t : trans_type)
+           (p : place_type)
+           (i n : nat)
+           (neighbours : neighbours_type)
+           (group group' : list trans_type),
+      nodup_places spn ->
+      nodup_transs spn ->
+      no_unknown_in_priority_groups spn t ->
+      no_intersect_in_priority_groups spn group group' t ->
+      nodup_lneighbours spn ->
+      no_isolated_or_unknown_place spn p ->
+      no_isolated_or_unknown_trans spn i ->
+      uniq_index_lneighbours spn neighbours ->
+      nodup_marking spn ->
+      no_unmarked_place spn i ->
+      no_unknown_place_in_marking spn i n ->
+      uniq_index_marking spn i n ->
+      exists couple : (list trans_type * marking_type),
+        spn_fire (lneighbours spn)
+                 (pre spn)
+                 (test spn)
+                 (inhib spn)
+                 (post spn)
+                 (marking spn)
+                 (priority_groups spn) = Some couple.
+  Proof.
+    unfold spn_fire.
+  Admitted.
   
 End FireSpn.
 
@@ -1988,7 +2158,8 @@ Section AnimateSpn.
       no_isolated_or_unknown_trans spn i ->
       uniq_index_lneighbours spn neighbours ->
       nodup_marking spn ->
-      no_unmarked_or_unknown_place spn i ->
+      no_unmarked_place spn i ->
+      no_unknown_place_in_marking spn i n ->
       uniq_index_marking spn i n ->
       exists value : list trans_type * SPN, spn_cycle spn = Some value.
   Proof.
@@ -2002,10 +2173,19 @@ Section AnimateSpn.
            Hno_isolated_or_unknown_trans
            Huniq_index_lneighbours
            Hnodup_marking
-           Hno_unmarked_or_unknown_place
+           Hno_unmarked_place
+           Hno_unknown_place_inmarking
            Huniq_index_marking.
-    elim spn; intros places transs pre post test inhib marking priority_groups lneighbours.
-    unfold spn_fire. 
+    destruct spn.
+    unfold spn_cycle.
+    unfold spn_fire.
+    unfold spn_map_fire_pre.
+    unfold spn_map_fire_pre_aux.
+    unfold spn_fire_pre.
+    unfold spn_fire_pre_aux.
+    unfold update_marking_pre.
+    unfold modify_m.
+    case spn_fire.
     - intro; elim p0; intros. exists ((a, {| places := places;
                                       transs := transs;
                                       pre := pre;
