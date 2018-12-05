@@ -1,4 +1,5 @@
-Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool FunInd Coq.Lists.ListDec Program. 
+Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool FunInd Coq.Lists.ListDec
+        Coq.Classes.EquivDec Program. 
 Export ListNotations.
 
 Print NoDup.
@@ -19,18 +20,10 @@ Print NoDup.
 (*===================================================================*)
 
 (* A place is identified by an index which is unique. *)
-Inductive place_type : Set :=
-| mk_place : nat -> place_type.
-
-(* Simpler notation for mk_place, strong binding level. *)
-Notation "'pl' nat" := (mk_place nat) (at level 100, no associativity).
+Definition place_type := nat.
 
 (* A transition is identified by an index which is unique. *)
-Inductive trans_type : Set :=
-| mk_trans : nat -> trans_type.
-
-(* Simpler notation for mk_transition, strong binding level. *)
-Notation "'tr' nat" := (mk_trans nat) (at level 100, no associativity).
+Definition trans_type := nat.
 
 (* There are 4 kinds of edges : pre, post, inhib, test 
  * along with "some" positive weight (default is 1 usually).       
@@ -52,7 +45,7 @@ Definition weight_type := trans_type -> place_type -> option nat_star.
  * the index of a place in the Petri net, and nboftokens
  * is the number of tokens currently assoicated to the place.
  *)
-Definition marking_type := list (nat * nat).
+Definition marking_type := list (place_type * nat).
 
 (* Defines a structure,
  * where index corresponds to a transition index
@@ -60,7 +53,7 @@ Definition marking_type := list (nat * nat).
  * pre, test, inhib and post neighbour places.
  *)
 Structure neighbours_type : Set := mk_neighbours {
-                                       index : nat;
+                                       index : trans_type;
                                        pre_pl : list place_type;
                                        test_pl : list place_type;
                                        inhib_pl : list place_type;
@@ -137,10 +130,10 @@ Definition NoIsolatedOrUnknownPlace (spn : SPN) (p : place_type) :=
 
 (* For all transition (tr i), (tr i) is in transs iff 
  * t is connected to at least one place. *)
-Definition NoIsolatedOrUnknownTrans (spn : SPN) (i : nat) :=
-  In (tr i) spn.(transs) <->
+Definition NoIsolatedOrUnknownTrans (spn : SPN) (t : trans_type) :=
+  In t spn.(transs) <->
   exists (pre_pl test_pl inhib_pl post_pl : list place_type),
-    In (mk_neighbours i pre_pl test_pl inhib_pl post_pl) spn.(lneighbours) /\
+    In (mk_neighbours t pre_pl test_pl inhib_pl post_pl) spn.(lneighbours) /\
     (pre_pl <> [] \/ test_pl <> [] \/ inhib_pl <> [] \/ post_pl <> []).
 
 (* For all neighbours, if neighbours is in lneighbours then
@@ -158,47 +151,18 @@ Definition NoDupMarking (spn : SPN) := NoDup spn.(marking).
 
 (* For all place (pl i), (pl i) is in places if
  * (pl i) is referenced in marking. *)
-Definition NoUnmarkedPlace (spn : SPN) (i : nat) :=
-  In (pl i) spn.(places) -> exists (n : nat), In (i, n) spn.(marking).
-
-(* For all couple (i, n), (i, n) is in marking if
- * (pl i) is in places. *)
-Definition NoUnknownPlaceInMarking (spn : SPN) (i n : nat) :=
-  In (i, n) spn.(marking) -> In (pl i) spn.(places).
-
-(* For all couple of nat (i, n), if (i, n) is in marking 
- * then there is no couple (i, n') in marking with n' different from n. *)
-Definition UniqIndexMarking (spn : SPN) (i n : nat) :=
-  In (i, n) spn.(marking) -> ~exists (n' : nat), In (i, n') spn.(marking) /\ n <> n'.
+Definition NoUnmarkedPlace (spn : SPN)  :=
+  spn.(places) = (fst (split spn.(marking))).
 
 (*********** EXTRA PROPERTIES ********)
 
-Definition IsPossibleSpnMarking
-           (some_marking : marking_type)
-           (spn : SPN)
-           (i n : nat) :=
-  (In (pl i) spn.(places) -> exists m : nat, In (i, m) some_marking) /\
-  (In (i, n) some_marking -> In (pl i) spn.(places)).
+Definition HaveSameStructure
+           (m1 : marking_type)
+           (m2 : marking_type) := fst (split m1) = fst (split m2).
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR SPN TYPES =====*)
 (*===============================================*)
-
-(*** Equality decidability for place_type. ***)
-Definition places_eq_dec :
-  forall x y : place_type, {x = y} + {x <> y}.
-Proof.
-  decide equality.
-  decide equality.
-Defined.
-
-(*** Equality decidability for trans_type. ***)
-Definition transs_eq_dec :
-  forall x y : trans_type, {x = y} + {x <> y}.
-Proof.
-  decide equality.
-  decide equality.
-Defined.
 
 (*** Equality decidability for neighbours_type ***)
 Definition neighbours_eq_dec :
@@ -219,11 +183,11 @@ Section Marking.
    *            Returns None if "index" doesn't belong
    *            to the marking.
    *)
-  Fixpoint get_m (marking : marking_type) (index : nat) : option nat :=
+  Fixpoint get_m (marking : marking_type) (p : place_type) : option nat :=
     match marking with
-    | (i, nboftokens) :: tail => if i =? index then
+    | (place, nboftokens) :: tail => if p =? place then
                                    Some nboftokens
-                                 else get_m tail index
+                                 else get_m tail p
     (* Exception : index is not in marking. *)
     | [] => None
     end.
@@ -233,41 +197,49 @@ Section Marking.
   (*** Formal specification for get_m ***)
   Inductive GetM : marking_type -> nat -> option nat -> Prop :=
   | GetM_err :
-      forall (i : nat), GetM [] i None
+      forall (p : place_type), GetM [] p None
   | GetM_if :
-      forall (m m' : marking_type) (index i nboftokens : nat),
-        m = (i, nboftokens) :: m' ->
-        index = i ->
-        GetM m index (Some nboftokens)
+      forall (m m' : marking_type)
+             (nboftokens : nat)
+             (p place : place_type),
+        m = (place, nboftokens) :: m' ->
+        p = place ->
+        GetM m p (Some nboftokens)
   | GetM_else :
-      forall (m m' : marking_type) (index i  n : nat) (opt_nboftokens : option nat),
-        m = (i, n) :: m' ->
-        index <> i ->
-        GetM m' index opt_nboftokens -> GetM m index opt_nboftokens.
+      forall (m m' : marking_type)
+             (p place : place_type)
+             (nboftokens : nat)
+             (opt_nboftokens : option nat),
+        m = (place, nboftokens) :: m' ->
+        p <> place ->
+        GetM m' p opt_nboftokens ->
+        GetM m p opt_nboftokens.
 
   (*** Correctness proof : get_m ***)
   Theorem get_m_correct :
-    forall (m : marking_type) (index : nat) (opt_nboftokens : option nat),
-      get_m m index = opt_nboftokens -> GetM m index opt_nboftokens.
+    forall (m : marking_type)
+           (p : place_type)
+           (opt_nboftokens : option nat),
+      get_m m p = opt_nboftokens -> GetM m p opt_nboftokens.
   Proof.
-    do 2 intro; functional induction (get_m m index0) using get_m_ind; intros.
+    do 2 intro; functional induction (get_m m p) using get_m_ind; intros.
     (* Case m = []. *)
     - rewrite <- H; apply GetM_err.
     (* Case if is true. *)
     - rewrite <- H.
-      apply GetM_if with (m' := tail) (i := i);
+      apply GetM_if with (m' := tail) (p := p) (place := place);
         [auto | rewrite Nat.eqb_sym in e1; apply beq_nat_true in e1; auto].
     (* Case else *)
-    - apply GetM_else with (i := i) (n := nboftokens) (m' := tail).
+    - apply GetM_else with (p := p) (place := place) (nboftokens := nboftokens) (m' := tail).
       + auto.
-      + rewrite Nat.eqb_sym in e1. apply beq_nat_false in e1. assumption.
-      + rewrite <- H. apply IHo with (opt_nboftokens := (get_m tail index0)). auto.
+      + rewrite Nat.eqb_sym in e1. apply beq_nat_false in e1. auto.
+      + rewrite <- H. apply IHo with (opt_nboftokens := (get_m tail p)). auto.
   Qed.
 
   (*** Completeness proof : get_m ***)
   Theorem get_m_compl :
-    forall (m : marking_type) (index : nat) (opt_nboftokens : option nat),
-      GetM m index opt_nboftokens -> get_m m index = opt_nboftokens.
+    forall (m : marking_type) (p : place_type) (opt_nboftokens : option nat),
+      GetM m p opt_nboftokens -> get_m m p = opt_nboftokens.
   Proof.
     intros. induction H.
     (* Case GetM_0 *)
@@ -281,64 +253,50 @@ Section Marking.
     (* Case GetM_else *)
     - rewrite H. simpl.
       apply Nat.eqb_neq in H0.
-      rewrite Nat.eqb_sym. rewrite H0.
+      rewrite Nat.eqb_sym.
+      apply beq_nat_false in H0.
+      apply not_eq_sym in H0.
+      apply Nat.eqb_neq in H0.
+      rewrite H0.
       assumption.
   Qed.
 
-  (* Lemma : For all marking "some_marking", (get_m some_marking i) returns no error
-   *         if (pl i) is in the list of places spn.(places)
-   *         and if some_marking verifies properties regarding spn.(marking).
-   *         In fact, get_m doesn't always receive a spn.(marking)
-   *         as a direct argument. Sometimes, it receives some
-   *         intermediate marking corresponding to a modified spn.(marking).
-   *         That's why proving that (get_m spn.(marking) i) returns no error
-   *         is not sufficient.
+  (* Lemma : Proves a property over the combination of fst and split 
+   *         functions.
+   *)
+  Lemma fst_split_app {A B : Type} :
+    forall (a : (A * B)) (l : list (A * B)),
+      fst (split (a :: l)) = (fst (split [a])) ++ (fst (split l)).
+  Proof.
+    intros.
+    elim a; simpl.
+    elim split; simpl.
+    auto.
+  Qed.
+  
+  (* Lemma : For all marking "some_marking" and pair of nat (i, n), 
+   *         (get_m some_marking i) returns no error
+   *         if (i, n) is in some_marking.
    **)
   Lemma get_m_no_error :
-    forall (spn : SPN)
-           (i n n' : nat)
-           (some_marking : marking_type),
-      NoUnmarkedPlace spn i ->
-      NoUnknownPlaceInMarking spn i n ->
-      IsPossibleSpnMarking some_marking spn i n ->
-      In (pl i) spn.(places) ->
-      exists v : nat, get_m some_marking i = Some v.
+    forall (some_marking : marking_type)
+           (p : place_type),
+      In p (fst (split some_marking)) ->
+      exists v : nat, get_m some_marking p = Some v.
   Proof.
-    do 2 intro.
-    unfold NoUnmarkedPlace;
-      unfold NoUnknownPlaceInMarking;
-      unfold IsPossibleSpnMarking.
-    (* Induction on marking. *)
-    induction (some_marking). intros.
-    (* Base case (marking spn) = [], contradiction regarding the hypothesis *)
-    - elim H1; intros.
-      apply H3 in H2.
-      elim H2; intros.
-      elim H5.
-    (* Inductive case *)
-    - unfold get_m.
-      induction a; intros.
-      case_eq (a =? i); intros.
-      (* Case i is the index of the head couple. *)
-      + exists b; auto.
-      (* Case i is not the index of the head couple. *)
-      + apply IHm.
-        (* Case NoUnmarkedPlace *)
-        -- auto.
-        (* Case NoUnknownPlaceInMarking *)
-        -- auto.
-        (* Case IsPossibleSpnMarking *)
-        -- intros. {
-             split.
-             - elim H1; intros.
-               apply H4 in H2; elim H2; intros.
-               apply in_inv in H7; elim H7; intros.
-               + injection H8; intros. apply beq_nat_false in H3. contradiction.
-               + exists x; auto.
-             - intro; auto.
-           }
-        (* Case pl i is in places *)
-        -- auto.
+    intros.
+    functional induction (get_m some_marking p)
+               using get_m_ind.
+    - elim H.
+    - exists nboftokens; auto.
+    - apply IHo.
+      rewrite fst_split_app in H.
+      simpl in H.
+      elim H; intros.
+      + apply beq_nat_false in e1.
+        symmetry in H0.
+        contradiction.
+      + auto.
   Qed.
   
   (*
@@ -493,6 +451,39 @@ Section Marking.
          ++ apply NoDup_cons_iff in H; elim H; intros; auto.
          ++ apply not_in_cons in H0; elim H0; intros; auto.
   Qed.
+
+  (* Lemma : Proves that replace_occ preserves structure
+   *         of a marking m passed as argument when 
+   *         (fst occ) = (fst repl).
+   *)
+  Lemma replace_occ_same_struct :
+    forall (m : marking_type)
+           (p : place_type)
+           (n n' : nat),
+      HaveSameStructure (replace_occ prodnat_eq_dec (p, n) (p, n') m) m.
+  Proof.
+    do 4 intro.
+    unfold HaveSameStructure.
+    functional induction (replace_occ prodnat_eq_dec (p, n) (p, n') m)
+               using replace_occ_ind;
+      intros.
+    (* Base case. *)
+    - auto.
+    (* Case (p,n) is hd of list. *)
+    - intros.
+      rewrite fst_split_app.
+      symmetry.
+      rewrite fst_split_app.
+      rewrite IHl.
+      simpl.
+      auto.
+    (* Case (p, n) not hd of list. *)
+    - rewrite fst_split_app.
+      symmetry.
+      rewrite fst_split_app.
+      rewrite IHl.
+      auto.
+  Qed.
   
   (* Function : Given a marking m, add/remove nboftokens tokens (if not None)
    *            inside place p and returns the new marking.
@@ -506,20 +497,18 @@ Section Marking.
              (p : place_type)
              (op : nat -> nat -> nat)
              (nboftokens : option nat_star) : option marking_type :=
-    match p with
-    | (pl i) => match nboftokens with
-                | None => Some m
-                | Some (mk_nat_star n' _) =>
-                  let opt_n := get_m m i in
-                  match opt_n with
-                  (* The couple (i, n) to remove must be unique. *)
-                  | Some n =>
-                    Some (replace_occ prodnat_eq_dec (i, n) (i, (op n n')) m)
-                  (* If couple with first member i doesn't exist
-                   * in m, then returns None (it's an exception). *)
-                  | None => None 
-                  end
-                end
+    match nboftokens with
+    | None => Some m
+    | Some (mk_nat_star n' _) =>
+      let opt_n := get_m m p in
+      match opt_n with
+      (* The couple (i, n) to remove must be unique. *)
+      | Some n =>
+        Some (replace_occ prodnat_eq_dec (p, n) (p, (op n n')) m)
+      (* If couple with first member i doesn't exist
+       * in m, then returns None (it's an exception). *)
+      | None => None 
+      end
     end.
 
   Functional Scheme modify_m_ind := Induction for modify_m Sort Prop.
@@ -535,21 +524,18 @@ Section Marking.
   (* Case place of index i is not in the marking,
    * which is a exception case. *)
   | ModifyM_err :
-      forall (i : nat)
-             (n : nat_star),
-        p = (pl i) ->
-        GetM m i None ->
+      forall (n : nat_star),
+        GetM m p None ->
         ModifyM m p op (Some n) None
   (* Case place of index i exists in the marking *)
   | ModifyM_some_repl :
       forall (nboftokens : option nat_star)
-             (i n n' : nat)
+             (n n' : nat)
              (is_positive : n' > 0)
              (m' : marking_type),
-        (pl i) = p ->
         nboftokens = Some (mk_nat_star n' is_positive) ->
-        GetM m i (Some n) ->
-        ReplaceOcc prodnat_eq_dec (i, n) (i, (op n n')) m m' ->
+        GetM m p (Some n) ->
+        ReplaceOcc prodnat_eq_dec (p, n) (p, (op n n')) m m' ->
         ModifyM m p op nboftokens (Some m').
 
   (*** Correctness proof : modify_m ***)
@@ -564,17 +550,14 @@ Section Marking.
     do 5 intro; functional induction (modify_m m p op nboftokens)
                            using modify_m_ind; intros.
     (* Case (pl i) exists in marking m *)
-    - rewrite <- H. apply ModifyM_some_repl with (i := i)
-                                    (n := n0)
-                                    (n' := n')
-                                    (is_positive := _x).
+    - rewrite <- H. apply ModifyM_some_repl with (n := n0)
+                                                 (n' := n')
+                                                 (is_positive := _x).
       + auto.
-      + auto.
-      + apply get_m_correct in e2; auto.
+      + apply get_m_correct in e1; auto.
       + apply replace_occ_correct; auto.
     (* Case (pl i) doesn't exist in marking m (error) *)
-    - rewrite <- H. apply ModifyM_err with (i := i).
-      + auto.
+    - rewrite <- H. apply ModifyM_err.
       + apply get_m_correct; auto.
     (* Case nboftokens is None *)
     - rewrite <- H; apply ModifyM_tokens_none.
@@ -591,76 +574,69 @@ Section Marking.
   Proof.
     intros; induction H.
     (* Case  ModifyM_tokens_none *)
-    - unfold modify_m; elim p; auto.
+    - simpl; auto.
     (* Case ModifyM_err *)
-    - unfold modify_m; rewrite H; elim n; intros.
-      apply get_m_compl in H0; rewrite H0; auto.
+    - unfold modify_m; elim n; intros.
+      apply get_m_compl in H; rewrite H; auto.
     (* Case ModifyM_some_repl *)
-    - unfold modify_m; rewrite <- H; rewrite H0; apply get_m_compl in H1; rewrite H1.
-      apply replace_occ_compl in H2; rewrite H2; auto.      
+    - unfold modify_m; rewrite H; apply get_m_compl in H0; rewrite H0.
+      apply replace_occ_compl in H1; rewrite H1; auto.      
   Qed.
 
+  (* Lemma : Proves that modify_m conserves
+   *         the structure of the marking m
+   *         passed as argument.  
+   *)
+  Lemma modify_m_same_struct :
+    forall (m m' : marking_type)
+           (p : place_type)
+           (op : nat -> nat -> nat)
+           (nboftokens : option nat_star),
+      modify_m m p op nboftokens = Some m' ->
+      HaveSameStructure m m'.
+  Proof.
+    do 5 intro.
+    functional induction (modify_m m p op nboftokens)
+               using modify_m_ind;
+      intros.
+    - injection H; intros.
+      rewrite <- H0.
+      unfold HaveSameStructure; symmetry.
+      apply replace_occ_same_struct.
+    - inversion H.
+    - injection H; intros.
+      rewrite H0.
+      unfold HaveSameStructure; auto.
+  Qed.
+  
   (* Lemma : For all spn, and marking "some_marking", 
    *         (modify_m some_marking (pl i) op nboftokens) returns no error
    *         if (pl i) is in the list of places spn.(places) and if
    *         some_marking verifies properties regarding spn.(marking).
    *)
   Lemma modify_m_no_error :
-    forall (spn : SPN)
-           (nboftokens : option nat_star)
+    forall (nboftokens : option nat_star)
            (some_marking : marking_type)
            (op : nat -> nat -> nat)
-           (i n n' : nat),
-      NoUnmarkedPlace spn i ->
-      NoUnknownPlaceInMarking spn i n ->
-      IsPossibleSpnMarking some_marking spn i n ->
-      In (pl i) spn.(places) ->
+           (p : place_type),
+      In p (fst (split some_marking)) ->
       exists v : marking_type,
-        modify_m some_marking (pl i) op nboftokens = Some v /\ IsPossibleSpnMarking v spn i n.
+        modify_m some_marking p op nboftokens = Some v.
   Proof.
-    do 2 intro.
-    unfold NoUnmarkedPlace;
-      unfold NoUnknownPlaceInMarking;
-      unfold IsPossibleSpnMarking.
-    simpl.
-    case nboftokens.
-    - intro; elim n. intros.
-      (* Using get_m_no_error lemma. *)
-      cut (exists v : nat, get_m some_marking i = Some v).
-      (* Replaces get_m with Some v *)
-      + intro; elim H3; intros.
-        rewrite H4; exists (replace_occ prodnat_eq_dec (i, x) (i, op x int0) some_marking).
-        (* Proving that modify_m returns Some marking and that this marking 
-         * has some properties. *)
-        split.
-        (* Proof 1 : modify_m returns Some marking, trivial if get_m returns a value. *)
-        -- auto.
-        (* Proof 2 : The returned marking verifies some properties. *)
-        -- elim H1; intros; clear H1. split. {
-             intro. exists (op x int0).
-             unfold replace_occ.
-             induction some_marking.
-             (* Base case, some_marking = [] *)
-             - simpl in H4. discriminate H4.
-             (* Inductive case, depends of prodnat_eq_dec value. *)
-             - elim (prodnat_eq_dec a (i, x)); intros.
-               + apply in_eq.   (* Case a = (i, x) *)
-               + apply in_cons. (* Case a <> (i, x) *)
-                 apply IHsome_marking.
-                 (* !!!! CAREFUL HERE, PROOF GAVE UP !!!! *)
-                 -- (* Some difficulty to prove that  
-                     * get_m (a :: some_marking) i -> get_m some_marking i,
-                     * knowing that a <> (i, x).
-                     *)
-                 -- admit.
-                 -- admit.
-                 -- admit.
-           }
-           { intro; auto. }
-      + apply (get_m_no_error spn i n n' some_marking).
-        auto. auto. auto. auto. auto.      
-    - exists some_marking. split; [ auto | split; [auto | auto]].
-  Admitted.
+    intros.
+    functional induction (modify_m some_marking p op nboftokens)
+               using modify_m_ind.    
+    (* Base case *)
+    - exists (replace_occ prodnat_eq_dec (p, n0) (p, op n0 n') some_marking).
+      auto.
+    (* Case get_m = None, not possible. *)
+    - apply get_m_no_error in H.
+      elim H; intros.
+      rewrite H0 in e1.
+      inversion e1.
+    (* Case nboftokens = None *)
+    - exists some_marking; auto.    
+  Qed.             
   
   (*=================================================*)
   (*=============== UPDATE MARKING ==================*)
@@ -751,50 +727,47 @@ Section Marking.
     (* Case UpdateMarkingPre_err *)
     - simpl; apply modify_m_compl in H; rewrite H; auto.
   Qed.
-
-  (* Lemma : 
-   **)
+  
+  (* Lemma : Proves that update_marking_pre returns no error 
+   *         if all places of the list passed as argument
+   *         are referenced in the marking (also passed as argument).
+   *)
   Lemma update_marking_pre_no_error :
-    forall (spn : SPN)
-           (t : trans_type)
+    forall (t : trans_type)
+           (pre : weight_type)
            (some_places : list place_type)
-           (some_marking : marking_type)
-           (i n n' : nat),
-      NoUnmarkedPlace spn i ->
-      NoUnknownPlaceInMarking spn i n ->
-      (In (pl i) spn.(places) -> exists m : nat, In (i, m) some_marking) ->
-      (In (i, n') some_marking -> In (pl i) spn.(places)) ->
-      (In (pl i) some_places -> In (pl i) spn.(places)) ->
+           (some_marking : marking_type),
+      (forall p : place_type, In p some_places -> In p (fst (split some_marking))) ->
       exists v : marking_type,
-        update_marking_pre t spn.(pre) some_marking some_places = Some v.
+        update_marking_pre t pre some_marking some_places = Some v.
   Proof.
-    do 2 intro.
-    unfold NoDupPlaces;
-      unfold NoDupMarking;
-      unfold NoUnmarkedPlace;
-      unfold NoUnknownPlaceInMarking;
-      unfold UniqIndexMarking.
-    (* Induction on places. *)
-    induction (some_places).
-    (* Base case spn.(places) = [] *)
-    - intro; simpl; exists some_marking; auto.
-    (* Inductive case *)
-    - destruct a. do 4 intro.
-      unfold update_marking_pre.
-      (*  *)
-      cut (exists v : marking_type, modify_m some_marking (pl n) Nat.sub (pre spn t (pl n)) = Some v /\
-                                    (In (pl i) spn.(places) -> exists m : nat, In (i, m) v) /\
-                                    (In (i, n') v -> In (pl i) spn.(places))).
-      + intro; elim H; do 2 intro. elim H0; intros; rewrite H1; intros.
-        apply (IHl x i n0 n').
-        auto. auto. elim H2; intros. auto. auto. elim H2; intros; auto. auto.
-        intro. apply in_cons with (a := (pl n)) in H8. apply H7 in H8; auto.
-      (* !!! Need to prove the cut. !!! *)
-      + (* apply modify_m_no_error with (nboftokens := (pre spn t (pl n0))) *)
-        (*                              (op := Nat.sub) *)
-        (*                              (i := n0) *)
-        (*                              (n := n) in H0. *)
-  Admitted.
+    intros t pre some_places some_marking p;
+    functional induction (update_marking_pre t pre some_marking some_places)
+               using update_marking_pre_ind;
+    intros.
+    (* Base case, some_places = []. *)
+    - exists m; auto.
+    (* Case modify_m returns some marking. *)
+    - apply IHo; intros.
+      apply (in_cons p0) in H.
+      apply p in H.
+      apply modify_m_same_struct in e0.
+      unfold HaveSameStructure in e0.
+      rewrite <- e0.
+      auto.
+    (* Case modify_m returns None, 
+     * impossible regarding the hypothesis 
+     *)
+    - cut (In p0 (p0 :: tail)).
+      + intro.
+        apply p in H.
+        apply modify_m_no_error with (nboftokens := (pre t p0))
+                                     (op := Nat.sub) in H.
+        elim H; intros.
+        rewrite e0 in H0.
+        inversion H0.
+      + apply in_eq.
+  Qed.
   
   (* 
    * Function : Adds some tokens from post places, according 
@@ -884,6 +857,47 @@ Section Marking.
     - simpl; apply modify_m_compl in H0; rewrite H0; auto.
   Qed.
 
+  (* Lemma : Proves that update_marking_pre returns no error 
+   *         if all places of the list passed as argument
+   *         are referenced in the marking (also passed as argument).
+   *)
+  Lemma update_marking_post_no_error :
+    forall (t : trans_type)
+           (post : weight_type)
+           (some_places : list place_type)
+           (some_marking : marking_type),
+      (forall p : place_type, In p some_places -> In p (fst (split some_marking))) ->
+      exists v : marking_type,
+        update_marking_post t post some_marking some_places = Some v.
+  Proof.
+    intros t post some_places some_marking p;
+    functional induction (update_marking_post t post some_marking some_places)
+               using update_marking_post_ind;
+    intros.
+    (* Base case, some_places = []. *)
+    - exists m; auto.
+    (* Case modify_m returns some marking. *)
+    - apply IHo; intros.
+      apply (in_cons p0) in H.
+      apply p in H.
+      apply modify_m_same_struct in e0.
+      unfold HaveSameStructure in e0.
+      rewrite <- e0.
+      auto.
+    (* Case modify_m returns None, 
+     * impossible regarding the hypothesis 
+     *)
+    - cut (In p0 (p0 :: tail)).
+      + intro.
+        apply p in H.
+        apply modify_m_no_error with (nboftokens := (post t p0))
+                                     (op := Nat.add) in H.
+        elim H; intros.
+        rewrite e0 in H0.
+        inversion H0.
+      + apply in_eq.
+  Qed.
+  
 End Marking.
 
 (*===============================================================*)
@@ -909,22 +923,21 @@ Section Edges.
            (places : list place_type)
            (check_result : bool) : option bool :=
     match places with
-    | (pl i) :: tail => match pre_or_test_arcs_t (pl i) with
-                        (* If there is no pre or test edge between (pl i) and t. *)
-                        | None => check_pre_or_test pre_or_test_arcs_t m tail check_result
-                        (* Else some pre or test edge exists. *)
-                        | Some (mk_nat_star edge_weight _) =>
-                          (* Retrieves the number of tokens associated 
-                           * with place i. *)
-                          let nboftokens := (get_m m i) in
-                          match nboftokens with
-                          | Some n =>
-                            check_pre_or_test pre_or_test_arcs_t m tail ((edge_weight <=? n)
-                                                                           && check_result)
-                          (* If number of tokens is None, then it's an error. *)
-                          | None => None
-                          end
-                        end
+    | p :: tail => match pre_or_test_arcs_t p with
+                   (* If there is no pre or test edge between p and t. *)
+                   | None => check_pre_or_test pre_or_test_arcs_t m tail check_result
+                   (* Else some pre or test edge exists. *)
+                   | Some (mk_nat_star edge_weight _) =>
+                     (* Retrieves the number of tokens associated 
+                      * with place p. *)
+                     match get_m m p with
+                     | Some n =>
+                       check_pre_or_test pre_or_test_arcs_t m tail ((edge_weight <=? n)
+                                                                      && check_result)
+                     (* If number of tokens is None, then it's an error. *)
+                     | None => None
+                     end
+                   end
     (* check_result must be initialized to true. *)
     | [] => Some check_result
     end.
@@ -941,31 +954,33 @@ Section Edges.
         CheckPreOrTest pre_or_test_arcs_t m [] b (Some b)
   | CheckPreOrTest_edge_none :
       forall (places : list place_type)
-             (i : nat)
+             (p : place_type)
              (check_result : bool)
              (optionb : option bool),
-        pre_or_test_arcs_t (pl i) = None ->
+        pre_or_test_arcs_t p = None ->
         CheckPreOrTest pre_or_test_arcs_t m places check_result optionb ->
-        CheckPreOrTest pre_or_test_arcs_t m ((pl i) :: places) check_result optionb
+        CheckPreOrTest pre_or_test_arcs_t m (p :: places) check_result optionb
   | CheckPreOrTest_err :
-      forall (places : list place_type) 
-             (i edge_weight : nat)
+      forall (places : list place_type)
+             (p : place_type)
+             (edge_weight : nat)
              (check_result : bool)
              (is_positive : edge_weight > 0),
-        pre_or_test_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
-        GetM m i None ->
-        CheckPreOrTest pre_or_test_arcs_t m ((pl i) :: places) check_result None
+        pre_or_test_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
+        GetM m p None ->
+        CheckPreOrTest pre_or_test_arcs_t m (p :: places) check_result None
   | CheckPreOrTest_tokens_some :
       forall (places : list place_type) 
-             (i n edge_weight : nat)
+             (n edge_weight : nat)
+             (p : place_type)
              (is_positive : edge_weight > 0)
              (check_result : bool)
              (optionb : option bool),
-      pre_or_test_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
-      GetM m i (Some n) ->
+      pre_or_test_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
+      GetM m p (Some n) ->
       CheckPreOrTest pre_or_test_arcs_t m places ((edge_weight <=? n) && check_result)
-                             optionb ->
-      CheckPreOrTest pre_or_test_arcs_t m ((pl i) :: places) check_result optionb.
+                     optionb ->
+      CheckPreOrTest pre_or_test_arcs_t m (p :: places) check_result optionb.
 
   (*** Correctness proof : check_pre_or_test ***)
   Theorem check_pre_or_test_correct :
@@ -984,18 +999,18 @@ Section Edges.
     (* Case places = [] *)
     - rewrite <- H; apply CheckPreOrTest_nil.
     (* Case edge and tokens exist *)
-    - apply CheckPreOrTest_tokens_some with (i := i)
-                                               (n := n0)
-                                               (edge_weight := edge_weight)
-                                               (is_positive := _x).
-      + rewrite e1; auto.
+    - apply CheckPreOrTest_tokens_some with (p := p)
+                                            (n := n0)
+                                            (edge_weight := edge_weight)
+                                            (is_positive := _x).
+      + rewrite e0; auto.
       + apply get_m_correct; auto.
       + apply IHo; auto. 
     (* Case of error, get_m returns None *)
-    - rewrite <- H; apply CheckPreOrTest_err with (i := i)
-                                               (edge_weight := edge_weight)
-                                               (is_positive := _x).
-      + rewrite e1; auto.
+    - rewrite <- H; apply CheckPreOrTest_err with (p := p)
+                                                  (edge_weight := edge_weight)
+                                                  (is_positive := _x).
+      + rewrite e0; auto.
       + apply get_m_correct; auto.
     (* Case edge doesn't exist *)
     - apply CheckPreOrTest_edge_none.
@@ -1023,6 +1038,47 @@ Section Edges.
     (* Case CheckPreOrTest_tokens_some *)
     - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
   Qed.
+
+  (* Lemma : Proves that check_pre_or_test returns no error if
+   *         the places in list places are referenced in marking m.
+   *
+   *)
+  Lemma check_pre_or_test_no_error :
+    forall (pre_or_test_arcs_t : place_type -> option nat_star)
+           (m : marking_type)
+           (places : list place_type)
+           (check_result : bool),
+      (forall p : place_type, In p places -> In p (fst (split m))) ->
+      exists v : bool,
+        check_pre_or_test pre_or_test_arcs_t m places check_result = Some v.
+  Proof.
+    intros pre_or_test_arcs_t m places check_result.
+    functional induction (check_pre_or_test pre_or_test_arcs_t m places check_result)
+               using check_pre_or_test_ind;
+      intros.
+    (* Base case, places = [] *)
+    - exists check_result; auto.
+    (* Case get_m = Some v *)
+    - apply IHo; intros.
+      apply (in_cons p) in H0.
+      apply H in H0.
+      auto.
+    (* Case get_m = None, impossible regarding the  
+     * hypothesis.
+     *)
+    - cut (In p (p :: tail)).
+      + intro.
+        apply H in H0.
+        apply get_m_no_error in H0.
+        elim H0; intros.
+        rewrite e2 in H1; inversion H1.
+      + apply in_eq.
+    (* Case pre_or_test_arcs_t = None. *)
+    - apply IHo; intros.
+      apply (in_cons p) in H0.
+      apply H in H0.
+      auto.
+  Qed.
   
   (**************************************************)
   (**************************************************)
@@ -1040,20 +1096,18 @@ Section Edges.
            (places : list place_type)
            (check_result : bool) : option bool :=
     match places with
-    | (pl i) :: tail => match inhib_arcs_t (pl i) with
-                        (* If there is inhib edge between (pl i) and t. *)
-                        | None => check_inhib inhib_arcs_t m tail check_result
-                        (* Else some inhib edge exists. *)
-                        | Some (mk_nat_star edge_weight _) =>
-                          let nboftokens := (get_m m i) in
-                          match nboftokens with
-                          | Some n => check_inhib inhib_arcs_t m tail (check_result
-                                                                         && (n <? edge_weight))
-                          (* Case of error, place i is not in m. *)
-                          | None => None
-                          end
-                          
-                        end
+    | p :: tail => match inhib_arcs_t p with
+                   (* If there is inhib edge between (pl i) and t. *)
+                   | None => check_inhib inhib_arcs_t m tail check_result
+                   (* Else some inhib edge exists. *)
+                   | Some (mk_nat_star edge_weight _) =>
+                     match get_m m p with
+                     | Some n => check_inhib inhib_arcs_t m tail (check_result
+                                                                    && (n <? edge_weight))
+                     (* Case of error, place i is not in m. *)
+                     | None => None
+                     end
+                   end
     | [] => Some check_result
     end.
 
@@ -1069,30 +1123,32 @@ Section Edges.
         CheckInhib inhib_arcs_t m [] b (Some b)
   | CheckInhib_edge_none :
       forall (places : list place_type)
-             (i : nat)
+             (p : place_type)
              (check_result : bool)
              (optionb : option bool),
-      inhib_arcs_t (pl i) = None ->
+      inhib_arcs_t p = None ->
       CheckInhib inhib_arcs_t m places check_result optionb->
-      CheckInhib inhib_arcs_t m ((pl i) :: places) check_result optionb
+      CheckInhib inhib_arcs_t m (p :: places) check_result optionb
   | CheckInhib_err :
-      forall (places : list place_type) 
-             (i edge_weight : nat)
+      forall (places : list place_type)
+             (p : place_type)
+             (edge_weight : nat)
              (is_positive : edge_weight > 0)
              (check_result : bool),
-        inhib_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
-        GetM m i None ->
-        CheckInhib inhib_arcs_t m ((pl i) :: places) check_result None
+        inhib_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
+        GetM m p None ->
+        CheckInhib inhib_arcs_t m (p :: places) check_result None
   | CheckInhib_tokens_some :
-      forall (places : list place_type) 
-             (i n edge_weight : nat)
+      forall (places : list place_type)
+             (p : place_type)
+             (n edge_weight : nat)
              (is_positive : edge_weight > 0)
              (check_result : bool)
              (optionb : option bool),
-      inhib_arcs_t (pl i) = Some (mk_nat_star edge_weight is_positive) ->
-      GetM m i (Some n) ->
+      inhib_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
+      GetM m p (Some n) ->
       CheckInhib inhib_arcs_t m places (check_result && (n <? edge_weight)) optionb ->
-      CheckInhib inhib_arcs_t m ((pl i) :: places) check_result optionb.
+      CheckInhib inhib_arcs_t m (p :: places) check_result optionb.
 
   (*** Correctness proof : check_inhib ***)
    Theorem check_inhib_correct :
@@ -1111,18 +1167,18 @@ Section Edges.
     (* Case places = [] *)
     - rewrite <- H; apply CheckInhib_nil.
     (* Case edge and tokens exist *)
-    - apply CheckInhib_tokens_some with (i := i)
-                                               (n := n0)
-                                               (edge_weight := edge_weight)
-                                               (is_positive := _x).
-      + rewrite e1; auto.
+    - apply CheckInhib_tokens_some with (p := p)
+                                        (n := n0)
+                                        (edge_weight := edge_weight)
+                                        (is_positive := _x).
+      + rewrite e0; auto.
       + apply get_m_correct; auto.
       + apply IHo; auto.
     (* Case edge exists but no tokens, case of error! *)
-    - rewrite <- H; apply CheckInhib_err with (i := i)
-                                                       (edge_weight := edge_weight)
-                                                       (is_positive := _x).
-      + rewrite e1; auto.
+    - rewrite <- H; apply CheckInhib_err with (p := p)
+                                              (edge_weight := edge_weight)
+                                              (is_positive := _x).
+      + rewrite e0; auto.
       + apply get_m_correct; auto.
     (* Case edge doesn't exist *)
     - apply CheckInhib_edge_none.
@@ -1149,6 +1205,47 @@ Section Edges.
     - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
     (* Case CheckInhib_tokens_some *)
     - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
+  Qed.
+
+  (* Lemma : Proves that check_inhib returns no error if
+   *         the places in list places are referenced in marking m.
+   *
+   *)
+  Lemma check_inhib_no_error :
+    forall (inhib_arcs_t : place_type -> option nat_star)
+           (m : marking_type)
+           (places : list place_type)
+           (check_result : bool),
+      (forall p : place_type, In p places -> In p (fst (split m))) ->
+      exists v : bool,
+        check_inhib inhib_arcs_t m places check_result = Some v.
+  Proof.
+    intros inhib_arcs_t m places check_result.
+    functional induction (check_inhib inhib_arcs_t m places check_result)
+               using check_inhib_ind;
+      intros.
+    (* Base case, places = [] *)
+    - exists check_result; auto.
+    (* Case get_m = Some v *)
+    - apply IHo; intros.
+      apply (in_cons p) in H0.
+      apply H in H0.
+      auto.
+    (* Case get_m = None, impossible regarding the  
+     * hypothesis.
+     *)
+    - cut (In p (p :: tail)).
+      + intro.
+        apply H in H0.
+        apply get_m_no_error in H0.
+        elim H0; intros.
+        rewrite e2 in H1; inversion H1.
+      + apply in_eq.
+    (* Case pre_or_test_arcs_t = None. *)
+    - apply IHo; intros.
+      apply (in_cons p) in H0.
+      apply H in H0.
+      auto.
   Qed.
   
   (*****************************************************)
@@ -1270,6 +1367,52 @@ Section Edges.
            +++ case (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t) true);
                  [ apply check_inhib_compl in H; rewrite H; auto | intro; auto ].
            +++ auto.
+  Qed.
+
+  (* Lemma : Proves that check_all_edges returns no error if
+   *         the places in (pre_pl neighbours_t), (inhib_pl neighbours_t) 
+   *         and (test_pl neighbours_t) are referenced in markings steadym
+   *         and decreasingm.  
+   *
+   *)
+  Lemma check_all_edges_no_error :
+    forall (neighbours_t : neighbours_type)
+           (pre_arcs_t : place_type -> option nat_star)
+           (test_arcs_t : place_type -> option nat_star)
+           (inhib_arcs_t : place_type -> option nat_star)
+           (steadym decreasingm : marking_type),
+      (forall p : place_type,
+          In p (pre_pl neighbours_t) -> In p (fst (split decreasingm))) ->
+      (forall p : place_type,
+          In p (test_pl neighbours_t) -> In p (fst (split steadym))) ->
+      (forall p : place_type,
+          In p (inhib_pl neighbours_t) -> In p (fst (split steadym))) ->
+      exists v : bool,
+        check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = Some v.
+  Proof.
+    do 6 intro.
+    functional induction (check_all_edges neighbours_t
+                                          pre_arcs_t test_arcs_t inhib_arcs_t
+                                          steadym
+                                          decreasingm)
+               using check_all_edges_ind; intros.
+    (* Case all went well. *)
+    - exists (check_pre_result && check_test_result && check_inhib_result); auto.
+    (* Case check_inhib = None, impossible regarding hypothesis. *)
+    - apply check_inhib_no_error with (inhib_arcs_t := inhib_arcs_t)
+                                      (check_result := true) in H1.
+      elim H1; intros.
+      rewrite e1 in H2; inversion H2.
+    (* Case check_test = None, impossible regarding hypothesis. *)
+    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := test_arcs_t)
+                                            (check_result := true) in H0.
+      elim H0; intros.
+      rewrite e0 in H2; inversion H2.
+    (* Case check_pre = None, impossible regarding hypothesis. *)
+    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := pre_arcs_t)
+                                            (check_result := true) in H.
+      elim H; intros.
+      rewrite e in H2; inversion H2.
   Qed.
   
 End Edges.
