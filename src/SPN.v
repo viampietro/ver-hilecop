@@ -1,5 +1,4 @@
-Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool FunInd Coq.Lists.ListDec
-        Coq.Classes.EquivDec Program. 
+Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool Coq.Lists.ListDec. 
 Export ListNotations.
 
 Print NoDup.
@@ -47,13 +46,12 @@ Definition weight_type := trans_type -> place_type -> option nat_star.
  *)
 Definition marking_type := list (place_type * nat).
 
-(* Defines a structure,
- * where index corresponds to a transition index
- * and the other attributes correspond to its
- * pre, test, inhib and post neighbour places.
+(* Defines a structure containing multiple list of places
+ * correspond to pre, test, inhib and post neighbour places
+ * which will be associated with a transition t (see the lneighbours
+ * attribute in the SPN Structure).
  *)
 Structure neighbours_type : Set := mk_neighbours {
-                                       index : trans_type;
                                        pre_pl : list place_type;
                                        test_pl : list place_type;
                                        inhib_pl : list place_type;
@@ -83,9 +81,23 @@ Structure SPN : Set :=
 
       (* Contains the list of pre, test, inhib and post places 
        * associated with each transition of the SPN. *)
-      lneighbours : list neighbours_type;
+      lneighbours : list (trans_type * neighbours_type);
       
     }.
+
+(*********** HELPERS DEFINITIONS *********)
+
+Definition MarkingHaveSameStruct
+           (m1 : marking_type)
+           (m2 : marking_type) := fst (split m1) = fst (split m2).
+
+Definition PlaceIsRefInNeighbours
+           (p : place_type)
+           (neighbours : neighbours_type) :=
+  In p neighbours.(pre_pl) \/
+  In p neighbours.(test_pl) \/
+  In p neighbours.(inhib_pl) \/
+  In p neighbours.(post_pl).
 
 (*==============================================*)
 (*============ PROPERTIES ON SPN ===============*)
@@ -98,53 +110,66 @@ Definition NoDupTranss (spn : SPN) := NoDup spn.(transs).
 
 (*** Properties on priority_groups ***)
 
-(* For all transition t, t is in transs iff 
- * there exists a group in priority_groups containing t. *)
-Definition NoUnknownInPriorityGroups (spn : SPN) (t : trans_type) :=
-  In t spn.(transs) <-> exists group : list trans_type, In group spn.(priority_groups)
-                                                        /\ In t group.
+(* For all transition t, t is in spn.(transs) iff 
+ * there exists a group in spn.(priority_groups) containing t. *)
+Definition NoUnknownInPriorityGroups (spn : SPN) :=
+  spn.(transs) = concat spn.(priority_groups).
 
 (* For all transition t in one of the group of
  * priority_groups, t is contained in only one
  * group of priority_groups. *)
-Definition NoIntersectInPriorityGroups
-           (spn : SPN)
-           (group group' : list trans_type)
-           (t : trans_type) :=
-  In group spn.(priority_groups) /\
-  In group' spn.(priority_groups) /\
-  group <> group' ->
-  In t group -> ~In t group'.
+Definition NoIntersectInPriorityGroups (spn : SPN) :=
+  forall (group group' : list trans_type),
+    (In group spn.(priority_groups) /\
+     In group' spn.(priority_groups) /\
+     group <> group') ->
+    (forall t : trans_type, In t group -> ~In t group').
   
 (*** Properties on lneighbours ***)
 Definition NoDupLneighbours (spn : SPN) := NoDup spn.(lneighbours).
   
 (* For all place p, p is in places iff 
  * p is in the neighbourhood of at least one transition. *)
-Definition NoIsolatedOrUnknownPlace (spn : SPN) (p : place_type) := 
-  In p spn.(places) <-> exists (neighbours : neighbours_type), In neighbours spn.(lneighbours) /\  
-                                                               (In p neighbours.(pre_pl) \/
-                                                                In p neighbours.(test_pl) \/
-                                                                In p neighbours.(inhib_pl) \/
-                                                                In p neighbours.(post_pl)).
+Definition NoIsolatedPlace (spn : SPN) := 
+  forall p : place_type,
+    In p spn.(places) ->
+    exists (neighbours_of_t : (trans_type * neighbours_type)),
+      In neighbours_of_t spn.(lneighbours) /\  
+      (In p (snd neighbours_of_t).(pre_pl) \/
+       In p (snd neighbours_of_t).(test_pl) \/
+       In p (snd neighbours_of_t).(inhib_pl) \/
+       In p (snd neighbours_of_t).(post_pl)).
 
-(* For all transition (tr i), (tr i) is in transs iff 
- * t is connected to at least one place. *)
-Definition NoIsolatedOrUnknownTrans (spn : SPN) (t : trans_type) :=
-  In t spn.(transs) <->
-  exists (pre_pl test_pl inhib_pl post_pl : list place_type),
-    In (mk_neighbours t pre_pl test_pl inhib_pl post_pl) spn.(lneighbours) /\
-    (pre_pl <> [] \/ test_pl <> [] \/ inhib_pl <> [] \/ post_pl <> []).
+(* Forall neighbours_of_t in spn.lneighbours 
+ * if place p is in neighbours_of_t then
+ * p is in spn.places.
+ *)
+Definition NoUnknownPlaceInNeighbours (spn : SPN) :=
+  forall (neighbours_of_t : (trans_type * neighbours_type)),
+    In neighbours_of_t spn.(lneighbours) ->  
+    (forall (p : place_type),
+        (In p (snd neighbours_of_t).(pre_pl) \/
+         In p (snd neighbours_of_t).(test_pl) \/
+         In p (snd neighbours_of_t).(inhib_pl) \/
+         In p (snd neighbours_of_t).(post_pl)) ->
+        In p spn.(places)).
 
-(* For all neighbours, if neighbours is in lneighbours then
- * there is no neighbours' in lneighbours with the same index
- * as neighbours. *)
-Definition UniqIndexLneighbours (spn : SPN) (neighbours : neighbours_type) :=
-  In neighbours spn.(lneighbours) ->
-  ~exists (neighbours' : neighbours_type),
-      In neighbours' spn.(lneighbours) /\
-      neighbours.(index) = neighbours'.(index) /\
-      neighbours <> neighbours'.
+(* For all transition t, t is in spn.transs iff 
+ * t is referenced in spn.lneighbours. *)
+Definition NoUnknownTransInLNeighbours (spn : SPN) (t : trans_type) :=
+  spn.(transs) = fst (split spn.(lneighbours)).
+
+(* Forall neighbours_of_t in spn.lneighbours 
+ * there exists one list of places that is not empty.
+ * i.e. A transition has at least one neighbour place.
+ *)
+Definition NoIsolatedTrans (spn : SPN) :=
+  forall (neighbours_of_t : (trans_type * neighbours_type)),
+    In neighbours_of_t spn.(lneighbours) ->
+    ((snd neighbours_of_t).(pre_pl) <> [] \/
+     (snd neighbours_of_t).(test_pl) <> [] \/
+     (snd neighbours_of_t).(inhib_pl) <> [] \/
+     (snd neighbours_of_t).(post_pl) <> []).
                                                                    
 (*** Properties on marking ***)
 Definition NoDupMarking (spn : SPN) := NoDup spn.(marking).
@@ -154,11 +179,7 @@ Definition NoDupMarking (spn : SPN) := NoDup spn.(marking).
 Definition NoUnmarkedPlace (spn : SPN)  :=
   spn.(places) = (fst (split spn.(marking))).
 
-(*********** EXTRA PROPERTIES ********)
 
-Definition HaveSameStructure
-           (m1 : marking_type)
-           (m2 : marking_type) := fst (split m1) = fst (split m2).
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR SPN TYPES =====*)
@@ -274,9 +295,9 @@ Section Marking.
     auto.
   Qed.
   
-  (* Lemma : For all marking "some_marking" and pair of nat (i, n), 
-   *         (get_m some_marking i) returns no error
-   *         if (i, n) is in some_marking.
+  (* Lemma : For all marking "some_marking" and place p, 
+   *         (get_m some_marking p) returns no error
+   *         if p is referenced in some_marking.
    **)
   Lemma get_m_no_error :
     forall (some_marking : marking_type)
@@ -460,10 +481,10 @@ Section Marking.
     forall (m : marking_type)
            (p : place_type)
            (n n' : nat),
-      HaveSameStructure (replace_occ prodnat_eq_dec (p, n) (p, n') m) m.
+      MarkingHaveSameStruct (replace_occ prodnat_eq_dec (p, n) (p, n') m) m.
   Proof.
     do 4 intro.
-    unfold HaveSameStructure.
+    unfold MarkingHaveSameStruct.
     functional induction (replace_occ prodnat_eq_dec (p, n) (p, n') m)
                using replace_occ_ind;
       intros.
@@ -593,7 +614,7 @@ Section Marking.
            (op : nat -> nat -> nat)
            (nboftokens : option nat_star),
       modify_m m p op nboftokens = Some m' ->
-      HaveSameStructure m m'.
+      MarkingHaveSameStruct m m'.
   Proof.
     do 5 intro.
     functional induction (modify_m m p op nboftokens)
@@ -601,12 +622,12 @@ Section Marking.
       intros.
     - injection H; intros.
       rewrite <- H0.
-      unfold HaveSameStructure; symmetry.
+      unfold MarkingHaveSameStruct; symmetry.
       apply replace_occ_same_struct.
     - inversion H.
     - injection H; intros.
       rewrite H0.
-      unfold HaveSameStructure; auto.
+      unfold MarkingHaveSameStruct; auto.
   Qed.
   
   (* Lemma : For all spn, and marking "some_marking", 
@@ -752,7 +773,7 @@ Section Marking.
       apply (in_cons p0) in H.
       apply p in H.
       apply modify_m_same_struct in e0.
-      unfold HaveSameStructure in e0.
+      unfold MarkingHaveSameStruct in e0.
       rewrite <- e0.
       auto.
     (* Case modify_m returns None, 
@@ -767,6 +788,34 @@ Section Marking.
         rewrite e0 in H0.
         inversion H0.
       + apply in_eq.
+  Qed.
+  
+  (* Lemma : Proves that update_marking_pre preserves
+   *         the structure of the marking m
+   *         passed as argument. 
+   *)
+  Lemma update_marking_pre_same_struct :
+    forall (t : trans_type)
+           (pre : weight_type)
+           (places : list place_type)
+           (m m' : marking_type),
+      update_marking_pre t pre m places = Some m' ->
+      MarkingHaveSameStruct m m'.
+  Proof.
+    intros t pre places m m'.
+    functional induction (update_marking_pre t pre m places)
+               using update_marking_pre_ind;
+    intros.
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    - apply IHo in H.
+      apply modify_m_same_struct in e0.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e0.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e0; auto.
+    - inversion H.    
   Qed.
   
   (* 
@@ -881,7 +930,7 @@ Section Marking.
       apply (in_cons p0) in H.
       apply p in H.
       apply modify_m_same_struct in e0.
-      unfold HaveSameStructure in e0.
+      unfold MarkingHaveSameStruct in e0.
       rewrite <- e0.
       auto.
     (* Case modify_m returns None, 
@@ -1425,90 +1474,133 @@ Section FireSpn.
 
   (*  
    * Function : Returns the element of type neighbours_type
-   *            included in the list neighbours having an
-   *            index attribute equal to idx.
-   *            Returns None if no element have an index
-   *            attribute equal to idx.
+   *            associated with transition t in the list lneighbours.
+   *            
+   *            Returns None if transition t is not referenced
+   *            in lneighbours.
    *)
   Fixpoint get_neighbours
-           (lneighbours : list neighbours_type)
-           (idx : nat) {struct lneighbours} : option neighbours_type :=
+           (lneighbours : list (trans_type * neighbours_type))
+           (t : trans_type) {struct lneighbours} : option neighbours_type :=
     match lneighbours with
-    | neighbours :: tail => if (index neighbours) =? idx then
+    | (t', neighbours) :: tail => if t' =? t then
                               Some neighbours
-                            else get_neighbours tail idx
+                            else get_neighbours tail t
     | [] => None 
     end.
 
   (*** Formal specification : get_neighbours ***)
   Inductive GetNeighbours :
-    list neighbours_type -> nat -> option neighbours_type -> Prop :=
+    list (trans_type * neighbours_type) ->
+    nat ->
+    option neighbours_type -> Prop :=
   | GetNeighbours_err :
-      forall (idx : nat), GetNeighbours [] idx None
+      forall (t : nat), GetNeighbours [] t None
   | GetNeighbours_if :
-      forall (lneighbours lneighbours' : list neighbours_type)
-             (idx : nat)
+      forall (lneighbours : list (trans_type * neighbours_type))
+             (t t' : trans_type)
              (neighbours : neighbours_type),
-      lneighbours = neighbours :: lneighbours' ->
-      (index neighbours) = idx ->
-      GetNeighbours lneighbours idx (Some neighbours)
+        t' = t ->
+        GetNeighbours ((t', neighbours) :: lneighbours) t (Some neighbours)
   | GetNeighbours_else :
-      forall (lneighbours lneighbours' : list neighbours_type)
-             (idx : nat)
+      forall (lneighbours : list (trans_type * neighbours_type))
+             (t t' : trans_type)
              (neighbours : neighbours_type)
              (opt_neighbours : option neighbours_type),
-      lneighbours = neighbours :: lneighbours' ->
-      (index neighbours) <> idx ->
-      GetNeighbours lneighbours' idx opt_neighbours ->
-      GetNeighbours lneighbours idx opt_neighbours.
+        t' <> t ->
+        GetNeighbours lneighbours t opt_neighbours ->
+        GetNeighbours ((t', neighbours) :: lneighbours) t opt_neighbours.
 
   Functional Scheme get_neighbours_ind := Induction for get_neighbours Sort Prop.
   
   (*** Correctness proof : get_neighbours ***)
   Theorem get_neighbours_correct :
-    forall (lneighbours : list neighbours_type)
-           (idx : nat)
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (t : trans_type)
            (opt_neighbours : option neighbours_type),
-    get_neighbours lneighbours idx = opt_neighbours ->
-    GetNeighbours lneighbours idx opt_neighbours.
+      get_neighbours lneighbours t = opt_neighbours ->
+      GetNeighbours lneighbours t opt_neighbours.
   Proof.
-    intros lneighbours idx opt_neighbours;
-      functional induction (get_neighbours lneighbours idx) using get_neighbours_ind; intros.
+    intros lneighbours t opt_neighbours;
+      functional induction (get_neighbours lneighbours t) using get_neighbours_ind; intros.
     (* Case neighbours = None *)
-    - rewrite <- H; apply GetNeighbours_err with (idx := idx).
+    - rewrite <- H; apply GetNeighbours_err.
     (* Case neighbour is head *)
-    - rewrite <- H; apply GetNeighbours_if with (lneighbours' := tail) (idx := idx);
-        [auto | apply beq_nat_true in e0; auto].
+    - rewrite <- H; apply GetNeighbours_if.
+      apply beq_nat_true in e1; auto.
     (* Case neighbour is not head *)
-    - rewrite <- H. apply GetNeighbours_else with (neighbours := neighbours)
-                                                   (lneighbours' := tail)
-                                                   (idx := idx).
-      + auto.
-      + apply beq_nat_false in e0. auto.
-      + rewrite H. apply IHo. auto.
+    - rewrite <- H; apply GetNeighbours_else.
+      + apply beq_nat_false in e1; auto.
+      + rewrite H; apply IHo; auto.
   Qed.
 
   (*** Completeness proof : get_neighbours ***)
   Theorem get_neighbours_compl :
-    forall (lneighbours : list neighbours_type)
-           (idx : nat)
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (t : trans_type)
            (opt_neighbours : option neighbours_type),
-    GetNeighbours lneighbours idx opt_neighbours ->
-    get_neighbours lneighbours idx = opt_neighbours.
+    GetNeighbours lneighbours t opt_neighbours ->
+    get_neighbours lneighbours t = opt_neighbours.
   Proof.
      intros. induction H.
     (* Case GetNeighbours_err *)
     - simpl; auto.
     (* Case GetNeighbours_if *)
-    - rewrite H. simpl.
-      rewrite H0.
+    - simpl.
+      rewrite H.
       rewrite Nat.eqb_refl.
       auto.
     (* Case GetNeighbours_else *)
-    - rewrite H. simpl.
-      apply Nat.eqb_neq in H0.
-      rewrite H0.
-      assumption.
+    - simpl.
+      apply Nat.eqb_neq in H.
+      rewrite H.
+      auto.
+  Qed.
+
+  (* Lemma : For all list of neighbours lneighbours 
+   *         and transition t, (get_neighbours lneighbours t) 
+   *         returns no error if t is referenced in lneighbours.
+   **)
+  Lemma get_neighbours_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (t : trans_type),
+      In t (fst (split lneighbours)) ->
+      exists v : neighbours_type,
+        get_neighbours lneighbours t = Some v.
+  Proof.
+    intros lneighbours t.
+    functional induction (get_neighbours lneighbours t)
+               using get_neighbours_ind;
+    intros.
+    - elim H.
+    - exists neighbours; auto.
+    - apply IHo.
+      rewrite fst_split_app in H.
+      simpl in H.
+      elim H; intros.
+      + apply beq_nat_false in e1.
+        contradiction.
+      + auto.
+  Qed.
+
+  Lemma exists_neighbours (lneighbours : list (trans_type * neighbours_type)) :
+    forall (t : trans_type),
+      In t (fst (split lneighbours)) ->
+      exists neighbours : neighbours_type,
+        In (t, neighbours) lneighbours.
+  Proof.
+    elim lneighbours.
+    - intros.
+      elim H.
+    - intro. case a. intros.
+      rewrite fst_split_app in H0.
+      simpl in H0.
+      elim H0; intros.
+      + exists n; rewrite H1; apply in_eq.
+      + apply H in H1.
+        elim H1; intros.
+        apply (in_cons (t, n)) in H2.
+        exists x; auto.
   Qed.
   
   (* 
@@ -1531,7 +1623,7 @@ Section FireSpn.
    *            transition is fired). "decreasingm" is then the resulting marking.
    *)
   Fixpoint spn_fire_pre_aux
-           (lneighbours : list neighbours_type)
+           (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib : weight_type)  
            (steadym : marking_type)
            (decreasingm : marking_type)
@@ -1539,23 +1631,23 @@ Section FireSpn.
            (fired_pre_group pgroup : list trans_type) :
     option (list trans_type * marking_type) :=
     match pgroup with
-    | (tr i) :: tail =>
-      match get_neighbours lneighbours i with
+    | t :: tail =>
+      match get_neighbours lneighbours t with
       (* Checks neighbours of t. *)
       | Some neighbours_t =>
         (* If t is sensitized. *)
-        match check_all_edges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm with
+        match check_all_edges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm with
         | Some true =>
-          (* Updates the marking for the pre places, neighbours of t. *)
-          match update_marking_pre (tr i) pre decreasingm (pre_pl neighbours_t) with
+          (* Updates the marking for the pre places neighbours of t. *)
+          match update_marking_pre t pre decreasingm (pre_pl neighbours_t) with
           | Some marking' =>
-            (spn_fire_pre_aux lneighbours pre test inhib steadym marking' (fired_pre_group ++ [(tr i)]) tail)
+            spn_fire_pre_aux lneighbours pre test inhib steadym marking' (fired_pre_group ++ [t]) tail
           (* Something went wrong, error! *)
           | None => None
           end
+        (* Else no changes but inductive progress. *)
         | Some false =>
-          (* Else no changes but inductive progress. *)
-          (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group tail)
+          spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group tail
         (* Something went wrong, error! *)
         | None => None
         end
@@ -1569,7 +1661,7 @@ Section FireSpn.
   
   (*** Formal specification : spn_fire_pre_aux ***)
   Inductive SpnFirePreAux
-            (lneighbours : list neighbours_type)
+            (lneighbours : list (trans_type * neighbours_type))
             (pre test inhib : weight_type) 
             (steadym : marking_type) 
             (decreasingm : marking_type)
@@ -1577,62 +1669,57 @@ Section FireSpn.
     list trans_type -> option (list trans_type * marking_type) -> Prop :=
   | SpnFirePreAux_nil :
       SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group []
-                            (Some (fired_pre_group, decreasingm))
+                    (Some (fired_pre_group, decreasingm))
   (* Case get_neighbours returns an error. *)
   | SpnFirePreAux_neighbours_err :
-      forall (i : nat) (pgroup : list trans_type),
-        GetNeighbours lneighbours i None ->
-        SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
-                              None
+      forall (t : trans_type) (pgroup : list trans_type),
+        GetNeighbours lneighbours t None ->
+        SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* Case check_all_edges returns an error. *)
   | SpnFirePreAux_edges_err :
-      forall (i : nat) (pgroup : list trans_type) (neighbours_t : neighbours_type),
-        GetNeighbours lneighbours i (Some neighbours_t) ->
-        CheckAllEdges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm
-                             None ->
-        SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
-                              None
+      forall (t : trans_type) (pgroup : list trans_type) (neighbours_t : neighbours_type),
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm None ->
+        SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* Case check_all_edges returns false. *)
   | SpnFirePreAux_edges_false :
-      forall (i : nat)
+      forall (t : trans_type)
              (pgroup : list trans_type)
              (neighbours_t : neighbours_type)
              (option_final_couple : option (list trans_type * marking_type)),
-        GetNeighbours lneighbours i (Some neighbours_t) ->
-        CheckAllEdges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm
-                             (Some false) ->
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm (Some false) ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup
                               option_final_couple ->
-        SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
+        SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup)
                               option_final_couple
   (* Case update_marking_pre returns an error. *)
   | SpnFirePreAux_update_err :
-      forall (i : nat)
+      forall (t : trans_type)
              (neighbours_t : neighbours_type)
              (pgroup : list trans_type),
-      GetNeighbours lneighbours i (Some neighbours_t) ->
-      CheckAllEdges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm (Some true) ->
-      UpdateMarkingPre (tr i) pre decreasingm (pre_pl neighbours_t) None ->
-      SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup) None
+      GetNeighbours lneighbours t (Some neighbours_t) ->
+      CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm (Some true) ->
+      UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) None ->
+      SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* General case, all went well. *)
   | SpnFirePreAux_cons :
-      forall (i : nat)
+      forall (t : trans_type)
              (neighbours_t : neighbours_type)
              (pgroup : list trans_type)
              (modifiedm : marking_type)
              (option_final_couple : option (list trans_type * marking_type)),
-      GetNeighbours lneighbours i (Some neighbours_t) ->
-      CheckAllEdges neighbours_t (pre (tr i)) (test (tr i)) (inhib (tr i)) steadym decreasingm
-                           (Some true) ->
-      UpdateMarkingPre (tr i) pre decreasingm (pre_pl neighbours_t) (Some modifiedm) ->
-      SpnFirePreAux lneighbours pre test inhib steadym modifiedm (fired_pre_group ++ [(tr i)]) pgroup
-                            option_final_couple ->
-      SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group ((tr i) :: pgroup)
-                            option_final_couple.
+      GetNeighbours lneighbours t (Some neighbours_t) ->
+      CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm (Some true) ->
+      UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) (Some modifiedm) ->
+      SpnFirePreAux lneighbours pre test inhib steadym modifiedm (fired_pre_group ++ [t]) pgroup
+                    option_final_couple ->
+      SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup)
+                    option_final_couple.
   
   (*** Correctness proof : spn_fire_pre_aux ***)
   Theorem spn_fire_pre_aux_correct :
-    forall (lneighbours : list neighbours_type)
+    forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib : weight_type) 
            (steadym : marking_type) 
            (decreasingm : marking_type)
@@ -1675,7 +1762,7 @@ Section FireSpn.
 
   (*** Completeness proof : spn_fire_pre_aux ***)
   Theorem spn_fire_pre_aux_compl :
-    forall (lneighbours : list neighbours_type)
+    forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib : weight_type) 
            (steadym : marking_type) 
            (decreasingm : marking_type)
@@ -1710,6 +1797,50 @@ Section FireSpn.
       apply get_neighbours_compl in H; rewrite H.
       apply check_all_edges_compl in H0; rewrite H0; auto.
       apply update_marking_pre_compl in H1; rewrite H1; auto.
+  Qed.
+
+  Lemma spn_fire_pre_aux_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type),
+      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours))) ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (forall p : place_type,
+              PlaceIsRefInNeighbours p neighbours ->
+              In p (fst (split steadym)) /\ In p (fst (split decreasingm)))) ->
+      exists v : (list trans_type * marking_type),
+        spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup = Some v.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm
+           fired_pre_group pgroup.
+    functional induction (spn_fire_pre_aux lneighbours pre test inhib
+                                           steadym decreasingm
+                                           fired_pre_group pgroup)
+               using spn_fire_pre_aux_ind;
+    intros.
+    (* Base case, pgroup = []. *)
+    - exists (fired_pre_group, decreasingm); auto.
+    (* Case check_all_edges = true. *)
+    - apply IHo.
+      + intros.
+        apply (in_cons t) in H1.
+        apply (H t0) in H1; auto.
+      + intros.
+        apply (H0 t0 neighbours H1 p) in H2.
+        apply update_marking_pre_same_struct in e3.
+        unfold MarkingHaveSameStruct in e3.
+        rewrite <- e3; auto.
+    (* Case update_marking_pre = None,
+     * impossible regarding hypothesis.
+     *)
+    - cut (In t (t :: tail)); intros.
+      apply H in H1.
+      apply exists_neighbours in H1.
+      apply (H0 t neighbours_t) in H1.
   Qed.
   
   (*  
