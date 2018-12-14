@@ -176,8 +176,6 @@ Definition NoDupMarking (spn : SPN) := NoDup spn.(marking).
 Definition NoUnmarkedPlace (spn : SPN)  :=
   spn.(places) = (fst (split spn.(marking))).
 
-
-
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR SPN TYPES =====*)
 (*===============================================*)
@@ -919,6 +917,34 @@ Section Marking.
         rewrite e0 in H0.
         inversion H0.
       + apply in_eq.
+  Qed.
+
+  (* Lemma : Proves that update_marking_post preserves
+   *         the structure of the marking m
+   *         passed as argument. 
+   *)
+  Lemma update_marking_post_same_struct :
+    forall (t : trans_type)
+           (post : weight_type)
+           (places : list place_type)
+           (m m' : marking_type),
+      update_marking_post t post m places = Some m' ->
+      MarkingHaveSameStruct m m'.
+  Proof.
+    intros t post places m m'.
+    functional induction (update_marking_post t post m places)
+               using update_marking_post_ind;
+      intros.
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    - apply IHo in H.
+      apply modify_m_same_struct in e0.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e0.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e0; auto.
+    - inversion H.    
   Qed.
   
 End Marking.
@@ -1889,6 +1915,46 @@ Section FireSpn.
     - inversion H.
     - inversion H.
   Qed.
+
+   Lemma spn_fire_pre_aux_in :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      ((forall t : trans_type, In t fired_pre_group -> In t pgroup) /\
+       spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup =
+       Some (final_fired_pre_group, finalm)) ->
+      (forall t : trans_type, In t final_fired_pre_group -> In t pgroup).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup.
+    functional induction (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup)
+               using spn_fire_pre_aux_ind;
+    do 3 intro.
+    (* Base case, pgroup = []. *)
+    - elim H; intros.
+      injection H1; intros.
+      rewrite <- H4 in H2.
+      apply H0 in H2.
+      elim H2.
+    (*  *)
+    - elim H; intros; clear H.
+      apply in_cons.
+      apply IHo with (finalm := finalm)
+                     (final_fired_pre_group := final_fired_pre_group).
+      + split.
+        -- apply H1 in H0.
+           intros.
+           elim H1 with (t0 := t1).
+      + 
+      
+      simpl in H; generalize (H t); intro.
+      apply (H2 False).
+      auto.
+  Qed.
   
   (*****************************************************)
   (*****************************************************)
@@ -2170,6 +2236,25 @@ Section FireSpn.
         intro; elim H1; intros; rewrite H4 in e0; inversion e0.
       + apply in_eq. 
   Qed.
+
+  Lemma spn_map_fire_pre_aux_in :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (steadym decreasingm : marking_type)
+           (pre_fired_trs : list trans_type)
+           (priority_groups : list (list trans_type))
+           (pre_fired_transitions : list trans_type)
+           (intermediatem : marking_type),
+      spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm pre_fired_trs priority_groups =
+      Some (pre_fired_transitions, intermediatem) ->
+      (forall t : trans_type, In t pre_fired_transitions -> In t (fst (split lneighbours))).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm pre_fired_trs priority_groups.
+    functional induction (spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm pre_fired_trs priority_groups)
+               using spn_map_fire_pre_aux_ind;
+    intros.
+    
+  Qed.
   
   (***********************************************************************)
   (***********************************************************************)
@@ -2256,6 +2341,24 @@ Section FireSpn.
     apply spn_map_fire_pre_aux_no_error.
     auto.
   Qed.
+
+  Lemma spn_map_fire_pre_in :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (priority_groups : list (list trans_type))
+           (pre_fired_transitions : list trans_type)
+           (intermediatem : marking_type),
+      spn_map_fire_pre lneighbours pre test inhib m priority_groups =
+      Some (pre_fired_transitions, intermediatem) ->
+      (forall t : trans_type, In t pre_fired_transitions -> In t (fst (split lneighbours))).
+  Proof.
+    intros lneighbours pre test inhib m priority_groups.
+    functional induction (spn_map_fire_pre lneighbours pre test inhib m priority_groups)
+               using spn_map_fire_pre_ind;
+    intros.
+    
+  Qed.
   
   (***********************************************************************)
   (***********************************************************************)
@@ -2274,14 +2377,14 @@ Section FireSpn.
     | t :: tail  =>
       match get_neighbours lneighbours t with
       (* Updates the marking
-       * for all neighbour post places of (tr i). *)
+       * for all neighbour post places of t. *)
       | Some neighbours_t =>
         match update_marking_post t post increasingm (post_pl neighbours_t) with
         | Some new_marking => (fire_post lneighbours post new_marking tail)
         (* Something went wrong, case of error. *)
         | None => None
         end
-      (* If transition (tr i) has no neighbours, then error. *)
+      (* If transition t has no neighbours, then error. *)
       | None => None
       end
     | []  => Some increasingm
@@ -2303,29 +2406,29 @@ Section FireSpn.
         FirePost lneighbours post increasingm (t :: pre_fired_transitions) None
   (* General case *)
   | FirePost_cons :
-      forall (i : nat)
+      forall (t : trans_type)
              (neighbours_t : neighbours_type)
              (pre_fired_transitions : list trans_type)
              (modifiedm : marking_type)
              (optionm : option marking_type),
-        GetNeighbours lneighbours i (Some neighbours_t) ->
-        UpdateMarkingPost (tr i) post increasingm (post_pl neighbours_t) (Some modifiedm) ->
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        UpdateMarkingPost t post increasingm (post_pl neighbours_t) (Some modifiedm) ->
         FirePost lneighbours post modifiedm pre_fired_transitions optionm ->
-        FirePost lneighbours post increasingm ((tr i) :: pre_fired_transitions) optionm
+        FirePost lneighbours post increasingm (t :: pre_fired_transitions) optionm
   (* Case update_marking_post returns an error. *)
   | FirePost_update_err :
-      forall (i : nat)
+      forall (t : trans_type)
              (neighbours_t : neighbours_type)
              (pre_fired_transitions : list trans_type),
-        GetNeighbours lneighbours i (Some neighbours_t) ->
-        UpdateMarkingPost (tr i) post increasingm (post_pl neighbours_t) None ->
-        FirePost lneighbours post increasingm ((tr i) :: pre_fired_transitions) None.
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        UpdateMarkingPost t post increasingm (post_pl neighbours_t) None ->
+        FirePost lneighbours post increasingm (t :: pre_fired_transitions) None.
 
   Functional Scheme fire_post_ind := Induction for fire_post Sort Prop.
   
   (*** Correctness proof : fire_post ***)
   Theorem fire_post_correct :
-    forall (lneighbours : list neighbours_type)
+    forall (lneighbours : list (trans_type * neighbours_type))
            (post : weight_type) 
            (increasingm : marking_type) 
            (pre_fired_transitions : list trans_type)
@@ -2356,7 +2459,7 @@ Section FireSpn.
 
   (*** Completeness proof : fire_post ***)
   Theorem fire_post_compl :
-    forall (lneighbours : list neighbours_type)
+    forall (lneighbours : list (trans_type * neighbours_type))
            (post : weight_type) 
            (increasingm : marking_type) 
            (pre_fired_transitions : list trans_type)
@@ -2380,26 +2483,82 @@ Section FireSpn.
       apply get_neighbours_compl in H0; rewrite H0.
       apply update_marking_post_compl in H1; rewrite H1; auto.
   Qed.
+
+  (* Lemma : fire_post returns no error if 
+   *         all transition t in pre_fired_transitions are referenced in lneighbours
+   *         and if all neighbour places referenced in lneighbours are
+   *         referenced in the markings increasingm. 
+   *)
+  Lemma fire_post_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (post : weight_type) 
+           (increasingm : marking_type) 
+           (pre_fired_transitions : list trans_type),
+      (forall t : trans_type, In t pre_fired_transitions -> In t (fst (split lneighbours))) ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          forall p : place_type, In p neighbours.(post_pl) -> In p (fst (split increasingm))) ->
+      exists v : marking_type,
+        fire_post lneighbours post increasingm pre_fired_transitions = Some v.
+  Proof.
+    intros lneighbours post increasingm pre_fired_transitions.
+    functional induction (fire_post lneighbours post increasingm pre_fired_transitions)
+               using fire_post_ind;
+      intros.
+    (* Base case, pre_fired_transitions = []. *)
+    - exists increasingm; auto.
+    (* Case update_marking_post = Some m. *)
+    - apply IHo.
+      + intros.
+        apply (in_cons t) in H1.
+        apply (H t0) in H1; auto.
+      + intros.
+        generalize (H0 t0 neighbours H1); intro.
+        apply (H3 p) in  H2.
+        apply update_marking_post_same_struct in e1.
+        unfold MarkingHaveSameStruct in e1.
+        rewrite <- e1; auto.
+    (* Case update_marking_post = None,
+     * impossible regarding hypothesis.
+     *)
+    - cut (In t (t :: tail)); intros.
+      + apply get_neighbours_in in e0.
+        generalize ((H0 t neighbours_t) e0).
+        intros.        
+        apply (update_marking_post_no_error t post (post_pl neighbours_t) increasingm) in H2.
+        elim H2; intros.
+        rewrite H3 in e1; inversion e1.
+      + apply in_eq.
+    (* Case get_neighbours = None, 
+     * impossible regarding the hypotheses.
+     *)
+    - cut (In t (t :: tail)); intros.
+      + apply H in H1.
+        apply get_neighbours_no_error in H1.
+        elim H1; intros.
+        rewrite H2 in e0; inversion e0.
+      + apply in_eq.
+  Qed.
   
   (*************************************************)
   (****************** SPN FIRE *********************)
   (*************************************************)
 
   (*
-   * Function : Returns  "fired transitions (pre_fired_transitions)" + "final marking",
+   * Function : Returns  "fired transitions" + "final marking",
    *            composing fire_post with spn_map_fire_pre
    *)
   Definition spn_fire
-             (lneighbours : list neighbours_type)
+             (lneighbours : list (trans_type * neighbours_type))
              (pre test inhib post : weight_type)
              (steadym : marking_type)
              (priority_groups : list (list trans_type)) :
     option (list trans_type * marking_type) :=
     (* Pre-fires the transitions in priority_groups. *)
-    match (spn_map_fire_pre lneighbours pre test inhib steadym priority_groups) with 
+    match spn_map_fire_pre lneighbours pre test inhib steadym priority_groups with 
     | Some (pre_fired_transitions, intermediatem) =>
       (* Post-fires the pre-fired transitions. *)
-      match (fire_post lneighbours post intermediatem pre_fired_transitions) with
+      match fire_post lneighbours post intermediatem pre_fired_transitions with
       | Some finalm => Some (pre_fired_transitions, finalm)
       (* If fire_post returned an error, then error. *)
       | None => None
@@ -2412,7 +2571,7 @@ Section FireSpn.
   
   (*** Formal specification : spn_fire ***)
   Inductive SpnFire
-            (lneighbours : list neighbours_type)
+            (lneighbours : list (trans_type * neighbours_type))
             (pre test inhib post : weight_type)
             (steadym : marking_type)
             (priority_groups : list (list trans_type)) :
@@ -2441,7 +2600,7 @@ Section FireSpn.
 
   (*** Correctness proof : spn_fire ***)
   Theorem spn_fire_correct :
-    forall (lneighbours : list neighbours_type)
+    forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib post : weight_type)
            (steadym : marking_type)
            (priority_groups : list (list trans_type))
@@ -2470,7 +2629,7 @@ Section FireSpn.
 
   (*** Completeness proof : spn_fire ***)
   Theorem spn_fire_compl :
-    forall (lneighbours : list neighbours_type)
+    forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib post : weight_type)
            (steadym : marking_type)
            (priority_groups : list (list trans_type))
@@ -2491,39 +2650,36 @@ Section FireSpn.
   Qed.
 
   (* Lemma : spn_fire always returns some value
-   *         if spn (which attributes are passed as arguments)
-   *         verifies certains properties. 
+   *         
    *)
   Theorem spn_fire_no_error :
-    forall (spn : SPN)
-           (t : trans_type)
-           (p : place_type)
-           (i n : nat)
-           (neighbours : neighbours_type)
-           (group group' : list trans_type),
-      NoDupPlaces spn ->
-      NoDupTranss spn ->
-      NoUnknownInPriorityGroups spn t ->
-      NoIntersectInPriorityGroups spn group group' t ->
-      NoDupLneighbours spn ->
-      NoIsolatedOrUnknownPlace spn p ->
-      NoIsolatedOrUnknownTrans spn i ->
-      UniqIndexLneighbours spn neighbours ->
-      NoDupMarking spn ->
-      NoUnmarkedPlace spn i ->
-      NoUnknownPlaceInMarking spn i n ->
-      UniqIndexMarking spn i n ->
-      exists couple : (list trans_type * marking_type),
-        spn_fire (lneighbours spn)
-                 (pre spn)
-                 (test spn)
-                 (inhib spn)
-                 (post spn)
-                 (marking spn)
-                 (priority_groups spn) = Some couple.
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (priority_groups : list (list trans_type)),
+        (forall pgroup : list trans_type,
+            In pgroup priority_groups ->
+            ((forall t : trans_type, In t pgroup -> In t (fst (split lneighbours))) /\
+             (forall (t : trans_type) (neighbours : neighbours_type),
+                 In (t, neighbours) lneighbours ->
+                 ((forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split m))) /\
+                  (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split m))) /\
+                  (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split m))) /\
+                  (forall p : place_type, In p neighbours.(post_pl) -> In p (fst (split m))))))) ->
+        exists v : (list trans_type * marking_type),
+          spn_fire lneighbours pre test inhib post m priority_groups = Some v.
   Proof.
-    unfold spn_fire.
-  Admitted.
+    intros lneighbours pre test inhib post m priority_groups.
+    functional induction (spn_fire lneighbours pre test inhib post m priority_groups)
+               using spn_fire_ind;
+    intros.
+    (* General case, spn_map_fire_pre and fire_post 
+     * both returned Some value.
+     *)
+    - exists (pre_fired_transitions, finalm); auto.
+    (*  *)
+    -
+  Qed.
   
 End FireSpn.
 
