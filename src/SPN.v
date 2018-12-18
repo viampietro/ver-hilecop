@@ -88,13 +88,22 @@ Definition MarkingHaveSameStruct
            (m1 : marking_type)
            (m2 : marking_type) := fst (split m1) = fst (split m2).
 
-Definition PlaceIsRefInNeighbours
-           (p : place_type)
-           (neighbours : neighbours_type) :=
-  In p neighbours.(pre_pl) \/
-  In p neighbours.(test_pl) \/
-  In p neighbours.(inhib_pl) \/
-  In p neighbours.(post_pl).
+Definition PlacesAreRefInMarking
+           (places : list place_type)
+           (marking : marking_type) :=
+  forall p : place_type, In p places -> In p (fst (split marking)).
+
+Definition TransAreRefInLneighbours
+           (trans : list trans_type)
+           (lneighbours : list (trans_type * neighbours_type)) :=
+  forall t : trans_type, In t trans -> In t (fst (split lneighbours)).
+
+Definition PriorityGroupsAreRefInLneighbours
+           (priority_groups : list (list trans_type))
+           (lneighbours : list (trans_type * neighbours_type)) :=
+  (forall pgroup : list trans_type,
+      In pgroup priority_groups ->
+      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))).
 
 (*==============================================*)
 (*============ PROPERTIES ON SPN ===============*)
@@ -177,6 +186,21 @@ Definition NoDupMarking (spn : SPN) := NoDup spn.(marking).
  * (pl i) is referenced in marking. *)
 Definition NoUnmarkedPlace (spn : SPN)  :=
   spn.(places) = (fst (split spn.(marking))).
+
+(*** Properties on the whole spn. ***)
+
+Definition IsWellStructuredSpn (spn : SPN) :=
+  NoDupPlaces spn /\
+  NoDupTranss spn /\
+  NoUnknownInPriorityGroups spn /\
+  NoIntersectInPriorityGroups spn /\
+  NoDupLneighbours spn /\
+  NoIsolatedPlace spn /\
+  NoUnknownPlaceInNeighbours spn /\
+  NoUnknownTransInLNeighbours spn /\
+  NoIsolatedTrans spn /\
+  NoDupMarking spn /\
+  NoUnmarkedPlace spn.
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR SPN TYPES =====*)
@@ -377,7 +401,9 @@ Section Marking.
     - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHReplaceOcc; auto].
   Qed.
 
-  (* Auxiliary lemma to prove replace_occ_nodup. *)
+  (* Lemma : auxiliary lemma to prove replace_occ_nodup. 
+   *
+   *)
   Lemma replace_occ_no_change {A: Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
       ~In occ l -> replace_occ eq_dec occ repl l = l.
@@ -394,7 +420,9 @@ Section Marking.
       + apply not_in_cons in H. elim H; auto.
   Qed.
 
-  (* Auxiliary lemma to prove replace_occ_nodup. *)
+  (* Lemma : auxiliary lemma to prove replace_occ_nodup. 
+   *
+   *)
   Lemma replace_occ_not_in {A :Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl a : A) (l : list A),
       a <> repl /\ ~In a l -> ~In a (replace_occ eq_dec occ repl l).
@@ -417,7 +445,9 @@ Section Marking.
           [ auto | apply not_in_cons in H1; elim H1; auto ].
   Qed.
 
-  (*** Forall list l, if NoDup l then NoDup (replace_occ l) ***)
+  (* Lemma : For all list l, if NoDup l then NoDup (replace_occ l) 
+   *
+   *)
   Lemma replace_occ_nodup {A : Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
       NoDup l -> ~In repl l -> NoDup (replace_occ eq_dec occ repl l).
@@ -730,16 +760,16 @@ Section Marking.
   Lemma update_marking_pre_no_error :
     forall (t : trans_type)
            (pre : weight_type)
-           (some_places : list place_type)
-           (some_marking : marking_type),
-      (forall p : place_type, In p some_places -> In p (fst (split some_marking))) ->
-      exists v : marking_type,
-        update_marking_pre t pre some_marking some_places = Some v.
+           (places : list place_type)
+           (marking : marking_type),
+      PlacesAreRefInMarking places marking ->
+      exists v : marking_type, update_marking_pre t pre marking places = Some v.
   Proof.
-    intros t pre some_places some_marking p;
-      functional induction (update_marking_pre t pre some_marking some_places)
-                 using update_marking_pre_ind;
-      intros.
+    unfold PlacesAreRefInMarking.
+    intros t pre places marking p;
+    functional induction (update_marking_pre t pre marking places)
+               using update_marking_pre_ind;
+    intros.
     (* Base case, some_places = []. *)
     - exists m; auto.
     (* Case modify_m returns some marking. *)
@@ -887,16 +917,17 @@ Section Marking.
   Lemma update_marking_post_no_error :
     forall (t : trans_type)
            (post : weight_type)
-           (some_places : list place_type)
-           (some_marking : marking_type),
-      (forall p : place_type, In p some_places -> In p (fst (split some_marking))) ->
+           (places : list place_type)
+           (marking : marking_type),
+      PlacesAreRefInMarking places marking ->
       exists v : marking_type,
-        update_marking_post t post some_marking some_places = Some v.
+        update_marking_post t post marking places = Some v.
   Proof.
-    intros t post some_places some_marking p;
-      functional induction (update_marking_post t post some_marking some_places)
-                 using update_marking_post_ind;
-      intros.
+    unfold PlacesAreRefInMarking.
+    intros t post places marking p;
+    functional induction (update_marking_post t post marking places)
+               using update_marking_post_ind;
+    intros.
     (* Base case, some_places = []. *)
     - exists m; auto.
     (* Case modify_m returns some marking. *)
@@ -1099,14 +1130,15 @@ Section Edges.
            (m : marking_type)
            (places : list place_type)
            (check_result : bool),
-      (forall p : place_type, In p places -> In p (fst (split m))) ->
+      PlacesAreRefInMarking places m ->
       exists v : bool,
         check_pre_or_test pre_or_test_arcs_t m places check_result = Some v.
   Proof.
+    unfold PlacesAreRefInMarking.
     intros pre_or_test_arcs_t m places check_result.
     functional induction (check_pre_or_test pre_or_test_arcs_t m places check_result)
                using check_pre_or_test_ind;
-      intros.
+    intros.
     (* Base case, places = [] *)
     - exists check_result; auto.
     (* Case get_m = Some v *)
@@ -1267,14 +1299,15 @@ Section Edges.
            (m : marking_type)
            (places : list place_type)
            (check_result : bool),
-      (forall p : place_type, In p places -> In p (fst (split m))) ->
+      PlacesAreRefInMarking places m ->
       exists v : bool,
         check_inhib inhib_arcs_t m places check_result = Some v.
   Proof.
+    unfold PlacesAreRefInMarking.
     intros inhib_arcs_t m places check_result.
     functional induction (check_inhib inhib_arcs_t m places check_result)
                using check_inhib_ind;
-      intros.
+    intros.
     (* Base case, places = [] *)
     - exists check_result; auto.
     (* Case get_m = Some v *)
@@ -1432,15 +1465,13 @@ Section Edges.
            (test_arcs_t : place_type -> option nat_star)
            (inhib_arcs_t : place_type -> option nat_star)
            (steadym decreasingm : marking_type),
-      (forall p : place_type,
-          In p (pre_pl neighbours_t) -> In p (fst (split decreasingm))) ->
-      (forall p : place_type,
-          In p (test_pl neighbours_t) -> In p (fst (split steadym))) ->
-      (forall p : place_type,
-          In p (inhib_pl neighbours_t) -> In p (fst (split steadym))) ->
+      PlacesAreRefInMarking (pre_pl neighbours_t) decreasingm ->
+      PlacesAreRefInMarking (test_pl neighbours_t) steadym ->
+      PlacesAreRefInMarking (inhib_pl neighbours_t) steadym ->
       exists v : bool,
         check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = Some v.
   Proof.
+    unfold PlacesAreRefInMarking.
     do 6 intro.
     functional induction (check_all_edges neighbours_t
                                           pre_arcs_t test_arcs_t inhib_arcs_t
@@ -1811,15 +1842,17 @@ Section FireSpn.
            (decreasingm : marking_type)
            (fired_pre_group : list trans_type)
            (pgroup : list trans_type),
-      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours))) ->
+      TransAreRefInLneighbours pgroup lneighbours ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          ((forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split decreasingm))) /\
-           (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split steadym))) /\
-           (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split steadym))))) ->
+          (PlacesAreRefInMarking neighbours.(pre_pl) decreasingm /\
+           PlacesAreRefInMarking neighbours.(inhib_pl) steadym /\
+           PlacesAreRefInMarking neighbours.(test_pl) steadym)) ->
       exists v : (list trans_type * marking_type),
         spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup = Some v.
   Proof.
+    unfold TransAreRefInLneighbours.
+    unfold PlacesAreRefInMarking.
     intros lneighbours pre test inhib steadym decreasingm
            fired_pre_group pgroup.
     functional induction (spn_fire_pre_aux lneighbours pre test inhib
@@ -1932,12 +1965,13 @@ Section FireSpn.
            (pgroup : list trans_type)
            (final_fired_pre_group : list trans_type)
            (finalm : marking_type),
-      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours))) ->
-      (forall t : trans_type, In t fired_pre_group -> In t (fst (split lneighbours))) ->
+      TransAreRefInLneighbours pgroup lneighbours ->
+      TransAreRefInLneighbours fired_pre_group lneighbours ->
       spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup =
       Some (final_fired_pre_group, finalm) ->
-      (forall t : trans_type, In t final_fired_pre_group -> In t (fst (split lneighbours))).
+      TransAreRefInLneighbours final_fired_pre_group lneighbours.
   Proof.
+    unfold TransAreRefInLneighbours.
     intros lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup.
     functional induction (spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup)
                using spn_fire_pre_aux_ind;
@@ -2063,12 +2097,12 @@ Section FireSpn.
            (steadym : marking_type) 
            (decreasingm : marking_type)
            (pgroup : list trans_type),
-      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours))) ->
+      TransAreRefInLneighbours pgroup lneighbours ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          ((forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split decreasingm))) /\
-           (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split steadym))) /\
-           (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split steadym))))) ->
+          (PlacesAreRefInMarking neighbours.(pre_pl) decreasingm /\
+           PlacesAreRefInMarking neighbours.(inhib_pl) steadym /\
+           PlacesAreRefInMarking neighbours.(test_pl) steadym )) ->
       exists v : (list trans_type * marking_type),
         spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup = Some v.
   Proof.
@@ -2110,11 +2144,12 @@ Section FireSpn.
            (pgroup : list trans_type)
            (final_fired_pre_group : list trans_type)
            (finalm : marking_type),
-      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours))) ->
+      TransAreRefInLneighbours pgroup lneighbours ->
       spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup =
       Some (final_fired_pre_group, finalm) ->
-      (forall t : trans_type, In t final_fired_pre_group -> In t (fst (split lneighbours))).
+      TransAreRefInLneighbours final_fired_pre_group lneighbours.
   Proof.
+    unfold TransAreRefInLneighbours.
     intros lneighbours pre test inhib steadym decreasingm pgroup.
     functional induction (spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup)
                using spn_fire_pre_ind;
@@ -2265,18 +2300,18 @@ Section FireSpn.
            (steadym decreasingm : marking_type)
            (priority_groups : list (list trans_type))
            (pre_fired_transitions : list trans_type),
-      (forall pgroup : list trans_type,
-          In pgroup priority_groups ->
-          (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))) ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          ((forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split decreasingm))) /\
-           (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split steadym))) /\
-           (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split steadym))))) ->     
+          (PlacesAreRefInMarking neighbours.(pre_pl) decreasingm /\
+           PlacesAreRefInMarking neighbours.(inhib_pl) steadym /\
+           PlacesAreRefInMarking neighbours.(test_pl) steadym)) ->
       exists v : (list trans_type * marking_type),
         spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
                              pre_fired_transitions priority_groups = Some v.
   Proof.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold PlacesAreRefInMarking.
     intros lneighbours pre test inhib steadym decreasingm
            priority_groups pre_fired_transitions.
     functional induction (spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
@@ -2354,14 +2389,14 @@ Section FireSpn.
            (priority_groups : list (list trans_type))
            (final_pre_fired : list trans_type)
            (intermediatem : marking_type),
-      (forall pgroup : list trans_type,
-          In pgroup priority_groups ->
-          (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))) ->
-      (forall t : trans_type, In t pre_fired_transitions -> In t (fst (split lneighbours))) ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      TransAreRefInLneighbours pre_fired_transitions lneighbours ->
       spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm pre_fired_transitions priority_groups =
       Some (final_pre_fired, intermediatem) ->
-      (forall t : trans_type, In t final_pre_fired -> In t (fst (split lneighbours))).
+      TransAreRefInLneighbours final_pre_fired lneighbours.
   Proof.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold TransAreRefInLneighbours.
     intros lneighbours pre test inhib steadym decreasingm pre_fired_transitions priority_groups.
     functional induction (spn_map_fire_pre_aux lneighbours pre test inhib
                                                steadym decreasingm
@@ -2474,14 +2509,12 @@ Section FireSpn.
            (pre test inhib : weight_type)
            (m : marking_type)
            (priority_groups : list (list trans_type)),
-      (forall pgroup : list trans_type,
-          In pgroup priority_groups ->
-          (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))) ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          ((forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split m))) /\
-           (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split m))) /\
-           (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split m))))) ->
+          (PlacesAreRefInMarking neighbours.(pre_pl) m /\
+           PlacesAreRefInMarking neighbours.(inhib_pl) m /\
+           PlacesAreRefInMarking neighbours.(test_pl) m)) ->
       exists v : (list trans_type * marking_type),
         spn_map_fire_pre lneighbours pre test inhib m priority_groups = Some v.
   Proof.
@@ -2523,13 +2556,13 @@ Section FireSpn.
            (priority_groups : list (list trans_type))
            (final_pre_fired : list trans_type)
            (intermediatem : marking_type),
-      (forall pgroup : list trans_type,
-          In pgroup priority_groups ->
-          (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))) ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
       spn_map_fire_pre lneighbours pre test inhib m priority_groups =
       Some (final_pre_fired, intermediatem) ->
-      (forall t : trans_type, In t final_pre_fired -> In t (fst (split lneighbours))).
+      TransAreRefInLneighbours final_pre_fired lneighbours.
   Proof.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold TransAreRefInLneighbours.
     intros lneighbours pre test inhib m priority_groups.
     functional induction (spn_map_fire_pre lneighbours pre test inhib m priority_groups)
                using spn_map_fire_pre_ind;
@@ -2678,13 +2711,15 @@ Section FireSpn.
            (post : weight_type) 
            (increasingm : marking_type) 
            (pre_fired_transitions : list trans_type),
-      (forall t : trans_type, In t pre_fired_transitions -> In t (fst (split lneighbours))) ->
+      TransAreRefInLneighbours pre_fired_transitions lneighbours ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          forall p : place_type, In p neighbours.(post_pl) -> In p (fst (split increasingm))) ->
+          PlacesAreRefInMarking neighbours.(post_pl) increasingm) ->
       exists v : marking_type,
         fire_post lneighbours post increasingm pre_fired_transitions = Some v.
   Proof.
+    unfold TransAreRefInLneighbours.
+    unfold PlacesAreRefInMarking.
     intros lneighbours post increasingm pre_fired_transitions.
     functional induction (fire_post lneighbours post increasingm pre_fired_transitions)
                using fire_post_ind;
@@ -2841,20 +2876,20 @@ Section FireSpn.
            (pre test inhib post : weight_type)
            (m : marking_type)
            (priority_groups : list (list trans_type)),
-      (forall pgroup : list trans_type,
-          In pgroup priority_groups ->
-          (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))) ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          ((forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split m))) /\
-           (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split m))) /\
-           (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split m))))) ->
+          (PlacesAreRefInMarking neighbours.(pre_pl) m /\
+           PlacesAreRefInMarking neighbours.(inhib_pl) m /\
+           PlacesAreRefInMarking neighbours.(test_pl) m)) ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          (forall p : place_type, In p neighbours.(post_pl) -> In p (fst (split m)))) ->
+          PlacesAreRefInMarking neighbours.(post_pl) m) ->
       exists v : (list trans_type * marking_type),
         spn_fire lneighbours pre test inhib post m priority_groups = Some v.
   Proof.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold PlacesAreRefInMarking.
     intros lneighbours pre test inhib post m priority_groups.
     functional induction (spn_fire lneighbours pre test inhib post m priority_groups)
                using spn_fire_ind;
@@ -3014,12 +3049,11 @@ Section AnimateSpn.
     forall (spn : SPN),
       NoUnknownInPriorityGroups spn ->
       NoUnknownTransInLNeighbours spn ->
-      (forall pgroup : list trans_type,
-          In pgroup spn.(priority_groups) ->
-          (forall t : trans_type, In t pgroup -> In t (fst (split spn.(lneighbours))))).
+      PriorityGroupsAreRefInLneighbours spn.(priority_groups) spn.(lneighbours).
   Proof.
     unfold NoUnknownInPriorityGroups.
     unfold NoUnknownTransInLNeighbours.
+    unfold PriorityGroupsAreRefInLneighbours.
     intros.
     generalize (in_concat t pgroup (priority_groups spn) H2 H1); intro.
     rewrite <- H in H3.
@@ -3039,10 +3073,11 @@ Section AnimateSpn.
       NoUnknownPlaceInNeighbours spn ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) spn.(lneighbours) ->
-          (forall p : place_type, In p neighbours.(pre_pl) -> In p (fst (split spn.(marking)))) /\
-          (forall p : place_type, In p neighbours.(inhib_pl) -> In p (fst (split spn.(marking)))) /\
-          (forall p : place_type, In p neighbours.(test_pl) -> In p (fst (split spn.(marking))))).
+          PlacesAreRefInMarking neighbours.(pre_pl) spn.(marking) /\
+          PlacesAreRefInMarking neighbours.(inhib_pl) spn.(marking) /\
+          PlacesAreRefInMarking neighbours.(test_pl) spn.(marking)).
   Proof.
+    unfold PlacesAreRefInMarking.
     intros.
     unfold NoUnmarkedPlace in H.
     unfold NoUnknownPlaceInNeighbours in H0.
@@ -3078,8 +3113,9 @@ Section AnimateSpn.
       NoUnknownPlaceInNeighbours spn ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) spn.(lneighbours) ->
-          (forall p : place_type, In p neighbours.(post_pl) -> In p (fst (split spn.(marking))))).
+          PlacesAreRefInMarking neighbours.(post_pl) spn.(marking)).
   Proof.
+    unfold PlacesAreRefInMarking.
     intros.
     unfold NoUnmarkedPlace in H.
     unfold NoUnknownPlaceInNeighbours in H0.
@@ -3092,18 +3128,15 @@ Section AnimateSpn.
   Qed.
 
   (*  
-   * Theorem : for all spn verify
+   * Theorem : For all spn verifying the property ISWellStructuredSpn,
+   *           spn_cycle spn returns no error.
    *)
   Theorem spn_cycle_no_error :
     forall (spn : SPN),
-      NoIsolatedPlace spn ->
-      NoUnknownPlaceInNeighbours spn ->
-      NoUnknownInPriorityGroups spn ->
-      NoUnknownTransInLNeighbours spn ->
-      NoIsolatedTrans spn ->
-      NoUnmarkedPlace spn ->
+      IsWellStructuredSpn spn ->
       exists value : list trans_type * SPN, spn_cycle spn = Some value.
   Proof.
+    unfold IsWellStructuredSpn.
     intro.
     functional induction (spn_cycle spn) using spn_cycle_ind.
     (* Case all went well, spn_fire returns Some value. *)
@@ -3120,24 +3153,24 @@ Section AnimateSpn.
     (* Case spn_fire returns None, impossible
      * regarding the hypotheses.
      *)
-    - set (spn := {|
-                   places := places0;
-                   transs := transs0;
-                   pre := pre0;
-                   post := post0;
-                   test := test0;
-                   inhib := inhib0;
-                   marking := m;
-                   priority_groups := priority_groups0;
-                   lneighbours := lneighbours0 |}).
+    - set (spn := {| places := places0;
+                     transs := transs0;
+                     pre := pre0;
+                     post := post0;
+                     test := test0;
+                     inhib := inhib0;
+                     marking := m;
+                     priority_groups := priority_groups0;
+                     lneighbours := lneighbours0 |}).
       intros.
-      generalize (priority_groups_in_lneighbours spn H1 H2); intro.
-      generalize (pre_places_in_marking spn H4 H0); intro.
-      generalize (post_places_in_marking spn H4 H0); intro.
-      generalize (spn_fire_no_error lneighbours0 pre0 test0 inhib0 post0 m priority_groups0 H5 H6 H7).
+      decompose [and] H; clear H.
+      generalize (priority_groups_in_lneighbours spn H1 H7); intro.
+      generalize (pre_places_in_marking spn H11 H6); intro.
+      generalize (post_places_in_marking spn H11 H6); intro.
+      generalize (spn_fire_no_error lneighbours0 pre0 test0 inhib0 post0 m priority_groups0 H H10 H12).
       intro.
-      elim H8; intros.
-      rewrite H9 in e0.
+      elim H13; intros.
+      rewrite H14 in e0.
       inversion e0.
   Qed.
   
