@@ -1,6 +1,12 @@
 Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool Coq.Lists.ListDec FunInd.
 Export ListNotations.
 
+(*=================================*  
+ *                                 *
+ *         HELPER LEMMAS           *
+ *                                 *
+ *=================================*)
+
 (* Lemma : Proves a property over the combination of fst and split 
    *         functions.
    *)
@@ -14,6 +20,52 @@ Export ListNotations.
     auto.
   Qed.
 
+
+(*  
+ * Lemma : If in_eq is True implies P then P.
+ *)
+  Lemma in_eq_impl {A : Type} :
+    forall (a : A) (l : list A) (P : Prop),
+      (In a (a :: l) -> P) -> P.
+  Proof.
+    intros.
+    apply H; apply in_eq.
+  Qed.
+
+  (*  
+   * Lemma : If a is in list l and l is in list of lists ll
+   *         then a is in (concat ll).
+   *         The result of (concat ll) is one list corresponding
+   *         to the concatenation of all lists in ll.  
+   *)
+  Lemma in_concat {A : Type} :
+    forall (a : A) (l : list A) (ll : list (list A)),
+      In a l -> In l ll -> In a (concat ll).
+  Proof.
+    intros.
+    induction ll.
+    (* Base case, ll = []. *)
+    - elim H0.
+    (* Inductive case. *)
+    - apply in_inv in H0; elim H0; intros.
+      + rewrite <- H1 in H.
+        apply or_introl with (B := In a (concat ll)) in H.
+        apply in_or_app in H.
+        rewrite concat_cons.
+        auto.
+      + apply IHll in H1.
+        apply or_intror with (A := In a a0) in H1.
+        apply in_or_app in H1.
+        rewrite concat_cons.
+        auto.
+  Qed.
+  
+(*==========================================================*  
+ *                                                          *
+ *         TACTIC FUNCTIONS FOR THE HILECOP PROGRAM         *
+ *                                                          *
+ *==========================================================*)
+  
 (*
  * Decides that an accessor function returns no error.  
  *)
