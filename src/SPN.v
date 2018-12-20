@@ -180,8 +180,6 @@ Definition NoIsolatedTrans (spn : SPN) :=
 
 (*** Properties on marking ***)
 
-Definition NoDupMarking (spn : SPN) := NoDup spn.(marking).
-
 (* For all place (pl i), (pl i) is in places if
  * (pl i) is referenced in marking. *)
 Definition NoUnmarkedPlace (spn : SPN)  :=
@@ -199,7 +197,6 @@ Definition IsWellStructuredSpn (spn : SPN) :=
   NoUnknownPlaceInNeighbours spn /\
   NoUnknownTransInLNeighbours spn /\
   NoIsolatedTrans spn /\
-  NoDupMarking spn /\
   NoUnmarkedPlace spn.
 
 (*===============================================*)
@@ -401,7 +398,8 @@ Section Marking.
     - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHReplaceOcc; auto].
   Qed.
 
-  (* Lemma : auxiliary lemma to prove replace_occ_nodup. 
+  (* Lemma : Auxiliary lemma to prove replace_occ_nodup 
+   *         and replace_occ_nodup_marking. 
    *
    *)
   Lemma replace_occ_no_change {A: Type} :
@@ -420,8 +418,8 @@ Section Marking.
       + apply not_in_cons in H. elim H; auto.
   Qed.
 
-  (* Lemma : auxiliary lemma to prove replace_occ_nodup. 
-   *
+  (* Lemma : Auxiliary lemma to prove replace_occ_nodup
+   *         and replace_occ_nodup_marking.
    *)
   Lemma replace_occ_not_in {A :Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl a : A) (l : list A),
@@ -445,9 +443,10 @@ Section Marking.
           [ auto | apply not_in_cons in H1; elim H1; auto ].
   Qed.
 
-  (* Lemma : For all list l, if NoDup l then NoDup (replace_occ l) 
-   *
-   *)
+  (* Lemma : For all list l, if NoDup l and repl not in l
+   *         then NoDup (replace_occ occ repl l).
+   *         
+   *) 
   Lemma replace_occ_nodup {A : Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
       NoDup l -> ~In repl l -> NoDup (replace_occ eq_dec occ repl l).
@@ -460,7 +459,7 @@ Section Marking.
     - apply NoDup_cons.
       -- apply NoDup_cons_iff in H. elim H; intros.
          apply replace_occ_no_change with (eq_dec0 := eq_dec) (repl0 := repl) in H1; rewrite H1.
-         apply not_in_cons in H0. elim H0. intros. auto.         
+         apply not_in_cons in H0. elim H0. intros. auto.
       -- apply IHl0.
          ++ apply NoDup_cons_iff in H; elim H; intros; auto.
          ++ apply not_in_cons in H0; elim H0; intros; auto.
@@ -477,6 +476,87 @@ Section Marking.
          ++ apply not_in_cons in H0; elim H0; intros; auto.
   Qed.
 
+  (* Lemma : Auxiliary lemma to prove replace_occ_nodup_marking.
+   *)
+  Lemma not_in_fst_split_replace_occ :
+    forall (l : list (nat * nat)) (x : nat) (y y' : nat) (a : nat),
+      ~In a (fst (split l)) -> a <> x -> ~In a (fst (split (replace_occ prodnat_eq_dec (x, y) (x, y') l))).
+  Proof.
+    do 4 intro.
+    functional induction (replace_occ prodnat_eq_dec (x, y) (x, y') l)
+               using replace_occ_ind; intros.
+    - auto.
+    - rewrite fst_split_app; simpl; apply not_in_cons.
+      split; auto.
+      apply IHl0.
+      + rewrite fst_split_app in H; simpl in H.
+        apply Decidable.not_or in H.
+        elim H; intros; auto.
+      + auto.
+    - generalize dependent x0; intro; elim x0; intros.
+      rewrite fst_split_app; simpl; apply not_in_cons.
+      split.
+      + rewrite fst_split_app in H; simpl in H.
+        apply Decidable.not_or in H.
+        elim H; intros; auto.
+      + apply IHl0.
+        -- rewrite fst_split_app in H; simpl in H.
+           apply Decidable.not_or in H.
+           elim H; intros; auto.
+        -- auto.
+  Qed.
+
+  (*  
+   * Lemma : If no duplicates in (fst (split m))
+   *         then no duplicates in (replace_occ (p, n) (p, n') m).
+   *         This holds because (fst (p, n)) = (fst (p, n')).
+   *)
+  Lemma replace_occ_nodup_marking :
+    forall (m : marking_type) (p : place_type) (n n' : nat),
+      NoDup (fst (split m)) ->
+      NoDup (fst (split (replace_occ prodnat_eq_dec (p, n) (p, n') m))).
+  Proof.
+    do 4 intro.
+    functional induction (replace_occ prodnat_eq_dec (p, n) (p, n') m)
+               using replace_occ_ind.
+    (* Base case, l = [] *)
+    - intro; apply NoDup_nil.
+    (* Case occ = hd l *)
+    - intros.
+      generalize (nodup_fst_split ((p, n) :: tl) H); intro.
+      apply NoDup_cons_iff in H0.
+      elim H0; intros.
+      apply replace_occ_no_change with (eq_dec := prodnat_eq_dec)
+                                       (repl := (p, n')) in H1.
+      rewrite H1.
+      rewrite fst_split_app in H.
+      rewrite fst_split_app.
+      simpl in H.
+      simpl.
+      auto.
+    (* Case occ <> hd l *)
+    - generalize dependent x; intro.
+      elim x; intros.
+      assert (H' := H).
+      assert (Hor := (classic (In (p, n) tl))).
+      elim Hor; clear Hor; intros.
+      (* Case In (p, n) tl *)
+      + rewrite fst_split_app in H; simpl in H.
+        apply NoDup_cons_iff in H.
+        elim H; intros.
+        generalize (in_fst_split p n tl H0); intros.
+        generalize (not_in_in_diff a p (fst (split tl)) (conj H1 H3)); intro.
+        generalize (not_in_fst_split_replace_occ tl p n n' a H1 H4); intro.
+        rewrite fst_split_app; simpl; apply NoDup_cons.
+        -- auto.
+        -- apply IHl; auto.
+      (* Case ~In (p, n) tl *)
+      + apply replace_occ_no_change with (eq_dec := prodnat_eq_dec) (repl := (p, n')) in H0.
+        rewrite H0.
+        apply nodup_fst_split in H.
+        auto.
+  Qed.
+  
   (* Lemma : Proves that replace_occ preserves structure
    *         of a marking m passed as argument when 
    *         (fst occ) = (fst repl).
@@ -632,6 +712,36 @@ Section Marking.
     - injection H; intros.
       rewrite H0.
       unfold MarkingHaveSameStruct; auto.
+  Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in (fst (split m)),
+   *         then modify_m returns a marking with no duplicates.
+   *)
+  Lemma modify_m_nodup :
+    forall (m m' : marking_type)
+           (p : place_type)
+           (op : nat -> nat -> nat)
+           (nboftokens : option nat_star),
+      NoDup (fst (split m)) ->
+      modify_m m p op nboftokens = Some m' ->
+      NoDup (fst (split m')).
+  Proof.
+    do 5 intro.
+    functional induction (modify_m m p op nboftokens)
+               using modify_m_ind;
+    intros.
+    (* Case get_m returns Some value. *)
+    - apply replace_occ_nodup_marking with (p := p) (n := n0) (n' := (op n0 n')) in H.
+      injection H0; intros.
+      rewrite <- H1.
+      auto.
+    (* Case get_m returns None, leads 
+     * to a contradiction.
+     *)
+    - inversion H0.
+    (* Case nboftokens = None *)
+    - injection H0; intros; rewrite <- H1; auto.
   Qed.
   
   (* Lemma : For all spn, and marking "some_marking", 
@@ -820,6 +930,33 @@ Section Marking.
       unfold MarkingHaveSameStruct in H.
       rewrite <- H; rewrite e0; auto.
     - inversion H.    
+  Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in (fst (split m)),
+   *         then update_marking_pre returns a marking with no duplicates.
+   *)
+  Lemma update_marking_pre_nodup :
+    forall (t : trans_type)
+           (pre : weight_type)
+           (places : list place_type)
+           (m m' : marking_type),
+      NoDup (fst (split m)) ->
+      update_marking_pre t pre m places = Some m' ->
+      NoDup (fst (split m')).
+  Proof.
+    intros t pre places m.
+    functional induction (update_marking_pre t pre m places)
+               using update_marking_pre_ind;
+    intros.
+    (* Base case, places = []. *)
+    - injection H0; intros; rewrite <- H1; auto.
+    (* Case modify_m returns Some value. *)
+    - apply IHo.
+      + apply (modify_m_nodup m m' p Nat.sub (pre t p) H e0).
+      + auto.
+    (* Case modify_m returns None, leads to a contradiction. *)
+    - inversion H0.
   Qed.
   
   (* 
