@@ -1116,6 +1116,33 @@ Section Marking.
       rewrite <- H; rewrite e0; auto.
     - inversion H.    
   Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in (fst (split m)),
+   *         then update_marking_post returns a marking with no duplicates.
+   *)
+  Lemma update_marking_post_nodup :
+    forall (t : trans_type)
+           (post : weight_type)
+           (places : list place_type)
+           (m m' : marking_type),
+      NoDup (fst (split m)) ->
+      update_marking_post t post m places = Some m' ->
+      NoDup (fst (split m')).
+  Proof.
+    intros t post places m.
+    functional induction (update_marking_post t post m places)
+               using update_marking_post_ind;
+      intros.
+    (* Base case, places = []. *)
+    - injection H0; intros; rewrite <- H1; auto.
+    (* Case modify_m returns Some value. *)
+    - apply IHo.
+      + apply (modify_m_nodup m m' p Nat.add (post t p) H e0).
+      + auto.
+    (* Case modify_m returns None, leads to a contradiction. *)
+    - inversion H0.
+  Qed.
   
 End Marking.
 
@@ -2160,6 +2187,47 @@ Section FireSpn.
      *)
     - inversion H1.
   Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in marking decreasingm
+   *         then spn_fire_pre_aux returns a marking with no
+   *         duplicates.
+   *)
+  Lemma spn_fire_pre_aux_nodup :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      NoDup (fst (split decreasingm)) ->
+      spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup =
+      Some (final_fired_pre_group, finalm) ->
+      NoDup (fst (split finalm)).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup.
+    functional induction (spn_fire_pre_aux lneighbours pre test inhib
+                                           steadym decreasingm
+                                           fired_pre_group pgroup)
+               using spn_fire_pre_aux_ind;
+    intros.
+    (* Base case, pgroup = []. *)
+    - injection H0; intros; rewrite <- H1; auto.
+    (* Case update_marking_pre returns Some value. *)
+    - apply IHo with (final_fired_pre_group := final_fired_pre_group).
+      + apply (update_marking_pre_nodup t pre (pre_pl neighbours_t) decreasingm marking' H e3).
+      + auto.
+    (* Case update_marking_pre returns None. *)
+    - inversion H0.
+    (* Case check_all_edges = false *)
+    - apply (IHo final_fired_pre_group finalm); [auto | auto].
+    (* Case check_all_edges = None. *)
+    - inversion H0.
+    (* Case get_neighbours = None. *)
+    - inversion H0.
+  Qed.
   
   (*****************************************************)
   (*****************************************************)
@@ -2302,6 +2370,29 @@ Section FireSpn.
       apply H3 in H1.
       auto.
     - elim H2.
+  Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in marking decreasingm
+   *         then spn_fire_pre returns a marking with no duplicates.
+   *)
+  Lemma spn_fire_pre_nodup :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      NoDup (fst (split decreasingm)) ->
+      spn_fire_pre lneighbours pre test inhib steadym decreasingm pgroup =
+      Some (final_fired_pre_group, finalm) ->
+      NoDup (fst (split finalm)).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm pgroup; intros.
+    unfold spn_fire_pre in H0.
+    apply (spn_fire_pre_aux_nodup lneighbours pre test inhib steadym decreasingm [] pgroup
+                                  final_fired_pre_group finalm H H0).
   Qed.
   
   (***********************************************************************)
@@ -2569,6 +2660,42 @@ Section FireSpn.
      *)
     - inversion H1.
   Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in marking decreasingm
+   *         then spn_map_fire_pre_aux returns a marking with no 
+   *         duplicates.
+   *)
+  Lemma spn_map_fire_pre_aux_nodup :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (steadym decreasingm : marking_type)
+           (pre_fired_transitions : list trans_type)
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      NoDup (fst (split decreasingm)) ->
+      spn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                           pre_fired_transitions priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      NoDup (fst (split intermediatem)).
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm pre_fired_transitions priority_groups.
+    functional induction (spn_map_fire_pre_aux lneighbours pre test inhib
+                                               steadym decreasingm
+                                               pre_fired_transitions priority_groups)
+               using spn_map_fire_pre_aux_ind;
+    intros.
+    (* Base case priority_groups = [] *)
+    - injection H0; intros; rewrite <- H1; auto.
+    (* Case spn_fire_pre returns Some value. *)
+    - apply IHo with (final_pre_fired := final_pre_fired).
+      + apply (spn_fire_pre_nodup lneighbours pre test inhib steadym decreasingm pgroup
+                                  pre_fired_trs decreasedm H e0).
+      + auto.
+    (* Case spn_fire_pre returns None. *)
+    - inversion H0.
+  Qed.  
   
   (***********************************************************************)
   (***********************************************************************)
@@ -2712,6 +2839,31 @@ Section FireSpn.
       intros.
       apply H3 in H1; auto.
     - elim H2.
+  Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in marking m
+   *         then spn_map_fire_pre returns a marking
+   *         with no duplicates.
+   *)
+  Lemma spn_map_fire_pre_nodup :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      NoDup (fst (split m)) ->
+      spn_map_fire_pre lneighbours pre test inhib m priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      NoDup (fst (split intermediatem)).
+  Proof. 
+    intros lneighbours pre test inhib m priority_groups.
+    functional induction (spn_map_fire_pre lneighbours pre test inhib m priority_groups)
+               using spn_map_fire_pre_ind;
+    intros.
+    apply (spn_map_fire_pre_aux_nodup lneighbours pre test inhib m m [] priority_groups
+                                      final_pre_fired intermediatem H H0). 
   Qed.
   
   (***********************************************************************)
@@ -2895,6 +3047,74 @@ Section FireSpn.
         rewrite H2 in e0; inversion e0.
       + apply in_eq.
   Qed.
+
+  (*  
+   * Lemma : If there are no duplicates in marking m
+   *         then fire_post returns a marking
+   *         with no duplicates.
+   *)
+  Lemma fire_post_nodup :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (post : weight_type) 
+           (increasingm : marking_type) 
+           (pre_fired_transitions : list trans_type)
+           (increasedm : marking_type),
+      NoDup (fst (split increasingm)) ->
+      fire_post lneighbours post increasingm pre_fired_transitions =
+      Some increasedm ->
+      NoDup (fst (split increasedm)).
+  Proof.
+    intros lneighbours post increasingm pre_fired_transitions.
+    functional induction (fire_post lneighbours post increasingm pre_fired_transitions)
+               using fire_post_ind;
+    intros.
+    (* Base case pre_fired_transitions = [] *)
+    - injection H0; intros; rewrite <- H1; auto.
+    (* Case update_marking_post returns Some value. *)
+    - apply IHo.
+      + apply (update_marking_post_nodup t post (post_pl neighbours_t) increasingm
+                                         new_marking H e1).
+      + auto.
+    (* Case update_marking_post returns None. *)
+    - inversion H0.
+    (* Case get_neighbours = None. *)
+    - inversion H0.
+  Qed.
+
+  (* Lemma : Proves that fire_post preserves
+   *         the structure of the marking increasingm
+   *         passed as argument. 
+   *)
+  Lemma fire_post_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (post : weight_type) 
+           (increasingm : marking_type) 
+           (pre_fired_transitions : list trans_type)
+           (increasedm : marking_type),
+      fire_post lneighbours post increasingm pre_fired_transitions =
+      Some increasedm ->
+      MarkingHaveSameStruct increasingm increasedm.
+  Proof.
+    intros lneighbours post increasingm pre_fired_transitions.
+    functional induction (fire_post lneighbours post increasingm pre_fired_transitions)
+               using fire_post_ind;
+    intros.
+    (* Base case pre_fired_transitions = []. *)
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    (* Case update_marking_post returns Some value. *)
+    - apply IHo in H.
+      apply update_marking_post_same_struct in e1.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e1.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e1; auto.
+    (* Case update_marking_post returns None. *)
+    - inversion H.
+    (* Case get_neighbours returns None. *)
+    - inversion H.
+  Qed.  
   
   (*************************************************)
   (****************** SPN FIRE *********************)
@@ -3070,6 +3290,71 @@ Section FireSpn.
       rewrite H3 in e.
       inversion e.
   Qed.
+
+  (* 
+   * Lemma : If there are no duplicates in marking m,
+   *         then spn_fire returns a marking with no duplicates.
+   *)
+  Lemma spn_fire_nodup :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (priority_groups : list (list trans_type))
+           (fired_transitions : list (trans_type))
+           (newm : marking_type),
+      NoDup (fst (split m)) ->
+      spn_fire lneighbours pre test inhib post m priority_groups =
+      Some (fired_transitions, newm) ->
+      NoDup (fst (split newm)).
+  Proof.
+    intros lneighbours pre test inhib post m priority_groups.
+    functional induction (spn_fire lneighbours pre test inhib post m priority_groups)
+               using spn_fire_ind;
+    intros.
+    (* General case, all went well. *)
+    - injection H0; intros; rewrite <- H1; auto.
+      generalize (spn_map_fire_pre_nodup lneighbours pre test inhib m priority_groups
+                                         pre_fired_transitions intermediatem
+                                         H e); intro.
+      apply (fire_post_nodup lneighbours post intermediatem pre_fired_transitions
+                             finalm H3 e1).
+    (* Case fire_post returns None. *)
+    - inversion H0.
+    (* Case spn_map_fire_pre returns None. *)
+    - inversion H0.
+  Qed.
+
+  (* Lemma : Proves that spn_fire preserves
+   *         the structure of the marking m
+   *         passed as argument. 
+   *)  
+  Lemma spn_fire_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (priority_groups : list (list trans_type))
+           (fired_transitions : list (trans_type))
+           (newm : marking_type),
+      spn_fire lneighbours pre test inhib post m priority_groups =
+      Some (fired_transitions, newm) ->
+      MarkingHaveSameStruct m newm.
+  Proof.
+    intros lneighbours pre test inhib post m priority_groups.
+    functional induction (spn_fire lneighbours pre test inhib post m priority_groups)
+               using spn_fire_ind;
+    intros.
+    - injection H; intros; rewrite <- H0; auto.
+      generalize (spn_map_fire_pre_same_struct lneighbours pre test inhib m priority_groups
+                                               pre_fired_transitions intermediatem
+                                               e); intro.
+      generalize (fire_post_same_struct lneighbours post intermediatem pre_fired_transitions
+                                        finalm e1); intro.
+      unfold MarkingHaveSameStruct in H2; unfold MarkingHaveSameStruct in H3.
+      unfold MarkingHaveSameStruct.
+      rewrite H2; rewrite H3; auto.
+    - inversion H.
+    - inversion H.
+  Qed.
   
 End FireSpn.
 
@@ -3176,7 +3461,7 @@ Section AnimateSpn.
   Qed.
 
   (*  
-   * Lemma : forall spn with properties NoUnknownInPriorityGroups
+   * Lemma : For all spn with properties NoUnknownInPriorityGroups
    *         and NoUnknownTransInLNeighbours then transitions
    *         in spn.(priority_groups) are referenced in spn.(lneighbours).
    *         
@@ -3199,7 +3484,7 @@ Section AnimateSpn.
   Qed.
 
   (*  
-   * Lemma : forall spn with properties NoUnmarkedPlace and NoUnknownPlaceInNeighbours
+   * Lemma : For all spn with properties NoUnmarkedPlace and NoUnknownPlaceInNeighbours
    *         then pre-places referenced in spn.(lneighbours) are referenced in spn.(marking).
    *
    *         Useful to apply spn_fire_no_error while proving spn_cycle_no_error.
@@ -3263,9 +3548,9 @@ Section AnimateSpn.
     generalize (H3 p H2); intro.
     rewrite H in H4; auto.
   Qed.
-
+  
   (*  
-   * Theorem : For all spn verifying the property ISWellStructuredSpn,
+   * Theorem : For all spn verifying the property IsWellStructuredSpn,
    *           spn_cycle spn returns no error.
    *)
   Theorem spn_cycle_no_error :
@@ -3302,13 +3587,45 @@ Section AnimateSpn.
       intros.
       decompose [and] H; clear H.
       generalize (priority_groups_in_lneighbours spn H1 H7); intro.
-      generalize (pre_places_in_marking spn H11 H6); intro.
-      generalize (post_places_in_marking spn H11 H6); intro.
-      generalize (spn_fire_no_error lneighbours0 pre0 test0 inhib0 post0 m priority_groups0 H H10 H12).
+      generalize (pre_places_in_marking spn H10 H6); intro.
+      generalize (post_places_in_marking spn H10 H6); intro.
+      generalize (spn_fire_no_error lneighbours0 pre0 test0 inhib0 post0 m priority_groups0 H H9 H11).
       intro.
-      elim H13; intros.
-      rewrite H14 in e0.
+      elim H12; intros.
+      rewrite H13 in e0.
       inversion e0.
+  Qed.
+
+  (*  
+   * Theorem : For all spn verifying the property IsWellStructuredSpn,
+   *           (spn_cycle spn) returns a new spn verifying the relation
+   *           IsWellStructuredSpn.
+   *)
+  Theorem spn_cycle_well_structured :
+    forall (spn : SPN)
+           (fired_transitions : list trans_type)
+           (next_spn : SPN),
+      IsWellStructuredSpn spn ->
+      spn_cycle spn = Some (fired_transitions, next_spn) ->
+      IsWellStructuredSpn next_spn.
+  Proof.
+    intro.
+    functional induction (spn_cycle spn) using spn_cycle_ind; intros.
+    (* General case. *)
+    - unfold IsWellStructuredSpn.
+      unfold IsWellStructuredSpn in H.
+      injection H0; clear H0; intros.
+      unfold NoUnmarkedPlace.
+      unfold NoUnmarkedPlace in H.
+      apply spn_fire_same_struct in e0.
+      unfold MarkingHaveSameStruct in e0.
+      rewrite <- H0.
+      simpl.
+      rewrite <- e0.
+      simpl in H.
+      auto.
+    (* Case spn_fire returns None. *)
+    - inversion H0.
   Qed.
   
   (*******************************************)
@@ -3316,62 +3633,123 @@ Section AnimateSpn.
   (*******************************************)
 
   (* 
-   * Function : Returns the list of (transitions_fired(i), marking(i))
+   * Function : Returns the list of (fired_transitions(i), marking(i))
    *            for each cycle i, from 0 to n, representing the evolution
    *            of the Petri net spn.
    *)
-  Fixpoint spn_animate (spn : SPN) (n : nat) :
-    list ((list (list trans_type)) * marking_type) :=
+  Fixpoint spn_animate
+           (spn : SPN)
+           (n : nat)
+           (spn_evolution : list (list trans_type * marking_type)) :
+    option (list (list trans_type * marking_type)) :=
     match n with
-    | O => [ ([], []) ]
-    | S n' => let (fired_groups_at_n, spn_at_n) := (spn_cycle spn) in
-              (fired_groups_at_n, (marking spn_at_n)) :: (spn_animate spn_at_n n')
+    | O => Some spn_evolution
+    | S n' => match (spn_cycle spn) with
+              | Some (fired_trans_at_n, spn_at_n) =>
+                spn_animate spn_at_n n' (spn_evolution ++ [(fired_trans_at_n, (marking spn_at_n))])
+              (* Case of error!! *)
+              | None => None
+              end
     end.
 
   Functional Scheme spn_animate_ind := Induction for spn_animate Sort Prop.
   
   (*** Formal specification : spn_animate ***)
   Inductive SpnAnimate (spn : SPN) :
-    nat -> list ((list (list trans_type)) * marking_type) -> Prop :=
-  | SpnAnimate_0 : SpnAnimate spn 0 [([], [])]
+    nat ->
+    list (list trans_type * marking_type) ->
+    option (list (list trans_type * marking_type)) ->
+    Prop :=
+  | SpnAnimate_0 :
+      forall (spn_evolution : list (list trans_type * marking_type)),
+        SpnAnimate spn 0 spn_evolution (Some spn_evolution) 
   | SpnAnimate_cons :
       forall (n : nat)
-             (fired_groups_at_n : list (list trans_type))
+             (fired_trans_at_n : list trans_type)
              (spn_at_n : SPN)
-             (marking_evolution : list ((list (list trans_type)) * marking_type)),
-        SpnCycle spn (fired_groups_at_n, spn_at_n) ->
-        SpnAnimate spn_at_n n marking_evolution ->
-        SpnAnimate spn (S n) ((fired_groups_at_n, (marking spn_at_n)) :: marking_evolution).
+             (spn_evolution : list (list trans_type * marking_type))
+             (opt_evolution : option (list (list trans_type * marking_type))),
+        SpnCycle spn (Some (fired_trans_at_n, spn_at_n)) ->
+        SpnAnimate spn_at_n
+                   n
+                   (spn_evolution ++ [(fired_trans_at_n, (marking spn_at_n))])
+                   opt_evolution ->
+        SpnAnimate spn
+                   (S n)
+                   spn_evolution
+                   opt_evolution
+  | SpnAnimate_err :
+      forall (n : nat)
+             (spn_evolution : list (list trans_type * marking_type)),
+        SpnCycle spn None ->
+        SpnAnimate spn (S n) spn_evolution None.
   
   (*** Correctness proof : spn_animate***)
   Theorem spn_animate_correct :
     forall (spn :SPN)
            (n : nat)
-           (marking_evolution : list ((list (list trans_type)) * marking_type)),
-      spn_animate spn n = marking_evolution -> SpnAnimate spn n marking_evolution.
+           (spn_evolution : list (list trans_type * marking_type))
+           (opt_evolution : option (list (list trans_type * marking_type))),
+      spn_animate spn n spn_evolution = opt_evolution ->
+      SpnAnimate spn n spn_evolution opt_evolution.
   Proof.                                                                                
-    intros spn n; functional induction (spn_animate spn n) using spn_animate_ind.
+    intros spn n spn_evolution.
+    functional induction (spn_animate spn n spn_evolution) using spn_animate_ind;
+    intros.
     (* Case n = 0 *)
     - intros; rewrite <- H; apply SpnAnimate_0.
     (* General case *)
-    - intros; rewrite <- H; apply SpnAnimate_cons.
+    - intros; rewrite <- H.
+      apply SpnAnimate_cons with (fired_trans_at_n := fired_trans_at_n)
+                                 (spn_at_n := spn_at_n).
       + apply spn_cycle_correct in e0; auto.
-      + apply IHl; auto.
+      + apply IHo; auto.
+    (* Error case. *)
+    - rewrite <- H; apply SpnAnimate_err.
+      apply spn_cycle_correct in e0; auto.
   Qed.
 
   (*** Completeness proof : spn_animate ***)
   Theorem spn_animate_compl :
     forall (spn :SPN)
            (n : nat)
-           (marking_evolution : list ((list (list trans_type)) * marking_type)),
-      SpnAnimate spn n marking_evolution -> spn_animate spn n = marking_evolution.
-  Proof.                                                                                
+           (spn_evolution : list (list trans_type * marking_type))
+           (opt_evolution : option (list (list trans_type * marking_type))),
+      SpnAnimate spn n spn_evolution opt_evolution ->
+      spn_animate spn n spn_evolution = opt_evolution.
+  Proof.
     intros; elim H; intros.
     (* Case SpnAnimate_0 *)
     - simpl; auto.
     (* Case SpnAnimate_cons *)
-    - simpl; apply spn_cycle_compl in H0; rewrite H0.
+    - simpl. apply spn_cycle_compl in H0; rewrite H0.
       rewrite H2; auto.
+    (* Case SpnAnimate_err *)
+    - apply spn_cycle_compl in H0.
+      simpl.
+      rewrite H0; auto.
   Qed.
 
+  Theorem spn_animate_no_error :
+    forall (spn : SPN)
+           (n : nat),
+      IsWellStructuredSpn spn ->
+      exists (v : list (list trans_type * marking_type)),
+        spn_animate spn n [] = Some v.
+  Proof.
+    do 2 intro.
+    functional induction (spn_animate spn n [])
+               using spn_animate_ind;
+    intros.
+    (* Base case, n = 0. *)
+    - exists spn_evolution; auto.
+    (* General case. *)
+    - apply IHo.
+      apply (spn_cycle_well_structured spn fired_trans_at_n spn_at_n H e0).
+    (* Error case, impossible regarding the hypotheses. *)
+    - generalize (spn_cycle_no_error spn H); intro.
+      elim H0; intros.
+      rewrite H1 in e0; inversion e0.
+  Qed.
+  
 End AnimateSpn.
