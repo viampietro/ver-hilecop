@@ -54,6 +54,29 @@ Structure neighbours_type : Set := mk_neighbours {
                                        inhib_pl : list place_type;
                                        post_pl : list place_type
                                      }.
+(*
+ * Function : Returns the concatenation of all list of places
+ *            contained in neighb.
+ *            
+ *            Useful for NoIsolatedPlace spn's property.
+ *)
+Definition flatten_neighbours (neighb : neighbours_type) : list place_type :=
+  neighb.(pre_pl) ++ neighb.(test_pl) ++ neighb.(inhib_pl) ++ neighb.(post_pl).
+
+(*
+ * Function : Returns the list of all places referenced in lneighbours.
+ *            A same place can possibly appear multiple times in the
+ *            resulting list.            
+ * 
+ *            Useful for NoIsolatedPlace spn's property.
+ *)
+Fixpoint flatten_lneighbours (lneighbours : list (trans_type * neighbours_type)) :=
+  match lneighbours with
+  | (t, neighb) :: tail => (flatten_neighbours neighb) ++ (flatten_lneighbours tail)
+  | [] => []
+  end.
+
+Functional Scheme flatten_lneighbours_ind := Induction for flatten_lneighbours Sort Prop.
 
 (*==================================================================*)
 (*============== STRUCTURE OF SYNCHRONOUS PETRI NETS ===============*)
@@ -119,17 +142,13 @@ Definition NoDupTranss (spn : SPN) := NoDup spn.(transs).
 (* For all transition t, t is in spn.(transs) iff 
  * there exists a group in spn.(priority_groups) containing t. *)
 Definition NoUnknownInPriorityGroups (spn : SPN) :=
-  spn.(transs) = concat spn.(priority_groups).
+  Permutation spn.(transs) (concat spn.(priority_groups)).
 
 (* For all transition t in one of the group of
  * priority_groups, t is contained in only one
  * group of priority_groups. *)
 Definition NoIntersectInPriorityGroups (spn : SPN) :=
-  forall (group group' : list trans_type),
-    (In group spn.(priority_groups) /\
-     In group' spn.(priority_groups) /\
-     group <> group') ->
-    (forall t : trans_type, In t group -> ~In t group').
+  NoDup (concat spn.(priority_groups)).
 
 (*** Properties on lneighbours ***)
 
@@ -138,28 +157,13 @@ Definition NoDupLneighbours (spn : SPN) := NoDup spn.(lneighbours).
 (* For all place p, p is in places iff 
  * p is in the neighbourhood of at least one transition. *)
 Definition NoIsolatedPlace (spn : SPN) := 
-  forall p : place_type,
-    In p spn.(places) ->
-    exists (neighbours_of_t : (trans_type * neighbours_type)),
-      In neighbours_of_t spn.(lneighbours) /\  
-      (In p (snd neighbours_of_t).(pre_pl) \/
-       In p (snd neighbours_of_t).(test_pl) \/
-       In p (snd neighbours_of_t).(inhib_pl) \/
-       In p (snd neighbours_of_t).(post_pl)).
+  incl spn.(places) (flatten_lneighbours spn.(lneighbours)).
 
-(* Forall neighbours_of_t in spn.lneighbours 
- * if place p is in neighbours_of_t then
- * p is in spn.places.
+(* All places in (flatten_lneighbours spn.(lneighbours)) 
+ * are in spn.(palces).
  *)
 Definition NoUnknownPlaceInNeighbours (spn : SPN) :=
-  forall (t : trans_type) (neighbours : neighbours_type),
-    In (t, neighbours) spn.(lneighbours) ->  
-    (forall (p : place_type),
-        (In p neighbours.(pre_pl) \/
-         In p neighbours.(test_pl) \/
-         In p neighbours.(inhib_pl) \/
-         In p neighbours.(post_pl)) ->
-        In p spn.(places)).
+  incl (flatten_lneighbours spn.(lneighbours)) spn.(places).
 
 (* For all transition t, t is in spn.transs iff 
  * t is referenced in spn.lneighbours. *)
@@ -171,12 +175,9 @@ Definition NoUnknownTransInLNeighbours (spn : SPN) :=
  * i.e. A transition has at least one neighbour place.
  *)
 Definition NoIsolatedTrans (spn : SPN) :=
-  forall (neighbours_of_t : (trans_type * neighbours_type)),
-    In neighbours_of_t spn.(lneighbours) ->
-    ((snd neighbours_of_t).(pre_pl) <> [] \/
-     (snd neighbours_of_t).(test_pl) <> [] \/
-     (snd neighbours_of_t).(inhib_pl) <> [] \/
-     (snd neighbours_of_t).(post_pl) <> []).
+  forall (t : trans_type) (neighbours_of_t : neighbours_type),
+    In (t, neighbours_of_t) spn.(lneighbours) ->
+    (flatten_neighbours neighbours_of_t) <> [].
 
 (*** Properties on marking ***)
 
@@ -3483,7 +3484,36 @@ Section AnimateSpn.
     auto.
   Qed.
 
-  (*  
+  Lemma incl_places_flatten_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (t : trans_type)
+           (neighbours : neighbours_type),
+      In (t, neighbours) lneighbours ->
+      (forall p : place_type, (In p (pre_pl neighbours) \/
+                               In p (test_pl neighbours) \/
+                               In p (inhib_pl neighbours) \/
+                               In p (post_pl neighbours)) -> In p (flatten_lneighbours lneighbours)).
+  Proof.
+    intros lneighbours.
+    functional induction (flatten_lneighbours lneighbours) using flatten_lneighbours_ind; intros.
+    - inversion H.
+    - apply in_or_app.
+      apply in_inv in H.
+      elim H; intros.
+      + injection H1; intros.
+        rewrite H2.
+        left.
+        unfold flatten_neighbours.
+        decompose [or] H0.
+        -- apply in_or_app; left; auto.
+        -- apply in_or_app; right; apply in_or_app; left; auto.
+        -- do 2 (apply in_or_app; right); apply in_or_app; left; auto.
+        -- do 3 (apply in_or_app; right); auto.
+      + right.
+        apply IHl with (t := t) (neighbours := neighbours); auto.
+  Qed.
+  
+    (*  
    * Lemma : For all spn with properties NoUnmarkedPlace and NoUnknownPlaceInNeighbours
    *         then pre-places referenced in spn.(lneighbours) are referenced in spn.(marking).
    *
@@ -3503,23 +3533,27 @@ Section AnimateSpn.
     intros.
     unfold NoUnmarkedPlace in H.
     unfold NoUnknownPlaceInNeighbours in H0.
-    generalize (H0 t neighbours H1); intro.
+    unfold incl in H0.
+    generalize (incl_places_flatten_lneighbours (lneighbours spn) t neighbours H1); intro.
     split.
     - intros.
       apply or_introl with (B := (In p (test_pl neighbours) \/
                                   In p (inhib_pl neighbours) \/
                                   In p (post_pl neighbours))) in H3. 
       generalize (H2 p H3); intro.
+      apply H0 in H4.
       rewrite H in H4; auto.
     - split; intros.
       + apply or_introl with (B := In p (post_pl neighbours)) in H3.
         apply or_intror with (A := In p (test_pl neighbours)) in H3.
         apply or_intror with (A := In p (pre_pl neighbours)) in H3.
         generalize (H2 p H3); intro.
+        apply H0 in H4.
         rewrite H in H4; auto.
       + apply or_introl with (B := In p (inhib_pl neighbours) \/ In p (post_pl neighbours)) in H3.
         apply or_intror with (A := In p (pre_pl neighbours)) in H3.
         generalize (H2 p H3); intro.
+        apply H0 in H4.
         rewrite H in H4; auto.
   Qed.
 
@@ -3541,11 +3575,13 @@ Section AnimateSpn.
     intros.
     unfold NoUnmarkedPlace in H.
     unfold NoUnknownPlaceInNeighbours in H0.
-    generalize (H0 t neighbours H1); intro.
+    unfold incl in H0.
+    generalize (incl_places_flatten_lneighbours spn.(lneighbours) t neighbours H1); intro.
     apply or_intror with (A := In p (inhib_pl neighbours)) in H2.
     apply or_intror with (A := In p (test_pl neighbours)) in H2.
     apply or_intror with (A := In p (pre_pl neighbours)) in H2.
     generalize (H3 p H2); intro.
+    apply H0 in H4.
     rewrite H in H4; auto.
   Qed.
   
