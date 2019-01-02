@@ -70,13 +70,58 @@ Definition flatten_neighbours (neighb : neighbours_type) : list place_type :=
  * 
  *            Useful for NoIsolatedPlace spn's property.
  *)
-Fixpoint flatten_lneighbours (lneighbours : list (trans_type * neighbours_type)) :=
+Fixpoint flatten_lneighbours (lneighbours : list (trans_type * neighbours_type)) :
+  list place_type :=
   match lneighbours with
   | (t, neighb) :: tail => (flatten_neighbours neighb) ++ (flatten_lneighbours tail)
   | [] => []
   end.
 
 Functional Scheme flatten_lneighbours_ind := Induction for flatten_lneighbours Sort Prop.
+
+(*** Formal specification : flatten_lneighbours. ***)
+Inductive FlattenLneighbours :
+  list (trans_type * neighbours_type) -> list place_type -> Prop :=
+| FlattenLneighbours_nil :
+    FlattenLneighbours [] []
+| FlattenLneighbours_cons :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (places : list place_type)
+           (t : trans_type)
+           (neighbours : neighbours_type),
+      FlattenLneighbours lneighbours places ->
+      FlattenLneighbours ((t, neighbours) :: lneighbours)
+                         ((flatten_neighbours neighbours) ++ places).
+
+(*** Correctness proof : flatten_lneighbours ***)
+Theorem flatten_lneighbours_correct :
+  forall (lneighbours : list (trans_type * neighbours_type))
+         (places : list place_type),
+    flatten_lneighbours lneighbours = places -> FlattenLneighbours lneighbours places.
+Proof.
+  intros lneighbours.
+  functional induction (flatten_lneighbours lneighbours)
+             using flatten_lneighbours_ind;
+  intros.
+  (* Base case : lneighbours = []. *)
+  - rewrite <- H; apply FlattenLneighbours_nil.
+  (* General case. *)
+  - rewrite <- H; apply FlattenLneighbours_cons; apply IHl; auto.
+Qed.
+
+(*** Completeness proof : flatten_lneighbours ***)
+Theorem flatten_lneighbours_compl :
+  forall (lneighbours : list (trans_type * neighbours_type))
+         (places : list place_type),
+    FlattenLneighbours lneighbours places -> flatten_lneighbours lneighbours = places.
+Proof.
+  intros.
+  induction H.
+  (* Case FlattenLneighbours_nil. *)
+  - simpl; auto.
+  (* Case FlattenLneighbours_cons. *)
+  - simpl; rewrite IHFlattenLneighbours; auto.
+Qed.
 
 (*==================================================================*)
 (*============== STRUCTURE OF SYNCHRONOUS PETRI NETS ===============*)
