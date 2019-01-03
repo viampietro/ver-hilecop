@@ -36,9 +36,10 @@ Structure chrono_type : Set :=
  *)
 Structure STPN : Set :=
   mk_STPN {
-      spn : SPN;
-      chronos : list (trans_type * option chrono_type)       
+      chronos : list (trans_type * option chrono_type);
+      spn :> SPN
     }.
+ 
 
 (*===================================================*)
 (*=============== CHRONO SECTION  ===================*)
@@ -136,13 +137,13 @@ Section Chrono.
    *            Raises an error (None value) otherwise.
    *)
   Fixpoint get_chrono
-           (t : trans_type)
-           (chronos : list (trans_type * option chrono_type)) {struct chronos} :
+           (chronos : list (trans_type * option chrono_type))
+           (t : trans_type) {struct chronos} :
     option (option chrono_type) :=
     match chronos with
     | (t', opt_chrono) :: tail => if t =? t' then
                                     Some opt_chrono
-                                  else get_chrono t tail
+                                  else get_chrono tail t
     (* Case of error!!! *)
     | [] => None
     end.
@@ -150,35 +151,38 @@ Section Chrono.
     Functional Scheme get_chrono_ind := Induction for get_chrono Sort Prop. 
 
     (*** Formal specification : get_chrono ***)
-    Inductive GetChrono (t : trans_type) :
-      list (trans_type * option chrono_type) -> option (option chrono_type) -> Prop :=
+    Inductive GetChrono :
+      list (trans_type * option chrono_type) ->
+      trans_type ->
+      option (option chrono_type) -> Prop :=
     | GetChrono_err :
-        GetChrono t [] None
+        forall t : trans_type,
+          GetChrono [] t None
     | GetChrono_hd_true :
         forall (chronos : list (trans_type * option chrono_type))
-               (t' : trans_type)
+               (t t' : trans_type)
                (opt_chrono : option chrono_type),
           t = t' ->
-          GetChrono t ((t', opt_chrono) :: chronos) (Some opt_chrono)
+          GetChrono ((t', opt_chrono) :: chronos) t (Some opt_chrono)
     | GetChrono_hd_false :
         forall (chronos : list (trans_type * option chrono_type))
-               (t' : trans_type)
+               (t t' : trans_type)
                (opt_chrono : option chrono_type)
                (opt_opt_chrono : option (option chrono_type)),
           t <> t' ->
-          GetChrono t chronos opt_opt_chrono ->
-          GetChrono t ((t', opt_chrono) :: chronos) opt_opt_chrono.
+          GetChrono chronos t opt_opt_chrono ->
+          GetChrono ((t', opt_chrono) :: chronos) t opt_opt_chrono.
           
     (*** Correctness proof : get_chrono ***)
     Theorem get_chrono_correct :
-      forall (t : trans_type)
-             (chronos : list (trans_type * option chrono_type))
+      forall (chronos : list (trans_type * option chrono_type))
+             (t : trans_type)
              (opt_opt_chrono : option (option chrono_type)),
-        get_chrono t chronos = opt_opt_chrono ->
-        GetChrono t chronos opt_opt_chrono.
+        get_chrono chronos t = opt_opt_chrono ->
+        GetChrono chronos t opt_opt_chrono.
     Proof.
-      intros t chronos.
-      functional induction (get_chrono t chronos) using get_chrono_ind; intros.
+      intros chronos t.
+      functional induction (get_chrono chronos t) using get_chrono_ind; intros.
       (* Error case chronos = []. *)
       - rewrite <- H; apply GetChrono_err.
       (* Case t = hd chronos. *)
@@ -191,13 +195,13 @@ Section Chrono.
 
     (*** Completeness proof : get_chrono ***)
     Theorem get_chrono_compl :
-      forall (t : trans_type)
-             (chronos : list (trans_type * option chrono_type))
+      forall (chronos : list (trans_type * option chrono_type))
+             (t : trans_type)
              (opt_opt_chrono : option (option chrono_type)),
-        GetChrono t chronos opt_opt_chrono ->
-        get_chrono t chronos = opt_opt_chrono.
+        GetChrono chronos t opt_opt_chrono ->
+        get_chrono chronos t = opt_opt_chrono.
     Proof.
-      intros t chronos opt_opt_chrono H.
+      intros chronos t opt_opt_chrono H.
       induction H.
       (* Case GetChrono_err *)
       - simpl; auto.
@@ -430,7 +434,7 @@ Section Chrono.
                (t : trans_type) 
                (chronos : list (trans_type * option chrono_type)) :
       option (list (trans_type * option chrono_type)) :=
-      match get_chrono t chronos with
+      match get_chrono chronos t with
       | Some opt_chrono =>
         match opt_chrono with
         (* Replaces old chrono by an incremented chrono 
@@ -456,7 +460,7 @@ Section Chrono.
       Prop :=
     | IncrementChrono_err :
         forall (chronos : list (trans_type * option chrono_type)),
-          GetChrono t chronos None ->
+          GetChrono chronos t None ->
           IncrementChrono t chronos None
     | IncrementChrono_some :
         forall (chronos : list (trans_type * option chrono_type))
@@ -466,7 +470,7 @@ Section Chrono.
                (max_is_infinite : bool)
                (min_t_le_max_t : (int min_t) <= (int max_t))
                (final_chronos : list (trans_type * option chrono_type)),
-          GetChrono t chronos (Some opt_chrono) ->
+          GetChrono chronos t (Some opt_chrono) ->
           opt_chrono = Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t) ->
           ReplaceChrono (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)
                         (mk_chrono (cnt + 1) min_t max_t max_is_infinite min_t_le_max_t)
@@ -476,7 +480,7 @@ Section Chrono.
     | IncrementChrono_none :
         forall (chronos : list (trans_type * option chrono_type))
                (opt_chrono : option chrono_type),
-          GetChrono t chronos (Some opt_chrono) ->
+          GetChrono chronos t (Some opt_chrono) ->
           opt_chrono = None ->
           IncrementChrono t chronos (Some chronos).
                     
@@ -636,7 +640,7 @@ Section Chrono.
                (t : trans_type) 
                (chronos : list (trans_type * option chrono_type)) :
       option (list (trans_type * option chrono_type)) :=
-      match get_chrono t chronos with
+      match get_chrono chronos t with
       | Some opt_chrono =>
         match opt_chrono with
         (* Replaces old chrono by a reset chrono in chronos list. *)
@@ -660,7 +664,7 @@ Section Chrono.
       Prop :=
     | ResetChrono_err :
         forall (chronos : list (trans_type * option chrono_type)),
-          GetChrono t chronos None ->
+          GetChrono chronos t None ->
           ResetChrono t chronos None
     | ResetChrono_some :
         forall (chronos : list (trans_type * option chrono_type))
@@ -670,7 +674,7 @@ Section Chrono.
                (max_is_infinite : bool)
                (min_t_le_max_t : (int min_t) <= (int max_t))
                (final_chronos : list (trans_type * option chrono_type)),
-          GetChrono t chronos (Some opt_chrono) ->
+          GetChrono chronos t (Some opt_chrono) ->
           opt_chrono = Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t) ->
           ReplaceChrono (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)
                         (mk_chrono 0 min_t max_t max_is_infinite min_t_le_max_t)
@@ -680,7 +684,7 @@ Section Chrono.
     | ResetChrono_none :
         forall (chronos : list (trans_type * option chrono_type))
                (opt_chrono : option chrono_type),
-          GetChrono t chronos (Some opt_chrono) ->
+          GetChrono chronos t (Some opt_chrono) ->
           opt_chrono = None ->
           ResetChrono t chronos (Some chronos).
                     
@@ -839,418 +843,348 @@ Section Chrono.
 
 End Chrono.
 
-(*  
- * Function : Returns true if transition t is 
- *            sensitized by marking m, false otherwise.
- *
- *            The difference with the check_all_edges function (SPN.v)
- *            is that only one marking "m" is considered instead
- *            of two (one steady and one decreasing).
- *)
-Definition is_sensitized
-           (neighbours_t : neighbours_type)
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (t : trans_type) : option bool :=
-  match (check_pre_or_test (pre t) m (pre_pl neighbours_t) true) with
-  | Some check_pre_result =>  
-    match (check_pre_or_test (test t) m (test_pl neighbours_t) true) with
-    | Some check_test_result =>
-      match check_inhib (inhib t) m (inhib_pl neighbours_t) true with
-      | Some check_inhib_result =>
-        Some (check_pre_result && check_test_result && check_inhib_result)
+(*==============================================================*)
+(*================= LIST SENSITIZED SECTION  ===================*)
+(*==============================================================*)
+Section ListSensitized.
+
+  (*  
+   * Function : Returns true if transition t is 
+   *            sensitized by marking m, false otherwise.
+   *
+   *            The difference with the check_all_edges function (SPN.v)
+   *            is that only one marking "m" is considered instead
+   *            of two (one steady and one decreasing).
+   *)
+  Definition is_sensitized
+             (neighbours_t : neighbours_type)
+             (pre test inhib : weight_type)
+             (m : marking_type)
+             (t : trans_type) : option bool :=
+    match (check_pre_or_test (pre t) m (pre_pl neighbours_t) true) with
+    | Some check_pre_result =>  
+      match (check_pre_or_test (test t) m (test_pl neighbours_t) true) with
+      | Some check_test_result =>
+        match check_inhib (inhib t) m (inhib_pl neighbours_t) true with
+        | Some check_inhib_result =>
+          Some (check_pre_result && check_test_result && check_inhib_result)
+        (* Case of error!! *)
+        | None => None
+        end
       (* Case of error!! *)
       | None => None
       end
     (* Case of error!! *)
     | None => None
-    end
-  (* Case of error!! *)
-  | None => None
-  end.
+    end.
 
-Functional Scheme is_sensitized_ind :=
-  Induction for is_sensitized Sort Prop.
+  Functional Scheme is_sensitized_ind := Induction for is_sensitized Sort Prop.
+  
+  (*** Formal specification : is_sensitized ***)
+  Inductive IsSensitized
+            (neighbours_t : neighbours_type)
+            (pre test inhib : weight_type)
+            (m : marking_type)
+            (t : trans_type) : option bool -> Prop :=
+  | IsSensitized_some :
+      forall (check_pre_result check_test_result check_inhib_result : bool),
+        CheckPreOrTest (pre t) m (pre_pl neighbours_t) true (Some check_pre_result) /\
+        CheckPreOrTest (test t) m (test_pl neighbours_t) true (Some check_test_result) /\
+        CheckInhib (inhib t) m (inhib_pl neighbours_t) true (Some check_inhib_result) ->
+        IsSensitized neighbours_t pre test inhib m t
+                     (Some (check_pre_result && check_test_result && check_inhib_result))
+  | IsSensitized_err :
+      CheckPreOrTest (pre t) m (pre_pl neighbours_t) true None \/
+      CheckPreOrTest (test t) m (test_pl neighbours_t) true None \/
+      CheckInhib (inhib t) m (inhib_pl neighbours_t) true None ->
+      IsSensitized neighbours_t pre test inhib m t None.
 
-(*** Formal specification : is_sensitized ***)
-Inductive is_sensitized_spec
-          (neighbours_t : neighbours_type)
-          (pre test inhib : weight_type)
-          (m : marking_type)
-          (t : trans_type) : Prop :=
-| is_sensitized_cons :   
-    check_pre_or_test_spec (pre t) m (pre_pl neighbours_t) 
-    /\ check_pre_or_test_spec (test t) m (test_pl neighbours_t)
-    /\ check_inhib_spec (inhib t) m (inhib_pl neighbours_t) ->
-    is_sensitized_spec neighbours_t pre test inhib m t.
-
-(*** Correctness proof : is_sensitized ***)
-Theorem is_sensitized_correct :
-  forall (neighbours_t : neighbours_type)
-         (pre test inhib : weight_type)
-         (m : marking_type)
-         (t : trans_type),
-  is_sensitized neighbours_t pre test inhib m t = true ->
-  is_sensitized_spec neighbours_t pre test inhib m t.
-Proof.
-  intros neighbours_t pre test inhib m t;
-  functional induction (is_sensitized neighbours_t pre test inhib m t)
-             using is_sensitized_ind;
-  intros.
-  apply is_sensitized_cons.
-  do 2 (apply andb_true_iff in H; elim H;  clear H; intros).
-  split.
-  - apply check_pre_or_test_correct; auto.
-  - split; [apply check_pre_or_test_correct; auto | apply check_inhib_correct; auto].
-Qed.
-
-(*** Completeness proof : is_sensitized ***)
-Theorem is_sensitized_complete :
-  forall (neighbours_t : neighbours_type)
-         (pre test inhib : weight_type)
-         (m : marking_type)
-         (t : trans_type),
-  is_sensitized_spec neighbours_t pre test inhib m t ->
-  is_sensitized neighbours_t pre test inhib m t = true.
-Proof.
-  intros places pre test inhib m_steady t H. elim H.
-  intro.
-  elim H0; intros; clear H0.
-  elim H2; intros; clear H2.
-  unfold is_sensitized.
-  apply andb_true_iff. split.
-  apply andb_true_iff. split.
-  - apply check_pre_or_test_compl in H1; auto.
-  - apply check_pre_or_test_compl in H0; auto.
-  - apply check_inhib_compl in H3; auto.
-Qed.
-
-Lemma not_is_sensitized_iff :
-  forall (neighbours_t : neighbours_type)
-         (pre test inhib : weight_type)
-         (m : marking_type)
-         (t : trans_type),
-  ~is_sensitized_spec neighbours_t pre test inhib m t <->
-  is_sensitized neighbours_t pre test inhib m t = false.
-Proof.
-  intros. rewrite <- not_true_iff_false. apply not_iff_compat. split.
-  - intro; apply is_sensitized_complete; auto.
-  -intro; apply is_sensitized_correct; auto.
-Qed.
-
-(* Useless fonction for SPN but useful for 
- *
- * -  _asynchronous_ Petri nets
- * -  STPN (and SITPN by extension) 
- *
- * Needed to list the sensitized transitions :
- *
- * 1) to increment time counter for these transitions, 
- *    at the beginning of the cycle
- *    
- *)
-
-(*  
- * Function :  Returns the list of sensitized transitions
- *             contained in sometranss.
- *)
-Fixpoint list_sensitized_aux 
-         (lneighbours : list neighbours_type)
-         (pre test inhib : weight_type) 
-         (m : marking_type)
-         (sensitized_transs : list trans_type)
-         (sometranss : list trans_type) : list trans_type :=
-  match sometranss with
-  | [] => sensitized_transs 
-  | (tr i) :: tail =>
-    (* Checks if tr i has neighbours *)
-    match (get_neighbours lneighbours i) with
-    (* If no neighbours, (tr i) is an isolated trans
-     * and cannot be sensitized anyway. *)
-    | None => list_sensitized_aux lneighbours pre test inhib m sensitized_transs tail
-    | Some neighbours_t => if (is_sensitized neighbours_t pre test inhib m (tr i)) then
-                             list_sensitized_aux lneighbours pre test inhib m ((tr i) :: sensitized_transs) tail   
-                           else
-                             list_sensitized_aux lneighbours pre test inhib m sensitized_transs tail
-    end
-  end.
-
-(*** Formal specification : list_sensitized_aux ***)
-Inductive list_sensitized_aux_spec
-          (lneighbours : list neighbours_type)
-          (pre test inhib : weight_type) 
-          (m : marking_type)
-          (sensitized_transs_rec : list trans_type) :
-  list trans_type -> (* sometranss *)
-  list trans_type -> (* sensitized_transs *)
-  Prop :=
-
-| list_sensitized_aux_nil :
-    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec []
-                             sensitized_transs_rec      
-| list_sensitized_aux_none :
-    forall (transs sensitized_transs : list trans_type)
-           (i : nat),
-    get_neighbours_spec lneighbours i None ->
-    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec transs
-                             sensitized_transs ->
-    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec ((tr i) :: transs)
-                             sensitized_transs      
-| list_sensitized_aux_if :
-    forall (transs sensitized_transs : list trans_type)
-           (i : nat)
-           (neighbours_t : neighbours_type),
-    get_neighbours_spec lneighbours i (Some neighbours_t) ->
-    is_sensitized_spec neighbours_t pre test inhib m (tr i) ->
-    list_sensitized_aux_spec lneighbours pre test inhib m ((tr i) :: sensitized_transs_rec) transs
-                             sensitized_transs ->
-    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec ((tr i) :: transs)
-                             sensitized_transs
-| list_sensitized_aux_else :
-    forall (transs sensitized_transs : list trans_type)
-           (i : nat)
-           (neighbours_t : neighbours_type),
-    get_neighbours_spec lneighbours i (Some neighbours_t) ->
-    ~is_sensitized_spec neighbours_t pre test inhib m (tr i) ->
-    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec transs
-                             sensitized_transs ->
-    list_sensitized_aux_spec lneighbours pre test inhib m sensitized_transs_rec ((tr i) :: transs)
-                             sensitized_transs.
-    
-Functional Scheme list_sensitized_aux_ind :=
-  Induction for list_sensitized_aux Sort Prop.
-
-(*** Correctness proof : list_sensitized_aux ***)
-Theorem list_sensitized_aux_correct :
-  forall (sometranss sensitized_transs_rec sensitized_transs : list trans_type)
-         (lneighbours : list neighbours_type)
-         (pre test inhib : weight_type)
-         (m : marking_type),
-  list_sensitized_aux lneighbours pre test inhib m
-                      sensitized_transs_rec sometranss = sensitized_transs ->
-  list_sensitized_aux_spec lneighbours pre test inhib m
-                           sensitized_transs_rec sometranss sensitized_transs.
-Proof.
-  intros sometranss sensitized_transs_rec sensitized_transs
-         lneighbours pre test inhib m.
-  functional induction (list_sensitized_aux lneighbours pre test inhib m
-                                            sensitized_transs_rec sometranss)
-             using list_sensitized_aux_ind.
-  (* Case sometranss = [] *)
-  - intro Heq. rewrite Heq. apply list_sensitized_aux_nil.
-  (* Case is_sensitized = true *)
-  - intro Htail. apply list_sensitized_aux_if with (neighbours_t := neighbours_t).
-    + apply get_neighbours_correct; auto.
-    + apply is_sensitized_correct; auto.
-    + apply (IHl Htail).
-  (* Case is_sensitized = false *)
-  - intro Htail. apply list_sensitized_aux_else with (neighbours_t := neighbours_t).
-    + apply get_neighbours_correct; auto.
-    + apply not_is_sensitized_iff; auto. 
-    + apply (IHl Htail).
-  (* Case get_neighbours = None *)
-  - intro; apply list_sensitized_aux_none;
-      [apply get_neighbours_correct; auto | apply IHl; auto].
-Qed.
-
-(*** Completeness proof : list_sensitized_aux ***)
-Theorem list_sensitized_aux_complete :
-  forall (sometranss sensitized_transs_rec sensitized_transs : list trans_type)
-         (lneighbours : list neighbours_type)
-         (pre test inhib : weight_type)
-         (m : marking_type),
-  list_sensitized_aux_spec lneighbours pre test inhib m
-                           sensitized_transs_rec sometranss sensitized_transs  ->
-  list_sensitized_aux lneighbours pre test inhib  m
-                      sensitized_transs_rec sometranss = sensitized_transs.
-Proof.
-  intros sometranss sensitized_transs_rec sensitized_transs
-         lneighbours pre test inhib m Hspec.
-  elim Hspec.
-  (* Case list_sensitized_aux_nil *)
-  - simpl; auto.
-  (* Case list_sensitized_aux_none *)
-  - intros sensitized_transs_rec0 tail sensitized_transs0 i Hspectail Htail Hsensitized.
-    simpl;
-      apply get_neighbours_compl in Hspectail;
-      rewrite Hspectail;
-      rewrite Hsensitized; auto.
-  (* Case list_sensitized_aux_if *)
-  - intros sensitized_transs_rec0 tail sensitized_transs0 i neighbours_t; intros.
-    simpl;
-      apply get_neighbours_compl in H;
-      rewrite H;
-      apply is_sensitized_complete in H0;
-      rewrite H0;
-      rewrite H2; auto.
-  (* Case list_sensitized_aux_else *)
-  - intros sensitized_transs_rec0 tail sensitized_transs0 i neighbours_t; intros.
-    simpl.
-    apply get_neighbours_compl in H; rewrite H.
-    apply not_is_sensitized_iff in H0; rewrite H0; auto.    
-Qed.
-
-(*
- * Function : Wrapper around list_sensitized_aux.
- *)
-Definition list_sensitized 
-           (sometranss : list trans_type)
-           (lneighbours : list neighbours_type)
-           (pre test inhib : weight_type) 
-           (m : marking_type) : list trans_type :=
-  list_sensitized_aux lneighbours pre test inhib m [] sometranss.
-
-(*** Formal specification : list_sensitized ***)
-Inductive list_sensitized_spec
-          (sometranss : list trans_type)
-          (lneighbours : list neighbours_type)
-          (pre test inhib : weight_type) 
-          (m : marking_type) : list trans_type -> Prop :=
-| list_sensitized_mk :
-    forall (sensitized_transs : list trans_type),
-    list_sensitized_aux_spec lneighbours pre test inhib m [] sometranss sensitized_transs ->
-    list_sensitized_spec sometranss lneighbours pre test inhib m sensitized_transs.
-
-Functional Scheme list_sensitized_ind :=
-  Induction for list_sensitized Sort Prop.
-
-(*** Correctness proof : list_sensitized ***)
-Theorem list_sensitized_correct :
-  forall (sometranss sensitized : list trans_type)
-         (lneighbours : list neighbours_type)
-         (pre test inhib : weight_type)
-         (m : marking_type),
-  list_sensitized sometranss lneighbours pre test inhib m = sensitized ->
-  list_sensitized_spec sometranss lneighbours pre test inhib m sensitized.
-Proof.
-  intros sometranss sensitized lneighbours pre test inhib m.
-  functional induction (list_sensitized sometranss lneighbours pre test inhib m)
-             using list_sensitized_ind.
-  intro H.
-  apply list_sensitized_mk.
-  apply list_sensitized_aux_correct; auto.  
-Qed.
-
-(*** Completeness proof : list_sensitized ***)
-Theorem list_sensitized_complete : forall
-    (sometranss  sensitized : list trans_type)
-    (lneighbours : list place_type)
-    (pre   test  inhib : weight_type)
-    (m : marking_type),
-    list_sensitized_spec
-      sometranss  lneighbours    pre   test  inhib
-      m   sensitized     ->
-    list_sensitized
-      sometranss  lneighbours    pre   test  inhib
-      m      =   sensitized.
-Proof.
-  intros  sometranss  sensitized lneighbours pre test inhib m H.
-  elim H. intros sensitized_transs H0. simpl. unfold list_sensitized.
-  rewrite H0. reflexivity. 
-Qed.
-
-(*
- * Function : Returns the list of the currently sensitized
- *            transitions contained in spn.
- *)
-Definition list_sensitized_spn (spn : SPN) : list trans_type :=
-  match spn with
-  | (mk_SPN places transs pre post test inhib marking (mk_prior Lol)) =>
-    (list_sensitized transs places pre test inhib marking)   
-  end.
-
-(*** Formal specification : list_sensitized_spn ***)
-Inductive list_sensitized_spn_spec (spn : SPN) : list trans_type -> Prop :=
-| list_sensitized_spn_mk :
-    forall (Lol: list (list trans_type))
+  (*** Correctness proof : is_sensitized *)
+  Theorem is_sensitized_correct :
+    forall (neighbours_t : neighbours_type)
+           (pre test inhib: weight_type)
            (m : marking_type)
-           (places : list place_type)
-           (transs : list trans_type)
-           (pre  post test inhib : weight_type)
-           (sensitized_transs : list trans_type),
-    spn = (mk_SPN places transs pre post test inhib m (mk_prior Lol)) ->
-    list_sensitized transs places pre test inhib m = sensitized_transs ->
-    list_sensitized_spn_spec spn sensitized_transs.
+           (t : trans_type)
+           (optionb : option bool),
+      is_sensitized neighbours_t pre test inhib m t = optionb ->
+      IsSensitized neighbours_t pre test inhib m t optionb.
+  Proof.
+    intros neighbours_t pre test inhib m t.
+    functional induction (is_sensitized neighbours_t pre test inhib m t)
+               using is_sensitized_ind; intros.
+    (* Case check_pre, check_test and check_inhib returned some value. *)
+    - rewrite <- H; apply IsSensitized_some.
+      split; [apply check_pre_or_test_correct; auto |
+              split; [apply check_pre_or_test_correct; auto |
+                      apply check_inhib_correct; auto]].            
+    (* Case of error 1. check_inhib returns None. *)
+    - rewrite <- H; apply IsSensitized_err.
+      apply check_inhib_correct in e1; auto.
+    (* Case of error 2. check_test returns None.  *)
+    - rewrite <- H; apply IsSensitized_err.
+      apply check_pre_or_test_correct in e0; auto.
+    (* Case of error 3. check_pre returns None. *)
+    - rewrite <- H; apply IsSensitized_err.
+      apply check_pre_or_test_correct in e; auto.
+  Qed.
 
-Functional Scheme list_sensitized_spn_ind :=
-  Induction for list_sensitized_spn Sort Prop.
+  (*** Completeness proof : is_sensitized ***)
+  Theorem is_sensitized_compl :
+    forall (neighbours_t : neighbours_type)
+           (pre test inhib: weight_type)
+           (m : marking_type)
+           (t : trans_type)
+           (optionb : option bool),
+      IsSensitized neighbours_t pre test inhib m t optionb ->
+      is_sensitized neighbours_t pre test inhib m t = optionb.
+  Proof.
+    intros; elim  H; intros.
+    (* Case IsSensitized_some *)
+    - unfold is_sensitized.
+      elim H0; clear H0; intros.
+      elim H1; clear H1; intros.
+      repeat (((apply check_pre_or_test_compl in H0; rewrite H0) ||
+               (apply check_pre_or_test_compl in H1; rewrite H1) ||
+               (apply check_inhib_compl in H2; rewrite H2));
+              auto).
+    (* Case IsSensitized_err *)
+    - unfold is_sensitized.
+      elim H0; clear H0; intros.
+      + apply check_pre_or_test_compl in H0; rewrite H0; auto.
+      + elim H0; clear H0; intros.
+        -- case (check_pre_or_test (pre t) m (pre_pl neighbours_t) true).
+           ++ intro; apply check_pre_or_test_compl in H0; rewrite H0; auto.
+           ++ auto.
+        -- case (check_pre_or_test (pre t) m (pre_pl neighbours_t) true).
+           +++ case (check_pre_or_test (test t) m (test_pl neighbours_t) true);
+                 [ apply check_inhib_compl in H0; rewrite H0; auto | intro; auto ].
+           +++ auto.
+  Qed.
 
-(*** Correctness proof : list_sensitized_spn ***)
-Theorem list_sensitized_spn_correct : forall
-    (spn : SPN) (sensitized : list trans_type),
-    list_sensitized_spn       spn = sensitized        ->
-    list_sensitized_spn_spec  spn   sensitized.
-Proof.
-  intros spn  sensitized.
-  functional induction (list_sensitized_spn
-                          spn)
-             using list_sensitized_spn_ind.
-  intro H. apply list_sensitized_spn_mk with
-               (Lol := _x0) (m := marking)
-               (places := places) (transs := transs)
-               (pre:=pre) (post:=_x) (test:=test) (inhib:=inhib).
-  + reflexivity.
-  + assumption.   
-Qed.
+  (* Useless fonction for SPN but useful for 
+   *
+   * -  _asynchronous_ Petri nets
+   * -  STPN (and SITPN by extension) 
+   *
+   * Needed to list the sensitized transitions :
+   *
+   * 1) to increment time counter for these transitions, 
+   *    at the beginning of the cycle
+   *    
+   *)
 
-(*** Comlpeteness proof : list_sensitized_spn ***)
-Theorem list_sensitized_spn_complete :
-  forall (spn : SPN) (sensitized : list trans_type),
-  list_sensitized_spn_spec spn sensitized -> 
-  list_sensitized_spn spn = sensitized.
-Proof.
-  intros spn  sensitized Hspec. elim Hspec.
-  intros Lol m places transs  pre post test inhib
-         sensitized_transs Hspn Hsensitized.
-  unfold list_sensitized_spn. rewrite Hspn. assumption. 
-Qed.
-
-(*
- * Function : Returns the list of currently sensitized
- *            transitions contained in stpn.
- *            Wrapper function around list_sensitized_spn.
- *)
-Definition list_sensitized_stpn (stpn : STPN) : list trans_type :=
-  match stpn with
-  | mk_STPN spn chronos => list_sensitized_spn spn
-  end.
-
-(*** Formal specification : list_sensitized_stpn ***)
-Inductive list_sensitized_stpn_spec (stpn : STPN) : list trans_type -> Prop :=
-| list_sensitized_stpn_mk :
-    forall (spn : SPN)
+  (*  
+   * Function :  Returns the list of sensitized transitions
+   *             contained in transs.
+   *             
+   *             Raises an error (None value) if get_neighbours or
+   *             is_sensitized return None.
+   *)
+  Fixpoint list_sensitized_aux 
+           (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (m : marking_type)
            (sensitized_transs : list trans_type)
-           (chronos : trans_type -> option chrono_type),
-    stpn = mk_STPN spn chronos ->
-    list_sensitized_spn spn = sensitized_transs ->
-    list_sensitized_stpn_spec stpn sensitized_transs.
+           (transs : list trans_type) :
+    option (list trans_type) :=
+    match transs with
+    | t :: tail =>
+      (* Checks if t has neighbours *)
+      match get_neighbours lneighbours t with
+      (* Case t has Some neighbours *)
+      | Some neighbours_t =>
+        (* Checks if t is sensitized. *)
+        match is_sensitized neighbours_t pre test inhib m t with
+        (* Case t is sensitized. *)
+        | Some true =>
+          list_sensitized_aux lneighbours pre test inhib m (t :: sensitized_transs) tail
+        (* Case t is not sensitized. *)
+        | Some false =>
+          list_sensitized_aux lneighbours pre test inhib m sensitized_transs tail
+        (* Error case!!! *)
+        | None => None
+        end
+      (* Error case!!! *)
+      | None => None
+      end
+    (* Recursion base case. *)
+    | [] => Some sensitized_transs
+    end.
 
-Functional Scheme list_sensitized_stpn_ind :=
-  Induction for list_sensitized_stpn Sort Prop.
+  (*** Formal specification : list_sensitized_aux ***)
+  Inductive ListSensitizedAux
+            (lneighbours : list (trans_type * neighbours_type))
+            (pre test inhib : weight_type) 
+            (m : marking_type)
+            (sensitized_transs : list trans_type) :
+    list trans_type -> (* sometranss *)
+    option (list trans_type) -> (* opt_sensitized_transs *)
+    Prop :=
+  | ListSensitizedAux_nil :
+      ListSensitizedAux lneighbours pre test inhib m sensitized_transs []
+                        (Some sensitized_transs)      
+  | ListSensitizedAux_get_neighbours_err :
+      forall (transs : list trans_type)
+             (t : trans_type),
+        GetNeighbours lneighbours t None ->
+        ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs) None      
+  | ListSensitizedAux_is_sensitized_err :
+      forall (transs : list trans_type)
+             (t : trans_type)
+             (neighbours_t : neighbours_type),
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        IsSensitized neighbours_t pre test inhib m t None ->
+        ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs) None
+  | ListSensitizedAux_is_sensitized_true :
+      forall (transs : list trans_type)
+             (t : trans_type)
+             (neighbours_t : neighbours_type)
+             (opt_sensitized_transs : option (list trans_type)),
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        IsSensitized neighbours_t pre test inhib m t (Some true) ->
+        ListSensitizedAux lneighbours pre test inhib m (t :: sensitized_transs) transs
+                          opt_sensitized_transs ->
+        ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs)
+                          opt_sensitized_transs
+  | ListSensitizedAux_is_sensitized_false :
+      forall (transs : list trans_type)
+             (t : trans_type)
+             (neighbours_t : neighbours_type)
+             (opt_sensitized_transs : option (list trans_type)),
+        GetNeighbours lneighbours t (Some neighbours_t) ->
+        IsSensitized neighbours_t pre test inhib m t (Some false) ->
+        ListSensitizedAux lneighbours pre test inhib m sensitized_transs transs
+                          opt_sensitized_transs ->
+        ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs)
+                          opt_sensitized_transs.
+  
+  Functional Scheme list_sensitized_aux_ind := Induction for list_sensitized_aux Sort Prop.
 
-(*** Correctness proof : list_sensitized_stpn ***)
-Theorem list_sensitized_stpn_correct :  forall
-    (stpn : STPN) (sensitized : list trans_type),
-    list_sensitized_stpn stpn = sensitized ->
-    list_sensitized_stpn_spec stpn sensitized.
-Proof.
-  intros stpn  sensitized.
-  functional induction (list_sensitized_stpn stpn) using list_sensitized_stpn_ind.
-  intro H. apply list_sensitized_stpn_mk with (spn := spn0) (chronos := _x).
-  + reflexivity.
-  + assumption.   
-Qed.
+  (*** Correctness proof : list_sensitized_aux ***)
+  Theorem list_sensitized_aux_correct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (sensitized_transs transs : list trans_type)
+           (opt_sensitized_transs : option (list trans_type)),
+      list_sensitized_aux lneighbours pre test inhib m
+                          sensitized_transs transs = opt_sensitized_transs ->
+      ListSensitizedAux lneighbours pre test inhib m
+                        sensitized_transs transs opt_sensitized_transs.
+  Proof.
+    intros lneighbours pre test inhib m sensitized_transs transs.
+    functional induction (list_sensitized_aux lneighbours pre test inhib m
+                                              sensitized_transs transs)
+               using list_sensitized_aux_ind; intros.
+    (* Case transs = [] *)
+    - rewrite <- H; apply ListSensitizedAux_nil.
+    (* Case is_sensitized = true *)
+    - apply ListSensitizedAux_is_sensitized_true with (neighbours_t := neighbours_t).
+      + apply get_neighbours_correct; auto.
+      + apply is_sensitized_correct; auto.
+      + rewrite <- H; apply IHo; auto.
+    (* Case is_sensitized = false *)
+    - apply ListSensitizedAux_is_sensitized_false with (neighbours_t := neighbours_t).
+      + apply get_neighbours_correct; auto.
+      + apply is_sensitized_correct; auto. 
+      + rewrite <- H; apply IHo; auto.        
+    (* Error case, is_sensitized = None *)
+    - rewrite <- H; apply ListSensitizedAux_is_sensitized_err with (neighbours_t := neighbours_t).
+      + apply get_neighbours_correct; auto.
+      + apply is_sensitized_correct; auto.
+    (* Error case, get_neighbours = None *)
+    - rewrite <- H; apply ListSensitizedAux_get_neighbours_err.
+      + apply get_neighbours_correct; auto.
+  Qed.
 
-(*** Completeness proof : list_sensitized_stpn ***)
-Theorem list_sensitized_stpn_complete :
-  forall (stpn : STPN) (sensitized : list trans_type),
-  list_sensitized_stpn_spec stpn sensitized -> 
-  list_sensitized_stpn stpn = sensitized.
-Proof.
-  intros stpn  sensitized H. elim H.
-  intros. unfold list_sensitized_stpn. rewrite H0. rewrite H1.
-  reflexivity. 
-Qed.
+  (*** Completeness proof : list_sensitized_aux ***)
+  Theorem list_sensitized_aux_complete :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (sensitized_transs transs : list trans_type)
+           (opt_sensitized_transs : option (list trans_type)),
+      ListSensitizedAux lneighbours pre test inhib m
+                        sensitized_transs transs opt_sensitized_transs ->
+      list_sensitized_aux lneighbours pre test inhib m
+                          sensitized_transs transs = opt_sensitized_transs.
+  Proof.
+    intros; elim H; intros.
+    (* Case ListSensitizedAux_nil *)
+    - simpl; auto.
+    (* Case ListSensitizedAux_get_neighbours_err *)
+    - simpl; apply get_neighbours_compl in H0; rewrite H0; auto.
+    (* Case ListSensitizedAux_is_sensitized_err *)
+    - simpl;
+        apply get_neighbours_compl in H0; rewrite H0;
+        apply is_sensitized_compl in H1; rewrite H1; auto.
+    (* Case ListSensitizedAux_is_sensitized_true *)
+    - simpl;
+        apply get_neighbours_compl in H0; rewrite H0;
+        apply is_sensitized_compl in H1; rewrite H1; auto.
+    (* Case ListSensitizedAux_is_sensitized_false *)
+    - simpl;
+        apply get_neighbours_compl in H0; rewrite H0;
+        apply is_sensitized_compl in H1; rewrite H1; auto.
+  Qed.
+
+  (*
+   * Function : Wrapper around list_sensitized_aux.
+   *)
+  Definition list_sensitized 
+             (lneighbours : list (trans_type * neighbours_type))
+             (pre test inhib : weight_type) 
+             (m : marking_type)
+             (transs : list trans_type) : option (list trans_type) :=
+    list_sensitized_aux lneighbours pre test inhib m [] transs.
+
+  (*** Formal specification : list_sensitized ***)
+  Inductive ListSensitized
+            (lneighbours : list (trans_type * neighbours_type))
+            (pre test inhib : weight_type) 
+            (m : marking_type) :
+    list trans_type ->
+    option (list trans_type) -> Prop :=
+  | ListSensitized_cons :
+      forall (transs : list trans_type)
+             (opt_sensitized_transs : option (list trans_type)),
+        ListSensitizedAux lneighbours pre test inhib m [] transs opt_sensitized_transs ->
+        ListSensitized lneighbours pre test inhib m transs opt_sensitized_transs.
+
+  Functional Scheme list_sensitized_ind := Induction for list_sensitized Sort Prop.
+
+  (*** Correctness proof : list_sensitized ***)
+  Theorem list_sensitized_correct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (transs : list trans_type)
+           (opt_sensitized_transs : option (list trans_type)),
+      list_sensitized lneighbours pre test inhib m transs = opt_sensitized_transs ->
+      ListSensitized lneighbours pre test inhib m transs opt_sensitized_transs.
+  Proof.
+    intros lneighbours pre test inhib m transs.
+    functional induction (list_sensitized lneighbours pre test inhib m transs)
+               using list_sensitized_ind; intros.
+    apply ListSensitized_cons.
+    apply list_sensitized_aux_correct; auto.  
+  Qed.
+
+  (*** Completeness proof : list_sensitized ***)
+  Theorem list_sensitized_complete :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (transs : list trans_type)
+           (opt_sensitized_transs : option (list trans_type)),
+      ListSensitized lneighbours pre test inhib m transs opt_sensitized_transs ->
+      list_sensitized lneighbours pre test inhib m transs = opt_sensitized_transs.
+  Proof.
+    intros; elim H; intros.
+    unfold list_sensitized; apply list_sensitized_aux_complete in H0; rewrite H0; auto. 
+  Qed.
+
+End ListSensitized.
 
 (* 
  * Function : Returns the list of disabled (unsensitized)
@@ -2059,46 +1993,6 @@ Proof.
   intros  classes_fired_pre0 m_inter chronos_next  Heq.
   unfold stpn_fire_pre. assumption.
 Qed.
-
-(***************************************************)
-(*********** For DEBUGGING only .. *****************)
-(***************************************************)
-
-(*  
- * Function : Returns the tuplet resulting of the call
- *            to stpn_fire_pre.
- *            Marking and chronos are presented in a
- *            pretty printed manner.
- *            
- *)
-Definition stpn_print_fire_pre
-           (places : list place_type)
-           (transs : list trans_type)
-           (pre test inhib : weight_type)
-           (marking : marking_type)
-           (chronos : trans_type -> option chrono_type)
-           (classes_transs : list (list trans_type)) :
-  (list (list trans_type)) *
-  list (place_type * nat) *
-  list (trans_type * option (nat * nat * nat)) (* chronos *) :=
-  let '(sub_Lol, m_inter, new_chronos ) :=
-      (stpn_fire_pre places pre test inhib marking classes_transs chronos)
-  in (sub_Lol, marking2list m_inter places, intervals2list new_chronos transs).
-
-(*  
- * Function : Wrapper around the stpn_print_fire_pre function.
- *)
-Definition stpn_debug2 (stpn : STPN) :
-  (list (list trans_type)) *
-  (list (place_type * nat))  *
-  (list (trans_type * option (nat * nat * nat)))  :=
-  match stpn with
-  | mk_STPN
-      (mk_SPN places transs pre test inhib post marking (mk_prior Lol))
-      chronos =>
-    (stpn_print_fire_pre places transs pre test inhib marking chronos Lol)
-  end.
-
 
 (* 
  * Function : Returns a tuplet (transitions fired (at this cycle), 
