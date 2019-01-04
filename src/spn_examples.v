@@ -346,10 +346,10 @@ Definition spn2 := mk_SPN
                      ex2_lneighbours.
 
 (*==== PERFORMANCE TESTS. ====*)
-Time Compute (spn_animate spn2 100 []).
-Time Compute (spn_animate spn2 200 []).
-Time Compute (spn_animate spn2 400 []).
-Time Compute (spn_animate spn2 800 []).
-Time Compute (spn_animate spn2 1000 []).
-Time Compute (spn_animate spn2 2000 []).
-Time Compute (spn_animate spn2 4000 []).
+(* Time Compute (spn_animate spn2 100 []). *)
+(* Time Compute (spn_animate spn2 200 []). *)
+(* Time Compute (spn_animate spn2 400 []). *)
+(* Time Compute (spn_animate spn2 800 []). *)
+(* Time Compute (spn_animate spn2 1000 []). *)
+(* Time Compute (spn_animate spn2 2000 []). *)
+(* Time Compute (spn_animate spn2 4000 []). *)

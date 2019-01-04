@@ -1541,28 +1541,32 @@ Section Edges.
       apply H in H0.
       auto.
   Qed.
-  
-  (*****************************************************)
-  (*****************************************************)
+    
+End Edges.
+
+(*==============================================================*)
+(*================= FIRING ALGORITHM for SPN ===================*)
+(*==============================================================*)
+
+Section FireSpn.
 
   (* 
    * Function : Returns true if a certain transition t
-   *            is sensitized according to a marking steadym
+   *            is firable according to a marking steadym
    *            (or decreasingm) on the neighbour places of t and
    *            to some weight functions pre_arcs_t, test_arcs_t
    *            and inhib_arcs_t.
    *)
-  Definition check_all_edges
+  Definition spn_is_firable
+             (t : trans_type)
              (neighbours_t : neighbours_type)
-             (pre_arcs_t : place_type -> option nat_star)
-             (test_arcs_t : place_type -> option nat_star)
-             (inhib_arcs_t : place_type -> option nat_star)
+             (pre test inhib : weight_type)
              (steadym decreasingm : marking_type) : option bool :=
-    match (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t) true) with
+    match (check_pre_or_test (pre t) decreasingm (pre_pl neighbours_t) true) with
     | Some check_pre_result =>  
-      match (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t) true) with
+      match (check_pre_or_test (test t) steadym (test_pl neighbours_t) true) with
       | Some check_test_result =>
-        match check_inhib inhib_arcs_t steadym (inhib_pl neighbours_t) true with
+        match check_inhib (inhib t) steadym (inhib_pl neighbours_t) true with
         | Some check_inhib_result => Some (check_pre_result
                                              && check_test_result
                                              && check_inhib_result)
@@ -1576,145 +1580,129 @@ Section Edges.
     | None => None
     end.
 
-  Functional Scheme check_all_edges_ind := Induction for check_all_edges Sort Prop.
+  Functional Scheme spn_is_firable_ind := Induction for spn_is_firable Sort Prop.
 
-  (*** Formal specification : check_all_edges ***)
-  Inductive CheckAllEdges
+  (*** Formal specification : spn_is_firable ***)
+  Inductive SpnIsFirable
+            (t : trans_type)
             (neighbours_t : neighbours_type)
-            (pre_arcs_t : place_type -> option nat_star)
-            (test_arcs_t : place_type -> option nat_star)
-            (inhib_arcs_t : place_type -> option nat_star)
+            (pre test inhib : weight_type)
             (steadym decreasingm : marking_type) : option bool -> Prop :=
-  | CheckAllEdges_some :
+  | SpnIsFirable_some :
       forall (check_pre_result check_test_result check_inhib_result : bool),
-        CheckPreOrTest pre_arcs_t decreasingm (pre_pl neighbours_t) true (Some check_pre_result) /\
-        CheckPreOrTest test_arcs_t steadym (test_pl neighbours_t) true (Some check_test_result) /\
-        CheckInhib inhib_arcs_t steadym (inhib_pl neighbours_t) true (Some check_inhib_result) ->
-        CheckAllEdges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm
-                      (Some (check_pre_result && check_test_result && check_inhib_result))
-  | CheckAllEdges_err :
-      CheckPreOrTest pre_arcs_t decreasingm (pre_pl neighbours_t) true None \/
-      CheckPreOrTest test_arcs_t steadym (test_pl neighbours_t) true None \/
-      CheckInhib inhib_arcs_t steadym (inhib_pl neighbours_t) true None ->
-      CheckAllEdges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm None.
+        CheckPreOrTest (pre t) decreasingm (pre_pl neighbours_t) true (Some check_pre_result) /\
+        CheckPreOrTest (test t) steadym (test_pl neighbours_t) true (Some check_test_result) /\
+        CheckInhib (inhib t) steadym (inhib_pl neighbours_t) true (Some check_inhib_result) ->
+        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm
+                     (Some (check_pre_result && check_test_result && check_inhib_result))
+  | SpnIsFirable_err :
+      CheckPreOrTest (pre t) decreasingm (pre_pl neighbours_t) true None \/
+      CheckPreOrTest (test t) steadym (test_pl neighbours_t) true None \/
+      CheckInhib (inhib t) steadym (inhib_pl neighbours_t) true None ->
+      SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None.
 
-  (*** Correctness proof : check_all_edges *)
-  Theorem check_all_edges_correct :
-    forall (neighbours_t : neighbours_type)
-           (pre_arcs_t : place_type -> option nat_star)
-           (test_arcs_t : place_type -> option nat_star)
-           (inhib_arcs_t : place_type -> option nat_star)
+  (*** Correctness proof : spn_is_firable *)
+  Theorem spn_is_firable_correct :
+    forall (t : trans_type)
+           (neighbours_t : neighbours_type)
+           (pre test inhib : weight_type)
            (steadym decreasingm : marking_type)
            (optionb : option bool),
-      check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = optionb ->
-      CheckAllEdges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm optionb.
+      spn_is_firable t neighbours_t pre test inhib steadym decreasingm = optionb ->
+      SpnIsFirable t neighbours_t pre test inhib steadym decreasingm optionb.
   Proof.
-    intros;
-      functional induction (check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm)
-                 using check_all_edges_ind;
-      intros.
+    intros t neighbours_t pre test inhib steadym decreasingm. 
+    functional induction (spn_is_firable t neighbours_t pre test inhib steadym decreasingm)
+               using spn_is_firable_ind; intros.
     (* Case check_pre, check_test and check_inhib returned some value. *)
-    - rewrite <- H; apply CheckAllEdges_some.
+    - rewrite <- H; apply SpnIsFirable_some.
       split; [apply check_pre_or_test_correct; auto |
               split; [apply check_pre_or_test_correct; auto |
                       apply check_inhib_correct; auto]].            
     (* Case of error 1. check_inhib returns None. *)
-    - rewrite <- H; apply CheckAllEdges_err.
+    - rewrite <- H; apply SpnIsFirable_err.
       apply check_inhib_correct in e1; auto.
     (* Case of error 2. check_test returns None.  *)
-    - rewrite <- H; apply CheckAllEdges_err.
+    - rewrite <- H; apply SpnIsFirable_err.
       apply check_pre_or_test_correct in e0; auto.
     (* Case of error 3. check_pre returns None. *)
-    - rewrite <- H; apply CheckAllEdges_err.
+    - rewrite <- H; apply SpnIsFirable_err.
       apply check_pre_or_test_correct in e; auto.
   Qed.
 
-  (*** Completeness proof : check_all_edges ***)
-  Theorem check_all_edges_compl :
-    forall (neighbours_t : neighbours_type)
-           (pre_arcs_t : place_type -> option nat_star)
-           (test_arcs_t : place_type -> option nat_star)
-           (inhib_arcs_t : place_type -> option nat_star)
+  (*** Completeness proof : spn_is_firable ***)
+  Theorem spn_is_firable_compl :
+    forall (t : trans_type)
+           (neighbours_t : neighbours_type)
+           (pre test inhib : weight_type)
            (steadym decreasingm : marking_type)
            (optionb : option bool),
-      CheckAllEdges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm optionb ->
-      check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = optionb.
+      SpnIsFirable t neighbours_t pre test inhib steadym decreasingm optionb ->
+      spn_is_firable t neighbours_t pre test inhib steadym decreasingm = optionb.
   Proof.
-    intros. induction H.
-    (* Case CheckAllEdges_some *)
-    - unfold check_all_edges.
-      elim H; clear H; intros.
+    intros t neighbours_t pre test inhib steadym decreasingm optionb H; elim H; intros.
+    (* Case SpnIsFirable_some *)
+    - unfold spn_is_firable.
       elim H0; clear H0; intros.
-      repeat (((apply check_pre_or_test_compl in H; rewrite H) ||
-               (apply check_pre_or_test_compl in H0; rewrite H0) ||
-               (apply check_inhib_compl in H1; rewrite H1));
+      elim H1; clear H1; intros.
+      repeat (((apply check_pre_or_test_compl in H0; rewrite H0) ||
+               (apply check_pre_or_test_compl in H1; rewrite H1) ||
+               (apply check_inhib_compl in H2; rewrite H2));
               auto).
-    (* Case CheckAllEdges_err *)
-    - unfold check_all_edges.
-      elim H; clear H; intros.
-      + apply check_pre_or_test_compl in H; rewrite H; auto.
-      + elim H; clear H; intros.
-        -- case (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t) true).
-           ++ intro; apply check_pre_or_test_compl in H; rewrite H; auto.
+    (* Case SpnIsFirable_err *)
+    - unfold spn_is_firable.
+      elim H0; clear H0; intros.
+      + apply check_pre_or_test_compl in H0; rewrite H0; auto.
+      + elim H0; clear H0; intros.
+        -- case (check_pre_or_test (pre t) decreasingm (pre_pl neighbours_t) true).
+           ++ intro; apply check_pre_or_test_compl in H0; rewrite H0; auto.
            ++ auto.
-        -- case (check_pre_or_test pre_arcs_t decreasingm (pre_pl neighbours_t) true).
-           +++ case (check_pre_or_test test_arcs_t steadym (test_pl neighbours_t) true);
-                 [ apply check_inhib_compl in H; rewrite H; auto | intro; auto ].
+        -- case (check_pre_or_test (pre t) decreasingm (pre_pl neighbours_t) true).
+           +++ case (check_pre_or_test (test t) steadym (test_pl neighbours_t) true);
+                 [ apply check_inhib_compl in H0; rewrite H0; auto | intro; auto ].
            +++ auto.
   Qed.
 
-  (* Lemma : Proves that check_all_edges returns no error if
+  (* Lemma : Proves that spn_is_firable returns no error if
    *         the places in (pre_pl neighbours_t), (inhib_pl neighbours_t) 
    *         and (test_pl neighbours_t) are referenced in markings steadym
    *         and decreasingm.  
    *
    *)
-  Lemma check_all_edges_no_error :
-    forall (neighbours_t : neighbours_type)
-           (pre_arcs_t : place_type -> option nat_star)
-           (test_arcs_t : place_type -> option nat_star)
-           (inhib_arcs_t : place_type -> option nat_star)
+  Lemma spn_is_firable_no_error :
+    forall (t : trans_type)
+           (neighbours_t : neighbours_type)
+           (pre test inhib : weight_type)
            (steadym decreasingm : marking_type),
       PlacesAreRefInMarking (pre_pl neighbours_t) decreasingm ->
       PlacesAreRefInMarking (test_pl neighbours_t) steadym ->
       PlacesAreRefInMarking (inhib_pl neighbours_t) steadym ->
       exists v : bool,
-        check_all_edges neighbours_t pre_arcs_t test_arcs_t inhib_arcs_t steadym decreasingm = Some v.
+        spn_is_firable t neighbours_t pre test inhib steadym decreasingm = Some v.
   Proof.
     unfold PlacesAreRefInMarking.
-    do 6 intro.
-    functional induction (check_all_edges neighbours_t
-                                          pre_arcs_t test_arcs_t inhib_arcs_t
-                                          steadym
-                                          decreasingm)
-               using check_all_edges_ind; intros.
+    intros t neighbours_t pre test inhib steadym decreasingm.
+    functional induction (spn_is_firable t neighbours_t pre test inhib steadym decreasingm)
+               using spn_is_firable_ind; intros.
     (* Case all went well. *)
     - exists (check_pre_result && check_test_result && check_inhib_result); auto.
     (* Case check_inhib = None, impossible regarding hypothesis. *)
-    - apply check_inhib_no_error with (inhib_arcs_t := inhib_arcs_t)
+    - apply check_inhib_no_error with (inhib_arcs_t := inhib t)
                                       (check_result := true) in H1.
       elim H1; intros.
       rewrite e1 in H2; inversion H2.
     (* Case check_test = None, impossible regarding hypothesis. *)
-    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := test_arcs_t)
+    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := test t)
                                             (check_result := true) in H0.
       elim H0; intros.
       rewrite e0 in H2; inversion H2.
     (* Case check_pre = None, impossible regarding hypothesis. *)
-    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := pre_arcs_t)
+    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := pre t)
                                             (check_result := true) in H.
       elim H; intros.
       rewrite e in H2; inversion H2.
   Qed.
   
-End Edges.
-
-(*==============================================================*)
-(*================= FIRING ALGORITHM for SPN ===================*)
-(*==============================================================*)
-
-Section FireSpn.
-
   (*  
    * Function : Returns the element of type neighbours_type
    *            associated with transition t in the list lneighbours.
@@ -1868,7 +1856,6 @@ Section FireSpn.
            (pre test inhib : weight_type)  
            (steadym : marking_type)
            (decreasingm : marking_type)
-           (* "fired_pre_group" meant  to be empty at first *)
            (fired_pre_group pgroup : list trans_type) :
     option (list trans_type * marking_type) :=
     match pgroup with
@@ -1877,7 +1864,7 @@ Section FireSpn.
       (* Checks neighbours of t. *)
       | Some neighbours_t =>
         (* If t is sensitized. *)
-        match check_all_edges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm with
+        match spn_is_firable t neighbours_t pre test inhib steadym decreasingm with
         | Some true =>
           (* Updates the marking for the pre places neighbours of t. *)
           match update_marking_pre t pre decreasingm (pre_pl neighbours_t) with
@@ -1916,20 +1903,20 @@ Section FireSpn.
       forall (t : trans_type) (pgroup : list trans_type),
         GetNeighbours lneighbours t None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
-  (* Case check_all_edges returns an error. *)
+  (* Case spn_is_firable returns an error. *)
   | SpnFirePreAux_edges_err :
       forall (t : trans_type) (pgroup : list trans_type) (neighbours_t : neighbours_type),
         GetNeighbours lneighbours t (Some neighbours_t) ->
-        CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm None ->
+        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
-  (* Case check_all_edges returns false. *)
+  (* Case spn_is_firable returns false. *)
   | SpnFirePreAux_edges_false :
       forall (t : trans_type)
              (pgroup : list trans_type)
              (neighbours_t : neighbours_type)
              (option_final_couple : option (list trans_type * marking_type)),
         GetNeighbours lneighbours t (Some neighbours_t) ->
-        CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm (Some false) ->
+        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some false) ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup
                       option_final_couple ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup)
@@ -1940,7 +1927,7 @@ Section FireSpn.
              (neighbours_t : neighbours_type)
              (pgroup : list trans_type),
         GetNeighbours lneighbours t (Some neighbours_t) ->
-        CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm (Some true) ->
+        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some true) ->
         UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* General case, all went well. *)
@@ -1951,7 +1938,7 @@ Section FireSpn.
              (modifiedm : marking_type)
              (option_final_couple : option (list trans_type * marking_type)),
         GetNeighbours lneighbours t (Some neighbours_t) ->
-        CheckAllEdges neighbours_t (pre t) (test t) (inhib t) steadym decreasingm (Some true) ->
+        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some true) ->
         UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) (Some modifiedm) ->
         SpnFirePreAux lneighbours pre test inhib steadym modifiedm (fired_pre_group ++ [t]) pgroup
                       option_final_couple ->
@@ -1979,23 +1966,23 @@ Section FireSpn.
     - apply SpnFirePreAux_cons with (modifiedm := marking')
                                     (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + apply check_all_edges_correct; auto.
+      + apply spn_is_firable_correct; auto.
       + apply update_marking_pre_correct; auto.
       + apply IHo; auto.
     (* Case update_marking_pre error. *)
     - rewrite <- H; apply SpnFirePreAux_update_err with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + apply check_all_edges_correct; auto.
+      + apply spn_is_firable_correct; auto.
       + apply update_marking_pre_correct; auto.
-    (* Case check_all_edges returns false. *)
+    (* Case spn_is_firable returns false. *)
     - apply SpnFirePreAux_edges_false with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + apply check_all_edges_correct; auto.
+      + apply spn_is_firable_correct; auto.
       + apply IHo; auto.
-    (* Case check_all_edges returns an error. *)
+    (* Case spn_is_firable returns an error. *)
     - rewrite <- H; apply SpnFirePreAux_edges_err with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
-      + apply check_all_edges_correct; auto.
+      + apply spn_is_firable_correct; auto.
     (* Case get_neighbours returns an error. *)
     - rewrite <- H; apply SpnFirePreAux_neighbours_err.
       apply get_neighbours_correct; auto.
@@ -2023,20 +2010,20 @@ Section FireSpn.
     (* Case SpnFirePreAux_edges_err *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
-      apply check_all_edges_compl in H0; rewrite H0; auto.
+      apply spn_is_firable_compl in H0; rewrite H0; auto.
     (* Case SpnFirePreAux_edges_false *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
-      apply check_all_edges_compl in H0; rewrite H0; rewrite IHHspec; auto.
+      apply spn_is_firable_compl in H0; rewrite H0; rewrite IHHspec; auto.
     (* Case SpnFirePreAux_update_err *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
-      apply check_all_edges_compl in H0; rewrite H0; auto.
+      apply spn_is_firable_compl in H0; rewrite H0; auto.
       apply update_marking_pre_compl in H1; rewrite H1; auto.
     (* Case SpnFirePreAux_cons *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
-      apply check_all_edges_compl in H0; rewrite H0; auto.
+      apply spn_is_firable_compl in H0; rewrite H0; auto.
       apply update_marking_pre_compl in H1; rewrite H1; auto.
   Qed.
 
@@ -2072,7 +2059,7 @@ Section FireSpn.
       intros.
     (* Base case, pgroup = []. *)
     - exists (fired_pre_group, decreasingm); auto.
-    (* Case check_all_edges = true. *)
+    (* Case spn_is_firable = true. *)
     - apply IHo.
       + intros.
         apply (in_cons t) in H1.
@@ -2094,11 +2081,11 @@ Section FireSpn.
         elim H3; intros.
         rewrite H5 in e3; inversion e3.
       + apply in_eq.
-    (* Case check_all_edges = false. *)
+    (* Case spn_is_firable = false. *)
     - apply IHo; intros.
       + apply (in_cons t) in H1; apply H in H1; auto.
       + apply H0 in H1; auto.
-    (* Case check_all_edges = None, 
+    (* Case spn_is_firable = None, 
      * impossible regarding the hypotheses. 
      *)
     - cut (In t (t :: tail)); intros.
@@ -2107,9 +2094,9 @@ Section FireSpn.
         intros.
         elim H2; intros; clear H2.
         elim H4; intros; clear H4.
-        (* Applies check_all_edges_no_error to create a contradiction. *)
-        apply (check_all_edges_no_error neighbours_t (pre t) (test t) (inhib t)
-                                        steadym decreasingm H3 H5) in H2.
+        (* Applies spn_is_firable_no_error to create a contradiction. *)
+        apply (spn_is_firable_no_error t neighbours_t pre test inhib
+                                       steadym decreasingm H3 H5) in H2.
         elim H2; intros.
         rewrite H4 in e1.
         inversion e1.
@@ -2213,7 +2200,7 @@ Section FireSpn.
      * then contradiction.
      *)
     - inversion H1.
-    (* Case check_all_edges = false. *)
+    (* Case spn_is_firable = false. *)
     - apply IHo with (final_fired_pre_group := final_fired_pre_group)
                      (finalm := finalm).
       + intros.
@@ -2224,7 +2211,7 @@ Section FireSpn.
         auto.
       + auto.
       + auto.
-    (* Case check_all_edges returns an error,
+    (* Case spn_is_firable returns an error,
      * then contradiction.
      *)
     - inversion H1.
@@ -2267,9 +2254,9 @@ Section FireSpn.
       + auto.
     (* Case update_marking_pre returns None. *)
     - inversion H0.
-    (* Case check_all_edges = false *)
+    (* Case spn_is_firable = false *)
     - apply (IHo final_fired_pre_group finalm); [auto | auto].
-    (* Case check_all_edges = None. *)
+    (* Case spn_is_firable = None. *)
     - inversion H0.
     (* Case get_neighbours = None. *)
     - inversion H0.
