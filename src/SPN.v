@@ -1863,11 +1863,11 @@ Section FireSpn.
       match get_neighbours lneighbours t with
       (* Checks neighbours of t. *)
       | Some neighbours_t =>
-        (* If t is sensitized. *)
         match spn_is_firable t neighbours_t pre test inhib steadym decreasingm with
+        (* If t is firable, updates the marking for the pre places neighbours of t. *)
         | Some true =>
-          (* Updates the marking for the pre places neighbours of t. *)
           match update_marking_pre t pre decreasingm (pre_pl neighbours_t) with
+          (* Recursive call with new marking *)
           | Some marking' =>
             spn_fire_pre_aux lneighbours pre test inhib steadym marking' (fired_pre_group ++ [t]) tail
           (* Something went wrong, error! *)
@@ -1904,13 +1904,13 @@ Section FireSpn.
         GetNeighbours lneighbours t None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* Case spn_is_firable returns an error. *)
-  | SpnFirePreAux_edges_err :
+  | SpnFirePreAux_firable_err :
       forall (t : trans_type) (pgroup : list trans_type) (neighbours_t : neighbours_type),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* Case spn_is_firable returns false. *)
-  | SpnFirePreAux_edges_false :
+  | SpnFirePreAux_firable_false :
       forall (t : trans_type)
              (pgroup : list trans_type)
              (neighbours_t : neighbours_type)
@@ -1975,12 +1975,12 @@ Section FireSpn.
       + apply spn_is_firable_correct; auto.
       + apply update_marking_pre_correct; auto.
     (* Case spn_is_firable returns false. *)
-    - apply SpnFirePreAux_edges_false with (neighbours_t := neighbours_t).
+    - apply SpnFirePreAux_firable_false with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
       + apply spn_is_firable_correct; auto.
       + apply IHo; auto.
     (* Case spn_is_firable returns an error. *)
-    - rewrite <- H; apply SpnFirePreAux_edges_err with (neighbours_t := neighbours_t).
+    - rewrite <- H; apply SpnFirePreAux_firable_err with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
       + apply spn_is_firable_correct; auto.
     (* Case get_neighbours returns an error. *)
@@ -2007,11 +2007,11 @@ Section FireSpn.
     - simpl; auto.
     (* Case SpnFirePreAux_neighbours_err *)
     - simpl; apply get_neighbours_compl in H; rewrite H; auto.
-    (* Case SpnFirePreAux_edges_err *)
+    (* Case SpnFirePreAux_firable_err *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
       apply spn_is_firable_compl in H0; rewrite H0; auto.
-    (* Case SpnFirePreAux_edges_false *)
+    (* Case SpnFirePreAux_firable_false *)
     - simpl.
       apply get_neighbours_compl in H; rewrite H.
       apply spn_is_firable_compl in H0; rewrite H0; rewrite IHHspec; auto.
