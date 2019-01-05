@@ -3396,11 +3396,6 @@ End FireSpn.
 (*==========================================================*)
 
 Section AnimateSpn.
-
-  (* From Coq Require Import ssreflect ssrfun ssrbool. *)
-  (* Set Implicit Arguments. *)
-  (* Unset Strict Implicit. *)
-  (* Unset Printing Implicit Defensive. *)
   
   (*  
    * Function : Returns the resulting Petri net after all the sensitized

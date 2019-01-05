@@ -1,4 +1,4 @@
-Require Export SPN.
+Require Import spn_examples.
 
 (*========================================================*)
 (*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS AND ===*)
@@ -33,6 +33,7 @@ Structure chrono_type : Set :=
  * Basically, same structure as an spn with chronos associated to transitions.
  * (One chrono by transition)
  *
+ * STPN is declared as a coercion of SPN.
  *)
 Structure STPN : Set :=
   mk_STPN {
@@ -2044,6 +2045,190 @@ Section FireStpn.
     | None => None
     end.
 
+  Functional Scheme stpn_fire_ind := Induction for stpn_fire Sort Prop.
+  
+  (*** Formal specification : stpn_fire ***)
+  Inductive StpnFire
+            (lneighbours : list (trans_type * neighbours_type))
+            (pre test inhib post : weight_type)
+            (m : marking_type)
+            (chronos : list (trans_type * option chrono_type))
+            (transs : list trans_type)
+            (priority_groups : list (list trans_type)) :
+    option ((list trans_type) * marking_type * (list (trans_type * option chrono_type))) ->
+    Prop :=
+  | StpnFire_fire_pre_err :
+      StpnMapFirePre lneighbours pre test inhib m chronos priority_groups None ->
+      StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
+  | StpnFire_reset_chronos_err1 :
+      forall (pre_fired_transitions : list trans_type)
+             (intermediatem : marking_type),
+        StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
+                       (Some (pre_fired_transitions, intermediatem)) ->
+        ResetAllChronos chronos pre_fired_transitions None ->
+        StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
+  | StpnFire_list_disabled_err :
+      forall (pre_fired_transitions : list trans_type)
+             (intermediatem : marking_type)
+             (updated_chronos : list (trans_type * option chrono_type)),
+        StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
+                       (Some (pre_fired_transitions, intermediatem)) ->
+        ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
+        ListDisabled lneighbours pre test inhib m transs None -> 
+        StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
+  | StpnFire_reset_chronos_err2 :
+      forall (pre_fired_transitions : list trans_type)
+             (intermediatem : marking_type)
+             (updated_chronos : list (trans_type * option chrono_type))
+             (disabled_transs : list trans_type),
+        StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
+                       (Some (pre_fired_transitions, intermediatem)) ->
+        ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
+        ListDisabled lneighbours pre test inhib m transs (Some disabled_transs) -> 
+        ResetAllChronos updated_chronos disabled_transs None ->
+        StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
+  | StpnFire_fire_post_err :
+      forall (pre_fired_transitions : list trans_type)
+             (intermediatem : marking_type)
+             (updated_chronos : list (trans_type * option chrono_type))
+             (disabled_transs : list trans_type)
+             (final_chronos : list (trans_type * option chrono_type)),
+        StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
+                       (Some (pre_fired_transitions, intermediatem)) ->
+        ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
+        ListDisabled lneighbours pre test inhib m transs (Some disabled_transs) -> 
+        ResetAllChronos updated_chronos disabled_transs (Some final_chronos) ->
+        FirePost lneighbours post intermediatem pre_fired_transitions None ->
+        StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
+  | StpnFire_cons :
+      forall (pre_fired_transitions : list trans_type)
+             (intermediatem : marking_type)
+             (updated_chronos : list (trans_type * option chrono_type))
+             (disabled_transs : list trans_type)
+             (final_chronos : list (trans_type * option chrono_type))
+             (finalm : marking_type),
+        StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
+                       (Some (pre_fired_transitions, intermediatem)) ->
+        ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
+        ListDisabled lneighbours pre test inhib m transs (Some disabled_transs) -> 
+        ResetAllChronos updated_chronos disabled_transs (Some final_chronos) ->
+        FirePost lneighbours post intermediatem pre_fired_transitions (Some finalm) ->
+        StpnFire lneighbours pre test inhib post m chronos transs priority_groups
+                 (Some (pre_fired_transitions, finalm, final_chronos)).
+
+  (*** Correctness proof : stpn_fire ***)
+  Theorem stpn_fire_correct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (transs : list trans_type)
+           (priority_groups : list (list trans_type))
+           (opt_final_tuplet : option ((list trans_type) *
+                                       marking_type *
+                                       (list (trans_type * option chrono_type)))),
+      stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = opt_final_tuplet ->
+      StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet.
+  Proof.
+    intros lneighbours pre test inhib post m chronos transs priority_groups.
+    functional induction (stpn_fire lneighbours pre test inhib post m chronos transs priority_groups)
+               using stpn_fire_ind; intros.
+    (* General case, all went well. *)
+    - rewrite <- H; apply StpnFire_cons with (intermediatem := intermediatem)
+                                             (updated_chronos := updated_chronos)
+                                             (disabled_transs := disabled_transs).
+      + apply stpn_map_fire_pre_correct in e; auto.
+      + apply reset_all_chronos_correct in e1; auto.
+      + apply list_disabled_correct in e2; auto.
+      + apply reset_all_chronos_correct in e3; auto.
+      + apply fire_post_correct in e4; auto.
+    (* Error case, fire_post returns None. *)
+    - rewrite <- H; apply StpnFire_fire_post_err with (pre_fired_transitions := pre_fired_transitions)
+                                                      (intermediatem := intermediatem)
+                                                      (updated_chronos := updated_chronos)
+                                                      (disabled_transs := disabled_transs)
+                                                      (final_chronos := final_chronos).
+      + apply stpn_map_fire_pre_correct in e; auto.
+      + apply reset_all_chronos_correct in e1; auto.
+      + apply list_disabled_correct in e2; auto.
+      + apply reset_all_chronos_correct in e3; auto.
+      + apply fire_post_correct in e4; auto.
+    (* Error case, 2nd reset_all_chronos returns None. *)
+    - rewrite <- H; apply StpnFire_reset_chronos_err2 with (pre_fired_transitions := pre_fired_transitions)
+                                                           (intermediatem := intermediatem)
+                                                           (updated_chronos := updated_chronos)
+                                                           (disabled_transs := disabled_transs).
+      + apply stpn_map_fire_pre_correct in e; auto.
+      + apply reset_all_chronos_correct in e1; auto.
+      + apply list_disabled_correct in e2; auto.
+      + apply reset_all_chronos_correct in e3; auto.
+    (* Error case, list_disabled returns None. *)
+    - rewrite <- H; apply StpnFire_list_disabled_err with (pre_fired_transitions := pre_fired_transitions)
+                                                          (intermediatem := intermediatem)
+                                                          (updated_chronos := updated_chronos).
+      + apply stpn_map_fire_pre_correct in e; auto.
+      + apply reset_all_chronos_correct in e1; auto.
+      + apply list_disabled_correct in e2; auto.
+    (* Error case, 1st reset_all_chronos returns None. *)
+    - rewrite <- H; apply StpnFire_reset_chronos_err1 with (pre_fired_transitions := pre_fired_transitions)
+                                                           (intermediatem := intermediatem).
+      + apply stpn_map_fire_pre_correct in e; auto.
+      + apply reset_all_chronos_correct in e1; auto.
+    (* Error case, stpn_map_fire_pre returns None. *)
+    - rewrite <- H; apply StpnFire_fire_pre_err.
+      + apply stpn_map_fire_pre_correct in e; auto.
+  Qed.
+
+  (*** Completeness proof : stpn_fire ***)
+  Theorem stpn_fire_compl :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (transs : list trans_type)
+           (priority_groups : list (list trans_type))
+           (opt_final_tuplet : option ((list trans_type) *
+                                       marking_type *
+                                       (list (trans_type * option chrono_type)))),
+      StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet ->
+      stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = opt_final_tuplet.
+  Proof.
+    intros lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet H.
+    elim H; intros.
+    (* Case StpnFire_fire_pre_err *)
+    - unfold stpn_fire.
+      apply stpn_map_fire_pre_compl in H0; rewrite H0; auto.
+    (* Case StpnFire_reset_chronos_err1 *)
+    - unfold stpn_fire.
+      apply stpn_map_fire_pre_compl in H0; rewrite H0.
+      apply reset_all_chronos_complete in H1; rewrite H1; auto.
+    (* Case StpnFire_list_disabled_err *)
+    - unfold stpn_fire.
+      apply stpn_map_fire_pre_compl in H0; rewrite H0.
+      apply reset_all_chronos_complete in H1; rewrite H1.
+      apply list_disabled_complete in H2; rewrite H2; auto.
+    (* Case StpnFire_reset_chronos_err2 *)
+    - unfold stpn_fire.
+      apply stpn_map_fire_pre_compl in H0; rewrite H0.
+      apply reset_all_chronos_complete in H1; rewrite H1.
+      apply list_disabled_complete in H2; rewrite H2.
+      apply reset_all_chronos_complete in H3; rewrite H3; auto.
+    (* Case StpnFire_reset_chronos_err2 *)
+    - unfold stpn_fire.
+      apply stpn_map_fire_pre_compl in H0; rewrite H0.
+      apply reset_all_chronos_complete in H1; rewrite H1.
+      apply list_disabled_complete in H2; rewrite H2.
+      apply reset_all_chronos_complete in H3; rewrite H3.
+      apply fire_post_compl in H4; rewrite H4; auto.
+    (* Case StpnFire_cons *)
+    - unfold stpn_fire.
+      apply stpn_map_fire_pre_compl in H0; rewrite H0.
+      apply reset_all_chronos_complete in H1; rewrite H1.
+      apply list_disabled_complete in H2; rewrite H2.
+      apply reset_all_chronos_complete in H3; rewrite H3.
+      apply fire_post_compl in H4; rewrite H4; auto.      
+  Qed.
+  
 End FireStpn.
 
 (*
@@ -2065,135 +2250,325 @@ Section Tuplet.
                                                 end.
 End Tuplet.
 
-(*  
- * Function : Returns the resulting Petri net after all the sensitized
- *            transitions - with right chrono value - in stpn have been fired.
- *            Also returns the list of fired transitions.
- *)
-Definition stpn_cycle (stpn : STPN) : option ((list trans_type) * STPN)  :=
-  match stpn with
-  | mk_STPN
-      chronos
-      (mk_SPN places transs pre post test inhib marking priority_groups lneighbours) =>
-    (* Lists all sensitized transitions. *)
-    match list_sensitized lneighbours pre test inhib marking transs with
-    | Some sensitized_transs =>           
-      (* Increments all chronos for the sensitized transitions. *)
-      match increment_all_chronos chronos sensitized_transs with
-      | Some updated_chronos =>
-        match stpn_fire lneighbours pre test inhib post marking updated_chronos transs priority_groups with
-        | Some (fired_transitions, nextm, next_chronos) =>
-          Some (fired_transitions,
-                mk_STPN
-                  next_chronos
-                  (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours))
-        (* Error, stpn_fire failed!!! *)
+(*==========================================================*)
+(*================= STPN CYCLE EVOLUTION ===================*)
+(*==========================================================*)
+
+Section AnimateStpn.
+  
+  (*  
+   * Function : Returns the resulting Petri net after all the sensitized
+   *            transitions - with right chrono value - in stpn have been fired.
+   *            Also returns the list of fired transitions.
+   *)
+  Definition stpn_cycle (stpn : STPN) : option ((list trans_type) * STPN)  :=
+    match stpn with
+    | mk_STPN
+        chronos
+        (mk_SPN places transs pre post test inhib marking priority_groups lneighbours) =>
+      (* Lists all sensitized transitions. *)
+      match list_sensitized lneighbours pre test inhib marking transs with
+      | Some sensitized_transs =>           
+        (* Increments all chronos for the sensitized transitions. *)
+        match increment_all_chronos chronos sensitized_transs with
+        | Some updated_chronos =>
+          match stpn_fire lneighbours pre test inhib post marking updated_chronos transs priority_groups with
+          | Some (fired_transitions, nextm, next_chronos) =>
+            Some (fired_transitions,
+                  (mk_STPN
+                     next_chronos
+                     (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours)))
+          (* Error, stpn_fire failed!!! *)
+          | None => None
+          end
+        (* Error, increment_all_chronos failed!!! *)
         | None => None
         end
-      (* Error, increment_all_chronos failed!!! *)
+      (* Error, list_sensitized failed. *)
       | None => None
       end
-    (* Error, list_sensitized failed. *)
-    | None => None
-    end
-  end.
+    end.
 
-(***************************************************)
-(*************** To animate a STPN *****************)
-(***************************************************)
+  Functional Scheme stpn_cycle_ind := Induction for stpn_cycle Sort Prop.
+  
+  (* Formal specification : stpn_cycle *)
+  Inductive StpnCycle (stpn : STPN) :
+    option ((list trans_type) * STPN) -> Prop :=
+  | StpnCycle_list_sensitized_err :
+      forall (chronos : list (trans_type * option chrono_type))
+             (places : list place_type)
+             (transs : list trans_type)
+             (pre post test inhib : weight_type)
+             (marking : marking_type)
+             (priority_groups : list (list trans_type))
+             (lneighbours : list (trans_type * neighbours_type)),
+        stpn = (mk_STPN
+                  chronos
+                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+        ListSensitized lneighbours pre test inhib marking transs None ->
+        StpnCycle stpn None
+  | StpnCycle_increment_chronos_err :
+      forall (chronos : list (trans_type * option chrono_type))
+             (places : list place_type)
+             (transs : list trans_type)
+             (pre post test inhib : weight_type)
+             (marking : marking_type)
+             (priority_groups : list (list trans_type))
+             (lneighbours : list (trans_type * neighbours_type))
+             (sensitized_transs : list trans_type),
+        stpn = (mk_STPN
+                  chronos
+                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+        ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
+        IncrementAllChronos chronos sensitized_transs None ->
+        StpnCycle stpn None
+  | StpnCycle_fire_err :
+      forall (chronos : list (trans_type * option chrono_type))
+             (places : list place_type)
+             (transs : list trans_type)
+             (pre post test inhib : weight_type)
+             (marking : marking_type)
+             (priority_groups : list (list trans_type))
+             (lneighbours : list (trans_type * neighbours_type))
+             (sensitized_transs : list trans_type)
+             (updated_chronos : list (trans_type * option chrono_type)),
+        stpn = (mk_STPN
+                  chronos
+                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+        ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
+        IncrementAllChronos chronos sensitized_transs (Some updated_chronos) ->
+        StpnFire lneighbours pre test inhib post marking updated_chronos transs priority_groups None -> 
+        StpnCycle stpn None
+  | StpnCycle_cons :
+      forall (chronos : list (trans_type * option chrono_type))
+             (places : list place_type)
+             (transs : list trans_type)
+             (pre post test inhib : weight_type)
+             (marking : marking_type)
+             (priority_groups : list (list trans_type))
+             (lneighbours : list (trans_type * neighbours_type))
+             (sensitized_transs : list trans_type)
+             (updated_chronos : list (trans_type * option chrono_type))
+             (fired_transitions : list trans_type)
+             (nextm : marking_type)
+             (next_chronos : list (trans_type * option chrono_type)),
+        stpn = (mk_STPN
+                  chronos
+                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+        ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
+        IncrementAllChronos chronos sensitized_transs (Some updated_chronos) ->
+        StpnFire lneighbours pre test inhib post marking updated_chronos transs priority_groups
+                 (Some (fired_transitions, nextm, next_chronos)) -> 
+        StpnCycle stpn (Some (fired_transitions,
+                              (mk_STPN
+                                 next_chronos
+                                 (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours)))).
 
-(*  
- * Function : Returns the list of (transitions_fired(i), marking(i), chronos(i))
- *            for each cycle i, from 0 to n, representing the evolution
- *            of the Petri net stpn.
- *)
-Fixpoint stpn_animate (stpn : STPN) (n : nat) :
-  list
-    (list (list trans_type)  *
-     list (place_type * nat) *
-     (list (trans_type * option (nat * nat * nat)))) :=
-  match n with
-  | O => [ ( [] , [] , []  ) ]
-  | S n' =>  let (Lol_fired, next_stpn) := (stpn_cycle stpn) in
-             (Lol_fired,
-              (marking2list (marking (spn next_stpn)) (places (spn next_stpn))),
-              (intervals2list (all_chronos next_stpn) (transs (spn next_stpn))))
-               :: (stpn_animate next_stpn n')
-  end.    
+  (*** Correctness proof : stpn_cycle ***)
+  Theorem stpn_cycle_correct :
+    forall (stpn : STPN)
+           (opt_final_couple : option ((list trans_type) * STPN)),
+      stpn_cycle stpn = opt_final_couple ->
+      StpnCycle stpn opt_final_couple.
+  Proof.
+    intro stpn.
+    functional induction (stpn_cycle stpn) using stpn_cycle_ind; intros.
+    (* General case, all went well. *)
+    - rewrite <- H; apply StpnCycle_cons with (chronos := chronos0)
+                                              (marking := marking)
+                                              (sensitized_transs := sensitized_transs)
+                                              (updated_chronos := updated_chronos).
+      + auto.
+      + apply list_sensitized_correct; auto.
+      + apply increment_all_chronos_correct; auto.
+      + apply stpn_fire_correct; auto.
+    (* Error case, stpn_fire returns None. *)
+    - rewrite <- H; apply StpnCycle_fire_err with (places := places)
+                                                  (transs := transs)
+                                                  (pre := pre)
+                                                  (post := post)
+                                                  (test := test)
+                                                  (inhib := inhib)
+                                                  (priority_groups := priority_groups)
+                                                  (lneighbours := lneighbours)
+                                                  (chronos := chronos0)
+                                                  (marking := marking)
+                                                  (sensitized_transs := sensitized_transs)
+                                                  (updated_chronos := updated_chronos).
+      + auto.
+      + apply list_sensitized_correct; auto.
+      + apply increment_all_chronos_correct; auto.
+      + apply stpn_fire_correct; auto.
+    (* Error case, increment_all_chronos returns None. *)
+    - rewrite <- H; apply StpnCycle_increment_chronos_err with (places := places)
+                                                               (transs := transs)
+                                                               (pre := pre)
+                                                               (post := post)
+                                                               (test := test)
+                                                               (inhib := inhib)
+                                                               (priority_groups := priority_groups)
+                                                               (lneighbours := lneighbours)
+                                                               (chronos := chronos0)
+                                                               (marking := marking)
+                                                               (sensitized_transs := sensitized_transs).
+      + auto.
+      + apply list_sensitized_correct; auto.
+      + apply increment_all_chronos_correct; auto.
+    (* Error case, list_sensitized returns None. *)
+    - rewrite <- H; apply StpnCycle_list_sensitized_err with (places := places)
+                                                               (transs := transs)
+                                                               (pre := pre)
+                                                               (post := post)
+                                                               (test := test)
+                                                               (inhib := inhib)
+                                                               (priority_groups := priority_groups)
+                                                               (lneighbours := lneighbours)
+                                                               (chronos := chronos0)
+                                                               (marking := marking).
+      + auto.
+      + apply list_sensitized_correct; auto.
+  Qed.
 
-(*** Formal specification : stpn_animate ***)
-Inductive stpn_animate_spec
-          (stpn : STPN)
-  : nat ->
-    list
-      (list (list trans_type)  *
-       list (place_type * nat) *
-       (list (trans_type * option (nat * nat * nat)))) -> Prop :=
-| animate_stpn_O : stpn_animate_spec
-                    stpn   O  [ ( [] , [] , [] ) ]
-| animate_stpn_S :
-    forall (next_stpn : STPN)
-           (Lol_fired : list (list trans_type))
-           (m_visuel : list (place_type * nat))
-           (chronos_visuels : list (trans_type * option (nat * nat * nat)))
+  (*** Completeness proof : stpn_cycle ***)
+  Theorem stpn_cycle_compl :
+    forall (stpn : STPN)
+           (opt_final_couple : option ((list trans_type) * STPN)),
+      StpnCycle stpn opt_final_couple ->
+      stpn_cycle stpn = opt_final_couple.
+  Proof.
+    intros; elim H; intros; unfold stpn_cycle; rewrite H0.
+    (* Case StpnCycle_list_sensitized_err *)
+    - apply list_sensitized_complete in H1; rewrite H1; auto.
+    (* Case StpnCycle_increment_chronos_err *)
+    - apply list_sensitized_complete in H1; rewrite H1.
+      apply increment_all_chronos_complete in H2; rewrite H2; auto.
+    (* Case StpnCycle_fire_err *)
+    - apply list_sensitized_complete in H1; rewrite H1.
+      apply increment_all_chronos_complete in H2; rewrite H2.
+      apply stpn_fire_compl in H3; rewrite H3; auto.
+    (* Case StpnCycle_cons *)
+    - apply list_sensitized_complete in H1; rewrite H1.
+      apply increment_all_chronos_complete in H2; rewrite H2.
+      apply stpn_fire_compl in H3; rewrite H3; auto.
+  Qed.
+  
+  (*******************************************)
+  (******** ANIMATING DURING N CYCLES ********)
+  (*******************************************)
+  
+  (*  
+   * Function : Returns the list of (transitions_fired(i), marking(i), chronos(i))
+   *            for each cycle i, from 0 to n, representing the evolution
+   *            of the Petri net stpn.
+   *)
+  Fixpoint stpn_animate 
+           (stpn : STPN)
            (n : nat)
-           (TAIL : list (list (list trans_type) *
-                         list (place_type * nat) *
-                         (list (trans_type * option (nat * nat * nat))))),
-     
-      (Lol_fired, next_stpn) = stpn_cycle stpn
-      ->
-      m_visuel = marking2list
-                   (marking (spn next_stpn))
-                   (places (spn next_stpn))
-      ->
-      chronos_visuels = (intervals2list
-                           (all_chronos   next_stpn)
-                           (transs (spn  next_stpn)))
-      ->
-      stpn_animate_spec
-        next_stpn    n    TAIL
-      -> 
-      stpn_animate_spec
-        stpn   (S n)   ((Lol_fired, m_visuel, chronos_visuels) :: TAIL).
+           (stpn_evolution : list (list trans_type *
+                                   marking_type *
+                                   list (trans_type * option chrono_type))) :
+    option (list (list trans_type * marking_type * list (trans_type * option chrono_type))) :=
+    match n with
+    | O => Some stpn_evolution
+    | S n' => match (stpn_cycle stpn) with
+              | Some (fired_trans_at_n, stpn_at_n) =>
+                stpn_animate stpn_at_n n' (stpn_evolution ++ [(fired_trans_at_n,
+                                                               (marking stpn_at_n),
+                                                               (chronos stpn_at_n))])
+              (* Error, stpn_cycle failed!!! *)
+              | None => None
+              end
+    end.
 
-Functional Scheme stpn_animate_ind :=
-  Induction for stpn_animate Sort Prop.
+  Functional Scheme stpn_animate_ind := Induction for stpn_animate Sort Prop.
+  
+  (*** Formal specification : stpn_animate ***)
+  Inductive StpnAnimate (stpn : STPN) :
+    nat ->
+    list (list trans_type * marking_type * list (trans_type * option chrono_type)) ->
+    option (list (list trans_type * marking_type * list (trans_type * option chrono_type))) ->
+    Prop :=
+  | StpnAnimate_0 :
+      forall (stpn_evolution : list (list trans_type *
+                                     marking_type *
+                                     list (trans_type * option chrono_type))),
+        StpnAnimate stpn 0 stpn_evolution (Some stpn_evolution) 
+  | StpnAnimate_cons :
+      forall (n : nat)
+             (fired_trans_at_n : list trans_type)
+             (stpn_at_n : STPN)
+             (stpn_evolution : list (list trans_type *
+                                     marking_type *
+                                     list (trans_type * option chrono_type)))
+             (opt_evolution : option (list (list trans_type *
+                                            marking_type *
+                                            list (trans_type * option chrono_type)))),
+        StpnCycle stpn (Some (fired_trans_at_n, stpn_at_n)) ->
+        StpnAnimate stpn_at_n
+                    n
+                    (stpn_evolution ++ [(fired_trans_at_n,
+                                         (marking stpn_at_n),
+                                         (chronos stpn_at_n))])
+                    opt_evolution ->
+        StpnAnimate stpn
+                    (S n)
+                    stpn_evolution
+                    opt_evolution
+  | StpnAnimate_err :
+      forall (n : nat)
+             (stpn_evolution : list (list trans_type *
+                                     marking_type *
+                                     list (trans_type * option chrono_type))),
+        StpnCycle stpn None ->
+        StpnAnimate stpn (S n) stpn_evolution None.
+  
+  (*** Correctness proof : stpn_animate***)
+  Theorem stpn_animate_correct :
+    forall (stpn :STPN)
+           (n : nat)
+           (stpn_evolution : list (list trans_type * marking_type * list (trans_type * option chrono_type)))
+           (opt_evolution : option (list (list trans_type * marking_type * list (trans_type * option chrono_type)))),
+      stpn_animate stpn n stpn_evolution = opt_evolution ->
+      StpnAnimate stpn n stpn_evolution opt_evolution.
+  Proof.                                                                                
+    intros stpn n stpn_evolution.
+    functional induction (stpn_animate stpn n stpn_evolution) using stpn_animate_ind; intros.
+    (* Case n = 0 *)
+    - rewrite <- H; apply StpnAnimate_0.
+    (* General case *)
+    - intros; rewrite <- H.
+      apply StpnAnimate_cons with (fired_trans_at_n := fired_trans_at_n)
+                                  (stpn_at_n := stpn_at_n).
+      + apply stpn_cycle_correct in e0; auto.
+      + apply IHo; auto.
+    (* Error case, stpn_cycle returns None. *)
+    - rewrite <- H; apply StpnAnimate_err.
+      apply stpn_cycle_correct in e0; auto.
+  Qed.
 
-(*** Correctness proof : stpn_animate ***)
-Theorem stpn_animate_correct :
-  forall (stpn : STPN)
-         (n : nat)
-         (triplets : list (list (list trans_type)  *
-                           list (place_type * nat) *
-                           list (trans_type * option (nat * nat * nat)))),
-  stpn_animate stpn n = triplets -> stpn_animate_spec stpn n triplets.
-Proof.
-  intros stpn n.
-  functional induction (stpn_animate stpn n)
-             using stpn_animate_ind.
-  - intros truc H. rewrite <- H. apply animate_stpn_O.
-  - intros truc H. rewrite <- H.
-    apply animate_stpn_S with (next_stpn := snd (stpn_cycle stpn)).
-    + rewrite e0. simpl. reflexivity.
-    + rewrite e0. simpl. reflexivity.
-    + rewrite e0. simpl. reflexivity. 
-    + rewrite e0. simpl. apply (IHl (stpn_animate next_stpn n')). reflexivity.
-Qed.
+  (*** Completeness proof : stpn_animate ***)
+  Theorem stpn_animate_compl :
+    forall (stpn : STPN)
+           (n : nat)
+           (stpn_evolution : list (list trans_type *
+                                   marking_type *
+                                   list (trans_type * option chrono_type)))
+           (opt_evolution : option (list (list trans_type *
+                                          marking_type *
+                                          list (trans_type * option chrono_type)))),
+      StpnAnimate stpn n stpn_evolution opt_evolution ->
+      stpn_animate stpn n stpn_evolution = opt_evolution.
+  Proof.
+    intros; elim H; intros.
+    (* Case StpnAnimate_0 *)
+    - simpl; auto.
+    (* Case StpnAnimate_cons *)
+    - simpl. apply stpn_cycle_compl in H0; rewrite H0.
+      rewrite H2; auto.
+    (* Case StpnAnimate_err *)
+    - apply stpn_cycle_compl in H0.
+      simpl.
+      rewrite H0; auto.
+  Qed.
 
-(*** Completeness proof : stpn_animate ***)
-Theorem stpn_animate_complete :
-  forall (stpn : STPN)
-         (n : nat)
-         (triplets : list (list (list trans_type)  *
-                           list (place_type * nat) *
-                           list (trans_type * option (nat * nat * nat)))),
-  stpn_animate_spec stpn n triplets -> stpn_animate stpn n = triplets.
-Proof.
-  intros. elim H.
-  - simpl. reflexivity. 
-  - intros. simpl.
-    rewrite <- H0. rewrite <- H1. rewrite <- H2. rewrite <- H4.
-    reflexivity.
-Qed.
-
+End AnimateStpn.
