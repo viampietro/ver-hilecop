@@ -151,7 +151,6 @@ Structure SPN : Set :=
     }.
 
 (*********** HELPERS DEFINITIONS *********)
-
 Definition MarkingHaveSameStruct
            (m1 : marking_type)
            (m2 : marking_type) := fst (split m1) = fst (split m2).
