@@ -1,239 +1,90 @@
 Require Import SITPN stpn_examples.
 
-(**********************************)
-(********   example (1)   *********)
-(**********************************)
+(*======================================================*)  
+(*                  FIRST SITPN EXAMPLE                 *)
+(*======================================================*)
 
-Definition ex_eval_conds_cycle1 (t : trans_type) : option bool :=
+(*  Defines conditions functions, and scenario for first SITPN example. *)
+Definition ex_conds_cycle1 (t : trans_type) : option bool :=
   match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some false
+  | 0  => Some true
+  | 2  => Some false
   | _ => None
   end.
 
-Definition ex_eval_conds_cycle2 (t : trans_type) : option bool :=
+Definition ex_conds_cycle2 (t : trans_type) : option bool :=
   match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
+  | 0  => Some true
+  | 2  => Some true
   | _ => None
   end.
 
-Definition ex_eval_conds_cycle3 (t : trans_type) : option bool :=
+Definition ex_conds_cycle3 (t : trans_type) : option bool :=
   match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
+  | 0  => Some true
+  | 2  => Some true
+  | 3  => Some false
   | _ => None
   end.
 
-Definition ex_eval_conds_cycle4 (t : trans_type) : option bool :=
+Definition ex_conds_cycle4 (t : trans_type) : option bool :=
   match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
+  | 0  => Some true
+  | 2  => Some true
+  | 3  => Some false
   | _ => None
   end.
 
-Definition ex_eval_conds_cycle5 (t : trans_type) : option bool :=
+Definition ex_conds_cycle5 (t : trans_type) : option bool :=
   match t with
-  | mk_trans 0  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
+  | 0  => Some true
+  | 2  => Some true
+  | 3  => Some false
   | _ => None
   end.
 
-Definition ex_scenar := [ex_eval_conds_cycle1;
-                           ex_eval_conds_cycle2;
-                           ex_eval_conds_cycle3;
-                           ex_eval_conds_cycle4;
-                           ex_eval_conds_cycle5].
+(* A scenario is a list of functions associating, option bool to transitions. *)
+(* Here, ex_scenario defines conditions value for 20 cycles. *)
+Definition ex_scenario := [ ex_conds_cycle1;
+                              ex_conds_cycle2;
+                              ex_conds_cycle3;
+                              ex_conds_cycle4;
+                              ex_conds_cycle5;
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None);
+                              (fun t => None) ].
 
-Definition ex_sitpn := mk_SITPN ex_stpn ex_scenar.
+(* Defines a SITPN instance. *)
+Definition sitpn1 := mk_SITPN ex_scenario stpn1.
 
-Time Eval compute in (sitpn_animate ex_sitpn 9).
+(*=== ERRORS TESTS. ===*)
 
-Lemma ex_sitpn_animate : (sitpn_animate
-                             ex_sitpn
-                             3) =
-      [([[]; []; []; [mk_trans 0]; [mk_trans 1]],
-        [(mk_place 0, 1); (mk_place 1, 0); 
-        (mk_place 2, 1); (mk_place 3, 0); (mk_place 4, 1);
-        (mk_place 5, 1); (mk_place 7, 0); (mk_place 8, 0);
-        (mk_place 9, 0); (mk_place 10, 0); 
-        (mk_place 11, 0); (mk_place 12, 1)],
-        [(mk_trans 0, None); (mk_trans 1, None);
-        (mk_trans 2, None); (mk_trans 3, None);
-        (mk_trans 4, Some (2, 0, 4)); (mk_trans 5, None);
-        (mk_trans 6, None); (mk_trans 8, None);
-        (mk_trans 9, Some (1, 0, 2)); (mk_trans 12, None);
-        (mk_trans 13, None); (mk_trans 14, None);
-        (mk_trans 16, None)]);
-       ([[]; []; []; [mk_trans 5]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 1);
-       (mk_place 3, 0); (mk_place 4, 1); (mk_place 5, 0);
-       (mk_place 7, 0); (mk_place 8, 0); (mk_place 9, 1);
-       (mk_place 10, 0); (mk_place 11, 0); 
-       (mk_place 12, 1)],
-       [(mk_trans 0, None); (mk_trans 1, None);
-       (mk_trans 2, None); (mk_trans 3, None);
-       (mk_trans 4, Some (2, 1, 4)); (mk_trans 5, None);
-       (mk_trans 6, None); (mk_trans 8, None);
-       (mk_trans 9, Some (1, 0, 2)); (mk_trans 12, None);
-       (mk_trans 13, None); (mk_trans 14, None);
-       (mk_trans 16, None)]);
-       ([[]; [mk_trans 4]; []; [mk_trans 2]; []],
-       [(mk_place 0, 1); (mk_place 1, 0); (mk_place 2, 0);
-       (mk_place 3, 1); (mk_place 4, 0); (mk_place 5, 0);
-       (mk_place 7, 0); (mk_place 8, 1); (mk_place 9, 1);
-       (mk_place 10, 0); (mk_place 11, 0); 
-       (mk_place 12, 1)],
-       [(mk_trans 0, None); (mk_trans 1, None);
-       (mk_trans 2, None); (mk_trans 3, None);
-       (mk_trans 4, Some (2, 0, 4)); (mk_trans 5, None);
-       (mk_trans 6, None); (mk_trans 8, None);
-       (mk_trans 9, Some (1, 0, 2)); (mk_trans 12, None);
-       (mk_trans 13, None); (mk_trans 14, None);
-       (mk_trans 16, None)]); ([], [], [])].
-Proof. vm_compute. reflexivity. Qed.
+(* The following examples must return None, because the number of evolution
+ * cycles passed as argument is greater than the size of the scenario list (length scenario = 20).
+ *)
+Example sitpn_animate_err1 : (sitpn_animate sitpn1 21 []) = None. compute; reflexivity. Qed.
+Example sitpn_animate_err2 : (sitpn_animate sitpn1 200 []) = None. compute; reflexivity. Qed.
+Example sitpn_animate_err3 : (sitpn_animate sitpn1 2000 []) = None. compute; reflexivity. Qed.
 
-(********************************************************)
-(**************** example 2 *****************************)
-(********************************************************)
+(*==== PERFORMANCE TESTS. ====*)
+(* Not easy to do performance tests here, because when have to define 
+ * a scenario of significant size to test sitpn_animate with big entries.
+ *)
 
-Definition ex2_conds_cycle1 (t : trans_type) : option bool :=
-  match t with
-  | mk_trans 1  => Some true
-  | mk_trans 2  => Some false
-  | _ => None
-  end.
-
-Definition ex2_conds_cycle2 (t : trans_type) : option bool :=
-  match t with
-  | mk_trans 1  => Some true
-  | mk_trans 6  => Some true
-  | _ => None
-  end.
-
-Definition ex2_conds_cycle3 (t : trans_type) : option bool :=
-  match t with
-  | mk_trans 1  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 5  => Some false
-  | _ => None
-  end.
-
-Definition ex2_conds_cycle4 (t : trans_type) : option bool :=
-  match t with
-  | mk_trans 1  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
-  | _ => None
-  end.
-
-Definition ex2_conds_cycle5 (t : trans_type) : option bool :=
-  match t with
-  | mk_trans 5  => Some true
-  | mk_trans 2  => Some true
-  | mk_trans 3  => Some false
-  | _ => None
-  end.
-
-Definition ex2_scenar := [ex2_conds_cycle1; ex2_conds_cycle2; ex2_conds_cycle3;
-                           ex2_conds_cycle4; ex2_conds_cycle5].
-
-Definition ex2_sitpn := mk_SITPN ex2_stpn ex2_scenar.
-
-Lemma ex2_sitpn_animate : (sitpn_animate ex2_sitpn 13) =
-      [([[]; []; []; [mk_trans 1]],
-        [(mk_place 1, 0); (mk_place 2, 1); 
-        (mk_place 3, 2); (mk_place 4, 1); (mk_place 5, 0);
-        (mk_place 6, 0); (mk_place 7, 0)],
-        [(mk_trans 1, None); (mk_trans 2, None);
-        (mk_trans 3, Some (3, 0, 5)); (mk_trans 4, None);
-        (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([[]; []; []; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 1, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([[]; []; []; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 2, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([[]; []; []; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 3, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([[]; []; []; []],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([],
-       [(mk_place 1, 0); (mk_place 2, 1); (mk_place 3, 2);
-       (mk_place 4, 1); (mk_place 5, 0); (mk_place 6, 0);
-       (mk_place 7, 0)],
-       [(mk_trans 1, None); (mk_trans 2, None);
-       (mk_trans 3, Some (3, 4, 5)); (mk_trans 4, None);
-       (mk_trans 5, Some (2, 0, 256)); (mk_trans 6, None)]);
-       ([], [], [])].
-Proof. vm_compute. reflexivity. Qed.
+(* Normally, performance test results for sitpn_animate are equivalent
+ * to the ones for stpn_animate, since we are only adding a O(1) test (condition test) to
+ * the algorithm.
+ *)
+Time Eval compute in (sitpn_animate sitpn1 20 []).

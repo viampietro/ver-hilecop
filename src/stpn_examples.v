@@ -1,78 +1,61 @@
 Require Export STPN spn_examples.
 
-(**********************************)
-(********   example (1)   *********)
-(**********************************)
+(*=====================================================*)  
+(*                  FIRST STPN EXAMPLE                 *)
+(*=====================================================*)
 
-Print two_positive.
-Lemma four_positive : 4 > 0. Proof. omega. Qed.
+Lemma pos1 : 1 > 0. omega. Qed.
+Lemma pos2 : 2 > 0. omega. Qed.
+Lemma pos3 : 3 > 0. omega. Qed.
+Lemma pos4 : 4 > 0. omega. Qed.
+Lemma le24 : 2 <= 4. omega. Qed.
+Lemma le12 : 1 <= 2. omega. Qed. 
+Lemma le23 : 2 <= 3. omega. Qed.
 
-Lemma preuve2le4 : 2 <= 4. Proof. omega. Qed.
-Lemma preuve1le2 : 1 <= 2. Proof. omega. Qed. 
+(* Defines some chronos. *)
+Definition chr1 := {| cnt := 0;
+                      min_t := {| int := 1; posi := pos1 |};
+                      max_t := {| int := 2; posi := pos2 |};
+                      max_is_infinite := false;
+                      min_t_le_max_t := le12 |}.
+Definition chr2 := {| cnt := 0;
+                      min_t := {| int := 2; posi := pos2 |};
+                      max_t := {| int := 3; posi := pos3 |};
+                      max_is_infinite := false;
+                      min_t_le_max_t := le23 |}.
+Definition chr3 := {| cnt := 0;
+                      min_t := {| int := 2; posi := pos2 |};
+                      max_t := {| int := 3; posi := pos3 |};
+                      max_is_infinite := true;
+                      min_t_le_max_t := le23 |}.
 
-Definition int_1_2 := mk_chrono 1 2 preuve1le2 0.
-Definition int_2_4 := mk_chrono 2 4 preuve2le4 0.
+(* List of (trans_type, option chrono_type). *)
+Definition ex_chronos := [(0, None);
+                            (1, Some chr1);
+                            (2, Some chr2);
+                            (3, Some chr3);
+                            (4, None);
+                            (5, None);
+                            (6, None);
+                            (8, None);
+                            (9, None);
+                            (12, None);
+                            (13, None);
+                            (14, None);
+                            (16, None)
+                         ].
 
-Definition ex_chronos : trans_type -> option chrono_type :=
-  fun trans => 
-    match trans with
-    | (tr 9)  =>  Some int_1_2
-    | (tr 4)  =>  Some int_2_4
-    | _ => None
-    end.
+(* Defines a STPN instance. *)
+Definition stpn1 := mk_STPN ex_chronos spn1.
 
-Definition ex_stpn := mk_STPN ex_spn1 ex_chronos.
+(*==== PERFORMANCE TESTS. ====*)
 
-Definition test_ex_stpn := (stpn_animate ex_stpn 3).
+(* FORMER stpn_animate : 9 steps takes 19.843 secs! *)
 
-(* 9 steps takes 19.843 secs! *)
-(* Time Eval compute in (stpn_animate ex_stpn 9). *)
-
-(********************************************************)
-(**************** example 2 *****************************)
-(********************************************************)
-
-(****  intervals need lemmas and structures .... ****) 
-Lemma three_positive : 3 > 0. Proof. omega. Qed.
-Lemma five_positive : 5 > 0. Proof. omega. Qed.
-Lemma twototheeight_positive : 256 > 0. Proof. omega. Qed.
-
-(*
-Definition three_star := mk_nat_star
-                           3
-                           three_positive.
-Definition five_star := mk_nat_star
-                           5
-                           five_positive.
-Definition two_star := mk_nat_star
-                           2
-                           two_positive.
-Definition twototheeight_star := mk_nat_star
-                           256
-                           twototheeight_positive.
- 
-Lemma preuve3le5 : three_star <=i five_star. 
-Proof. unfold lebi. Admitted.
-Lemma preuve2le256 : two_star <=i twototheeight_star.
-Proof. unfold lebi. Admitted.
- *)
-
-Lemma preuve3le5 : 3 <= 5. 
-Proof. omega. Qed.
-Lemma preuve2le256 : 2 <= 256.
-Proof. omega. Qed.
-
-Definition int_3_5 := mk_chrono 3 5 preuve3le5 0.
-Definition int_2_256 := mk_chrono 2 256 preuve2le256 0.
-
-Definition ex2_chronos :
-  trans_type -> option chrono_type :=
-  fun trans => 
-    match trans with
-    | (tr 3)  =>  Some int_3_5
-    | (tr 5)  =>  Some int_2_256
-    | _ => None
-    end.
-    
-Definition ex2_stpn := mk_STPN ex2_spn ex2_chronos.
+(* ACTUAL stpn_animate : 9 steps takes 0.53 secs! *)
+(* Time Eval compute in stpn_animate stpn1 9 []. *)
+(* Time Eval compute in stpn_animate stpn1 50 []. *)
+(* Time Eval compute in stpn_animate stpn1 100 []. *)
+(* Time Eval compute in stpn_animate stpn1 500 []. *)
+(* Time Eval compute in stpn_animate stpn1 1000 []. *)
 

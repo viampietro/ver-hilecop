@@ -1,4 +1,4 @@
-Require Import spn_examples.
+Require Export SPN.
 
 (*========================================================*)
 (*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS AND ===*)
@@ -7,7 +7,7 @@ Require Import spn_examples.
 
 (* 
  * Defines the time interval structure associated with transitions.
- * Firing of transitions must happen when cnt >= min_t and cnt <= max_t.
+ * Transitions are firable when min_t <= cnt <= max_t.
  * 
  *)
 Structure chrono_type : Set :=
@@ -29,9 +29,10 @@ Structure chrono_type : Set :=
   }.
 
 (*  
- * Defines the structure of stpn. 
+ * Defines the STPN structure. 
+ * 
  * Basically, same structure as an spn with chronos associated to transitions.
- * (One chrono by transition)
+ * (At most one chrono by transition, or None)
  *
  * STPN is declared as a coercion of SPN.
  *)
@@ -211,11 +212,15 @@ Section Chrono.
       (* Case GetChrono_hd_false *)
       - simpl; apply Nat.eqb_neq in H; rewrite H; auto.
     Qed.
+
+
     
     (* 
      * Function : Returns true if chrono and chrono' are equal.
+     * 
      *            Two chronos are equal only if their max_is_infinite attribute
      *            values are the same.
+     *
      *            If max_is_infinite is true for both chronos, then
      *            only counter value and min_t value are compared for equality.
      *            Otherwise, counter, min_t and max_t are compared.     
@@ -2469,15 +2474,18 @@ Section AnimateStpn.
                                    list (trans_type * option chrono_type))) :
     option (list (list trans_type * marking_type * list (trans_type * option chrono_type))) :=
     match n with
+    (* Base case, returns the list storing the evolution. *)
     | O => Some stpn_evolution
-    | S n' => match (stpn_cycle stpn) with
-              | Some (fired_trans_at_n, stpn_at_n) =>
-                stpn_animate stpn_at_n n' (stpn_evolution ++ [(fired_trans_at_n,
-                                                               (marking stpn_at_n),
-                                                               (chronos stpn_at_n))])
-              (* Error, stpn_cycle failed!!! *)
-              | None => None
-              end
+    | S n' =>
+      match (stpn_cycle stpn) with
+      (* Adds a new evolution step at the end of the list. *)
+      | Some (fired_trans_at_n, stpn_at_n) =>
+        stpn_animate stpn_at_n n' (stpn_evolution ++ [(fired_trans_at_n,
+                                                       (marking stpn_at_n),
+                                                       (chronos stpn_at_n))])
+      (* Error, stpn_cycle failed!!! *)
+      | None => None
+      end
     end.
 
   Functional Scheme stpn_animate_ind := Induction for stpn_animate Sort Prop.
