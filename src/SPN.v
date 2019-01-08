@@ -733,7 +733,7 @@ Section Marking.
       apply replace_occ_compl in H1; rewrite H1; auto.      
   Qed.
 
-  (* Lemma : Proves that modify_m conserves
+  (* Lemma : Proves that modify_m preserves
    *         the structure of the marking m
    *         passed as argument.  
    *)

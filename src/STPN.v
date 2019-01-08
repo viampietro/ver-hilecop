@@ -50,6 +50,13 @@ Structure STPN : Set :=
 Definition ChronosHaveSameStruct (chronos chronos' : list (trans_type * option chrono_type)) :=
   fst (split chronos) = fst (split chronos').
 
+Definition PriorityGroupsAreRefInChronos
+           (priority_groups : list (list trans_type))
+           (chronos : list (trans_type * option chrono_type)) :=
+  (forall pgroup : list trans_type,
+      In pgroup priority_groups ->
+      (forall t : trans_type, In t pgroup -> In t (fst (split chronos)))).
+
 Definition NoUnknownTransInChronos (stpn : STPN) :=
   stpn.(transs) = fst (split stpn.(chronos)).
 
@@ -1026,6 +1033,29 @@ Section Chrono.
         unfold reset_all_chronos; rewrite H0; auto.
     Qed.
 
+    (* Lemma : Proves that reset_all_chronos preserves
+     *         the structure of the chronos passed as argument.  
+     *)
+    Lemma reset_all_chronos_same_struct :
+      forall (chronos : list (trans_type * option chrono_type))
+             (transs : list trans_type)
+             (reset_chronos : list (trans_type * option chrono_type)),
+        reset_all_chronos chronos transs = Some reset_chronos ->
+        ChronosHaveSameStruct chronos reset_chronos.
+    Proof.
+      intros chronos transs.
+      functional induction (reset_all_chronos chronos transs)
+                 using reset_all_chronos_ind; intros.
+      - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
+      - apply reset_chrono_same_struct in e0.
+        apply IHo in H.
+        unfold ChronosHaveSameStruct.
+        unfold ChronosHaveSameStruct in e0.
+        unfold ChronosHaveSameStruct in H.
+        transitivity (fst (split new_chronos)); [auto | auto].
+      - inversion H.
+    Qed.
+    
     (* Lemma : Proves that reset_all_chronos returns no error 
      *         if all transitions of the list transs
      *         are referenced in chronos.
@@ -1690,6 +1720,117 @@ Section ListDisabled.
           apply is_sensitized_compl in H1; rewrite H1; auto.
   Qed.
 
+  (*  
+   * Lemma : If all transitions in transs are ref in lneighbours then 
+   *         all transitions in disabled_transs (returned by list_disabled_aux)
+   *         are in lneighbours.
+   *)
+  Lemma list_disabled_aux_incl_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (disabled_transs transs final_disabled : list trans_type),
+      incl transs (fst (split lneighbours)) ->
+      incl disabled_transs (fst (split lneighbours)) ->
+      list_disabled_aux lneighbours pre test inhib m disabled_transs transs =
+      Some final_disabled ->
+      incl final_disabled (fst (split lneighbours)).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib m disabled_transs transs.
+    functional induction (list_disabled_aux lneighbours pre test inhib m disabled_transs transs)
+               using list_disabled_aux_ind; intros.
+    (* Base case, transs = []. *)
+    - injection H1; intros.
+      rewrite <- H3 in H2.
+      apply H0 in H2.
+      auto.
+    (* Case everything went well. *)
+    - apply IHo with (final_disabled := final_disabled).
+      + intros.
+        apply (in_cons t) in H3.
+        apply H in H3; auto.
+      + intros.
+        apply (H0 a0 H3).
+      + auto.
+      + auto.
+    (* Case is_sensitized = false. *)
+    - apply IHo with (final_disabled := final_disabled).
+      + intros.
+        apply (in_cons t) in H3.
+        apply H in H3; auto.
+      + intros.
+        apply in_inv in H3.
+        elim H3; intros.
+        -- cut (In a0 (t :: tail)); intros;
+             [apply H in H5; auto | rewrite H4; apply in_eq].
+        -- apply H0 in H4; auto.
+      + auto.
+      + auto.
+    (* Case is_sensitized returns an error,
+     * then contradiction.
+     *)
+     - inversion H1.
+    (* Case get_neighbours returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+  Qed.
+
+  (*  
+   * Lemma : If list_disabled_aux returns Some final_disabled then
+   *         all transitions in final_disabled are in disabled_transs ++ transs.
+   *)
+  Lemma list_disabled_aux_incl_transs :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (disabled_transs transs final_disabled : list trans_type),
+      list_disabled_aux lneighbours pre test inhib m disabled_transs transs =
+      Some final_disabled ->
+      incl final_disabled (disabled_transs ++ transs).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib m disabled_transs transs.
+    functional induction (list_disabled_aux lneighbours pre test inhib m disabled_transs transs)
+               using list_disabled_aux_ind; intros.
+    (* Base case, transs = []. *)
+    - injection H; intros.
+      rewrite <- H1 in H0.
+      rewrite <- app_nil_end; auto.
+    (* Case everything went well. *)
+    - generalize (IHo final_disabled H a H0); intro.
+      apply in_app_or in H1.
+      elim H1; intros.
+      + apply or_introl with (B := In a (t :: tail)) in H2.
+        apply in_or_app in H2.
+        auto.
+      + apply (in_cons t) in H2.
+        apply or_intror with (A := In a disabled_transs) in H2.
+        apply in_or_app in H2.
+        auto.
+    (* Case is_sensitized = false. *)
+    - generalize (IHo final_disabled H a H0); intro.
+      apply in_app_or in H1.
+      elim H1; intros.
+      + apply in_or_app.
+        apply in_inv in H2.
+        elim H2; intros.
+        -- rewrite H3; right; apply in_eq.
+        -- left; auto.
+      + apply in_or_app.
+        apply (in_cons t) in H2.
+        right; auto.
+    (* Case is_sensitized returns an error,
+     * then contradiction.
+     *)
+    - inversion H.
+    (* Case get_neighbours returns an error,
+     * then contradiction.
+     *)
+    - inversion H.
+  Qed.
+  
   (* Lemma : list_disabled_aux returns no error if 
    *         all transition t in transs are referenced in lneighbours
    *         and if all neighbour places referenced in lneighbours are
@@ -1700,17 +1841,16 @@ Section ListDisabled.
            (pre test inhib : weight_type)
            (m : marking_type)
            (disabled_transs transs : list trans_type),
-      TransAreRefInLneighbours transs lneighbours ->
+      incl transs (fst (split lneighbours)) ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          (PlacesAreRefInMarking neighbours.(pre_pl) m /\
-           PlacesAreRefInMarking neighbours.(inhib_pl) m /\
-           PlacesAreRefInMarking neighbours.(test_pl) m)) ->
+          (incl neighbours.(pre_pl) (fst (split m)) /\
+           incl neighbours.(inhib_pl) (fst (split m)) /\
+           incl neighbours.(test_pl) (fst (split m)))) ->
       exists v : list trans_type,
         list_disabled_aux lneighbours pre test inhib m disabled_transs transs = Some v.
   Proof.
-    unfold TransAreRefInLneighbours.
-    unfold PlacesAreRefInMarking.
+    unfold incl.
     intros lneighbours pre test inhib m disabled_transs transs.
     functional induction (list_disabled_aux lneighbours pre test inhib m
                                             disabled_transs transs)
@@ -1722,7 +1862,7 @@ Section ListDisabled.
     - apply IHo.
       + intros.
         apply (in_cons t) in H1.
-        apply (H t0) in H1; auto.
+        apply (H a) in H1; auto.
       + intros.
         apply (H0 t0 neighbours) in H1; auto.
     (* Case is_sensitized = false. *)
@@ -1806,6 +1946,58 @@ Section ListDisabled.
     unfold list_disabled; apply list_disabled_aux_complete in H0; rewrite H0; auto. 
   Qed.
 
+  (*  
+   * Lemma : If all transitions in transs are ref in lneighbours then 
+   *         all transitions in disabled_transs (returned by list_disabled)
+   *         are in lneighbours.
+   *)
+  Lemma list_disabled_incl_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (transs disabled_transs : list trans_type),
+      incl transs (fst (split lneighbours)) ->
+      list_disabled lneighbours pre test inhib m transs = Some disabled_transs ->
+      incl disabled_transs (fst (split lneighbours)).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib m transs.
+    functional induction (list_disabled lneighbours pre test inhib m transs)
+               using list_disabled_ind;
+      intros.
+    cut (incl [] (fst (split lneighbours))); intros.
+    - generalize (list_disabled_aux_incl_lneighbours
+                    lneighbours pre test inhib m
+                    [] transs disabled_transs
+                    H H2 H0).
+      intros.
+      apply H3 in H1.
+      auto.
+    - unfold incl; intros; elim H2.
+  Qed.
+
+  (*  
+   * Lemma : All transitions in disabled_transs (returned by list_disabled_aux)
+   *         are in transs.
+   *)
+  Lemma list_disabled_incl_transs :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (transs disabled_transs : list trans_type),
+      list_disabled lneighbours pre test inhib m transs = Some disabled_transs ->
+      incl disabled_transs transs.
+  Proof.
+    intros lneighbours pre test inhib m transs.
+    functional induction (list_disabled lneighbours pre test inhib m transs)
+               using list_disabled_ind; intros.
+    generalize (list_disabled_aux_incl_transs
+                  lneighbours pre test inhib m
+                  [] transs disabled_transs H); intros.
+    simpl in H0.
+    auto.
+  Qed.
+      
   (* Lemma : list_disabled returns no error if 
    *         all transition t in transs are referenced in lneighbours
    *         and if all neighbour places referenced in lneighbours are
@@ -1815,13 +2007,13 @@ Section ListDisabled.
     forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib : weight_type)
            (m : marking_type)
-           (disabled_transs transs : list trans_type),
-      TransAreRefInLneighbours transs lneighbours ->
+           (transs : list trans_type),
+      incl transs (fst (split lneighbours)) ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          (PlacesAreRefInMarking neighbours.(pre_pl) m /\
-           PlacesAreRefInMarking neighbours.(inhib_pl) m /\
-           PlacesAreRefInMarking neighbours.(test_pl) m)) ->
+          (incl neighbours.(pre_pl) (fst (split m)) /\
+           incl neighbours.(inhib_pl) (fst (split m)) /\
+           incl neighbours.(test_pl) (fst (split m)))) ->
       exists v : list trans_type,
         list_disabled lneighbours pre test inhib m transs = Some v.
   Proof.
@@ -2202,6 +2394,197 @@ Section FireStpn.
       apply update_marking_pre_compl in H2; rewrite H2; auto.
   Qed.
 
+  (* Lemma : Proves that stpn_fire_pre preserves
+   *         the structure of the marking decreasingm
+   *         passed as argument.
+   *
+   *         stpn_fire_pre returns a marking decreasedm
+   *         which has the same structure as decreasingm. 
+   *)
+  Lemma stpn_fire_pre_aux_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (pre_fired_transitions : list trans_type)
+           (decreasedm : marking_type),
+      stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup =
+      Some (pre_fired_transitions, decreasedm) ->
+      MarkingHaveSameStruct decreasingm decreasedm.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup.
+    functional induction (stpn_fire_pre_aux lneighbours pre test inhib
+                                            steadym decreasingm
+                                            chronos fired_pre_group pgroup)
+               using stpn_fire_pre_aux_ind;
+      intros.
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    - apply IHo in H.
+      apply update_marking_pre_same_struct in e3.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e3.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e3; auto.
+    - inversion H.
+    - apply IHo in H; auto.
+    - inversion H.
+    - inversion H.
+  Qed.
+
+  (*  
+   * Lemma : If all transitions in pgroup are in lneighbours then 
+   *         all transitions in final_fired_pre_group (returned by stpn_fire_pre_aux)
+   *         are in lneighbours.
+   *)
+  Lemma stpn_fire_pre_aux_final_fired_in_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      incl pgroup (fst (split lneighbours)) ->
+      incl fired_pre_group (fst (split lneighbours)) ->
+      stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup =
+      Some (final_fired_pre_group, finalm) ->
+      incl final_fired_pre_group (fst (split lneighbours)).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup.
+    functional induction (stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup)
+               using stpn_fire_pre_aux_ind;
+      intros.
+    (* Base case, pgroup = []. *)
+    - injection H1; intros.
+      rewrite <- H4 in H2.
+      apply H0 in H2.
+      auto.
+    (* Case everything went well. *)
+    - apply IHo with (final_fired_pre_group := final_fired_pre_group)
+                     (finalm := finalm).
+      + intros.
+        apply (in_cons t) in H3.
+        apply H in H3; auto.
+      + intros.
+        apply in_app_or in H3.
+        elim H3; intros.
+        -- apply H0 in H4; auto.
+        -- apply in_inv in H4.
+           elim H4; intros.
+           { cut (In a0 (t :: tail)); intros;
+               [apply H in H6; auto | rewrite H5; apply in_eq].
+           }
+           { elim H5. }
+      + auto.
+      + auto.
+    (* Case update_marking_pre returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+    (* Case stpn_is_firable = false. *)
+    - apply IHo with (final_fired_pre_group := final_fired_pre_group)
+                     (finalm := finalm).
+      + intros.
+        apply (in_cons t) in H3.
+        apply H in H3; auto.
+      + intros.
+        apply H0 in H3.
+        auto.
+      + auto.
+      + auto.
+    (* Case stpn_is_firable returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+    (* Case get_neighbours returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+  Qed.
+  
+  (*  
+   * Lemma : If all transitions in pgroup are ref in chronos then 
+   *         all transitions in final_fired_pre_group (returned by stpn_fire_pre_aux)
+   *         are ref in chronos.
+   *)
+  Lemma stpn_fire_pre_aux_final_fired_in_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (fired_pre_group : list trans_type)
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      incl pgroup (fst (split chronos)) ->
+      incl fired_pre_group (fst (split chronos)) ->
+      stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
+                        fired_pre_group pgroup =
+      Some (final_fired_pre_group, finalm) ->
+      incl final_fired_pre_group (fst (split chronos)).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup.
+    functional induction (stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup)
+               using stpn_fire_pre_aux_ind;
+      intros.
+    (* Base case, pgroup = []. *)
+    - injection H1; intros.
+      rewrite <- H4 in H2.
+      apply H0 in H2.
+      auto.
+    (* Case everything went well. *)
+    - apply IHo with (final_fired_pre_group := final_fired_pre_group)
+                     (finalm := finalm).
+      + intros.
+        apply (in_cons t) in H3.
+        apply H in H3; auto.
+      + intros.
+        apply in_app_or in H3.
+        elim H3; intros.
+        -- apply H0 in H4; auto.
+        -- apply in_inv in H4.
+           elim H4; intros.
+           { cut (In a0 (t :: tail)); intros;
+               [apply H in H6; auto | rewrite H5; apply in_eq].
+           }
+           { elim H5. }
+      + auto.
+      + auto.
+    (* Case update_marking_pre returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+    (* Case stpn_is_firable = false. *)
+    - apply IHo with (final_fired_pre_group := final_fired_pre_group)
+                     (finalm := finalm).
+      + intros.
+        apply (in_cons t) in H3.
+        apply H in H3; auto.
+      + intros.
+        apply H0 in H3.
+        auto.
+      + auto.
+      + auto.
+    (* Case stpn_is_firable returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+    (* Case get_neighbours returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+  Qed.
+  
   (* Lemma : stpn_fire_pre_aux returns no error if 
    *         all transition t in pgroup are referenced in lneighbours
    *         and if all neighbour places referenced in lneighbours are
@@ -2349,6 +2732,140 @@ Section FireStpn.
     intros; elim H; intros.
     unfold stpn_fire_pre; apply stpn_fire_pre_aux_compl in H0; auto. 
   Qed.
+
+  (* Lemma : Proves that stpn_fire_pre preserves
+   *         the structure of the marking decreasingm
+   *         passed as argument.
+   *
+   *         stpn_fire_pre returns a marking decreasedm
+   *         which has the same structure as decreasingm. 
+   *)
+  Lemma stpn_fire_pre_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pgroup : list trans_type)
+           (pre_fired_transitions : list trans_type)
+           (decreasedm : marking_type),
+      stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup =
+      Some (pre_fired_transitions, decreasedm) ->
+      MarkingHaveSameStruct decreasingm decreasedm.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos pgroup; intros.
+    unfold stpn_fire_pre in H.
+    apply stpn_fire_pre_aux_same_struct in H; auto.
+  Qed.
+
+  (*  
+   * Lemma : If all transitions in pgroup are in lneighbours then 
+   *         all transitions in final_fired_pre_group (returned by stpn_fire_pre)
+   *         are in lneighbours.
+   *)
+  Lemma stpn_fire_pre_final_fired_in_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      incl pgroup (fst (split lneighbours)) ->
+      stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup =
+      Some (final_fired_pre_group, finalm) ->
+      incl final_fired_pre_group (fst (split lneighbours)).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos pgroup.
+    functional induction (stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup)
+               using stpn_fire_pre_ind;
+      intros.
+    (* This hypothesis is needed to apply spn_fire_pre_aux_final_fired_in_lneighbours. 
+     * Corresponds to the hypothesis "incl pre_fired_group (fst (split lneighbours))"
+     * but in that case, pre_fired_group = [].
+     *)
+    cut (incl [] (fst (split lneighbours))); intros.
+    - generalize (stpn_fire_pre_aux_final_fired_in_lneighbours
+                    lneighbours pre test inhib
+                    steadym decreasingm chronos
+                    [] pgroup
+                    final_fired_pre_group finalm
+                    H H2 H0).
+      intros.
+      apply H3 in H1.
+      auto.
+    - unfold incl; intros; elim H2.
+  Qed.
+
+  (*  
+   * Lemma : If all transitions in pgroup are ref in chronos then 
+   *         all transitions in final_fired_pre_group (returned by stpn_fire_pre)
+   *         are ref in chronos.
+   *)
+  Lemma stpn_fire_pre_final_fired_in_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pgroup : list trans_type)
+           (final_fired_pre_group : list trans_type)
+           (finalm : marking_type),
+      incl pgroup (fst (split chronos)) ->
+      stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup =
+      Some (final_fired_pre_group, finalm) ->
+      incl final_fired_pre_group (fst (split chronos)).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos pgroup.
+    functional induction (stpn_fire_pre lneighbours pre test inhib
+                                        steadym decreasingm chronos pgroup)
+               using stpn_fire_pre_ind; intros.
+    (* This hypothesis is needed to apply stpn_fire_pre_aux_final_fired_in_chronos. 
+     * Corresponds to the hypothesis "incl pre_fired_group (fst (split chronos))"
+     * but in that case, pre_fired_group = [].
+     *)
+    cut (incl [] (fst (split chronos))); intros.
+    - generalize (stpn_fire_pre_aux_final_fired_in_chronos
+                    lneighbours pre test inhib
+                    steadym decreasingm chronos
+                    [] pgroup
+                    final_fired_pre_group finalm
+                    H H2 H0).
+      intros.
+      apply H3 in H1.
+      auto.
+    - unfold incl; intros; elim H2.
+  Qed.
+  
+  (* Lemma : stpn_fire_pre returns no error if 
+   *         all transition t in pgroup are referenced in lneighbours
+   *         and if all neighbour places referenced in lneighbours are
+   *         referenced in the markings steadym and decreasingm. 
+   *)
+  Lemma stpn_fire_pre_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type) 
+           (steadym : marking_type) 
+           (decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pgroup : list trans_type),
+      incl pgroup (fst (split chronos)) ->
+      incl pgroup (fst (split lneighbours)) ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
+           incl neighbours.(inhib_pl) (fst (split steadym)) /\
+           incl neighbours.(test_pl) (fst (split steadym)))) ->
+      exists v : (list trans_type * marking_type),
+        stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup = Some v.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos pgroup; intros.
+    unfold spn_fire_pre.
+    apply stpn_fire_pre_aux_no_error; [auto | auto | auto].
+  Qed.
   
   (***********************************************************************)
   (***********************************************************************)
@@ -2473,6 +2990,241 @@ Section FireStpn.
     - simpl; apply stpn_fire_pre_compl in H0; rewrite H0; auto.
   Qed.
 
+  (* Lemma : Proves that stpn_map_fire_pre_aux preserves
+   *         the structure of the marking decreasingm
+   *         passed as argument. 
+   *)
+  Lemma stpn_map_fire_pre_aux_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (steadym decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pre_fired_transitions : list trans_type)
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
+                            pre_fired_transitions priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      MarkingHaveSameStruct decreasingm intermediatem.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos
+           pre_fired_transitions
+           priority_groups.
+    functional induction (stpn_map_fire_pre_aux lneighbours
+                                               pre test inhib
+                                               steadym decreasingm
+                                               chronos
+                                               pre_fired_transitions priority_groups)
+               using stpn_map_fire_pre_aux_ind;
+      intros.
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    - apply IHo in H.
+      apply stpn_fire_pre_same_struct in e0.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e0.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e0; auto.
+    - inversion H.
+  Qed.
+
+  (*  
+   * Lemma : If all transitions in priority_groups are in lneighbours
+   *         then all transitions in final_pre_fired (returned by stpn_map_fire_pre_aux) 
+   *         are in lneighbours.
+   *)
+  Lemma stpn_map_fire_pre_aux_final_fired_in_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (steadym decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pre_fired_transitions : list trans_type)
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      incl pre_fired_transitions (fst (split lneighbours)) ->
+      stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
+                            pre_fired_transitions priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      incl final_pre_fired (fst (split lneighbours)).
+  Proof.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos
+           pre_fired_transitions priority_groups.
+    functional induction (stpn_map_fire_pre_aux lneighbours pre test inhib
+                                                steadym decreasingm
+                                                chronos
+                                                pre_fired_transitions
+                                                priority_groups)
+               using stpn_map_fire_pre_aux_ind;
+      intros.
+    (* Base case, priority_groups = []. *)
+    - injection H1; intros.
+      rewrite <- H4 in H2; apply H0 in H2; auto.
+    (* Case stpn_fire_pre returns Some value. *)
+    - apply IHo with (final_pre_fired := final_pre_fired)
+                     (intermediatem := intermediatem).
+      + intros.
+        apply (in_cons pgroup) in H3.
+        generalize (H pgroup0 H3); intros.
+        apply H5 in H4; auto.
+      + intros.
+        generalize (H pgroup); intros.
+        apply in_eq_impl in H4.
+        (*  
+         * We need to use the lemma saying
+         * that all transitions in pre_fired_trs are
+         * referenced in lneighbours.
+         *)
+        generalize (stpn_fire_pre_final_fired_in_lneighbours
+                      lneighbours pre test inhib
+                      steadym decreasingm
+                      chronos0
+                      pgroup
+                      pre_fired_trs
+                      decreasedm H4 e0).
+        intros.
+        apply in_app_or in H3; elim H3; intros;
+          [apply H0 in H6; auto | apply H5 in H6; auto].
+      + auto.
+      + auto.
+    (* Case stpn_fire_pre returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+  Qed.
+
+  (*  
+   * Lemma : If all transitions in priority_groups are ref in chronos
+   *         then all transitions in final_pre_fired (returned by stpn_map_fire_pre_aux) 
+   *         are ref in chronos.
+   *)
+  Lemma stpn_map_fire_pre_aux_final_fired_in_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (steadym decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (pre_fired_transitions : list trans_type)
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      PriorityGroupsAreRefInChronos priority_groups chronos ->
+      incl pre_fired_transitions (fst (split chronos)) ->
+      stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
+                            pre_fired_transitions priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      incl final_pre_fired (fst (split chronos)).
+  Proof.
+    unfold PriorityGroupsAreRefInChronos.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos
+           pre_fired_transitions priority_groups.
+    functional induction (stpn_map_fire_pre_aux lneighbours pre test inhib
+                                                steadym decreasingm
+                                                chronos
+                                                pre_fired_transitions
+                                                priority_groups)
+               using stpn_map_fire_pre_aux_ind;
+      intros.
+    (* Base case, priority_groups = []. *)
+    - injection H1; intros.
+      rewrite <- H4 in H2; apply H0 in H2; auto.
+    (* Case stpn_fire_pre returns Some value. *)
+    - apply IHo with (final_pre_fired := final_pre_fired)
+                     (intermediatem := intermediatem).
+      + intros.
+        apply (in_cons pgroup) in H3.
+        generalize (H pgroup0 H3); intros.
+        apply H5 in H4; auto.
+      + intros.
+        generalize (H pgroup); intros.
+        apply in_eq_impl in H4.
+        (*  
+         * We need to use the lemma saying
+         * that all transitions in pre_fired_trs are
+         * referenced in chronos.
+         *)
+        generalize (stpn_fire_pre_final_fired_in_chronos
+                      lneighbours pre test inhib
+                      steadym decreasingm
+                      chronos0
+                      pgroup
+                      pre_fired_trs
+                      decreasedm H4 e0).
+        intros.
+        apply in_app_or in H3; elim H3; intros;
+          [apply H0 in H6; auto | apply H5 in H6; auto].
+      + auto.
+      + auto.
+    (* Case stpn_fire_pre returns an error,
+     * then contradiction.
+     *)
+    - inversion H1.
+  Qed.
+
+  (*
+   * Lemma : stpn_map_fire_pre_aux returns no error if 
+   *         forall pgroup of transitions in priority_groups,
+   *         transitions are referenced in chronos and
+   *         transitions are referenced in lneighbours and
+   *         neighbours places (of these transitions) are referenced 
+   *         in markings steadym and decreasingm.
+   *)
+  Lemma stpn_map_fire_pre_aux_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (steadym decreasingm : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (priority_groups : list (list trans_type))
+           (pre_fired_transitions : list trans_type),
+      PriorityGroupsAreRefInChronos priority_groups chronos ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
+           incl neighbours.(inhib_pl) (fst (split steadym)) /\
+           incl neighbours.(test_pl) (fst (split steadym)))) ->
+      exists v : (list trans_type * marking_type),
+        stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                              chronos pre_fired_transitions priority_groups = Some v.
+  Proof.
+    unfold PriorityGroupsAreRefInChronos.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm
+           chronos priority_groups pre_fired_transitions.
+    functional induction (stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                                                chronos pre_fired_transitions priority_groups)
+               using stpn_map_fire_pre_aux_ind;
+      intros.
+    (* Base case, priority_groups = []. *)
+    - exists (pre_fired_transitions, decreasingm); auto.
+    (* Case stpn_fire_pre = Some v *)
+    - apply IHo.
+      + intros.
+        apply (in_cons pgroup) in H2.
+        generalize (H pgroup0 H2); intro; auto.
+      + intros.
+        apply (in_cons pgroup) in H2.
+        generalize (H0 pgroup0 H2); intro; auto.
+      + apply stpn_fire_pre_same_struct in e0.
+        unfold MarkingHaveSameStruct in e0.
+        rewrite <- e0.
+        auto.
+    (* Case stpn_fire_pre = None, impossible regarding the hypotheses. *)
+    - assert (H' := in_eq pgroup pgroups_tail).      
+      generalize (H pgroup H'); intro.
+      generalize (H0 pgroup H'); intro.
+      generalize (stpn_fire_pre_no_error lneighbours pre test inhib
+                                         steadym decreasingm
+                                         chronos0 pgroup H2 H3 H1).
+      intro; elim H4; intros; rewrite H5 in e0; inversion e0.
+  Qed.
+  
   (***********************************************************************)
   (***********************************************************************)
   
@@ -2539,6 +3291,126 @@ Section FireStpn.
     unfold stpn_map_fire_pre.
     apply stpn_map_fire_pre_aux_compl; auto.
   Qed.
+
+  (*  
+   * Lemma : If all transitions in priority_groups are in lneighbours
+   *         then all transitions in final_pre_fired (returned by stpn_map_fire_pre) 
+   *         are in lneighbours.
+   *)
+  Lemma stpn_map_fire_pre_final_fired_in_lneighbours :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      incl final_pre_fired (fst (split lneighbours)).
+  Proof.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold incl.
+    intros lneighbours pre test inhib m chronos priority_groups.
+    functional induction (stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups)
+               using stpn_map_fire_pre_ind; intros.
+    cut (forall t : trans_type, In t [] -> In t (fst (split lneighbours))); intros.
+    - generalize (stpn_map_fire_pre_aux_final_fired_in_lneighbours
+                    lneighbours pre test inhib m m chronos [] priority_groups
+                    final_pre_fired intermediatem
+                    H H2 H0).
+      intros.
+      apply H3 in H1; auto.
+    - elim H2.
+  Qed.
+
+  (*  
+   * Lemma : If all transitions in priority_groups are ref in chronos
+   *         then all transitions in final_pre_fired (returned by stpn_map_fire_pre) 
+   *         are ref in chronos.
+   *)
+  Lemma stpn_map_fire_pre_final_fired_in_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      PriorityGroupsAreRefInChronos priority_groups chronos ->
+      stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      incl final_pre_fired (fst (split chronos)).
+  Proof.
+    unfold PriorityGroupsAreRefInChronos.
+    unfold incl.
+    intros lneighbours pre test inhib m chronos priority_groups.
+    functional induction (stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups)
+               using stpn_map_fire_pre_ind; intros.
+    cut (forall t : trans_type, In t [] -> In t (fst (split chronos))); intros.
+    - generalize (stpn_map_fire_pre_aux_final_fired_in_chronos
+                    lneighbours pre test inhib m m chronos [] priority_groups
+                    final_pre_fired intermediatem
+                    H H2 H0).
+      intros.
+      apply H3 in H1; auto.
+    - elim H2.
+  Qed.
+  
+  (*
+   * Lemma : stpn_map_fire_pre returns no error if 
+   *         forall pgroup of transitions in priority_groups,
+   *         transitions are referenced in chronos and
+   *         transitions are referenced in lneighbours and
+   *         neighbours places (of these transitions) are referenced 
+   *         in markings steadym and decreasingm.
+   *)
+  Lemma stpn_map_fire_pre_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (priority_groups : list (list trans_type)),
+      PriorityGroupsAreRefInChronos priority_groups chronos ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (PlacesAreRefInMarking neighbours.(pre_pl) m /\
+           PlacesAreRefInMarking neighbours.(inhib_pl) m /\
+           PlacesAreRefInMarking neighbours.(test_pl) m)) ->
+      exists v : (list trans_type * marking_type),
+        stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups = Some v.
+  Proof.
+    intros lneighbours pre test inhib m chronos priority_groups.
+    unfold stpn_map_fire_pre; intros.
+    apply stpn_map_fire_pre_aux_no_error; [ auto | auto | auto ].
+  Qed.
+
+  (* Lemma : Proves that stpn_map_fire_pre preserves
+   *         the structure of the marking m
+   *         passed as argument. 
+   *)
+  Lemma stpn_map_fire_pre_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (priority_groups : list (list trans_type))
+           (final_pre_fired : list trans_type)
+           (intermediatem : marking_type),
+      stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      MarkingHaveSameStruct m intermediatem.
+  Proof.
+    intros lneighbours pre test inhib m chronos priority_groups.
+    functional induction (stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups)
+               using stpn_map_fire_pre_ind; intros.
+    apply stpn_map_fire_pre_aux_same_struct in H; auto.
+  Qed.
+
+  (***********************************************************************)
+  (***********************************************************************)
   
   (* 
    * Function : Returns a tuplet (fired transitions (at this cycle), 
@@ -2775,6 +3647,121 @@ Section FireStpn.
       apply reset_all_chronos_complete in H3; rewrite H3.
       apply fire_post_compl in H4; rewrite H4; auto.      
   Qed.
+
+  (*  
+   * Lemma : Proves that stpn_fire returns no error if :
+   *         - All transitions in transs are ref in chronos and lneighbours.
+   *         - All pgroups in priority_groups are ref in chronos and lneighbours.
+   *         - All places in lneighbours are ref in m.
+   *)
+  Lemma stpn_fire_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (transs : list trans_type)
+           (priority_groups : list (list trans_type)),
+      incl transs (fst (split chronos)) ->
+      incl transs (fst (split lneighbours)) ->
+      PriorityGroupsAreRefInChronos priority_groups chronos ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (incl neighbours.(pre_pl) (fst (split m)) /\
+           incl neighbours.(inhib_pl) (fst (split m)) /\
+           incl neighbours.(test_pl) (fst (split m)))) ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          incl neighbours.(post_pl) (fst (split m))) ->
+      exists v : (list trans_type * marking_type * list (trans_type * option chrono_type)),
+        stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = Some v.
+  Proof.
+    unfold incl.
+    unfold PriorityGroupsAreRefInChronos.
+    unfold PriorityGroupsAreRefInLneighbours.
+    intros lneighbours pre test inhib post m chronos transs priority_groups.
+    functional induction (stpn_fire lneighbours pre test inhib post m
+                                    chronos transs priority_groups)
+               using stpn_fire_ind;
+      intros.
+    (* GENERAL CASE, all functions returned Some value. *)
+    - exists (pre_fired_transitions, finalm, final_chronos); auto.
+    (* CASE fire_post returns None, 
+     * impossible according to the hypotheses.
+     *)
+    (* First we need the hypothesis that said that
+     * all transitions in the list pre_fired_transitions
+     * are referenced in lneighbours.
+     *)
+    - generalize (stpn_map_fire_pre_final_fired_in_lneighbours
+                    lneighbours
+                    pre test inhib m chronos priority_groups
+                    pre_fired_transitions intermediatem
+                    H2 e); intros.
+      (* Then we need transform our hypotheses,  
+       * using the fact that intermediate marking
+       * have the same structure as the first marking.
+       *)
+      apply stpn_map_fire_pre_same_struct in e.
+      unfold MarkingHaveSameStruct in e.
+      rewrite e in H4.
+      generalize (fire_post_no_error lneighbours post intermediatem pre_fired_transitions H5 H4).
+      intros.
+      elim H6; intros.
+      rewrite H7 in e4.
+      inversion e4.
+    (* CASE 2nd call to reset_all_chronos returns None,
+     * impossible according to the hypotheses.
+     *)
+    (*  
+     * To deduce (incl disabled_transs (fst (split updated_chronos)))
+     * and apply reset_all_chronos_no_error, we need to ensure :
+     *
+     * - (incl disabled_transs transs), then use incl_tran
+     *   to deduce incl disabled (fst (split chronos).
+     * - ChronosHaveSameStruct chronos updated_chronos,
+     *   then rewrite (fst (split chronos) in (fst (split updated_chronos).
+     *)
+    - generalize (list_disabled_incl_transs
+                    lneighbours pre test inhib m transs disabled_transs e2); intros.
+      generalize (incl_tran H5 H); intros.
+      generalize (reset_all_chronos_same_struct
+                    chronos pre_fired_transitions updated_chronos e1); intros.
+      unfold ChronosHaveSameStruct in H7.
+      rewrite H7 in H6.
+      generalize (reset_all_chronos_no_error
+                    updated_chronos disabled_transs H6); intros.
+      elim H8; intros; rewrite H9 in e3; inversion e3.
+    (* CASE list_disabled returns None,
+     * impossible according to the hypotheses.
+     *)
+    - generalize (list_disabled_no_error
+                    lneighbours pre test inhib m transs
+                    H0 H3); intros.
+      elim H5; intros; rewrite H6 in e2; inversion e2.
+    (* CASE 1st reset_all_chronos returns None,
+     * impossible according to the hypotheses.
+     *)
+    (* We need (incl pre_fired_transitions chronos) 
+     * in order to apply reset_all_chronos_no_error.
+     *)
+    - generalize (stpn_map_fire_pre_final_fired_in_chronos
+                    lneighbours pre test inhib m chronos priority_groups
+                    pre_fired_transitions intermediatem
+                    H1 e); intros.
+      generalize (reset_all_chronos_no_error
+                    chronos pre_fired_transitions H5); intros.
+      elim H6; intros; rewrite H7 in e1; inversion e1.
+    (* CASE stpn_map_fire_pre returns None,
+     * impossible according to the hypotheses.
+     *)
+    - generalize (stpn_map_fire_pre_no_error
+                    lneighbours pre test inhib m chronos priority_groups
+                    H1 H2 H3); intros.
+      elim H5; intros.
+      rewrite H6 in e.
+      inversion e.
+  Qed.  
   
 End FireStpn.
 
