@@ -3518,7 +3518,8 @@ Section AnimateSpn.
       (forall p : place_type, (In p (pre_pl neighbours) \/
                                In p (test_pl neighbours) \/
                                In p (inhib_pl neighbours) \/
-                               In p (post_pl neighbours)) -> In p (flatten_lneighbours lneighbours)).
+                               In p (post_pl neighbours)) ->
+                              In p (flatten_lneighbours lneighbours)).
   Proof.
     intros lneighbours.
     functional induction (flatten_lneighbours lneighbours) using flatten_lneighbours_ind; intros.
@@ -3651,7 +3652,8 @@ Section AnimateSpn.
       generalize (priority_groups_in_lneighbours spn H1 H7); intro.
       generalize (pre_places_in_marking spn H10 H6); intro.
       generalize (post_places_in_marking spn H10 H6); intro.
-      generalize (spn_fire_no_error lneighbours0 pre0 test0 inhib0 post0 m priority_groups0 H H9 H11).
+      generalize (spn_fire_no_error
+                    lneighbours0 pre0 test0 inhib0 post0 m priority_groups0 H H9 H11).
       intro.
       elim H12; intros.
       rewrite H13 in e0.
@@ -3792,6 +3794,10 @@ Section AnimateSpn.
       rewrite H0; auto.
   Qed.
 
+  (*  
+   * Theorem :  For all spn verifying the property IsWellStructuredSpn,
+   *            and for all number n of evolution cycles, spn_animate returns no error.
+   *)
   Theorem spn_animate_no_error :
     forall (spn : SPN)
            (n : nat),

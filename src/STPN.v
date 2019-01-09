@@ -560,16 +560,17 @@ Section Chrono.
       functional induction (increment_chrono t chronos)
                  using  increment_chrono_ind; intros.
       (* Case get_chrono returns Some (Some chrono). *)
-      - rewrite <- H; apply IncrementChrono_some with (opt_chrono := (Some {| cnt := cnt0;
-                                                                             min_t := min_t0;
-                                                                             max_t := max_t0;
-                                                                             max_is_infinite := max_is_infinite0;
-                                                                             min_t_le_max_t := min_t_le_max_t0 |}))
-                                                      (cnt := cnt0)
-                                                      (min_t := min_t0)
-                                                      (max_t := max_t0)
-                                                      (max_is_infinite := max_is_infinite0)
-                                                      (min_t_le_max_t := min_t_le_max_t0).
+      - rewrite <- H; apply IncrementChrono_some
+                        with (opt_chrono := (Some {| cnt := cnt0;
+                                                     min_t := min_t0;
+                                                     max_t := max_t0;
+                                                     max_is_infinite := max_is_infinite0;
+                                                     min_t_le_max_t := min_t_le_max_t0 |}))
+                             (cnt := cnt0)
+                             (min_t := min_t0)
+                             (max_t := max_t0)
+                             (max_is_infinite := max_is_infinite0)
+                             (min_t_le_max_t := min_t_le_max_t0).
         + apply get_chrono_correct; auto.
         + auto.
         + apply replace_chrono_correct; auto.
@@ -636,8 +637,16 @@ Section Chrono.
                  using increment_chrono_ind.    
       (* Base case *)
       - exists(replace_chrono
-                 {| cnt := cnt0; min_t := min_t0; max_t := max_t0; max_is_infinite := max_is_infinite0; min_t_le_max_t := min_t_le_max_t0 |}
-                 {| cnt := cnt0 + 1; min_t := min_t0; max_t := max_t0; max_is_infinite := max_is_infinite0; min_t_le_max_t := min_t_le_max_t0 |}
+                 {| cnt := cnt0;
+                    min_t := min_t0;
+                    max_t := max_t0;
+                    max_is_infinite := max_is_infinite0;
+                    min_t_le_max_t := min_t_le_max_t0 |}
+                 {| cnt := cnt0 + 1;
+                    min_t := min_t0;
+                    max_t := max_t0;
+                    max_is_infinite := max_is_infinite0;
+                    min_t_le_max_t := min_t_le_max_t0 |}
                  chronos).
         auto.
       (* Case opt_chrono = None *)
@@ -736,7 +745,30 @@ Section Chrono.
       - apply increment_chrono_complete in H0.
         unfold increment_all_chronos; rewrite H0; auto.
     Qed.
-
+    
+    (* Lemma : Proves that increment_all_chronos preserves
+     *         the structure of the chronos passed as argument.  
+     *)
+    Lemma increment_all_chronos_same_struct :
+      forall (chronos : list (trans_type * option chrono_type))
+             (transs : list trans_type)
+             (incremented_chronos : list (trans_type * option chrono_type)),
+        increment_all_chronos chronos transs = Some incremented_chronos ->
+        ChronosHaveSameStruct chronos incremented_chronos.
+    Proof.
+      intros chronos transs.
+      functional induction (increment_all_chronos chronos transs)
+                 using increment_all_chronos_ind; intros.
+      - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
+      - apply increment_chrono_same_struct in e0.
+        apply IHo in H.
+        unfold ChronosHaveSameStruct.
+        unfold ChronosHaveSameStruct in e0.
+        unfold ChronosHaveSameStruct in H.
+        transitivity (fst (split new_chronos)); [auto | auto].
+      - inversion H.
+    Qed.
+    
     (* Lemma : Proves that increment_all_chronos returns no error 
      *         if all transitions of the list transs
      *         are referenced in chronos.
@@ -845,16 +877,17 @@ Section Chrono.
       functional induction (reset_chrono t chronos)
                  using  reset_chrono_ind; intros.
       (* Case get_chrono returns Some (Some chrono). *)
-      - rewrite <- H; apply ResetChrono_some with (opt_chrono := (Some {| cnt := cnt0;
-                                                                             min_t := min_t0;
-                                                                             max_t := max_t0;
-                                                                             max_is_infinite := max_is_infinite0;
-                                                                             min_t_le_max_t := min_t_le_max_t0 |}))
-                                                      (cnt := cnt0)
-                                                      (min_t := min_t0)
-                                                      (max_t := max_t0)
-                                                      (max_is_infinite := max_is_infinite0)
-                                                      (min_t_le_max_t := min_t_le_max_t0).
+      - rewrite <- H; apply ResetChrono_some
+                        with (opt_chrono := (Some {| cnt := cnt0;
+                                                     min_t := min_t0;
+                                                     max_t := max_t0;
+                                                     max_is_infinite := max_is_infinite0;
+                                                     min_t_le_max_t := min_t_le_max_t0 |}))
+                             (cnt := cnt0)
+                             (min_t := min_t0)
+                             (max_t := max_t0)
+                             (max_is_infinite := max_is_infinite0)
+                             (min_t_le_max_t := min_t_le_max_t0).
         + apply get_chrono_correct; auto.
         + auto.
         + apply replace_chrono_correct; auto.
@@ -921,8 +954,16 @@ Section Chrono.
                  using reset_chrono_ind.    
       (* Base case *)
       - exists(replace_chrono
-                 {| cnt := cnt0; min_t := min_t0; max_t := max_t0; max_is_infinite := max_is_infinite0; min_t_le_max_t := min_t_le_max_t0 |}
-                 {| cnt := 0; min_t := min_t0; max_t := max_t0; max_is_infinite := max_is_infinite0; min_t_le_max_t := min_t_le_max_t0 |}
+                 {| cnt := cnt0;
+                    min_t := min_t0;
+                    max_t := max_t0;
+                    max_is_infinite := max_is_infinite0;
+                    min_t_le_max_t := min_t_le_max_t0 |}
+                 {| cnt := 0;
+                    min_t := min_t0;
+                    max_t := max_t0;
+                    max_is_infinite := max_is_infinite0;
+                    min_t_le_max_t := min_t_le_max_t0 |}
                  chronos).
         auto.
       (* Case opt_chrono = None *)
@@ -1418,6 +1459,60 @@ Section ListSensitized.
         apply is_sensitized_compl in H1; rewrite H1; auto.
   Qed.
 
+  (*  
+   * Lemma : If list_sensitized_aux returns Some final_sensitized then
+   *         all transitions in final_sensitized are in sensitized_transs ++ transs.
+   *)
+  Lemma list_sensitized_aux_incl_transs :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (sensitized_transs transs final_sensitized : list trans_type),
+      list_sensitized_aux lneighbours pre test inhib m sensitized_transs transs =
+      Some final_sensitized ->
+      incl final_sensitized (sensitized_transs ++ transs).
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib m sensitized_transs transs.
+    functional induction (list_sensitized_aux lneighbours pre test inhib m sensitized_transs transs)
+               using list_sensitized_aux_ind; intros.
+    (* Base case, transs = []. *)
+    - injection H; intros.
+      rewrite <- H1 in H0.
+      rewrite <- app_nil_end; auto.
+    (* Case is_sensitized = true. *)
+    - generalize (IHo final_sensitized H a H0); intro.
+      apply in_app_or in H1.
+      elim H1; intros.
+      + apply in_or_app.
+        apply in_inv in H2.
+        elim H2; intros.
+        -- rewrite H3; right; apply in_eq.
+        -- left; auto.
+      + apply in_or_app.
+        apply (in_cons t) in H2.
+        right; auto.      
+    (* Case is_sensitized = false. *)
+    - generalize (IHo final_sensitized H a H0); intro.
+      apply in_app_or in H1.
+      elim H1; intros.
+      + apply or_introl with (B := In a (t :: tail)) in H2.
+        apply in_or_app in H2.
+        auto.
+      + apply (in_cons t) in H2.
+        apply or_intror with (A := In a sensitized_transs) in H2.
+        apply in_or_app in H2.
+        auto.
+    (* Case is_sensitized returns an error,
+     * then contradiction.
+     *)
+    - inversion H.
+    (* Case get_neighbours returns an error,
+     * then contradiction.
+     *)
+    - inversion H.
+  Qed.
+  
   (* Lemma : list_sensitized_aux returns no error if 
    *         all transition t in transs are referenced in lneighbours
    *         and if all neighbour places referenced in lneighbours are
@@ -1534,6 +1629,28 @@ Section ListSensitized.
     unfold list_sensitized; apply list_sensitized_aux_complete in H0; rewrite H0; auto. 
   Qed.
 
+  (*  
+   * Lemma : All transitions in sensitized_transs (returned by list_sensitized_aux)
+   *         are in transs.
+   *)
+  Lemma list_sensitized_incl_transs :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib : weight_type)
+           (m : marking_type)
+           (transs sensitized_transs : list trans_type),
+      list_sensitized lneighbours pre test inhib m transs = Some sensitized_transs ->
+      incl sensitized_transs transs.
+  Proof.
+    intros lneighbours pre test inhib m transs.
+    functional induction (list_sensitized lneighbours pre test inhib m transs)
+               using list_sensitized_ind; intros.
+    generalize (list_sensitized_aux_incl_transs
+                  lneighbours pre test inhib m
+                  [] transs sensitized_transs H); intros.
+    simpl in H0.
+    auto.
+  Qed.
+  
   (* Lemma : list_sensitized returns no error if 
    *         all transition t in transs are referenced in lneighbours
    *         and if all neighbour places referenced in lneighbours are
@@ -1543,13 +1660,13 @@ Section ListSensitized.
     forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib : weight_type)
            (m : marking_type)
-           (sensitized_transs transs : list trans_type),
-      TransAreRefInLneighbours transs lneighbours ->
+           (transs : list trans_type),
+      incl transs (fst (split lneighbours)) ->
       (forall (t : trans_type) (neighbours : neighbours_type),
           In (t, neighbours) lneighbours ->
-          (PlacesAreRefInMarking neighbours.(pre_pl) m /\
-           PlacesAreRefInMarking neighbours.(inhib_pl) m /\
-           PlacesAreRefInMarking neighbours.(test_pl) m)) ->
+          (incl neighbours.(pre_pl) (fst (split m)) /\
+           incl neighbours.(inhib_pl) (fst (split m)) /\
+           incl neighbours.(test_pl) (fst (split m)))) ->
       exists v : list trans_type,
         list_sensitized lneighbours pre test inhib m transs = Some v.
   Proof.
@@ -3546,11 +3663,13 @@ Section FireStpn.
            (opt_final_tuplet : option ((list trans_type) *
                                        marking_type *
                                        (list (trans_type * option chrono_type)))),
-      stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = opt_final_tuplet ->
+      stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
+      opt_final_tuplet ->
       StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet.
   Proof.
     intros lneighbours pre test inhib post m chronos transs priority_groups.
-    functional induction (stpn_fire lneighbours pre test inhib post m chronos transs priority_groups)
+    functional induction (stpn_fire lneighbours pre test inhib post m
+                                    chronos transs priority_groups)
                using stpn_fire_ind; intros.
     (* General case, all went well. *)
     - rewrite <- H; apply StpnFire_cons with (intermediatem := intermediatem)
@@ -3562,35 +3681,39 @@ Section FireStpn.
       + apply reset_all_chronos_correct in e3; auto.
       + apply fire_post_correct in e4; auto.
     (* Error case, fire_post returns None. *)
-    - rewrite <- H; apply StpnFire_fire_post_err with (pre_fired_transitions := pre_fired_transitions)
-                                                      (intermediatem := intermediatem)
-                                                      (updated_chronos := updated_chronos)
-                                                      (disabled_transs := disabled_transs)
-                                                      (final_chronos := final_chronos).
+    - rewrite <- H; apply StpnFire_fire_post_err
+                      with (pre_fired_transitions := pre_fired_transitions)
+                           (intermediatem := intermediatem)
+                           (updated_chronos := updated_chronos)
+                           (disabled_transs := disabled_transs)
+                           (final_chronos := final_chronos).
       + apply stpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
       + apply list_disabled_correct in e2; auto.
       + apply reset_all_chronos_correct in e3; auto.
       + apply fire_post_correct in e4; auto.
     (* Error case, 2nd reset_all_chronos returns None. *)
-    - rewrite <- H; apply StpnFire_reset_chronos_err2 with (pre_fired_transitions := pre_fired_transitions)
-                                                           (intermediatem := intermediatem)
-                                                           (updated_chronos := updated_chronos)
-                                                           (disabled_transs := disabled_transs).
+    - rewrite <- H; apply StpnFire_reset_chronos_err2
+                      with (pre_fired_transitions := pre_fired_transitions)
+                           (intermediatem := intermediatem)
+                           (updated_chronos := updated_chronos)
+                           (disabled_transs := disabled_transs).
       + apply stpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
       + apply list_disabled_correct in e2; auto.
       + apply reset_all_chronos_correct in e3; auto.
     (* Error case, list_disabled returns None. *)
-    - rewrite <- H; apply StpnFire_list_disabled_err with (pre_fired_transitions := pre_fired_transitions)
-                                                          (intermediatem := intermediatem)
-                                                          (updated_chronos := updated_chronos).
+    - rewrite <- H; apply StpnFire_list_disabled_err
+                      with (pre_fired_transitions := pre_fired_transitions)
+                           (intermediatem := intermediatem)
+                           (updated_chronos := updated_chronos).
       + apply stpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
       + apply list_disabled_correct in e2; auto.
     (* Error case, 1st reset_all_chronos returns None. *)
-    - rewrite <- H; apply StpnFire_reset_chronos_err1 with (pre_fired_transitions := pre_fired_transitions)
-                                                           (intermediatem := intermediatem).
+    - rewrite <- H; apply StpnFire_reset_chronos_err1
+                      with (pre_fired_transitions := pre_fired_transitions)
+                           (intermediatem := intermediatem).
       + apply stpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
     (* Error case, stpn_map_fire_pre returns None. *)
@@ -3648,6 +3771,83 @@ Section FireStpn.
       apply fire_post_compl in H4; rewrite H4; auto.      
   Qed.
 
+  (* Lemma : Proves that stpn_fire preserves
+   *         the structure of the marking m
+   *         passed as argument. 
+   *)  
+  Lemma stpn_fire_same_struct_marking :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (transs : list trans_type)
+           (priority_groups : list (list trans_type))
+           (fired_transitions : list (trans_type))
+           (newm : marking_type)
+           (new_chronos : list (trans_type * option chrono_type)),
+      stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
+      Some (fired_transitions, newm, new_chronos) ->
+      MarkingHaveSameStruct m newm.
+  Proof.
+    intros lneighbours pre test inhib post m chronos transs priority_groups.
+    functional induction (stpn_fire lneighbours pre test inhib post m
+                                    chronos transs priority_groups)
+               using stpn_fire_ind;
+      intros.
+    injection H; intros; rewrite <- H1; auto.
+    generalize (stpn_map_fire_pre_same_struct
+                  lneighbours pre test inhib m chronos priority_groups
+                  pre_fired_transitions intermediatem e); intro.
+    - generalize (fire_post_same_struct
+                    lneighbours post intermediatem
+                    pre_fired_transitions finalm e4); intro.
+      unfold MarkingHaveSameStruct in H3; unfold MarkingHaveSameStruct in H4.
+      unfold MarkingHaveSameStruct.
+      transitivity (fst (split intermediatem)); [auto | auto].
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+  Qed.
+
+  (* Lemma : Proves that stpn_fire preserves
+   *         the structure of the chronos
+   *         passed as argument. 
+   *)  
+  Lemma stpn_fire_same_struct_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+           (pre test inhib post : weight_type)
+           (m : marking_type)
+           (chronos : list (trans_type * option chrono_type))
+           (transs : list trans_type)
+           (priority_groups : list (list trans_type))
+           (fired_transitions : list (trans_type))
+           (newm : marking_type)
+           (new_chronos : list (trans_type * option chrono_type)),
+      stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
+      Some (fired_transitions, newm, new_chronos) ->
+      ChronosHaveSameStruct chronos new_chronos.
+  Proof.
+    intros lneighbours pre test inhib post m chronos transs priority_groups.
+    functional induction (stpn_fire lneighbours pre test inhib post m
+                                    chronos transs priority_groups)
+               using stpn_fire_ind; intros.
+    - injection H; intros; rewrite <- H0; auto.
+      generalize (reset_all_chronos_same_struct
+                    chronos pre_fired_transitions updated_chronos e1); intro.
+      generalize (reset_all_chronos_same_struct
+                    updated_chronos disabled_transs final_chronos e3); intro.
+      unfold ChronosHaveSameStruct in H3; unfold ChronosHaveSameStruct in H4.
+      unfold ChronosHaveSameStruct.
+      transitivity (fst (split updated_chronos)); [auto | auto].
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+  Qed.
+  
   (*  
    * Lemma : Proves that stpn_fire returns no error if :
    *         - All transitions in transs are ref in chronos and lneighbours.
@@ -3987,8 +4187,31 @@ Section AnimateStpn.
   Qed.
 
   (*  
+   * Lemma : For all stpn with properties NoUnknownInPriorityGroups
+   *         and NoUnknownTransInChronos then transitions
+   *         in stpn.(priority_groups) are referenced in stpn.(chronos).
+   *         
+   *         Useful to apply stpn_fire_no_error while proving spn_cycle_no_error.
+   *)
+  Lemma priority_groups_in_chronos :
+    forall (stpn : STPN),
+      NoUnknownInPriorityGroups stpn ->
+      NoUnknownTransInChronos stpn ->
+      PriorityGroupsAreRefInChronos stpn.(priority_groups) stpn.(chronos).
+  Proof.
+    unfold NoUnknownInPriorityGroups.
+    unfold NoUnknownTransInChronos.
+    unfold PriorityGroupsAreRefInChronos.
+    intros.
+    generalize (in_concat t pgroup (priority_groups stpn) H2 H1); intro.
+    rewrite <- H in H3.
+    rewrite H0 in H3.
+    auto.
+  Qed.
+  
+  (*  
    * Theorem : For all stpn verifying the predicate IsWellStructuredStpn,
-   *           stpn_cycle stpn raises no error (alays returns Some value). 
+   *           stpn_cycle raises no error (alays returns Some value). 
    *)
   Theorem stpn_cycle_no_error :
     forall (stpn : STPN),
@@ -3996,7 +4219,154 @@ Section AnimateStpn.
       exists v : ((list trans_type) * STPN),
         stpn_cycle stpn = Some v.
   Proof.
-    
+    unfold IsWellStructuredStpn; intro.
+    functional induction (stpn_cycle stpn) using stpn_cycle_ind;
+      set (stpn := {| chronos := chronos0;
+                      spn := {| places := places;
+                                transs := transs;
+                                pre := pre;
+                                post := post;
+                                test := test;
+                                inhib := inhib;
+                                marking := marking;
+                                priority_groups := priority_groups;
+                                lneighbours := lneighbours |}
+                   |});
+      intros;
+      unfold IsWellStructuredSpn in H;
+      decompose [and] H; clear H.
+    (* Case all went well, spn_fire returns Some value. *)
+    - exists ((fired_transitions,
+               {|
+                 chronos := next_chronos;
+                 spn := {|
+                         places := places;
+                         transs := transs;
+                         pre := pre;
+                         post := post;
+                         test := test;
+                         inhib := inhib;
+                         marking := nextm;
+                         priority_groups := priority_groups;
+                         lneighbours := lneighbours |} |})).
+      auto.            
+    (* CASE stpn_fire returns None, impossible
+     * regarding the hypotheses.
+     *)
+    - unfold NoUnknownTransInChronos in H0.
+      unfold NoUnknownTransInLNeighbours in H8.
+      (* Deduces the hypotheses needed to apply stpn_fire_no_error 
+       * from the properties embedded in IsWellStructuredStpn.
+       *)
+      assert (H' : incl (SPN.transs stpn) (fst (split (chronos stpn))))
+        by (rewrite H0; unfold incl; intros ; auto).
+      assert (H'' : incl (SPN.transs stpn) (fst (split (SPN.lneighbours stpn))))
+        by (rewrite H8; unfold incl; intros ; auto).
+      generalize (priority_groups_in_chronos stpn H3 H0); intro.
+      generalize (priority_groups_in_lneighbours stpn H3 H8); intro.
+      generalize (pre_places_in_marking stpn H11 H7); intro.
+      generalize (post_places_in_marking stpn H11 H7); intro.
+      (* Then, ensures that chronos0 and updated_chronos have same structure. *)
+      generalize (increment_all_chronos_same_struct
+                    chronos0 sensitized_transs updated_chronos e2); intros.
+      (* Rewrites chronos0 with updated_chronos in some hypotheses.  *)
+      unfold ChronosHaveSameStruct in H14.
+      simpl in H'.
+      rewrite H14 in H'.
+      simpl in H.
+      unfold PriorityGroupsAreRefInChronos in H.
+      rewrite H14 in H.
+      (* Finally, applies lemma stpn_fire_no_error. *)
+      generalize (stpn_fire_no_error
+                    lneighbours pre test inhib post marking updated_chronos transs priority_groups
+                    H' H'' H H10 H12 H13).
+      intro; elim H15; intros.
+      rewrite H16 in e3.
+      inversion e3.
+    (* CASE increment_all_chronos returns None, impossible
+     * regarding the hypotheses. 
+     *)
+    - unfold NoUnknownTransInChronos in H0.
+      generalize (list_sensitized_incl_transs
+                    lneighbours pre test inhib marking transs sensitized_transs e1); intro.
+      assert (H' : incl (SPN.transs stpn) (fst (split (chronos stpn))))
+        by (rewrite H0; unfold incl; intros ; auto).
+      generalize (incl_tran H H'); intro.
+      generalize (increment_all_chronos_no_error
+                    chronos0 sensitized_transs H10); intro.
+      elim H12; intros.
+      rewrite H13 in e2; inversion e2.
+    (* CASE list_sensitized returns None, impossible
+     * regarding the hypotheses. 
+     *)
+    - unfold NoUnknownTransInLNeighbours in H8.
+      assert (H'' : incl (SPN.transs stpn) (fst (split (SPN.lneighbours stpn))))
+        by (rewrite H8; unfold incl; intros ; auto).
+      generalize (pre_places_in_marking stpn H11 H7); intro.
+      unfold PlacesAreRefInMarking in H.
+      generalize (list_sensitized_no_error
+                    lneighbours pre test inhib marking transs
+                    H'' H); intro.
+      elim H10; intros; rewrite H12 in e1; inversion e1.
+  Qed.
+
+  (*  
+   * Theorem : For all stpn verifying the property IsWellStructuredStpn,
+   *           stpn_cycle returns a new stpn (next_stpn) verifying the relation
+   *           IsWellStructuredStpn.
+   *)
+  Theorem stpn_cycle_well_structured :
+    forall (stpn : STPN)
+           (fired_transitions : list trans_type)
+           (next_stpn : STPN),
+      IsWellStructuredStpn stpn ->
+      stpn_cycle stpn = Some (fired_transitions, next_stpn) ->
+      IsWellStructuredStpn next_stpn.
+  Proof.
+    intro.
+    functional induction (stpn_cycle stpn) using stpn_cycle_ind; intros.
+    (* GENERAL CASE. *)
+    - unfold IsWellStructuredStpn; unfold IsWellStructuredSpn.
+      unfold IsWellStructuredStpn in H; unfold IsWellStructuredSpn in H.
+      injection H0; clear H0; intros.
+      unfold NoUnmarkedPlace in H.
+      unfold NoUnknownTransInChronos in H.
+      (*  
+       * We need to ensure that stpn_fire preserves the structure
+       * of marking and chronos.
+       *)
+      generalize (stpn_fire_same_struct_marking
+                    lneighbours pre test inhib post
+                    marking updated_chronos transs priority_groups
+                    fired_transitions nextm next_chronos e3); intro.
+      generalize (stpn_fire_same_struct_chronos
+                    lneighbours pre test inhib post
+                    marking updated_chronos transs priority_groups
+                    fired_transitions nextm next_chronos e3); intro.
+      generalize (increment_all_chronos_same_struct
+                    chronos0 sensitized_transs updated_chronos e2); intro.
+      (*  
+       * Then, we need to rewrite chronos with updated_chronos, and
+       * marking with nextm.
+       *)
+      unfold MarkingHaveSameStruct in H2;
+        unfold ChronosHaveSameStruct in H3;
+        unfold ChronosHaveSameStruct in H4.
+      simpl in H.
+      rewrite H2 in H.
+      rewrite H4 in H.
+      rewrite H3 in H.
+      unfold NoUnknownTransInChronos;
+        unfold NoUnmarkedPlace.
+      rewrite <- H0.
+      simpl.
+      auto.
+    (* CASE stpn_fire returns None. *)
+    - inversion H0.
+    (* CASE increment_all_chronos returns None. *)
+    - inversion H0.
+    (* CASE list_sensitized returns None. *)
+    - inversion H0.
   Qed.
   
   (*******************************************)
@@ -4119,6 +4489,32 @@ Section AnimateStpn.
     - apply stpn_cycle_compl in H0.
       simpl.
       rewrite H0; auto.
+  Qed.
+
+  (*  
+   * Theorem :  For all stpn verifying the property IsWellStructuredStpn,
+   *            and for all number n of evolution cycles, stpn_animate returns no error.
+   *)
+  Theorem stpn_animate_no_error :
+    forall (stpn : STPN)
+           (n : nat),
+      IsWellStructuredStpn stpn ->
+      exists (v : list (list trans_type * marking_type * list (trans_type * option chrono_type))),
+        stpn_animate stpn n [] = Some v.
+  Proof.
+    do 2 intro.
+    functional induction (stpn_animate stpn n [])
+               using stpn_animate_ind;
+      intros.
+    (* Base case, n = 0. *)
+    - exists stpn_evolution; auto.
+    (* General case. *)
+    - apply IHo.
+      apply (stpn_cycle_well_structured stpn fired_trans_at_n stpn_at_n H e0).
+    (* Error case, impossible regarding the hypotheses. *)
+    - generalize (stpn_cycle_no_error stpn H); intro.
+      elim H0; intros.
+      rewrite H1 in e0; inversion e0.
   Qed.
 
 End AnimateStpn.
