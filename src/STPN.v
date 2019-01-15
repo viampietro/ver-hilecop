@@ -1,4 +1,4 @@
-Require Export SPN.
+Require Export Hilecop.SPN.
 
 (*========================================================*)
 (*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS AND ===*)

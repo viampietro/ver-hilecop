@@ -1,4 +1,4 @@
-Require Export STPN.
+Require Export Hilecop.STPN.
 
 (*==========================================================================================*)
 (*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS, TEMPORAL AND INTERPRETED PETRI NETS. ===*)

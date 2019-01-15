@@ -1,4 +1,4 @@
-Require Export SPN.
+Require Export Hilecop.SPN.
                                
 (*====================================================*)  
 (*                  FIRST SPN EXAMPLE                 *)

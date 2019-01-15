@@ -1,0 +1,9 @@
+-Q src/ Hilecop 
+-Q src/utils Hilecop.Utils
+-Q test/ Hilecop.Test
+
+src/utils/HilecopTactics.v
+src/SPN.v
+src/STPN.v
+src/SITPN.v
+test/spn_examples.v

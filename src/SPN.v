@@ -1,6 +1,6 @@
-Require Export HilecopTactics.
+Require Export Hilecop.Utils.HilecopTactics.
 
-(*
+(**
  * ============ CODING GUIDELINES ============
  * 
  * - Function names, records, lemmas and theorems idents : 
@@ -11,14 +11,14 @@ Require Export HilecopTactics.
  *  
  *)
 
-(*===================================================================*)
+(** * ============================================================* **)
 (*=== TYPES FOR GENERALIZED, EXTENDED AND SYNCHRONOUS PETRI NETS. ===*)
 (*===================================================================*)
 
-(* A place is identified by an index which is unique. *)
+(** A place is identified by a unique index. *)
 Definition place_type := nat.
 
-(* A transition is identified by an index which is unique. *)
+(** A transition is identified by a unique index. *)
 Definition trans_type := nat.
 
 (* There are 4 kinds of edges : pre, post, inhib, test 
@@ -3802,7 +3802,7 @@ Section AnimateSpn.
     forall (spn : SPN)
            (n : nat),
       IsWellStructuredSpn spn ->
-      exists (v : list (list trans_type * marking_type)),
+      exists (v : list ((list trans_type) * marking_type)),
         spn_animate spn n [] = Some v.
   Proof.
     do 2 intro.

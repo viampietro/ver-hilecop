@@ -1,8 +1,0 @@
--R . Top
-
-SPN.v
-spn_examples.v
-STPN.v
-stpn_examples.v
-SITPN.v
-sitpn_examples.v
