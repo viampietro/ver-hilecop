@@ -3,7 +3,12 @@
 -Q test/ Hilecop.Test
 
 src/utils/HilecopTactics.v
+src/utils/HilecopLemmas.v
 src/SPN.v
+src/SPNAnimator.v
 src/STPN.v
+src/STPNAnimator.v
 src/SITPN.v
+src/SITPNAnimator.v
+
 test/spn_examples.v
