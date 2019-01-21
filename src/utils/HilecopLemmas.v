@@ -15,7 +15,7 @@ Export Permutation.
 
 (** Proves a property over the combination of fst and split functions. *)
 
-Lemma fst_split_app {A B : Type} :
+Lemma fst_split_cons_app {A B : Type} :
   forall (a : (A * B)) (l : list (A * B)),
     fst (split (a :: l)) = (fst (split [a])) ++ (fst (split l)).
 Proof.
@@ -23,6 +23,58 @@ Proof.
   elim a; simpl.
   elim split; simpl.
   auto.
+Qed.
+
+(** Proves a property over the combination of snd and split functions. *)
+
+Lemma snd_split_cons_app {A B : Type} :
+  forall (a : (A * B)) (l : list (A * B)),
+    snd (split (a :: l)) = (snd (split [a])) ++ (snd (split l)).
+Proof.
+  intros.
+  elim a; simpl.
+  elim split; simpl.
+  auto.
+Qed.
+
+(** Proves that applying the combination of [fst] and [split] on the concatenation
+    of list [l] and [l'] is the same as applying separately [fst] and [split] on each list,
+    and then concatenating the result. 
+ *)
+
+Lemma fst_split_app {A B : Type} :
+  forall (l l' : list (A * B)),
+    (fst (split (l ++ l'))) = fst (split l) ++ fst (split l').
+Proof.
+  intros.
+  elim l; intros.
+  - simpl; auto.
+  - rewrite fst_split_cons_app.
+    rewrite <- app_comm_cons.
+    rewrite fst_split_cons_app.
+    rewrite H.
+    rewrite app_assoc_reverse.
+    reflexivity.
+Qed.
+
+(** Proves that applying the combination of [snd] and [split] on the concatenation
+    of list [l] and [l'] is the same as applying separately [snd] and [split] on each list,
+    and then concatenating the result. 
+ *)
+
+Lemma snd_split_app {A B : Type} :
+  forall (l l' : list (A * B)),
+    (snd (split (l ++ l'))) = snd (split l) ++ snd (split l').
+Proof.
+  intros.
+  elim l; intros.
+  - simpl; auto.
+  - rewrite snd_split_cons_app.
+    rewrite <- app_comm_cons.
+    rewrite snd_split_cons_app.
+    rewrite H.
+    rewrite app_assoc_reverse.
+    reflexivity.
 Qed.
 
 (** For all list of pairs l and element a, if a is not in [(fst (split l))], 
@@ -35,7 +87,7 @@ Proof.
   induction l.
   - intros; intro; elim H0.
   - elim a; intros.
-    rewrite fst_split_app in H.
+    rewrite fst_split_cons_app in H.
     simpl in H.
     apply Decidable.not_or in H.
     elim H; intros.
@@ -58,7 +110,7 @@ Proof.
   - intro. apply NoDup_nil.
   - elim a.
     intros.
-    rewrite fst_split_app in H.
+    rewrite fst_split_cons_app in H.
     simpl in H.
     apply NoDup_cons_iff in H.
     elim H; intros.
@@ -80,7 +132,7 @@ Proof.
   - auto.
   - elim a0.
     intros.
-    rewrite fst_split_app.
+    rewrite fst_split_cons_app.
     simpl.
     apply in_inv in H.
     elim H; intros.

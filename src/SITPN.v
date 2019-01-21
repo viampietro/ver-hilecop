@@ -4,26 +4,27 @@ Require Export Hilecop.STPN.
 (*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS, TEMPORAL AND INTERPRETED PETRI NETS. ===*)
 (*==========================================================================================*)
 
+(** * Interpreted Petri nets : associating conditions to transitions. *)
+
 (********************************************************)
 (* CONDITIONS ON TRANSITIONS FOR INTERPRETED PETRI NETS *)
 (********************************************************)
 
-(*
- * Defines the SITPN structure. 
- *
- * Basically, same structure as STPN with condition values associated to transitions.
- * (At most one condition value by transition, or None)
- *
- * Conditions evolving through time are represented by 
- * a scenario. 
- *
- * A scenario is a list of functions associating 
- * condition value (bool) to transition (or None if no condition
- * exists for a given transition), for each evolution step of the Petri net. 
- *  
- *)
+(** Defines the type for condition. 
+    Condition values (boolean values) are evolving through time. 
+    [nat] represents the discrete time value. *)
+
+Definition condition_type := nat -> bool.
+
+(** Defines the SITPN structure. 
+ 
+    Basically, same structure as STPN with condition values associated to transitions.
+    (At most one condition value by transition, or None)
+ 
+    The [lconditions] field represents the association between transitions and conditions. *)
+
 Structure SITPN : Set := mk_SITPN { 
-                             scenario : list (trans_type -> option bool);
+                             lconditions : list (trans_type * option condition_type);
                              stpn :> STPN
                            }.
 
@@ -32,51 +33,151 @@ Structure SITPN : Set := mk_SITPN {
 (*===================================================*)
 Section Condition.
 
-  (* 
-   * Function : Return true if no condition is associated
-   *            to t, or returns the current value of the condition
-   *            if it exists.
-   *)
-  Definition check_condition
-             (conditions : trans_type -> option bool)
-             (t : trans_type) : bool :=
-    match (conditions t) with
-    | None => true
-    | Some b => b
+  (** Returns an [option] to a [condition_type] associated to transition t
+      in the list [lconditions]. 
+      Returns None if [t] doesn't belong to the list [lconditions]. *)
+  
+  Fixpoint get_condition
+           (lconditions : list (trans_type * option condition_type))
+           (t : trans_type) {struct lconditions} : option (option condition_type) :=
+    match lconditions with
+    | (tr, opt_cond) :: tail => if t =? tr then
+                              Some opt_cond
+                            else get_condition tail t
+    (* Exception : t is not in lconditions. *)
+    | [] => None
     end.
 
-  (*** Formal specification : check_condition ***)
+  Functional Scheme get_condition_ind := Induction for get_condition Sort Prop.
+
+  (** Formal specification for get_condition *)
+  Inductive GetCondition : list (trans_type * option condition_type) ->
+                   nat ->
+                   option (option condition_type) -> Prop :=
+  | GetCondition_err :
+      forall (t : trans_type), GetCondition [] t None
+  | GetCondition_if :
+      forall (lconditions : list (trans_type * option condition_type))
+             (opt_cond : option condition_type)
+             (t tr : trans_type),
+        t = tr ->
+        GetCondition ((tr, opt_cond) :: lconditions) t (Some opt_cond)
+  | GetCondition_else :
+      forall (lconditions : list (trans_type * option condition_type))
+             (t tr : trans_type)
+             (opt_cond : option condition_type)
+             (opt_opt_cond : option (option condition_type)),
+        t <> tr ->
+        GetCondition lconditions t opt_opt_cond ->
+        GetCondition ((tr, opt_cond) :: lconditions) t opt_opt_cond.
+                     
+  (*** Correctness proof : get_condition ***)
+  Theorem get_condition_correct :
+    forall (lconditions : list (trans_type * option condition_type))
+           (t : trans_type)
+           (opt_opt_cond : option (option condition_type)),
+      get_condition lconditions t = opt_opt_cond ->
+      GetCondition lconditions t opt_opt_cond.
+  Proof.
+    intros lconditions t; functional induction (get_condition lconditions t)
+                                     using get_condition_ind; intros.
+    (* Case lconditions = []. *)
+    - rewrite <- H; apply GetCondition_err.
+    (* Case if is true. *)
+    - rewrite <- H.
+      apply GetCondition_if;
+        rewrite Nat.eqb_sym in e1; apply beq_nat_true in e1; auto.
+    (* Case else *)
+    - apply GetCondition_else.
+      + rewrite Nat.eqb_sym in e1; apply beq_nat_false in e1; auto.
+      + rewrite <- H; apply IHo; reflexivity.
+  Qed.
+
+  (*** Completeness proof : get_condition ***)
+  Theorem get_condition_compl :
+    forall (lconditions : list (trans_type * option condition_type))
+           (t : trans_type)
+           (opt_opt_cond : option (option condition_type)),
+      GetCondition lconditions t opt_opt_cond ->
+      get_condition lconditions t = opt_opt_cond.
+  Proof.
+    intros; induction H.
+    (* Case GetCondition_0 *)
+    - simpl; auto.
+    (* Case GetCondition_if *)
+    - rewrite H; simpl.
+      rewrite Nat.eqb_refl.
+      reflexivity.
+    (* Case GetCondition_else *)
+    - simpl.
+      apply Nat.eqb_neq in H.
+      rewrite H.
+      assumption.
+  Qed.
+  
+  (** For all list [lconditions] and transition [t], (get_condition lconditions t) 
+      returns no error if [t] is referenced in [lconditions]. *)
+  
+  Lemma get_condition_no_error :
+    forall (lconditions : list (trans_type * option condition_type))
+           (t : trans_type),
+      In t (fst (split lconditions)) ->
+      exists v : option (condition_type), get_condition lconditions t = Some v.
+  Proof.
+    intros lconditions t;
+      functional induction (get_condition lconditions t) using get_condition_ind;
+      intros;
+      decide_accessor_no_err.
+  Qed.
+  
+  (** Returns true if [opt_cond] is None, otherwise returns the 
+      condition value at time [time_value]. *)
+  
+  Definition check_condition
+             (opt_cond : option condition_type)
+             (time_value : nat) : bool :=
+    match opt_cond with
+    | None => true
+    | Some cond => (cond time_value)
+    end.
+
+  (** Formal specification : check_condition *)
   Inductive CheckCondition
-            (conditions : trans_type -> option bool)
-            (t : trans_type) : Prop :=
+            (opt_cond : option condition_type)
+            (time_value : nat) : Prop :=
   | CheckCondition_none : 
-      (conditions t) = None -> CheckCondition conditions t
+      opt_cond = None -> CheckCondition opt_cond time_value
   | CheckCondition_true : 
-      (conditions t) = Some true -> CheckCondition conditions t.
+      forall (cond : condition_type),
+        opt_cond = Some cond ->
+        (cond time_value) = true ->
+        CheckCondition opt_cond time_value.
 
   Functional Scheme check_condition_ind :=
     Induction for check_condition Sort Prop.
 
   (*** Correctness proof : check_condition ***)
   Theorem check_condition_correct :
-    forall (conditions : trans_type -> option bool)
-           (t : trans_type),
-      check_condition conditions t = true -> CheckCondition conditions t.
+    forall (opt_cond : option (condition_type))
+           (time_value : nat),
+      check_condition opt_cond time_value = true -> CheckCondition opt_cond time_value.
   Proof.
-    intros conditions t.
-    functional induction (check_condition conditions t) using check_condition_ind; intros.
-    - apply CheckCondition_true; rewrite e; rewrite H; reflexivity.
-    - apply CheckCondition_none; assumption.
+    intros opt_cond time_value.
+    functional induction (check_condition opt_cond time_value) using check_condition_ind; intros.
+    - apply CheckCondition_true with (cond := cond); [reflexivity | assumption]. 
+    - apply CheckCondition_none; reflexivity.
   Qed.
 
   (*** Completeness proof : check_condition ***)
   Theorem check_condition_complete :
-    forall (conditions : trans_type -> option bool)
-           (t : trans_type),
-      CheckCondition conditions t -> check_condition conditions t = true.    
+    forall (opt_cond : option (condition_type))
+           (time_value : nat),
+      CheckCondition opt_cond time_value -> check_condition opt_cond time_value = true.
   Proof.
-    intros conditions t H; elim H; intros;
-      unfold check_condition; rewrite H0; reflexivity.
+    intros opt_cond time_value H; elim H; intros;
+      unfold check_condition.
+    - rewrite H0; reflexivity.
+    - rewrite H0; rewrite <- H1; reflexivity.
   Qed.
 
 End Condition.

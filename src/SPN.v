@@ -265,9 +265,9 @@ Section Marking.
 
   (*  
    * Function : Returns the number of tokens
-   *            associated with the place of index "index"
-   *            in marking "marking".
-   *            Returns None if "index" doesn't belong
+   *            associated with the place [p]
+   *            in marking [marking].
+   *            Returns None if [p] doesn't belong
    *            to the marking.
    *)
   Fixpoint get_m (marking : marking_type) (p : place_type) : option nat :=
@@ -275,7 +275,7 @@ Section Marking.
     | (place, nboftokens) :: tail => if p =? place then
                                        Some nboftokens
                                      else get_m tail p
-    (* Exception : index is not in marking. *)
+    (* Exception : p is not in marking. *)
     | [] => None
     end.
 
@@ -534,21 +534,21 @@ Section Marking.
     functional induction (replace_occ prodnat_eq_dec (x, y) (x, y') l)
                using replace_occ_ind; intros.
     - auto.
-    - rewrite fst_split_app; simpl; apply not_in_cons.
+    - rewrite fst_split_cons_app; simpl; apply not_in_cons.
       split; auto.
       apply IHl0.
-      + rewrite fst_split_app in H; simpl in H.
+      + rewrite fst_split_cons_app in H; simpl in H.
         apply Decidable.not_or in H.
         elim H; intros; auto.
       + auto.
     - generalize dependent x0; intro; elim x0; intros.
-      rewrite fst_split_app; simpl; apply not_in_cons.
+      rewrite fst_split_cons_app; simpl; apply not_in_cons.
       split.
-      + rewrite fst_split_app in H; simpl in H.
+      + rewrite fst_split_cons_app in H; simpl in H.
         apply Decidable.not_or in H.
         elim H; intros; auto.
       + apply IHl0.
-        -- rewrite fst_split_app in H; simpl in H.
+        -- rewrite fst_split_cons_app in H; simpl in H.
            apply Decidable.not_or in H.
            elim H; intros; auto.
         -- auto.
@@ -577,8 +577,8 @@ Section Marking.
       apply replace_occ_no_change with (eq_dec := prodnat_eq_dec)
                                        (repl := (p, n')) in H1.
       rewrite H1.
-      rewrite fst_split_app in H.
-      rewrite fst_split_app.
+      rewrite fst_split_cons_app in H.
+      rewrite fst_split_cons_app.
       simpl in H.
       simpl.
       auto.
@@ -589,13 +589,13 @@ Section Marking.
       assert (Hor := (classic (In (p, n) tl))).
       elim Hor; clear Hor; intros.
       (* Case In (p, n) tl *)
-      + rewrite fst_split_app in H; simpl in H.
+      + rewrite fst_split_cons_app in H; simpl in H.
         apply NoDup_cons_iff in H.
         elim H; intros.
         generalize (in_fst_split p n tl H0); intros.
         generalize (not_in_in_diff a p (fst (split tl)) (conj H1 H3)); intro.
         generalize (not_in_fst_split_replace_occ tl p n n' a H1 H4); intro.
-        rewrite fst_split_app; simpl; apply NoDup_cons.
+        rewrite fst_split_cons_app; simpl; apply NoDup_cons.
         -- auto.
         -- apply IHl; auto.
       (* Case ~In (p, n) tl *)
@@ -624,16 +624,16 @@ Section Marking.
     - auto.
     (* Case (p,n) is hd of list. *)
     - intros.
-      rewrite fst_split_app.
+      rewrite fst_split_cons_app.
       symmetry.
-      rewrite fst_split_app.
+      rewrite fst_split_cons_app.
       rewrite IHl.
       simpl.
       auto.
     (* Case (p, n) not hd of list. *)
-    - rewrite fst_split_app.
+    - rewrite fst_split_cons_app.
       symmetry.
-      rewrite fst_split_app.
+      rewrite fst_split_cons_app.
       rewrite IHl.
       auto.
   Qed.

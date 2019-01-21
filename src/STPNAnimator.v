@@ -2832,25 +2832,6 @@ Section FireStpn.
   
 End FireStpn.
 
-(*
- * Helper functions to access the different elements
- * of a tuplet. 
- *)
-Section Tuplet.
-  
-  Context {A : Type} {B : Type} {C : Type}.
-
-  Definition fst_tuplet (tuplet : A * B * C) := match tuplet with
-                                                | (x, y, z) => x
-                                                end.
-  Definition snd_tuplet (tuplet : A * B * C) := match tuplet with
-                                                | (x, y, z) => y
-                                                end.
-  Definition trd_tuplet (tuplet : A * B * C) := match tuplet with
-                                                | (x, y, z) => z
-                                                end.
-End Tuplet.
-
 (*==========================================================*)
 (*================= STPN CYCLE EVOLUTION ===================*)
 (*==========================================================*)
@@ -3235,23 +3216,22 @@ Section AnimateStpn.
     (* CASE list_sensitized returns None. *)
     - inversion H0.
   Qed.
+
+  (** -------------------------------------------------------------------------- *)
+  (** -------------------------------------------------------------------------- *)
   
   (*******************************************)
   (******** ANIMATING DURING N CYCLES ********)
   (*******************************************)
   
-  (*  
-   * Function : Returns the list of (transitions_fired(i), marking(i), chronos(i))
-   *            for each cycle i, from 0 to n, representing the evolution
-   *            of the Petri net stpn.
-   *)
-  Fixpoint stpn_animate 
+  (** Returns the list of (transitions_fired(i), STPN(i)) for each cycle i, 
+      from 0 to n, representing the evolution of the Petri net stpn. *)
+  
+  Fixpoint stpn_animate_aux 
            (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type *
-                                   marking_type *
-                                   list (trans_type * option chrono_type))) :
-    option (list (list trans_type * marking_type * list (trans_type * option chrono_type))) :=
+           (stpn_evolution : list (list trans_type * STPN)) :
+    option (list (list trans_type * STPN)) :=
     match n with
     (* Base case, returns the list storing the evolution. *)
     | O => Some stpn_evolution
@@ -3259,119 +3239,105 @@ Section AnimateStpn.
       match (stpn_cycle stpn) with
       (* Adds a new evolution step at the end of the list. *)
       | Some (fired_trans_at_n, stpn_at_n) =>
-        stpn_animate stpn_at_n n' (stpn_evolution ++ [(fired_trans_at_n,
-                                                       (marking stpn_at_n),
-                                                       (chronos stpn_at_n))])
+        stpn_animate_aux stpn_at_n n' (stpn_evolution ++ [(fired_trans_at_n, stpn_at_n)])
       (* Error, stpn_cycle failed!!! *)
       | None => None
       end
     end.
 
-  Functional Scheme stpn_animate_ind := Induction for stpn_animate Sort Prop.
+  Functional Scheme stpn_animate_aux_ind := Induction for stpn_animate_aux Sort Prop.
   
-  (*** Formal specification : stpn_animate ***)
-  Inductive StpnAnimate (stpn : STPN) :
+  (** Formal specification : stpn_animate_aux *)
+
+  Inductive StpnAnimateAux (stpn : STPN) :
     nat ->
-    list (list trans_type * marking_type * list (trans_type * option chrono_type)) ->
-    option (list (list trans_type * marking_type * list (trans_type * option chrono_type))) ->
+    list (list trans_type * STPN) ->
+    option (list (list trans_type * STPN) )->
     Prop :=
-  | StpnAnimate_0 :
-      forall (stpn_evolution : list (list trans_type *
-                                     marking_type *
-                                     list (trans_type * option chrono_type))),
-        StpnAnimate stpn 0 stpn_evolution (Some stpn_evolution) 
-  | StpnAnimate_cons :
+  | StpnAnimateAux_0 :
+      forall (stpn_evolution : list (list trans_type * STPN)),
+        StpnAnimateAux stpn 0 stpn_evolution (Some stpn_evolution) 
+  | StpnAnimateAux_cons :
       forall (n : nat)
              (fired_trans_at_n : list trans_type)
              (stpn_at_n : STPN)
-             (stpn_evolution : list (list trans_type *
-                                     marking_type *
-                                     list (trans_type * option chrono_type)))
-             (opt_evolution : option (list (list trans_type *
-                                            marking_type *
-                                            list (trans_type * option chrono_type)))),
+             (stpn_evolution : list (list trans_type * STPN))
+             (opt_evolution : option (list (list trans_type * STPN))),
         StpnCycle stpn (Some (fired_trans_at_n, stpn_at_n)) ->
-        StpnAnimate stpn_at_n
-                    n
-                    (stpn_evolution ++ [(fired_trans_at_n,
-                                         (marking stpn_at_n),
-                                         (chronos stpn_at_n))])
-                    opt_evolution ->
-        StpnAnimate stpn
-                    (S n)
-                    stpn_evolution
-                    opt_evolution
-  | StpnAnimate_err :
+        StpnAnimateAux stpn_at_n
+                       n
+                       (stpn_evolution ++ [(fired_trans_at_n, stpn_at_n)])
+                       opt_evolution ->
+        StpnAnimateAux stpn
+                       (S n)
+                       stpn_evolution
+                       opt_evolution
+  | StpnAnimateAux_err :
       forall (n : nat)
-             (stpn_evolution : list (list trans_type *
-                                     marking_type *
-                                     list (trans_type * option chrono_type))),
+             (stpn_evolution : list (list trans_type * STPN)),
         StpnCycle stpn None ->
-        StpnAnimate stpn (S n) stpn_evolution None.
+        StpnAnimateAux stpn (S n) stpn_evolution None.
   
-  (*** Correctness proof : stpn_animate***)
-  Theorem stpn_animate_correct :
+  (** Correctness proof : stpn_animate_aux *)
+
+  Theorem stpn_animate_aux_correct :
     forall (stpn :STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * marking_type * list (trans_type * option chrono_type)))
-           (opt_evolution : option (list (list trans_type * marking_type * list (trans_type * option chrono_type)))),
-      stpn_animate stpn n stpn_evolution = opt_evolution ->
-      StpnAnimate stpn n stpn_evolution opt_evolution.
+           (stpn_evolution : list (list trans_type * STPN))
+           (opt_evolution : option (list (list trans_type * STPN))),
+      stpn_animate_aux stpn n stpn_evolution = opt_evolution ->
+      StpnAnimateAux stpn n stpn_evolution opt_evolution.
   Proof.                                                                                
     intros stpn n stpn_evolution.
-    functional induction (stpn_animate stpn n stpn_evolution) using stpn_animate_ind; intros.
+    functional induction (stpn_animate_aux stpn n stpn_evolution) using stpn_animate_aux_ind; intros.
     (* Case n = 0 *)
-    - rewrite <- H; apply StpnAnimate_0.
+    - rewrite <- H; apply StpnAnimateAux_0.
     (* General case *)
     - intros; rewrite <- H.
-      apply StpnAnimate_cons with (fired_trans_at_n := fired_trans_at_n)
+      apply StpnAnimateAux_cons with (fired_trans_at_n := fired_trans_at_n)
                                   (stpn_at_n := stpn_at_n).
       + apply stpn_cycle_correct in e0; auto.
       + apply IHo; auto.
     (* Error case, stpn_cycle returns None. *)
-    - rewrite <- H; apply StpnAnimate_err.
+    - rewrite <- H; apply StpnAnimateAux_err.
       apply stpn_cycle_correct in e0; auto.
   Qed.
 
-  (*** Completeness proof : stpn_animate ***)
-  Theorem stpn_animate_compl :
+  (** Completeness proof : stpn_animate_aux *)
+
+  Theorem stpn_animate_aux_compl :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type *
-                                   marking_type *
-                                   list (trans_type * option chrono_type)))
-           (opt_evolution : option (list (list trans_type *
-                                          marking_type *
-                                          list (trans_type * option chrono_type)))),
-      StpnAnimate stpn n stpn_evolution opt_evolution ->
-      stpn_animate stpn n stpn_evolution = opt_evolution.
+           (stpn_evolution : list (list trans_type * STPN))
+           (opt_evolution : option (list (list trans_type * STPN))),
+      StpnAnimateAux stpn n stpn_evolution opt_evolution ->
+      stpn_animate_aux stpn n stpn_evolution = opt_evolution.
   Proof.
     intros; elim H; intros.
-    (* Case StpnAnimate_0 *)
+    (* Case StpnAnimateAux_0 *)
     - simpl; auto.
-    (* Case StpnAnimate_cons *)
+    (* Case StpnAnimateAux_cons *)
     - simpl. apply stpn_cycle_compl in H0; rewrite H0.
       rewrite H2; auto.
-    (* Case StpnAnimate_err *)
+    (* Case StpnAnimateAux_err *)
     - apply stpn_cycle_compl in H0.
       simpl.
       rewrite H0; auto.
   Qed.
 
-  (*  
-   * Theorem :  For all stpn verifying the property IsWellStructuredStpn,
-   *            and for all number n of evolution cycles, stpn_animate returns no error.
-   *)
-  Theorem stpn_animate_no_error :
+  (** For all stpn verifying the property IsWellStructuredStpn, and for all number n 
+      of evolution cycles, stpn_animate_aux returns no error. *)
+  Theorem stpn_animate_aux_no_error :
     forall (stpn : STPN)
-           (n : nat),
+           (n : nat)
+           (stpn_evolution : list (list trans_type * STPN)),
       IsWellStructuredStpn stpn ->
-      exists (v : list (list trans_type * marking_type * list (trans_type * option chrono_type))),
-        stpn_animate stpn n [] = Some v.
+      exists (v : list (list trans_type * STPN)),
+        stpn_animate_aux stpn n stpn_evolution = Some v.
   Proof.
-    do 2 intro.
-    functional induction (stpn_animate stpn n [])
-               using stpn_animate_ind;
+    do 3 intro.
+    functional induction (stpn_animate_aux stpn n stpn_evolution)
+               using stpn_animate_aux_ind;
       intros.
     (* Base case, n = 0. *)
     - exists stpn_evolution; auto.
@@ -3384,4 +3350,160 @@ Section AnimateStpn.
       rewrite H1 in e0; inversion e0.
   Qed.
 
+  (** For all well-structured [STPN] passed to [stpn_animate_aux], and for all list of well-structured [STPN]
+      stpn_evolution, the resulting list is only composed of well-structured [STPN]. *)
+  
+  Theorem stpn_animate_aux_well_structured :
+    forall (stpn : STPN)
+           (n : nat)
+           (stpn_evolution final_stpn_evolution : list (list trans_type * STPN)),
+      IsWellStructuredStpn stpn ->
+      (forall stpn' : STPN, In stpn' (snd (split stpn_evolution)) -> IsWellStructuredStpn stpn') ->
+      stpn_animate_aux stpn n stpn_evolution = Some final_stpn_evolution ->
+      forall (stpn'' : STPN), In stpn'' (snd (split final_stpn_evolution)) -> IsWellStructuredStpn stpn''.
+  Proof.
+    do 3 intro.
+    functional induction (stpn_animate_aux stpn n stpn_evolution) using stpn_animate_aux_ind; intros.
+    - injection H1; intros.
+      rewrite <- H3 in H2.
+      apply (H0 stpn'' H2).
+    - apply IHo with (final_stpn_evolution := final_stpn_evolution).
+      + generalize (stpn_cycle_well_structured stpn fired_trans_at_n stpn_at_n H e0); intro; auto.
+      + intros.
+        rewrite snd_split_app in H3.
+        apply in_app_or in H3.
+        elim H3; intros.
+        -- apply (H0 stpn' H4).
+        -- simpl in H4; elim H4; intros;
+           [generalize (stpn_cycle_well_structured stpn fired_trans_at_n stpn_at_n H e0); intro;
+            rewrite H5 in H6; assumption
+           | elim H5].           
+      + auto.
+      + auto.
+    - inversion H1.
+  Qed.
+
+  (** For all well-structured [STPN] passed to [stpn_animate_aux], and for all [n], number 
+      of evolution cycles, the length of the resulting [final_stpn_evolution] list
+      is equal to the number of evolution cycles plus the length of the [stpn_evolution] 
+      list passed in argument. *)
+  
+  Theorem stpn_animate_aux_preserves_cycles :
+    forall (stpn : STPN)
+           (n : nat)
+           (stpn_evolution final_stpn_evolution : list (list trans_type * STPN)),
+      IsWellStructuredStpn stpn ->
+      stpn_animate_aux stpn n stpn_evolution = Some final_stpn_evolution ->
+      n + length stpn_evolution = length final_stpn_evolution.
+  Proof.
+    do 3 intro.
+    functional induction (stpn_animate_aux stpn n stpn_evolution) using stpn_animate_aux_ind; intros.
+    - injection H0; intros; rewrite H1; simpl; auto.
+    - generalize (stpn_cycle_well_structured stpn fired_trans_at_n stpn_at_n H e0); intro.
+      generalize (IHo final_stpn_evolution H1 H0); intro.
+      rewrite <- H2.
+      rewrite app_length.
+      simpl.
+      rewrite Nat.add_1_r.
+      auto.
+    - inversion H0.
+  Qed.
+
+  (** ------------------------------------------------------------------------------- *)
+  (** ------------------------------------------------------------------------------- *)
+
+  (** Wrapper function around stpn_animate_aux. Here, stpn_evolution is initialized to nil. *)
+  
+  Definition stpn_animate (stpn : STPN) (n : nat) :
+    option (list (list trans_type * STPN)) := stpn_animate_aux stpn n [].
+
+  (** Formal specification : stpn_animate *)
+  
+  Inductive StpnAnimate (stpn : STPN) (n : nat) : option (list (list trans_type * STPN)) -> Prop :=
+  | StpnAnimate_cons :
+      forall (opt_stpn_evolution : option (list (list trans_type * STPN))),
+        StpnAnimateAux stpn n [] opt_stpn_evolution ->
+        StpnAnimate stpn n opt_stpn_evolution.
+
+  (** Correctness proof : stpn_animate *)
+  
+  Theorem stpn_animate_correct :
+    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list trans_type * STPN))),
+      stpn_animate stpn n = opt_stpn_evolution ->
+      StpnAnimate stpn n opt_stpn_evolution.
+  Proof.
+    unfold stpn_animate.
+    intros.
+    apply StpnAnimate_cons; apply stpn_animate_aux_correct in H; auto.
+  Qed.
+
+  (** Completeness proof : stpn_animate *)
+  
+  Theorem stpn_animate_compl :
+    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list trans_type * STPN))),
+      StpnAnimate stpn n opt_stpn_evolution ->
+      stpn_animate stpn n = opt_stpn_evolution.
+  Proof.
+    unfold stpn_animate.
+    intros.
+    elim H; apply stpn_animate_aux_compl; auto.
+  Qed.
+
+  (** For all stpn verifying the property IsWellStructuredStpn,
+      and for all number n of evolution cycles, stpn_animate returns no error. *)
+  
+  Theorem stpn_animate_no_error :
+    forall (stpn : STPN)
+           (n : nat),
+      IsWellStructuredStpn stpn ->
+      exists (v : list ((list trans_type) * STPN)),
+        stpn_animate stpn n = Some v.
+  Proof.
+    unfold stpn_animate.
+    intros.
+    generalize (stpn_animate_aux_no_error stpn n [] H); intro.
+    elim H0; intros.
+    rewrite H1.
+    exists x; auto.
+  Qed.
+
+  (** For all well-structured [STPN] passed to [stpn_animate], the resulting evolution 
+      list is only composed of well-structured [STPN]. *)
+  
+  Theorem stpn_animate_well_structured :
+    forall (stpn : STPN)
+           (n : nat)
+           (stpn_evolution : list (list trans_type * STPN)),
+      IsWellStructuredStpn stpn ->
+      stpn_animate stpn n = Some stpn_evolution ->
+      forall (stpn' : STPN), In stpn' (snd (split stpn_evolution)) -> IsWellStructuredStpn stpn'.
+  Proof.
+    unfold stpn_animate.
+    intros.
+    (* We need this hypothesis to apply stpn_animate_aux_well_structured. *)
+    assert (H' : forall (stpn' : STPN), In stpn' [] -> IsWellStructuredStpn stpn')
+      by (intros; elim H2).
+    generalize (stpn_animate_aux_well_structured stpn n [] stpn_evolution H H' H0); intros.
+    apply H2; assumption.
+  Qed.
+
+  (** For all well-structured [STPN] passed to [stpn_animate], and for all [n], number 
+      of evolution cycles, the length of the resulting [final_stpn_evolution] list
+      is equal to the number of evolution cycles plus the length of the [stpn_evolution] 
+      list passed in argument. *)
+  
+  Theorem stpn_animate_preserves_cycles :
+    forall (stpn : STPN)
+           (n : nat)
+           (stpn_evolution : list (list trans_type * STPN)),
+      IsWellStructuredStpn stpn ->
+      stpn_animate stpn n = Some stpn_evolution ->
+      n = length stpn_evolution.
+  Proof.
+    unfold stpn_animate; intros.
+    generalize (stpn_animate_aux_preserves_cycles stpn n [] stpn_evolution H H0); intros.
+    rewrite Nat.add_0_r in H1.
+    assumption.
+  Qed.
+  
 End AnimateStpn.

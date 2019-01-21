@@ -482,11 +482,11 @@ Section Chrono.
     (* Base case. *)
     - auto.
     (* Case old_chrono is head of the list. *)
-    - rewrite fst_split_app; symmetry; rewrite fst_split_app; simpl; auto.
+    - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; simpl; auto.
     (* Case old_chrono is not head of list. *)
-    - rewrite fst_split_app; symmetry; rewrite fst_split_app; rewrite IHl; auto.
+    - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; rewrite IHl; auto.
     (* Case head of chronos is None. *)
-    - rewrite fst_split_app; symmetry; rewrite fst_split_app; rewrite IHl; auto.
+    - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; rewrite IHl; auto.
   Qed.
   
   (*  

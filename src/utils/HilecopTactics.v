@@ -14,7 +14,7 @@ Ltac decide_accessor_no_err :=
   | [ H : In ?e (fst (split nil)) |- _ ] => elim H; decide_accessor_no_err
   | [|- exists _ : _, Some ?n = Some _ ] => exists n; reflexivity; decide_accessor_no_err
   | [ IHo : _ -> ?G, H : _ |- ?G ] => apply IHo;
-                                      rewrite fst_split_app in H;
+                                      rewrite fst_split_cons_app in H;
                                       simpl in H;
                                       elim H;
                                       intros; [decide_accessor_no_err | auto]
