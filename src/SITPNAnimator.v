@@ -1,11 +1,11 @@
 Require Export Hilecop.SITPN.
 Require Export Hilecop.STPNAnimator.
 
-(** * Firing algorithm for SITPN *)
+(*** ========================== ***)
+(*** FIRING ALGORITHM for SITPN ***)
+(*** ========================== ***)
 
-(*=============================================================*)
-(*================= FIRING ALGORITHM for SITPN ================*)
-(*=============================================================*)
+(** * Firing algorithm for SITPN *)
 
 Section FireSitpn.
 
@@ -14,8 +14,8 @@ Section FireSitpn.
       its time counter value is in the firable interval, and
       its condition value equals true.
     
-      Raises an error (None value) if stpn_is_firable or 
-      get_condition returns None. *)
+      Raises an error (None value) if [stpn_is_firable] or 
+      [get_condition] returns None. *)
   
   Definition sitpn_is_firable
              (t : trans_type)
@@ -24,7 +24,8 @@ Section FireSitpn.
              (steadym decreasingm : marking_type)
              (chronos : list (trans_type * option chrono_type))
              (lconditions : list (trans_type * option condition_type))
-             (time_value : nat) : option bool :=
+             (time_value : nat) :
+    option bool :=
     match stpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos with
     (* If t is firable according to "STPN standards", then checks its associated conditions. *)
     | Some b =>
@@ -41,7 +42,8 @@ Section FireSitpn.
 
   Functional Scheme sitpn_is_firable_ind := Induction for sitpn_is_firable Sort Prop.
   
-  (*** Formal specification : sitpn_is_firable ***)
+  (** Formal specification : sitpn_is_firable *)
+  
   Inductive SitpnIsFirable
             (t : trans_type)
             (neighbours_t : neighbours_type)
@@ -74,15 +76,16 @@ Section FireSitpn.
         SitpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value (Some false).
   
   (** Correctness proof : sitpn_is_firable *)
+
   Theorem sitpn_is_firable_correct :
     forall (t : trans_type)
-           (neighbours_t : neighbours_type)
-           (pre test inhib: weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (optionb : option bool),
+      (neighbours_t : neighbours_type)
+      (pre test inhib: weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (optionb : option bool),
       sitpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value = optionb ->
       SitpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value optionb.
   Proof.
@@ -122,13 +125,13 @@ Section FireSitpn.
 
   Theorem sitpn_is_firable_compl :
     forall (t : trans_type)
-           (neighbours_t : neighbours_type)
-           (pre test inhib: weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (optionb : option bool),
+      (neighbours_t : neighbours_type)
+      (pre test inhib: weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (optionb : option bool),
       SitpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value optionb ->
       sitpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value = optionb.
   Proof.  
@@ -164,12 +167,52 @@ Section FireSitpn.
         apply get_condition_compl in H0.
         unfold sitpn_is_firable; rewrite H3; rewrite H0; rewrite H4; auto.
   Qed.
+
+  (** Proves that [sitpn_is_firable] returns no error if :
+
+      - the places in [(pre_pl neighbours_t)], [(inhib_pl neighbours_t)] 
+        and [(test_pl neighbours_t)] are referenced in markings [steadym]
+        and [decreasingm].
+      - [t] is referenced in chronos. 
+      - [t] is referenced in lconditions *)
+  
+  Lemma sitpn_is_firable_no_error :
+    forall (t : trans_type)
+      (neighbours_t : neighbours_type)
+      (pre test inhib : weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat),
+      In t (fst (split lconditions)) ->
+      In t (fst (split chronos)) ->
+      incl (pre_pl neighbours_t) (fst (split decreasingm)) ->
+      incl (test_pl neighbours_t) (fst (split steadym)) ->
+      incl (inhib_pl neighbours_t) (fst (split steadym)) ->
+      exists v : bool,
+        sitpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value = Some v.
+  Proof.
+    intros t neighbours_t pre test inhib steadym decreasingm chronos lconditions time_value.
+    functional induction (sitpn_is_firable t neighbours_t pre test inhib steadym decreasingm
+                                           chronos lconditions time_value)
+               using sitpn_is_firable_ind; intros.
+    (* General case, all went well. *)
+    - exists (b && check_condition opt_cond time_value); auto.
+    (* Case get_chrono = None, impossible regarding the hypotheses. *)
+    - generalize (get_condition_no_error lconditions t H); intros.
+      elim H4; intros; rewrite H5 in e0; inversion e0.
+    (* Case stpn_is_firable = None, impossible regarding the hypotheses. *)
+    - generalize (stpn_is_firable_no_error t neighbours_t pre test inhib steadym decreasingm chronos
+                                           H0 H1 H2 H3); intros.
+      elim H4; intros; rewrite H5 in e; inversion e.
+  Qed.
+
   
   (** -------------------------------------------------------------------------- *)
   (** -------------------------------------------------------------------------- *)
   
   (** Given 1 priority group of transitions (a list [pgroup]), 
-      returns a list of transitions "fired_pre_group" and a marking [decreasingm].
+      returns a list of transitions [fired_pre_group] and a marking [decreasingm].
    
       Returns a couple (list of transitions, marking)
       For each sensitized transition of the list,
@@ -217,7 +260,8 @@ Section FireSitpn.
 
   Functional Scheme sitpn_fire_pre_aux_ind := Induction for sitpn_fire_pre_aux Sort Prop.
   
-  (** Formal specification : stpn_fire_pre_aux *)
+  (** Formal specification : sitpn_fire_pre_aux *)
+
   Inductive SitpnFirePreAux
             (lneighbours : list (trans_type * neighbours_type))
             (pre test inhib : weight_type) 
@@ -278,7 +322,7 @@ Section FireSitpn.
         SitpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value fired_pre_group (t :: pgroup)
                         option_final_couple.
 
-  (*** Correctness proof : sitpn_fire_pre_aux ***)
+  (** Correctness proof : sitpn_fire_pre_aux *)
 
   Theorem sitpn_fire_pre_aux_correct :
     forall (lneighbours : list (trans_type * neighbours_type))
@@ -314,12 +358,12 @@ Section FireSitpn.
       + apply get_neighbours_correct; auto.
       + apply sitpn_is_firable_correct; auto.
       + apply update_marking_pre_correct; auto.
-    (* Case stpn_is_firable returns false. *)
+    (* Case sitpn_is_firable returns false. *)
     - apply SitpnFirePreAux_firable_false with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
       + apply sitpn_is_firable_correct; auto.
       + apply IHo; auto.
-    (* Case stpn_is_firable returns an error. *)
+    (* Case sitpn_is_firable returns an error. *)
     - rewrite <- H; apply SitpnFirePreAux_firable_err with (neighbours_t := neighbours_t).
       + apply get_neighbours_correct; auto.
       + apply sitpn_is_firable_correct; auto.
@@ -332,15 +376,15 @@ Section FireSitpn.
 
   Theorem sitpn_fire_pre_aux_compl :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (fired_pre_group : list trans_type)
-           (pgroup : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+      (pre test inhib : weight_type) 
+      (steadym : marking_type) 
+      (decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (fired_pre_group : list trans_type)
+      (pgroup : list trans_type)
+      (option_final_couple : option (list trans_type * marking_type)),
       SitpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
                       fired_pre_group pgroup option_final_couple ->
       sitpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
@@ -371,6 +415,148 @@ Section FireSitpn.
             apply update_marking_pre_compl in H2; rewrite H2; auto.
   Qed.
 
+  (** Proves that [sitpn_fire_pre_aux] preserves
+      the structure of the marking [decreasingm]
+      passed as argument.
+      
+      [sitpn_fire_pre_aux] returns a marking [decreasedm]
+      which has the same structure as [decreasingm]. *)
+  
+  Lemma sitpn_fire_pre_aux_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type) 
+      (steadym : marking_type) 
+      (decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (fired_pre_group : list trans_type)
+      (pgroup : list trans_type)
+      (pre_fired_transitions : list trans_type)
+      (decreasedm : marking_type),
+      sitpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value fired_pre_group pgroup =
+      Some (pre_fired_transitions, decreasedm) ->
+      MarkingHaveSameStruct decreasingm decreasedm.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos lconditions time_value fired_pre_group pgroup.
+    functional induction (sitpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm
+                                             chronos lconditions time_value fired_pre_group pgroup)
+               using sitpn_fire_pre_aux_ind;
+      intros.
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    - apply IHo in H.
+      apply update_marking_pre_same_struct in e3.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e3.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e3; auto.
+    - inversion H.
+    - apply IHo in H; auto.
+    - inversion H.
+    - inversion H.
+  Qed.
+
+  (** [sitpn_fire_pre_aux] returns no error if : 
+      
+      - all transitions in [pgroup] are referenced in [chronos]   
+      - all transitions in [pgroup] are referenced in [lconditions]
+      - all transitions in [pgroup] are referenced in [lneighbours]
+      - all neighbour places referenced in [lneighbours] are
+        referenced in the markings [steadym] and [decreasingm]. *)
+  
+  Lemma sitpn_fire_pre_aux_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type) 
+      (steadym : marking_type) 
+      (decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (fired_pre_group : list trans_type)
+      (pgroup : list trans_type),
+      incl pgroup (fst (split lconditions)) ->
+      incl pgroup (fst (split chronos)) ->
+      incl pgroup (fst (split lneighbours)) ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
+           incl neighbours.(inhib_pl) (fst (split steadym)) /\
+           incl neighbours.(test_pl) (fst (split steadym)))) ->
+      exists v : (list trans_type * marking_type),
+        sitpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value fired_pre_group pgroup = Some v.
+  Proof.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos lconditions time_value fired_pre_group pgroup.
+    functional induction (sitpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
+                                             lconditions time_value fired_pre_group pgroup)
+               using sitpn_fire_pre_aux_ind;
+      intros.
+    (* Base case, pgroup = []. *)
+    - exists (fired_pre_group, decreasingm); auto.
+    (* Case sitpn_is_firable = true. *)
+    - apply IHo.
+      + intros.
+        apply (in_cons t) in H3.
+        apply (H a) in H3; auto.
+      + intros.
+        apply (in_cons t) in H3.
+        apply (H0 a) in H3; auto.
+      + intros.
+        apply (in_cons t) in H3.
+        apply (H1 a) in H3; auto.
+      + intros.
+        apply (H2 t0 neighbours) in H3.
+        apply update_marking_pre_same_struct in e3.
+        unfold MarkingHaveSameStruct in e3.
+        rewrite <- e3; auto.
+    (* Case update_marking_pre = None,
+     * impossible regarding hypothesis.
+     *)
+    - assert (H' := in_eq t tail).
+      apply get_neighbours_in in e0.
+      generalize ((H2 t neighbours_t) e0).
+      intros.
+      elim H3; intros.
+      apply (update_marking_pre_no_error t pre (pre_pl neighbours_t) decreasingm) in H4.
+      elim H4; intros.
+      rewrite H6 in e3; inversion e3.
+    (* Case sitpn_is_firable = false. *)
+    - apply IHo; intros.
+      + apply (H a (in_cons t a tail H3)).
+      + apply (H0 a (in_cons t a tail H3)).
+      + apply (H1 a (in_cons t a tail H3)).
+      + apply (H2 t0 neighbours H3).
+    (* Case sitpn_is_firable = None, 
+     * impossible regarding the hypotheses. 
+     *)
+    - assert (H' := in_eq t tail).
+      apply get_neighbours_in in e0.
+      generalize (H t H'); intros.
+      generalize (H0 t H'); intros.
+      generalize (H1 t H'); intros.
+      generalize ((H2 t neighbours_t) e0); intros.
+      elim H6; intros; clear H6.
+      elim H8; intros; clear H8.
+      (* Applies sitpn_is_firable_no_error to create a contradiction. *)
+      generalize (sitpn_is_firable_no_error
+                    t neighbours_t pre test inhib
+                    steadym decreasingm chronos lconditions time_value
+                    H3 H4 H7 H9 H6); intro.
+      elim H8; intros.
+      rewrite H10 in e1.
+      inversion e1.
+    (* Case get_neighbours = None, 
+     * impossible regarding the hypotheses.
+     *)
+    - assert (H' := in_eq t tail).
+      apply H1 in H'.
+      apply get_neighbours_no_error in H'.
+      elim H'; intros.
+      rewrite H3 in e0; inversion e0.
+  Qed.
+  
   (** ----------------------------------------------------------------------- *)
   (** ----------------------------------------------------------------------- *)
   
@@ -432,13 +618,13 @@ Section FireSitpn.
 
   Theorem sitpn_fire_pre_compl :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (pgroup : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+      (pre test inhib : weight_type) 
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (pgroup : list trans_type)
+      (option_final_couple : option (list trans_type * marking_type)),
       SitpnFirePre lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
                    pgroup option_final_couple ->
       sitpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
@@ -448,13 +634,73 @@ Section FireSitpn.
     unfold sitpn_fire_pre; apply sitpn_fire_pre_aux_compl in H0; auto. 
   Qed.
 
+  (** Proves that [sitpn_fire_pre] preserves
+      the structure of the marking [decreasingm]
+      passed as argument.
+   
+      [sitpn_fire_pre] returns a marking [decreasedm]
+      which has the same structure as [decreasingm]. *)
+  
+  Lemma sitpn_fire_pre_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type) 
+      (steadym : marking_type) 
+      (decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (pgroup : list trans_type)
+      (pre_fired_transitions : list trans_type)
+      (decreasedm : marking_type),
+      sitpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos lconditions time_value pgroup =
+      Some (pre_fired_transitions, decreasedm) ->
+      MarkingHaveSameStruct decreasingm decreasedm.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos lconditions time_value pgroup; intros.
+    unfold sitpn_fire_pre in H.
+    apply sitpn_fire_pre_aux_same_struct in H; auto.
+  Qed.
+
+  (** [sitpn_fire_pre] returns no error if : 
+      
+      - all transitions in [pgroup] are referenced in [lconditions]
+      - all transitions in [pgroup] are referenced in [chronos]
+      - all transitions in [pgroup] are referenced in [lneighbours]
+      - all neighbour places referenced in [lneighbours] are
+        referenced in the markings [steadym] and [decreasingm]. *)
+  
+  Lemma sitpn_fire_pre_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type) 
+      (steadym : marking_type) 
+      (decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (pgroup : list trans_type),
+      incl pgroup (fst (split lconditions)) ->
+      incl pgroup (fst (split chronos)) ->
+      incl pgroup (fst (split lneighbours)) ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
+           incl neighbours.(inhib_pl) (fst (split steadym)) /\
+           incl neighbours.(test_pl) (fst (split steadym)))) ->
+      exists v : (list trans_type * marking_type),
+        sitpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos lconditions time_value pgroup = Some v.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos pgroup; intros.
+    unfold spn_fire_pre.
+    apply sitpn_fire_pre_aux_no_error; [auto | auto | auto | auto].
+  Qed.
+  
   (** ----------------------------------------------------------------------- *)
   (** ----------------------------------------------------------------------- *)
   
   (** Returns the list of pre-fired transitions and a marking.
    
       Applies [sitpn_fire_pre] over all priority group of transitions. 
-      Begins with initial marking; End with half fired marking.  *)
+      Begins with initial marking; ends with half-fired marking.  *)
   
   Fixpoint sitpn_map_fire_pre_aux
            (lneighbours : list (trans_type * neighbours_type))
@@ -565,14 +811,14 @@ Section FireSitpn.
   
   Theorem sitpn_map_fire_pre_aux_compl :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (priority_groups : list (list trans_type))
-           (pre_fired_transitions : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+      (pre test inhib : weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (priority_groups : list (list trans_type))
+      (pre_fired_transitions : list trans_type)
+      (option_final_couple : option (list trans_type * marking_type)),
       SitpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
                          pre_fired_transitions priority_groups option_final_couple ->
       sitpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
@@ -587,11 +833,124 @@ Section FireSitpn.
     - simpl; apply sitpn_fire_pre_compl in H0; rewrite H0; auto.
   Qed.
 
+  (** Proves that [sitpn_map_fire_pre_aux] preserves
+      the structure of the marking [decreasingm]
+      passed as argument. *)
+  
+  Lemma sitpn_map_fire_pre_aux_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (pre_fired_transitions : list trans_type)
+      (priority_groups : list (list trans_type))
+      (final_pre_fired : list trans_type)
+      (intermediatem : marking_type),
+      sitpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
+                             lconditions time_value
+                             pre_fired_transitions priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      MarkingHaveSameStruct decreasingm intermediatem.
+  Proof.
+    intros lneighbours pre test inhib steadym decreasingm chronos lconditions
+           time_value pre_fired_transitions priority_groups.
+    functional induction (sitpn_map_fire_pre_aux
+                            lneighbours pre test inhib steadym decreasingm
+                            chronos lconditions time_value pre_fired_transitions priority_groups)
+               using sitpn_map_fire_pre_aux_ind;
+      intros.
+    - injection H; intros.
+      rewrite H0.
+      unfold MarkingHaveSameStruct; auto.
+    - apply IHo in H.
+      apply sitpn_fire_pre_same_struct in e0.
+      unfold MarkingHaveSameStruct.
+      unfold MarkingHaveSameStruct in e0.
+      unfold MarkingHaveSameStruct in H.
+      rewrite <- H; rewrite e0; auto.
+    - inversion H.
+  Qed.
+
+  (** [sitpn_map_fire_pre_aux] returns no error if :  
+      
+      - for all pgroups of transitions in [lconditions],
+        transitions are referenced in [chronos]
+      - for all pgroups of transitions in [priority_groups],
+        transitions are referenced in [chronos]
+      - for all pgroups of transitions in [priority_groups],
+        transitions are referenced in [lneighbours]
+      - neighbours places (of these transitions) are referenced 
+        in markings [steadym] and [decreasingm]. *)
+  
+  Lemma sitpn_map_fire_pre_aux_no_error :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (priority_groups : list (list trans_type))
+      (pre_fired_transitions : list trans_type),
+      PriorityGroupsAreRefInLconditions priority_groups lconditions ->
+      PriorityGroupsAreRefInChronos priority_groups chronos ->
+      PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
+      (forall (t : trans_type) (neighbours : neighbours_type),
+          In (t, neighbours) lneighbours ->
+          (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
+           incl neighbours.(inhib_pl) (fst (split steadym)) /\
+           incl neighbours.(test_pl) (fst (split steadym)))) ->
+      exists v : (list trans_type * marking_type),
+        sitpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos lconditions
+                               time_value pre_fired_transitions priority_groups = Some v.
+  Proof.
+    unfold PriorityGroupsAreRefInLconditions.
+    unfold PriorityGroupsAreRefInChronos.
+    unfold PriorityGroupsAreRefInLneighbours.
+    unfold incl.
+    intros lneighbours pre test inhib steadym decreasingm chronos lconditions 
+           time_value priority_groups pre_fired_transitions.
+    functional induction (sitpn_map_fire_pre_aux
+                            lneighbours pre test inhib steadym decreasingm chronos lconditions
+                            time_value pre_fired_transitions priority_groups)
+               using sitpn_map_fire_pre_aux_ind;
+      intros.
+    (* Base case, priority_groups = []. *)
+    - exists (pre_fired_transitions, decreasingm); auto.
+    (* Case sitpn_fire_pre = Some v *)
+    - apply IHo.
+      + intros.
+        apply (in_cons pgroup) in H3.
+        generalize (H pgroup0 H3); intro; auto.
+      + intros.
+        apply (in_cons pgroup) in H3.
+        generalize (H0 pgroup0 H3); intro; auto.
+      + intros.
+        apply (in_cons pgroup) in H3.
+        generalize (H1 pgroup0 H3); intro; auto.
+      + apply sitpn_fire_pre_same_struct in e0.
+        unfold MarkingHaveSameStruct in e0.
+        rewrite <- e0.
+        auto.
+    (* Case sitpn_fire_pre = None, impossible regarding the hypotheses. *)
+    - assert (H' := in_eq pgroup pgroups_tail).      
+      generalize (H pgroup H'); intro.
+      generalize (H0 pgroup H'); intro.
+      generalize (H1 pgroup H'); intro.
+      generalize (sitpn_fire_pre_no_error lneighbours pre test inhib
+                                          steadym decreasingm
+                                          chronos lconditions time_value pgroup
+                                          H3 H4 H5 H2).
+      intro; elim H6; intros; rewrite H7 in e0; inversion e0.
+  Qed.
+  
   (** ------------------------------------------------------------------------ *)
   (** ------------------------------------------------------------------------ *)
   
-  (** Wrapper around sitpn_map_fire_pre_aux function. 
-      Updates the marking by consuming the tokens in pre-condition places. *)
+  (** Wrapper around [sitpn_map_fire_pre_aux] function. 
+
+      Updates the marking [m] by consuming the tokens in pre-condition places. *)
   
   Definition sitpn_map_fire_pre
              (lneighbours : list (trans_type * neighbours_type))
@@ -643,16 +1002,17 @@ Section FireSitpn.
     auto.
   Qed.
 
-  (*** Completeness proof : sitpn_map_fire_pre ***)
+  (** Completeness proof : sitpn_map_fire_pre *)
+  
   Theorem sitpn_map_fire_pre_compl :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (priority_groups : list (list trans_type))
-           (option_final_couple : option (list trans_type * marking_type)),
+      (pre test inhib : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (priority_groups : list (list trans_type))
+      (option_final_couple : option (list trans_type * marking_type)),
       SitpnMapFirePre lneighbours pre test inhib m chronos lconditions time_value priority_groups
                       option_final_couple ->
       sitpn_map_fire_pre lneighbours pre test inhib m chronos lconditions time_value priority_groups = option_final_couple.
@@ -661,16 +1021,39 @@ Section FireSitpn.
     unfold sitpn_map_fire_pre.
     apply sitpn_map_fire_pre_aux_compl; auto.
   Qed.
+
+  (** Proves that [sitpn_map_fire_pre] preserves the structure of the marking [m]
+      passed in parameter. *)
+  
+  Lemma sitpn_map_fire_pre_same_struct :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (priority_groups : list (list trans_type))
+      (final_pre_fired : list trans_type)
+      (intermediatem : marking_type),
+      sitpn_map_fire_pre lneighbours pre test inhib m chronos lconditions time_value priority_groups =
+      Some (final_pre_fired, intermediatem) ->
+      MarkingHaveSameStruct m intermediatem.
+  Proof.
+    intros lneighbours pre test inhib m chronos lconditions time_value priority_groups.
+    functional induction (sitpn_map_fire_pre lneighbours pre test inhib m chronos lconditions time_value priority_groups)
+               using sitpn_map_fire_pre_ind; intros.
+    apply sitpn_map_fire_pre_aux_same_struct in H; auto.
+  Qed.
   
   (** Returns a tuplet (fired transitions (at this cycle), 
                        final marking, 
                        final chronos).
                
-      Raises an error (None value) if sitpn_map_fire_pre, reset_all_chronos,
-      list_disabled, or fire_post return None.            
+      Raises an error (None value) if [sitpn_map_fire_pre], [reset_all_chronos],
+      [list_disabled], or [fire_post] return None.            
    
-      This function has the same structure has stpn_fire, except
-      that sitpn_fire adds some instructions to reset chronos
+      This function has the same structure has [stpn_fire], except
+      that [sitpn_fire] adds some instructions to reset chronos
       between the pre-firing and the post-firing phases. *)
   
   Definition sitpn_fire  
@@ -716,6 +1099,7 @@ Section FireSitpn.
   Functional Scheme sitpn_fire_ind := Induction for sitpn_fire Sort Prop.
   
   (** Formal specification : sitpn_fire *)
+
   Inductive SitpnFire
             (lneighbours : list (trans_type * neighbours_type))
             (pre test inhib post : weight_type)
@@ -787,18 +1171,19 @@ Section FireSitpn.
                   (Some (pre_fired_transitions, finalm, final_chronos)).
 
   (** Correctness proof : sitpn_fire *)
+
   Theorem sitpn_fire_correct :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib post : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (transs : list trans_type)
-           (priority_groups : list (list trans_type))
-           (opt_final_tuplet : option ((list trans_type) *
-                                       marking_type *
-                                       (list (trans_type * option chrono_type)))),
+      (pre test inhib post : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (transs : list trans_type)
+      (priority_groups : list (list trans_type))
+      (opt_final_tuplet : option ((list trans_type) *
+                                  marking_type *
+                                  (list (trans_type * option chrono_type)))),
       sitpn_fire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups = opt_final_tuplet ->
       SitpnFire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups opt_final_tuplet.
   Proof.
@@ -807,8 +1192,8 @@ Section FireSitpn.
                using sitpn_fire_ind; intros.
     (* General case, all went well. *)
     - rewrite <- H; apply SitpnFire_cons with (intermediatem := intermediatem)
-                                              (updated_chronos := updated_chronos)
-                                              (disabled_transs := disabled_transs).
+                                             (updated_chronos := updated_chronos)
+                                             (disabled_transs := disabled_transs).
       + apply sitpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
       + apply list_disabled_correct in e2; auto.
@@ -836,14 +1221,14 @@ Section FireSitpn.
       + apply reset_all_chronos_correct in e3; auto.
     (* Error case, list_disabled returns None. *)
     - rewrite <- H; apply SitpnFire_list_disabled_err with (pre_fired_transitions := pre_fired_transitions)
-                                                           (intermediatem := intermediatem)
-                                                           (updated_chronos := updated_chronos).
+                                                          (intermediatem := intermediatem)
+                                                          (updated_chronos := updated_chronos).
       + apply sitpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
       + apply list_disabled_correct in e2; auto.
     (* Error case, 1st reset_all_chronos returns None. *)
     - rewrite <- H; apply SitpnFire_reset_chronos_err1 with (pre_fired_transitions := pre_fired_transitions)
-                                                            (intermediatem := intermediatem).
+                                                           (intermediatem := intermediatem).
       + apply sitpn_map_fire_pre_correct in e; auto.
       + apply reset_all_chronos_correct in e1; auto.
     (* Error case, sitpn_map_fire_pre returns None. *)
@@ -852,18 +1237,19 @@ Section FireSitpn.
   Qed.
 
   (** Completeness proof : sitpn_fire *)
+
   Theorem sitpn_fire_compl :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib post : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (transs : list trans_type)
-           (priority_groups : list (list trans_type))
-           (opt_final_tuplet : option ((list trans_type) *
-                                       marking_type *
-                                       (list (trans_type * option chrono_type)))),
+      (pre test inhib post : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (transs : list trans_type)
+      (priority_groups : list (list trans_type))
+      (opt_final_tuplet : option ((list trans_type) *
+                                  marking_type *
+                                  (list (trans_type * option chrono_type)))),
       SitpnFire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups opt_final_tuplet ->
       sitpn_fire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups = opt_final_tuplet.
   Proof.
@@ -902,6 +1288,128 @@ Section FireSitpn.
       apply reset_all_chronos_complete in H3; rewrite H3.
       apply fire_post_compl in H4; rewrite H4; auto.      
   Qed.
+
+  (** Proves that [sitpn_fire] preserves the structure of the marking [m]
+      passed as argument. *)
+  
+  Lemma sitpn_fire_same_struct_marking :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib post : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (transs : list trans_type)
+      (priority_groups : list (list trans_type))
+      (fired_transitions : list (trans_type))
+      (newm : marking_type)
+      (new_chronos : list (trans_type * option chrono_type)),
+      sitpn_fire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups =
+      Some (fired_transitions, newm, new_chronos) ->
+      MarkingHaveSameStruct m newm.
+  Proof.
+    intros lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups.
+    functional induction (sitpn_fire lneighbours pre test inhib post m chronos lconditions
+                                     time_value transs priority_groups)
+               using sitpn_fire_ind;
+      intros.
+    injection H; intros; rewrite <- H1; auto.
+    generalize (sitpn_map_fire_pre_same_struct
+                  lneighbours pre test inhib m chronos lconditions time_value priority_groups
+                  pre_fired_transitions intermediatem e); intro.
+    - generalize (fire_post_same_struct
+                    lneighbours post intermediatem
+                    pre_fired_transitions finalm e4); intro.
+      unfold MarkingHaveSameStruct in H3; unfold MarkingHaveSameStruct in H4.
+      unfold MarkingHaveSameStruct.
+      transitivity (fst (split intermediatem)); [auto | auto].
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+  Qed.
+
+  (** Proves that sitpn_fire preserves the structure of the [chronos] list. *)
+  
+  Lemma sitpn_fire_same_struct_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib post : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (transs : list trans_type)
+      (priority_groups : list (list trans_type))
+      (fired_transitions : list (trans_type))
+      (newm : marking_type)
+      (new_chronos : list (trans_type * option chrono_type)),
+      sitpn_fire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups =
+      Some (fired_transitions, newm, new_chronos) ->
+      ChronosHaveSameStruct chronos new_chronos.
+  Proof.
+    intros lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups.
+    functional induction (sitpn_fire lneighbours pre test inhib post m chronos
+                                     lconditions time_value transs priority_groups)
+               using sitpn_fire_ind; intros.
+    - injection H; intros; rewrite <- H0; auto.
+      generalize (reset_all_chronos_same_struct
+                    chronos pre_fired_transitions updated_chronos e1); intro.
+      generalize (reset_all_chronos_same_struct
+                    updated_chronos disabled_transs final_chronos e3); intro.
+      unfold ChronosHaveSameStruct in H3; unfold ChronosHaveSameStruct in H4.
+      unfold ChronosHaveSameStruct.
+      transitivity (fst (split updated_chronos)); [auto | auto].
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+    - inversion H.
+  Qed.
+  
+  (** If all chrono in [chronos] are well-formed, then [sitpn_fire] 
+      returns a list [new_chronos] of well-formed chronos. *)
+  
+  Lemma sitpn_fire_well_formed_chronos :
+    forall (lneighbours : list (trans_type * neighbours_type))
+      (pre test inhib post : weight_type)
+      (m : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (transs : list trans_type)
+      (priority_groups : list (list trans_type))
+      (fired_transitions : list (trans_type))
+      (newm : marking_type)
+      (new_chronos : list (trans_type * option chrono_type)),
+      (forall chrono : chrono_type,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      sitpn_fire lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups =
+      Some (fired_transitions, newm, new_chronos) ->
+      (forall chrono' : chrono_type,
+          In (Some chrono') (snd (split new_chronos)) -> IsWellFormedChrono chrono').
+  Proof.
+    intros lneighbours pre test inhib post m chronos lconditions time_value transs priority_groups.
+    functional induction (sitpn_fire lneighbours pre test inhib post m chronos lconditions
+                                     time_value transs priority_groups)
+               using sitpn_fire_ind; intros.
+    (* GENERAL CASE (all went well) *)
+    (* We need to prove that reset_all_chronos return well-formed chronos. *)
+    - generalize (reset_all_chronos_well_formed_chronos chronos pre_fired_transitions updated_chronos H e1); intro.
+      generalize (reset_all_chronos_well_formed_chronos updated_chronos disabled_transs final_chronos H2 e3); intro.
+      injection H0; intros.
+      rewrite <- H4 in H1; apply (H3 chrono' H1).
+    (* CASE fire_post returns None, impossible. *)
+    - inversion H0.
+    (* CASE reset_all_chronos returns None, impossible. *)
+    - inversion H0.
+    (* CASE list_disabled returns None, impossible. *)
+    - inversion H0.
+    (* CASE reset_all_chronos returns None, impossible. *)
+    - inversion H0.
+    (* CASE sitpn_map_fire_pre returns None, impossible. *)
+    - inversion H0.      
+  Qed.
   
 End FireSitpn.
 
@@ -911,8 +1419,8 @@ End FireSitpn.
 
 Section AnimateSitpn.
   
-  (** Returns the resulting Petri net after that all the sensitized
-      transitions - with right chrono and cond value - in sitpn have been fired.
+  (** Returns the resulting Petri net after the firing of all the sensitized
+      transitions - with right chrono and cond value - in sitpn.
       
       Also returns the list of fired transitions. 
       
@@ -952,19 +1460,20 @@ Section AnimateSitpn.
 
   Functional Scheme sitpn_cycle_ind := Induction for sitpn_cycle Sort Prop.
   
-  (* Formal specification : sitpn_cycle *)
+  (** Formal specification : sitpn_cycle *)
+  
   Inductive SitpnCycle :
     SITPN -> nat -> option ((list trans_type) * SITPN) -> Prop :=
   | SitpnCycle_list_sensitized_err :
       forall (lconditions : list (trans_type * option condition_type))
-             (chronos : list (trans_type * option chrono_type))
-             (places : list place_type)
-             (transs : list trans_type)
-             (pre post test inhib : weight_type)
-             (marking : marking_type)
-             (priority_groups : list (list trans_type))
-             (lneighbours : list (trans_type * neighbours_type))
-             (time_value : nat),
+        (chronos : list (trans_type * option chrono_type))
+        (places : list place_type)
+        (transs : list trans_type)
+        (pre post test inhib : weight_type)
+        (marking : marking_type)
+        (priority_groups : list (list trans_type))
+        (lneighbours : list (trans_type * neighbours_type))
+        (time_value : nat),
         ListSensitized lneighbours pre test inhib marking transs None ->
         SitpnCycle
           (mk_SITPN
@@ -1042,10 +1551,11 @@ Section AnimateSitpn.
                     (mk_STPN next_chronos (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours))))).
 
   (** Correctness proof : sitpn_cycle *)
+
   Theorem sitpn_cycle_correct :
     forall (sitpn : SITPN)
-           (time_value : nat)
-           (opt_final_couple : option ((list trans_type) * SITPN)),
+      (time_value : nat)
+      (opt_final_couple : option ((list trans_type) * SITPN)),
       sitpn_cycle sitpn time_value = opt_final_couple ->
       SitpnCycle sitpn time_value opt_final_couple.
   Proof.
@@ -1053,53 +1563,53 @@ Section AnimateSitpn.
     functional induction (sitpn_cycle sitpn time_value) using sitpn_cycle_ind; intros.
     (* General case, all went well. *)
     - rewrite <- H; apply SitpnCycle_cons with (chronos := chronos)
-                                               (marking := marking)
-                                               (sensitized_transs := sensitized_transs)
-                                               (updated_chronos := updated_chronos).
+                                              (marking := marking)
+                                              (sensitized_transs := sensitized_transs)
+                                              (updated_chronos := updated_chronos).
       + apply list_sensitized_correct; auto.
       + apply increment_all_chronos_correct; auto.
       + apply sitpn_fire_correct; auto.
     (* Error case, sitpn_fire returns None. *)
     - rewrite <- H; apply SitpnCycle_fire_err with (places := places)
-                                                   (transs := transs)
-                                                   (pre := pre)
-                                                   (post := post)
-                                                   (test := test)
-                                                   (inhib := inhib)
-                                                   (priority_groups := priority_groups)
-                                                   (lneighbours := lneighbours)
-                                                   (chronos := chronos)
-                                                   (marking := marking)
-                                                   (sensitized_transs := sensitized_transs)
-                                                   (updated_chronos := updated_chronos).
+                                                  (transs := transs)
+                                                  (pre := pre)
+                                                  (post := post)
+                                                  (test := test)
+                                                  (inhib := inhib)
+                                                  (priority_groups := priority_groups)
+                                                  (lneighbours := lneighbours)
+                                                  (chronos := chronos)
+                                                  (marking := marking)
+                                                  (sensitized_transs := sensitized_transs)
+                                                  (updated_chronos := updated_chronos).
       + apply list_sensitized_correct; auto.
       + apply increment_all_chronos_correct; auto.
       + apply sitpn_fire_correct; auto.
     (* Error case, increment_all_chronos returns None. *)
     - rewrite <- H; apply SitpnCycle_increment_chronos_err with (places := places)
-                                                                (transs := transs)
-                                                                (pre := pre)
-                                                                (post := post)
-                                                                (test := test)
-                                                                (inhib := inhib)
-                                                                (priority_groups := priority_groups)
-                                                                (lneighbours := lneighbours)
-                                                                (chronos := chronos)
-                                                                (marking := marking)
-                                                                (sensitized_transs := sensitized_transs).
+                                                               (transs := transs)
+                                                               (pre := pre)
+                                                               (post := post)
+                                                               (test := test)
+                                                               (inhib := inhib)
+                                                               (priority_groups := priority_groups)
+                                                               (lneighbours := lneighbours)
+                                                               (chronos := chronos)
+                                                               (marking := marking)
+                                                               (sensitized_transs := sensitized_transs).
       + apply list_sensitized_correct; auto.
       + apply increment_all_chronos_correct; auto.
     (* Error case, list_sensitized returns None. *)
     - rewrite <- H; apply SitpnCycle_list_sensitized_err with (places := places)
-                                                              (transs := transs)
-                                                              (pre := pre)
-                                                              (post := post)
-                                                              (test := test)
-                                                              (inhib := inhib)
-                                                              (priority_groups := priority_groups)
-                                                              (lneighbours := lneighbours)
-                                                              (chronos := chronos)
-                                                              (marking := marking).
+                                                             (transs := transs)
+                                                             (pre := pre)
+                                                             (post := post)
+                                                             (test := test)
+                                                             (inhib := inhib)
+                                                             (priority_groups := priority_groups)
+                                                             (lneighbours := lneighbours)
+                                                             (chronos := chronos)
+                                                             (marking := marking).
       + apply list_sensitized_correct; auto.
   Qed.
 
@@ -1107,8 +1617,8 @@ Section AnimateSitpn.
   
   Theorem sitpn_cycle_compl :
     forall (sitpn : SITPN)
-           (time_value : nat)
-           (opt_final_couple : option ((list trans_type) * SITPN)),
+      (time_value : nat)
+      (opt_final_couple : option ((list trans_type) * SITPN)),
       SitpnCycle sitpn time_value opt_final_couple ->
       sitpn_cycle sitpn time_value = opt_final_couple.
   Proof.
@@ -1128,16 +1638,95 @@ Section AnimateSitpn.
           apply sitpn_fire_compl in H2; rewrite H2; auto.
   Qed.
 
+  (** For all [sitpn] verifying the property [IsWellStructuredSitpn],
+      [sitpn_cycle] returns a new SITPN [next_sitpn] verifying the relation
+      [IsWellStructuredSitpn]. *)
+  
+  Theorem sitpn_cycle_well_structured :
+    forall (sitpn : SITPN)
+      (time_value : nat)
+      (fired_transitions : list trans_type)
+      (next_sitpn : SITPN),
+      IsWellStructuredSitpn sitpn ->
+      sitpn_cycle sitpn time_value = Some (fired_transitions, next_sitpn) ->
+      IsWellStructuredSitpn next_sitpn.
+  Proof.
+    do 2 intro.
+    functional induction (sitpn_cycle sitpn time_value) using sitpn_cycle_ind; intros.
+    (* GENERAL CASE. *)
+    - unfold IsWellStructuredSitpn; unfold IsWellStructuredStpn; unfold IsWellStructuredSpn.
+      unfold IsWellStructuredSitpn in H; unfold IsWellStructuredStpn in H; unfold IsWellStructuredSpn in H.
+      injection H0; clear H0; intros.
+      unfold NoUnmarkedPlace in H.
+      unfold NoUnknownTransInChronos in H.
+      (*  
+       * We need to ensure that sitpn_fire preserves the structure
+       * of marking and chronos, and preserves the fact that chronos
+       * are well-formed.
+       *)
+      
+      (* sitpn_fire returns well-formed chronos. *)
+      (* Hypothesis H4 in needed to apply sitpn_fire_well_formed_chronos. *)
+      elim H; intros; elim H3; intros; unfold AreWellFormedChronos in H4; simpl in H4.
+      generalize (increment_all_chronos_well_formed_chronos
+                    chronos sensitized_transs updated_chronos H4 e3); intro.
+      generalize (sitpn_fire_well_formed_chronos
+                    lneighbours pre test inhib post
+                    marking updated_chronos lconditions time_value transs priority_groups
+                    fired_transitions nextm next_chronos H6 e4); intro.
+      (* sitpn_fire preserves marking structure. *)
+      generalize (sitpn_fire_same_struct_marking
+                    lneighbours pre test inhib post
+                    marking updated_chronos lconditions time_value transs priority_groups
+                    fired_transitions nextm next_chronos e4); intro.
+      (* increment_all_chronos and sitpn_fire preserves chronos structure *)
+      generalize (increment_all_chronos_same_struct
+                    chronos sensitized_transs updated_chronos e3); intro.
+      generalize (sitpn_fire_same_struct_chronos
+                    lneighbours pre test inhib post
+                    marking updated_chronos lconditions time_value
+                    transs priority_groups
+                    fired_transitions nextm next_chronos e4); intro.      
+      (*  
+       * Then, we need to rewrite chronos with updated_chronos, and
+       * marking with nextm.
+       *)
+      unfold MarkingHaveSameStruct in H8;
+        unfold ChronosHaveSameStruct in H9;
+        unfold ChronosHaveSameStruct in H10.
+      simpl in H.
+      rewrite H8 in H.
+      rewrite H9 in H.
+      rewrite H10 in H.
+      unfold NoUnknownTransInChronos;
+        unfold NoUnmarkedPlace;
+        unfold AreWellFormedChronos.
+      (* Conjunction of H7 and H14 to obtain a hypothesis close to the goal. *)
+      elim H; intros.
+      elim H12; intros.
+      generalize (conj H11 (conj H7 H14)); intro.
+      (* Rewrite and symplify goal to match last hypothesis. *)
+      rewrite <- H0; simpl; auto.
+    (* CASE sitpn_fire returns None. *)
+    - inversion H0.
+    (* CASE increment_all_chronos returns None. *)
+    - inversion H0.
+    (* CASE list_sensitized returns None. *)
+    - inversion H0.
+  Qed.
+
+  
+  
   (** ------------------------------------------------------------------- *)
   (** ------------------------------------------------------------------- *)
   
-  (*******************************************)
-  (******** ANIMATING DURING N CYCLES ********)
-  (*******************************************)
+  (* ======================================== *)
+  (* ====== ANIMATING DURING N CYCLES ========*)
+  (* ======================================== *)  
   
-  (** Returns the list of (transitions_fired(i), SITPN(i))
+  (** Returns the list of (fired_transitions(i), SITPN(i))
       for each cycle i, from 0 to n, representing the evolution
-      of the Petri net sitpn. *)
+      of the Petri net [sitpn]. *)
   
   Fixpoint sitpn_animate_aux 
            (sitpn : SITPN)
@@ -1212,7 +1801,7 @@ Section AnimateSitpn.
       apply sitpn_cycle_correct in e0; auto.
   Qed.
 
-  (*** Completeness proof : sitpn_animate_aux ***)
+  (** Completeness proof : sitpn_animate_aux *)
   Theorem sitpn_animate_aux_compl :
     forall (sitpn : SITPN)
            (n : nat)
@@ -1233,4 +1822,87 @@ Section AnimateSitpn.
       rewrite H0; auto.
   Qed.
 
+  (** For all sitpn verifying the property IsWellStructuredSitpn, and for all number n 
+      of evolution cycles, sitpn_animate_aux returns no error. *)
+  Theorem sitpn_animate_aux_no_error :
+    forall (sitpn : SITPN)
+      (n : nat)
+      (sitpn_evolution : list (list trans_type * SITPN)),
+      IsWellStructuredSitpn sitpn ->
+      exists (v : list (list trans_type * SITPN)),
+        sitpn_animate_aux sitpn n sitpn_evolution = Some v.
+  Proof.
+    do 3 intro.
+    functional induction (sitpn_animate_aux sitpn n sitpn_evolution)
+               using sitpn_animate_aux_ind;
+      intros.
+    (* Base case, n = 0. *)
+    - exists sitpn_evolution; auto.
+    (* General case. *)
+    - apply IHo.
+      apply (sitpn_cycle_well_structured sitpn (S n') fired_trans_at_n sitpn_at_n H e0).
+    (* Error case, impossible regarding the hypotheses. *)
+    - generalize (sitpn_cycle_no_error sitpn H); intro.
+      elim H0; intros.
+      rewrite H1 in e0; inversion e0.
+  Qed.
+  
+  (** ------------------------------------------------------------------------------- *)
+  (** ------------------------------------------------------------------------------- *)
+
+  (** Wrapper function around sitpn_animate_aux. Here, sitpn_evolution is initialized to nil. *)
+  
+  Definition sitpn_animate (sitpn : SITPN) (n : nat) :
+    option (list (list trans_type * SITPN)) := sitpn_animate_aux sitpn n [].
+
+  (** Formal specification : sitpn_animate *)
+  
+  Inductive SitpnAnimate (sitpn : SITPN) (n : nat) : option (list (list trans_type * SITPN)) -> Prop :=
+  | SitpnAnimate_cons :
+      forall (opt_sitpn_evolution : option (list (list trans_type * SITPN))),
+        SitpnAnimateAux sitpn n [] opt_sitpn_evolution ->
+        SitpnAnimate sitpn n opt_sitpn_evolution.
+
+  (** Correctness proof : sitpn_animate *)
+  
+  Theorem sitpn_animate_correct :
+    forall (sitpn : SITPN) (n : nat) (opt_sitpn_evolution : option (list (list trans_type * SITPN))),
+      sitpn_animate sitpn n = opt_sitpn_evolution ->
+      SitpnAnimate sitpn n opt_sitpn_evolution.
+  Proof.
+    unfold sitpn_animate.
+    intros.
+    apply SitpnAnimate_cons; apply sitpn_animate_aux_correct in H; auto.
+  Qed.
+
+  (** Completeness proof : sitpn_animate *)
+  
+  Theorem sitpn_animate_compl :
+    forall (sitpn : SITPN) (n : nat) (opt_sitpn_evolution : option (list (list trans_type * SITPN))),
+      SitpnAnimate sitpn n opt_sitpn_evolution ->
+      sitpn_animate sitpn n = opt_sitpn_evolution.
+  Proof.
+    unfold sitpn_animate.
+    intros.
+    elim H; apply sitpn_animate_aux_compl; auto.
+  Qed.
+  
+  (** For all [SITPN] verifying the property [IsWellStructuredSitpn],
+      and for all number [n] of evolution cycles, [sitpn_animate] returns no error. *)
+  
+  Theorem sitpn_animate_no_error :
+    forall (sitpn : SITPN)
+           (n : nat),
+      IsWellStructuredSitpn sitpn ->
+      exists (v : list ((list trans_type) * SITPN)),
+        sitpn_animate sitpn n = Some v.
+  Proof.
+    unfold sitpn_animate.
+    intros.
+    generalize (sitpn_animate_aux_no_error sitpn n [] H); intro.
+    elim H0; intros.
+    rewrite H1.
+    exists x; auto.
+  Qed.
+  
 End AnimateSitpn.

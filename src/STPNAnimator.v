@@ -1393,8 +1393,8 @@ Section FireStpn.
       the structure of the marking decreasingm
       passed as argument.
    
-     stpn_fire_pre returns a marking decreasedm
-     which has the same structure as decreasingm. *)
+      stpn_fire_pre returns a marking decreasedm
+      which has the same structure as decreasingm. *)
   
   Lemma stpn_fire_pre_aux_same_struct :
     forall (lneighbours : list (trans_type * neighbours_type))
@@ -1983,10 +1983,10 @@ Section FireStpn.
     - simpl; apply stpn_fire_pre_compl in H0; rewrite H0; auto.
   Qed.
 
-  (* Lemma : Proves that stpn_map_fire_pre_aux preserves
-   *         the structure of the marking decreasingm
-   *         passed as argument. 
-   *)
+  (** Proves that [stpn_map_fire_pre_aux] preserves
+      the structure of the marking [decreasingm]
+      passed as argument. *)
+
   Lemma stpn_map_fire_pre_aux_same_struct :
     forall (lneighbours : list (trans_type * neighbours_type))
            (pre test inhib : weight_type)
@@ -3233,7 +3233,8 @@ Section AnimateStpn.
       (* Hypothesis H2 in needed to apply stpn_fire_well_formed_chronos. *)
       elim H; intros; clear H3; unfold AreWellFormedChronos in H2; simpl in H2.
       generalize (increment_all_chronos_well_formed_chronos
-                    chronos sensitized_transs updated_chronos H2 e2); intro.                              generalize (stpn_fire_well_formed_chronos
+                    chronos sensitized_transs updated_chronos H2 e2); intro.
+      generalize (stpn_fire_well_formed_chronos
                     lneighbours pre test inhib post
                     marking updated_chronos transs priority_groups
                     fired_transitions nextm next_chronos H3 e3); intro.
@@ -3509,8 +3510,8 @@ Section AnimateStpn.
     elim H; apply stpn_animate_aux_compl; auto.
   Qed.
 
-  (** For all stpn verifying the property IsWellStructuredStpn,
-      and for all number n of evolution cycles, stpn_animate returns no error. *)
+  (** For all [STPN] verifying the property [IsWellStructuredStpn],
+      and for all number [n] of evolution cycles, [stpn_animate] returns no error. *)
   
   Theorem stpn_animate_no_error :
     forall (stpn : STPN)

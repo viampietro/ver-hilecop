@@ -1,9 +1,9 @@
 Require Export Hilecop.SPN.
 
-(*========================================================*)
-(*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS AND ===*)
-(*=== TEMPORAL PETRI NETS.                             ===*)
-(*========================================================*)
+(*** ================================================ ***)
+(*** TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS AND ***)
+(*** TEMPORAL PETRI NETS.                             ***)
+(*** ================================================ ***)
 
 (** * Types for generalized, extended, synchronous and temporal Petri nets *)
 
@@ -58,10 +58,6 @@ Structure STPN : Set :=
 
 (** ** Properties on [STPN] *)
 
-(*===============================================*)
-(*============ PROPERTIES ON STPN ===============*)
-(*===============================================*)
-
 (** *** Properties on [STPN.(chronos)] *)
 
 Definition ChronosHaveSameStruct (chronos chronos' : list (trans_type * option chrono_type)) :=
@@ -80,7 +76,7 @@ Definition AreWellFormedChronos (stpn : STPN) :=
   forall (chrono : chrono_type),
     In (Some chrono) (snd (split stpn.(chronos))) -> IsWellFormedChrono chrono.
 
-(** All transitions in [STPN.chronos] are in the list of transitions [STPN.(transs)]. *)
+(** All transitions in [STPN.(chronos)] are in the list of transitions [STPN.(transs)]. *)
 
 Definition NoUnknownTransInChronos (stpn : STPN) :=
   stpn.(transs) = fst (split stpn.(chronos)).

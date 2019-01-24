@@ -1,14 +1,11 @@
 Require Export Hilecop.STPN.
 
-(*==========================================================================================*)
-(*=== TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS, TEMPORAL AND INTERPRETED PETRI NETS. ===*)
-(*==========================================================================================*)
+(*** ============================================= ***)
+(*** TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS, ***)
+(*** TEMPORAL AND INTERPRETED PETRI NETS (SITPN).  ***)
+(*** ============================================= ***)
 
 (** * Interpreted Petri nets : associating conditions to transitions. *)
-
-(********************************************************)
-(* CONDITIONS ON TRANSITIONS FOR INTERPRETED PETRI NETS *)
-(********************************************************)
 
 (** Defines the type for condition. 
     Condition values (boolean values) are evolving through time. 
@@ -28,9 +25,34 @@ Structure SITPN : Set := mk_SITPN {
                              stpn :> STPN
                            }.
 
+(** ** Properties on SITPN *)
+
+(** All transitions in [sitpn.(transs)] are referenced in [sitpn.(lconditions)]. *)
+
+Definition NoUnknownTransInLconditions (sitpn : SITPN) : Prop :=
+  sitpn.(transs) = fst (split sitpn.(lconditions)).
+
+(** A [SITPN] is well-structured if its inner [STPN] is well-structured 
+    and no transitions are unknown in the field [lconditions]. *)
+
+Definition IsWellStructuredSitpn (sitpn : SITPN) : Prop :=
+  NoUnknownTransInLconditions sitpn /\ IsWellStructuredStpn sitpn.
+
+(** *** Helper properties fir SITPN *)
+
+Definition PriorityGroupsAreRefInLconditions 
+           (priority_groups : list (list trans_type))
+           (lconditions : list (trans_type * option condition_type)) :=
+  (forall pgroup : list trans_type,
+      In pgroup priority_groups ->
+      (forall t : trans_type, In t pgroup -> In t (fst (split lconditions)))).
+
+(** ** Conditions on transitions for interpreted Petri nets. *)
+
 (*===================================================*)
 (*=============== CONDITION SECTION  ================*)
 (*===================================================*)
+
 Section Condition.
 
   (** Returns an [option] to a [condition_type] associated to transition t
@@ -51,17 +73,16 @@ Section Condition.
   Functional Scheme get_condition_ind := Induction for get_condition Sort Prop.
 
   (** Formal specification for get_condition *)
-  Inductive GetCondition : list (trans_type * option condition_type) ->
-                   nat ->
-                   option (option condition_type) -> Prop :=
+
+  Inductive GetCondition :
+    list (trans_type * option condition_type) -> nat -> option (option condition_type) -> Prop :=
   | GetCondition_err :
       forall (t : trans_type), GetCondition [] t None
   | GetCondition_if :
       forall (lconditions : list (trans_type * option condition_type))
-             (opt_cond : option condition_type)
-             (t tr : trans_type),
-        t = tr ->
-        GetCondition ((tr, opt_cond) :: lconditions) t (Some opt_cond)
+        (opt_cond : option condition_type)
+        (t tr : trans_type),
+        t = tr -> GetCondition ((tr, opt_cond) :: lconditions) t (Some opt_cond)
   | GetCondition_else :
       forall (lconditions : list (trans_type * option condition_type))
              (t tr : trans_type)
@@ -71,7 +92,8 @@ Section Condition.
         GetCondition lconditions t opt_opt_cond ->
         GetCondition ((tr, opt_cond) :: lconditions) t opt_opt_cond.
                      
-  (*** Correctness proof : get_condition ***)
+  (** Correctness proof : get_condition *)
+  
   Theorem get_condition_correct :
     forall (lconditions : list (trans_type * option condition_type))
            (t : trans_type)
@@ -93,7 +115,8 @@ Section Condition.
       + rewrite <- H; apply IHo; reflexivity.
   Qed.
 
-  (*** Completeness proof : get_condition ***)
+  (** Completeness proof : get_condition *)
+  
   Theorem get_condition_compl :
     forall (lconditions : list (trans_type * option condition_type))
            (t : trans_type)
@@ -142,6 +165,7 @@ Section Condition.
     end.
 
   (** Formal specification : check_condition *)
+
   Inductive CheckCondition
             (opt_cond : option condition_type)
             (time_value : nat) : Prop :=
@@ -156,7 +180,8 @@ Section Condition.
   Functional Scheme check_condition_ind :=
     Induction for check_condition Sort Prop.
 
-  (*** Correctness proof : check_condition ***)
+  (** Correctness proof : check_condition *)
+  
   Theorem check_condition_correct :
     forall (opt_cond : option (condition_type))
            (time_value : nat),
@@ -168,7 +193,8 @@ Section Condition.
     - apply CheckCondition_none; reflexivity.
   Qed.
 
-  (*** Completeness proof : check_condition ***)
+  (** Completeness proof : check_condition *)
+  
   Theorem check_condition_complete :
     forall (opt_cond : option (condition_type))
            (time_value : nat),
