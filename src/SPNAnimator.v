@@ -2281,8 +2281,7 @@ Section AnimateSpn.
 
   (** For all well-structured [SPN] passed to [spn_animate], and for all [n], number 
       of evolution cycles, the length of the resulting [final_spn_evolution] list
-      is equal to the number of evolution cycles plus the length of the [spn_evolution] 
-      list passed in argument. *)
+      is equal to [n]. *)
   
   Theorem spn_animate_preserves_cycles :
     forall (spn : SPN)

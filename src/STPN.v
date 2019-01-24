@@ -5,48 +5,65 @@ Require Export Hilecop.SPN.
 (*=== TEMPORAL PETRI NETS.                             ===*)
 (*========================================================*)
 
-(* 
- * Defines the time interval structure associated with transitions.
- * Transitions are firable when min_t <= cnt <= max_t.
- * 
- *)
+(** * Types for generalized, extended, synchronous and temporal Petri nets *)
+
+(** Defines the inductive type to express positive or (positively) infinite values. 
+    Useful to type the upper bound of the time interval in [chrono_type]. *)
+
+Inductive positive_interval_bound : Set :=
+| pos_inf : positive_interval_bound
+| pos_val : nat_star -> positive_interval_bound.
+
+(** Defines the time interval structure associated with transitions.
+    Transitions are firable when min_t <= cnt <= max_t. *)
+
 Structure chrono_type : Set :=
   mk_chrono {
       cnt : nat;   (* possibly 0 /!\ *)
       min_t : nat_star;
-      max_t : nat_star;
-
-      (* true, if the upper bound of the time interval 
-       * is infinite.
-       *)
-      max_is_infinite : bool;
-
-      (* Tells that the lower bound of the time interval 
-       * is always less than or equal to the upper bound.
-       *)
-      min_t_le_max_t : (int min_t) <= (int max_t);
-      
+      max_t : positive_interval_bound;
     }.
 
-(*  
- * Defines the STPN structure. 
- * 
- * Basically, same structure as an spn with chronos associated to transitions.
- * (At most one chrono by transition, or None)
- *
- * STPN is declared as a coercion of SPN.
- *)
+(** ** Properties on [chrono_type] *)
+
+(** Predicate telling if a given [chrono] is well-formed, 
+    meaning that the lower bound of its time interval is always 
+    inferior or equal to the upper bound. *)
+
+Definition IsWellFormedChrono (chrono : chrono_type) : Prop :=
+  match chrono with
+  | mk_chrono cnt min_t max_t =>
+    (* Checks the max_t structure. *)
+    match max_t with
+    (* If max_t is infinite then chrono is well-formed. *)
+    | pos_inf => True
+    (* Else if max_t has a finite positive value, then 
+     * checks that it is superior or equal to min_t. *)
+    | pos_val max_val => (int min_t) <= (int max_val)
+    end
+  end.
+
+(** Defines the STPN structure. 
+ 
+    Basically, same structure as an [SPN] with chronos associated to transitions.
+    (At most one chrono by transition, or None)
+ 
+    [STPN] is declared as a coercion of [SPN]. *)
+
 Structure STPN : Set :=
   mk_STPN {
       chronos : list (trans_type * option chrono_type);
       spn :> SPN
     }.
 
+(** ** Properties on [STPN] *)
+
 (*===============================================*)
 (*============ PROPERTIES ON STPN ===============*)
 (*===============================================*)
 
-(* Properties on chronos. *)
+(** *** Properties on [STPN.(chronos)] *)
+
 Definition ChronosHaveSameStruct (chronos chronos' : list (trans_type * option chrono_type)) :=
   fst (split chronos) = fst (split chronos').
 
@@ -57,12 +74,21 @@ Definition PriorityGroupsAreRefInChronos
       In pgroup priority_groups ->
       (forall t : trans_type, In t pgroup -> In t (fst (split chronos)))).
 
+(** All chronos in [STPN.(chronos)] are well-formed. *)
+
+Definition AreWellFormedChronos (stpn : STPN) :=
+  forall (chrono : chrono_type),
+    In (Some chrono) (snd (split stpn.(chronos))) -> IsWellFormedChrono chrono.
+
+(** All transitions in [STPN.chronos] are in the list of transitions [STPN.(transs)]. *)
+
 Definition NoUnknownTransInChronos (stpn : STPN) :=
   stpn.(transs) = fst (split stpn.(chronos)).
 
-(* Properties on whole STPN. *)
+(** *** Properties on the whole [STPN]. *)
+
 Definition IsWellStructuredStpn (stpn : STPN) :=
-  NoUnknownTransInChronos stpn /\ IsWellStructuredSpn stpn.(spn).
+  AreWellFormedChronos stpn /\ NoUnknownTransInChronos stpn /\ IsWellStructuredSpn stpn.(spn).
 
 (*===================================================*)
 (*=============== CHRONO SECTION  ===================*)
@@ -70,47 +96,50 @@ Definition IsWellStructuredStpn (stpn : STPN) :=
 
 Section Chrono.
 
-  (*  
-   * Function : Returns true if chrono doesn't exist,
-   *            or if the associated cnt is greater or equal
-   *            to min_t and less or equal to max_t.
-   *            Returns false otherwise.
-   *)
+  (** Returns true if chrono doesn't exist,
+      or if the associated cnt is greater or equal
+      to min_t and less or equal to max_t.
+      
+      Returns false otherwise. *)
+  
   Definition check_chrono (opt_chrono : option chrono_type) : bool :=
     match opt_chrono with
     | None => true
-    | Some (mk_chrono cnt min_t max_t max_is_infinite _) =>
+    | Some (mk_chrono cnt min_t max_t) =>
+      match max_t with
       (* If upper bound is infinite, tests only the lower bound *)
-      if max_is_infinite then
-        int min_t <=? cnt
-      else (int min_t <=? cnt) && (cnt <=? int max_t)
+      | pos_inf => int min_t <=? cnt
+      | pos_val max_val =>
+        (int min_t <=? cnt) && (cnt <=? int max_val)
+      end
     end.
 
-  (*** Formal specification : check_chrono ***)
+  (** Formal specification : check_chrono *)
+  
   Inductive CheckChrono : option chrono_type -> Prop :=
   | CheckChrono_none : 
       CheckChrono None
   | CheckChrono_infinite :
       forall (cnt : nat)
-             (min_t max_t : nat_star)
-             (max_is_infinite : bool)
-             (min_t_le_max_t : (int min_t) <= (int max_t)),
-        max_is_infinite = true ->
+             (min_t : nat_star)
+             (max_t : positive_interval_bound),
+        max_t = pos_inf ->
         (int min_t) <= cnt ->
-        CheckChrono (Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t))
+        CheckChrono (Some (mk_chrono cnt min_t max_t))
   | CheckChrono_cons :
       forall (cnt : nat)
-             (min_t max_t : nat_star)
-             (max_is_infinite : bool)
-             (min_t_le_max_t : (int min_t) <= (int max_t)),
-        max_is_infinite = false ->
-        ((int min_t) <= cnt) /\ (cnt <= (int max_t)) ->
-        CheckChrono (Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)).
+             (min_t : nat_star)
+             (max_t : positive_interval_bound)
+             (max_val : nat_star),
+        max_t = pos_val max_val ->
+        ((int min_t) <= cnt) /\ (cnt <= (int max_val)) ->
+        CheckChrono (Some (mk_chrono cnt min_t max_t)).
 
   Functional Scheme check_chrono_ind :=
     Induction for check_chrono Sort Prop.
 
-  (*** Correctness proof : check_chrono ***)
+  (** Correctness proof : check_chrono *)
+
   Theorem check_chrono_correct :
     forall (opt_chrono : option chrono_type),
       check_chrono opt_chrono = true -> CheckChrono opt_chrono.
@@ -121,17 +150,14 @@ Section Chrono.
       intro Htrue.
     (* Case max_is_infinite = true. *)
     - apply CheckChrono_infinite with (cnt := cnt0)
-                                      (min_t := min_t0)
-                                      (max_t := max_t0)
-                                      (min_t_le_max_t := _x).
-      + auto.
-      + apply leb_complete in Htrue; auto.
+                                      (min_t := min_t0).
+      + reflexivity.
+      + apply leb_complete in Htrue; assumption.
     (* General case, with one min and one max. *)
     - apply CheckChrono_cons with (cnt := cnt0)
                                   (min_t := min_t0)
-                                  (max_t := max_t0)
-                                  (min_t_le_max_t := _x).
-      + auto.
+                                  (max_val := max_val).
+      + reflexivity.
       + apply andb_true_iff in Htrue; elim Htrue; intros; split.
         -- apply leb_complete in H; auto.
         -- apply leb_complete in H0; auto.
@@ -139,7 +165,8 @@ Section Chrono.
     - apply CheckChrono_none.
   Qed.
 
-  (*** Completeness proof : check_chrono ***)
+  (** Completeness proof : check_chrono *)
+
   Theorem check_chrono_complete :
     forall (opt_chrono : option chrono_type),
       CheckChrono opt_chrono -> check_chrono opt_chrono = true.     
@@ -155,11 +182,11 @@ Section Chrono.
       + apply leb_correct; auto.
   Qed.
   
-  (*  
-   * Function : Returns the chrono associated to
-   *            transition t if t is referenced in the chronos list.
-   *            Raises an error (None value) otherwise.
-   *)
+  (** Returns the chrono associated to transition t 
+      if t is referenced in the chronos list.
+      
+      Raises an error (None value) otherwise. *)
+  
   Fixpoint get_chrono
            (chronos : list (trans_type * option chrono_type))
            (t : trans_type) {struct chronos} :
@@ -174,7 +201,8 @@ Section Chrono.
 
   Functional Scheme get_chrono_ind := Induction for get_chrono Sort Prop. 
 
-  (*** Formal specification : get_chrono ***)
+  (** Formal specification : get_chrono *)
+
   Inductive GetChrono :
     list (trans_type * option chrono_type) ->
     trans_type ->
@@ -197,7 +225,8 @@ Section Chrono.
         GetChrono chronos t opt_opt_chrono ->
         GetChrono ((t', opt_chrono) :: chronos) t opt_opt_chrono.
   
-  (*** Correctness proof : get_chrono ***)
+  (** Correctness proof : get_chrono *)
+
   Theorem get_chrono_correct :
     forall (chronos : list (trans_type * option chrono_type))
            (t : trans_type)
@@ -217,11 +246,12 @@ Section Chrono.
       + apply IHo; auto.
   Qed.
 
-  (*** Completeness proof : get_chrono ***)
+  (** Completeness proof : get_chrono *)
+  
   Theorem get_chrono_compl :
     forall (chronos : list (trans_type * option chrono_type))
-           (t : trans_type)
-           (opt_opt_chrono : option (option chrono_type)),
+      (t : trans_type)
+      (opt_opt_chrono : option (option chrono_type)),
       GetChrono chronos t opt_opt_chrono ->
       get_chrono chronos t = opt_opt_chrono.
   Proof.
@@ -235,11 +265,27 @@ Section Chrono.
     - simpl; apply Nat.eqb_neq in H; rewrite H; auto.
   Qed.
 
-  (* Lemma : For all chronos and transition t, 
-   *         (get_chrono chronos t) returns no error
-   *         if t is referenced in chronos.
-   *
-   *)
+  (** If [get_chrono] returns Some [opt_chrono], then [opt_chrono] 
+      is in [chronos] *)
+  
+  Lemma get_chrono_in :
+    forall (chronos : list (trans_type * option chrono_type))
+      (t : trans_type)
+      (opt_chrono : option chrono_type),
+      get_chrono chronos t = Some opt_chrono ->
+      In opt_chrono (snd (split chronos)).
+  Proof.
+    intros chronos t.
+    functional induction (get_chrono chronos t)
+               using get_chrono_ind; intros.
+    - inversion H.
+    - rewrite snd_split_cons_app; simpl; left; injection H; auto.
+    - rewrite snd_split_cons_app; simpl; right; apply IHo; auto.
+  Qed.
+  
+  (** For all chronos and transition t, [get_chrono chronos t] returns no error
+      if t is referenced in chronos. *)
+  
   Lemma get_chrono_no_error :
     forall (chronos : list (trans_type * option chrono_type))
            (t : trans_type),
@@ -251,45 +297,45 @@ Section Chrono.
       decide_accessor_no_err.
   Qed.
   
-  (* 
-   * Function : Returns true if chrono and chrono' are equal.
-   * 
-   *            Two chronos are equal only if their max_is_infinite attribute
-   *            values are the same.
-   *
-   *            If max_is_infinite is true for both chronos, then
-   *            only counter value and min_t value are compared for equality.
-   *            Otherwise, counter, min_t and max_t are compared.     
-   *)
+  (** Returns true if chrono and chrono' are equal.
+   
+      Two chronos are equal only if their counter, lower bound and
+      upper bound values are the same. *)
+  
   Definition beq_chrono (chrono chrono' : chrono_type) : bool :=
-    match (max_is_infinite chrono), (max_is_infinite chrono') with
-    | true, true => ((cnt chrono) =? (cnt chrono'))
-                      && ((int (min_t chrono)) =? (int (min_t chrono')))
-    | false, false => ((cnt chrono) =? (cnt chrono'))
-                        && ((int (min_t chrono)) =? (int (min_t chrono')))
-                        && ((int (max_t chrono)) =? (int (max_t chrono')))
+    match (max_t chrono), (max_t chrono') with
+    | pos_inf, pos_inf =>
+      ((cnt chrono) =? (cnt chrono'))
+        && ((int (min_t chrono)) =? (int (min_t chrono')))
+    | pos_val max_val, pos_val max_val' =>
+      ((cnt chrono) =? (cnt chrono'))
+        && ((int (min_t chrono)) =? (int (min_t chrono')))
+        && ((int (max_val)) =? (int (max_val')))
     | _, _ => false
     end.
 
   Functional Scheme beq_chrono_ind := Induction for beq_chrono Sort Prop. 
 
-  (*** Formal specification : beq_chrono ***)
+  (** Formal specification : beq_chrono *)
+
   Inductive BEqChrono (chrono chrono' : chrono_type) : Prop :=
   | BEqChrono_inf :
-      max_is_infinite chrono = true ->
-      max_is_infinite chrono' = true ->
+      max_t chrono = pos_inf ->
+      max_t chrono' = pos_inf ->
       cnt chrono = cnt chrono' ->
       (int (min_t chrono)) = (int (min_t chrono')) ->
       BEqChrono chrono chrono'
-  | BEqChrono_cons : 
-      max_is_infinite chrono = false ->
-      max_is_infinite chrono' = false ->
-      cnt chrono = cnt chrono' ->
-      (int (min_t chrono)) = (int (min_t chrono')) ->
-      (int (max_t chrono)) = (int (max_t chrono')) ->
-      BEqChrono chrono chrono'.
+  | BEqChrono_cons :
+      forall (max_val max_val' : nat_star),
+        max_t chrono = pos_val max_val ->
+        max_t chrono' = pos_val max_val' ->
+        cnt chrono = cnt chrono' ->
+        (int (min_t chrono)) = (int (min_t chrono')) ->
+        int max_val = int max_val' ->
+        BEqChrono chrono chrono'.
 
-  (*** Correctness proof : beq_chrono ***)
+  (**  Correctness proof : beq_chrono *)
+  
   Theorem beq_chrono_correct :
     forall chrono chrono' : chrono_type,
       beq_chrono chrono chrono' = true ->
@@ -299,24 +345,26 @@ Section Chrono.
     functional induction (beq_chrono chrono chrono')
                using beq_chrono_ind;
       intros.
-    (* Case max_is_infinite = true for both chronos. *)
+    (* Case max_t = pos_inf for both chronos. *)
     - apply andb_true_iff in H; elim H; intros.
       apply Nat.eqb_eq in H0.
       apply Nat.eqb_eq in H1.
       apply BEqChrono_inf; auto.
-    (* 2 cases, max_is_infinite is different for both chronos. *)
+    (* 2 cases, max_t is different for both chronos. *)
     - inversion H.
     - inversion H.
-    (* Case max_is_infinite = false for both chronos. *)
+    (* Case max_t = pos_val for both chronos. *)
     - apply andb_true_iff in H; elim H; intros.
       apply andb_true_iff in H0; elim H0; intros.
       apply Nat.eqb_eq in H1.
       apply Nat.eqb_eq in H2.
       apply Nat.eqb_eq in H3.
-      apply BEqChrono_cons; auto.
+      apply BEqChrono_cons with (max_val := max_val)
+                                (max_val' := max_val'); auto.
   Qed.
 
-  (*** Completeness proof : beq_chrono ***)
+  (** Completeness proof : beq_chrono *)
+  
   Theorem beq_chrono_compl :
     forall chrono chrono' : chrono_type,
       BEqChrono chrono chrono' ->
@@ -335,9 +383,8 @@ Section Chrono.
                                   | apply Nat.eqb_eq; auto].
   Qed.
 
-  (*  
-   * Useful to prove replace_chrono_correct.
-   *)
+  (**  Useful to prove replace_chrono_correct. *)
+  
   Theorem beq_chrono_iff :
     forall chrono chrono' : chrono_type,
       BEqChrono chrono chrono' <-> beq_chrono chrono chrono' = true.
@@ -348,11 +395,9 @@ Section Chrono.
     apply beq_chrono_correct.
   Qed.
   
-  (*  
-   * Function : Returns a list of pair (trans, chrono) where the first 
-   *            occurence of old_chrono has been replaced by new_chrono 
-   *            (if old_chrono is found in the list).
-   *)
+  (** Returns a list of pairs (trans, chrono) where the first 
+      occurence of old_chrono has been replaced by new_chrono. *)
+  
   Fixpoint replace_chrono
            (old_chrono new_chrono : chrono_type)
            (chronos : list (trans_type * option chrono_type))
@@ -375,7 +420,8 @@ Section Chrono.
 
   Functional Scheme replace_chrono_ind := Induction for replace_chrono Sort Prop.
   
-  (*** Formal specification : replace_chrono ***)
+  (** Formal specification : replace_chrono *)
+  
   Inductive ReplaceChrono (old_chrono new_chrono : chrono_type) :
     list (trans_type * option chrono_type) ->
     list (trans_type * option chrono_type) -> Prop :=
@@ -414,7 +460,8 @@ Section Chrono.
                       ((t, opt_chrono) :: chronos)
                       ((t, opt_chrono) :: final_chronos).
 
-  (*** Correctness proof : replace_chrono ***)
+  (** Correctness proof : replace_chrono *)
+  
   Theorem replace_chrono_correct :
     forall (old_chrono new_chrono : chrono_type)
            (chronos : list (trans_type * option chrono_type))
@@ -444,7 +491,8 @@ Section Chrono.
       + apply IHl; auto.
   Qed.
 
-  (*** Completeness proof : replace_chrono ***)
+  (** Completeness proof : replace_chrono *)
+  
   Theorem replace_chrono_compl :
     forall (old_chrono new_chrono : chrono_type)
            (chronos : list (trans_type * option chrono_type))
@@ -466,12 +514,11 @@ Section Chrono.
     - simpl; rewrite H0; rewrite H2; auto.
   Qed.
 
-  (* Lemma : Proves that replace_chrono preserves structure
-   *         of chronos.
-   *)
+  (** Proves that replace_chrono preserves structure of [chronos]. *)
+  
   Lemma replace_chrono_same_struct :
     forall (old_chrono new_chrono : chrono_type)
-           (chronos : list (trans_type * option chrono_type)),
+      (chronos : list (trans_type * option chrono_type)),
       ChronosHaveSameStruct (replace_chrono old_chrono new_chrono chronos) chronos.
   Proof.
     intros old_chrono new_chrono chronos.
@@ -488,13 +535,54 @@ Section Chrono.
     (* Case head of chronos is None. *)
     - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; rewrite IHl; auto.
   Qed.
+
+  (** If all chronos in [chronos] are well-formed, then [replace_chrono] returns 
+      a list [chronos'] of well-formed chronos. *)
   
-  (*  
-   * Function : Returns a new list of chronos, where the time
-   *            counter of transition t is incremented.
-   *            Raises an error (None value) if get_chrono returns
-   *            an error.
-   *)
+  Lemma replace_chrono_well_formed_chronos :
+    forall (old_chrono new_chrono : chrono_type)
+      (chronos : list (trans_type * option chrono_type)),
+      IsWellFormedChrono new_chrono ->
+      (forall chrono : chrono_type, In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      (forall chrono' : chrono_type,
+          In (Some chrono') (snd (split (replace_chrono old_chrono new_chrono chronos))) -> IsWellFormedChrono chrono').
+  Proof.
+    intros old_chrono new_chrono chronos.
+    functional induction (replace_chrono old_chrono new_chrono chronos)
+               using replace_chrono_ind; intros.
+    (* Base case, chronos = [] *)
+    - elim H1.
+    (* Case old_chrono = hd chronos *)
+    - rewrite snd_split_cons_app in H1; simpl in H1; elim H1; intros.
+      + injection H2; intro; rewrite <- H3; assumption.
+      + apply or_intror with (A := In (Some chrono') (snd (split [(t, Some chrono)]))) in H2.
+        apply in_or_app in H2.
+        rewrite snd_split_cons_app in H0; apply (H0 chrono' H2).
+    (* Case old_chrono <> hd chronos *)
+    - rewrite snd_split_cons_app in H1; simpl in H1; elim H1; intros.
+      + apply or_introl with (B := In (Some chrono') (snd (split tail))) in H2.
+        rewrite snd_split_cons_app in H0; simpl in H0; apply (H0 chrono' H2).
+      + apply IHl.
+        -- assumption.
+        -- intros; apply or_intror with (A := (Some chrono = Some chrono0)) in H3.
+           rewrite snd_split_cons_app in H0; simpl in H0; apply (H0 chrono0 H3).
+        -- assumption.
+    (* Case None = hd chronos *)
+    - rewrite snd_split_cons_app in H1; simpl in H1; elim H1; intros.
+      + inversion H2.
+      + apply IHl.
+        -- assumption.
+        -- intros; apply or_intror with (A := (None = Some chrono)) in H3.
+           rewrite snd_split_cons_app in H0; simpl in H0; apply (H0 chrono H3).
+        -- assumption.
+  Qed.
+  
+  (** Returns a new list of chronos, where the time
+      counter of transition t is incremented.
+   
+      Raises an error (None value) if get_chrono returns
+      an error. *)
+  
   Definition increment_chrono
              (t : trans_type) 
              (chronos : list (trans_type * option chrono_type)) :
@@ -505,9 +593,9 @@ Section Chrono.
       (* Replaces old chrono by an incremented chrono 
        * in chronos list.
        *)
-      | Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t) =>
-        Some (replace_chrono (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)
-                             (mk_chrono (cnt + 1) min_t max_t max_is_infinite min_t_le_max_t)
+      | Some (mk_chrono cnt min_t max_t) =>
+        Some (replace_chrono (mk_chrono cnt min_t max_t)
+                             (mk_chrono (cnt + 1) min_t max_t)
                              chronos)
       (* Otherwise, nothing to increment, t has no associated chrono. *)
       | None => Some chronos
@@ -518,7 +606,8 @@ Section Chrono.
 
   Functional Scheme increment_chrono_ind := Induction for increment_chrono Sort Prop. 
   
-  (*** Formal specification : increment_chrono ***)
+  (** Formal specification : increment_chrono *)
+  
   Inductive IncrementChrono (t : trans_type) :
     list (trans_type * option chrono_type) ->
     option (list (trans_type * option chrono_type)) ->
@@ -531,14 +620,13 @@ Section Chrono.
       forall (chronos : list (trans_type * option chrono_type))
              (opt_chrono : option chrono_type)
              (cnt : nat)
-             (min_t max_t : nat_star)
-             (max_is_infinite : bool)
-             (min_t_le_max_t : (int min_t) <= (int max_t))
+             (min_t : nat_star)
+             (max_t : positive_interval_bound)
              (final_chronos : list (trans_type * option chrono_type)),
         GetChrono chronos t (Some opt_chrono) ->
-        opt_chrono = Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t) ->
-        ReplaceChrono (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)
-                      (mk_chrono (cnt + 1) min_t max_t max_is_infinite min_t_le_max_t)
+        opt_chrono = Some (mk_chrono cnt min_t max_t) ->
+        ReplaceChrono (mk_chrono cnt min_t max_t)
+                      (mk_chrono (cnt + 1) min_t max_t)
                       chronos
                       final_chronos ->
         IncrementChrono t chronos (Some final_chronos)
@@ -549,7 +637,8 @@ Section Chrono.
         opt_chrono = None ->
         IncrementChrono t chronos (Some chronos).
   
-  (*** Correctness proof : increment_chrono ***)
+  (** Correctness proof : increment_chrono *)
+  
   Theorem increment_chrono_correct :
     forall (t : trans_type)
            (chronos : list (trans_type * option chrono_type))
@@ -564,14 +653,10 @@ Section Chrono.
     - rewrite <- H; apply IncrementChrono_some
                       with (opt_chrono := (Some {| cnt := cnt0;
                                                    min_t := min_t0;
-                                                   max_t := max_t0;
-                                                   max_is_infinite := max_is_infinite0;
-                                                   min_t_le_max_t := min_t_le_max_t0 |}))
+                                                   max_t := max_t0; |}))
                            (cnt := cnt0)
                            (min_t := min_t0)
-                           (max_t := max_t0)
-                           (max_is_infinite := max_is_infinite0)
-                           (min_t_le_max_t := min_t_le_max_t0).
+                           (max_t := max_t0).
       + apply get_chrono_correct; auto.
       + auto.
       + apply replace_chrono_correct; auto.
@@ -583,7 +668,8 @@ Section Chrono.
     - rewrite <- H; apply IncrementChrono_err; apply get_chrono_correct; auto.
   Qed.
 
-  (*** Completeness proof increment_chrono ***)
+  (** Completeness proof increment_chrono *)
+  
   Theorem increment_chrono_complete :
     forall (t : trans_type)
            (chronos : list (trans_type * option chrono_type))
@@ -601,9 +687,9 @@ Section Chrono.
     - apply get_chrono_compl in H0; unfold increment_chrono; rewrite H0; rewrite H1; auto.
   Qed.
 
-  (* Lemma : Proves that increment_chrono preserves
-   *         the structure of the chronos passed as argument.  
-   *)
+  (** Proves that increment_chrono preserves
+      the structure of the chronos passed as argument. *)
+  
   Lemma increment_chrono_same_struct :
     forall (t : trans_type)
            (chronos chronos': list (trans_type * option chrono_type)),
@@ -621,11 +707,39 @@ Section Chrono.
     - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
     - inversion H.
   Qed.
+
+  (** If all chronos in [chronos] are well-formed, then [increment_chrono] returns
+      a list [chronos'] of well-formed chronos. *)
   
-  (* Lemma : For all transition t and chronos, 
-   *         increment_chrono t chronos returns no error
-   *         if t is referenced in chronos.
-   *)
+  Lemma increment_chrono_well_formed_chronos :
+    forall (t : trans_type)
+      (chronos chronos': list (trans_type * option chrono_type)),
+      (forall chrono : chrono_type,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) -> 
+      increment_chrono t chronos = Some chronos' ->
+      (forall chrono' : chrono_type,
+          In (Some chrono') (snd (split chronos')) -> IsWellFormedChrono chrono').
+  Proof.
+    intros t chronos.
+    functional induction (increment_chrono t chronos) using increment_chrono_ind; intros.
+    (* GENERAL CASE (all went well) *)
+    (* We need to prove that replace_chrono returns a list of well-formed chronos. *)
+    - generalize (get_chrono_in chronos t (Some {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}) e); intro. 
+      apply H in H2.
+      injection H0; intro.
+      generalize (replace_chrono_well_formed_chronos
+                    {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}
+                    {| cnt := cnt0 + 1; min_t := min_t0; max_t := max_t0 |}
+                    chronos H2 H); intro.
+      rewrite H3 in H4.
+      apply (H4 chrono' H1).
+    - injection H0; intro; rewrite <- H2 in H1; apply (H chrono' H1).
+    - inversion H0.
+  Qed.
+  
+  (** For all transition [t] and [chronos], [increment_chrono t chronos] returns no error
+      if t is referenced in chronos. *)
+  
   Lemma increment_chrono_no_error :
     forall (t : trans_type)
            (chronos : list (trans_type * option chrono_type)),
@@ -640,14 +754,10 @@ Section Chrono.
     - exists(replace_chrono
                {| cnt := cnt0;
                   min_t := min_t0;
-                  max_t := max_t0;
-                  max_is_infinite := max_is_infinite0;
-                  min_t_le_max_t := min_t_le_max_t0 |}
+                  max_t := max_t0 |}
                {| cnt := cnt0 + 1;
                   min_t := min_t0;
-                  max_t := max_t0;
-                  max_is_infinite := max_is_infinite0;
-                  min_t_le_max_t := min_t_le_max_t0 |}
+                  max_t := max_t0 |} 
                chronos).
       auto.
     (* Case opt_chrono = None *)
@@ -657,15 +767,13 @@ Section Chrono.
       elim H; intros; rewrite H0 in e; inversion e.      
   Qed.             
   
-  (*  
-   * Function : Returns an option to a list of pair (trans, option chrono_type),
-   *            where all chronos associated to transition in the list 
-   *            transs have been incremented.
-   *            
-   *            Raises an error (None value) if an incrementation
-   *            went wrong for one of the transition of the list.
-   * 
-   *)
+  (** Returns an option to a list of pairs (trans, option chrono_type),
+      where all chronos associated to transition in the list 
+      [transs] have been incremented.
+    
+      Raises an error (None value) if an incrementation
+      went wrong for one of the transition in the list. *)
+  
   Fixpoint increment_all_chronos
            (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type) :
@@ -685,7 +793,8 @@ Section Chrono.
 
   Functional Scheme increment_all_chronos_ind := Induction for increment_all_chronos Sort Prop.
   
-  (*** Formal specification : increment_all_chronos ***)
+  (** Formal specification : increment_all_chronos *)
+  
   Inductive IncrementAllChronos
             (chronos : list (trans_type * option chrono_type)) :       
     list trans_type ->
@@ -707,7 +816,8 @@ Section Chrono.
         IncrementChrono t chronos None ->
         IncrementAllChronos chronos (t :: transs) None.
   
-  (*** Correctness proof : increment_all_chronos ***)
+  (** Correctness proof : increment_all_chronos *)
+  
   Theorem increment_all_chronos_correct :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type)
@@ -728,7 +838,8 @@ Section Chrono.
     - rewrite <- H; apply IncrementAllChronos_err; apply increment_chrono_correct; auto.
   Qed.
 
-  (*** Completeness proof : increment_all_chronos ***)
+  (** Completeness proof : increment_all_chronos *)
+  
   Theorem increment_all_chronos_complete :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type)
@@ -747,9 +858,9 @@ Section Chrono.
       unfold increment_all_chronos; rewrite H0; auto.
   Qed.
   
-  (* Lemma : Proves that increment_all_chronos preserves
-   *         the structure of the chronos passed as argument.  
-   *)
+  (** Proves that increment_all_chronos preserves
+      the structure of the chronos passed as argument. *)
+  
   Lemma increment_all_chronos_same_struct :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type)
@@ -769,11 +880,42 @@ Section Chrono.
       transitivity (fst (split new_chronos)); [auto | auto].
     - inversion H.
   Qed.
+
+  (** If all chrono in [chronos] are well-formed, then [increment_all_chronos] 
+      returns a list [increment_chronos] of well-formed chronos. *)
+
+  Lemma increment_all_chronos_well_formed_chronos :
+    forall (chronos : list (trans_type * option chrono_type))
+      (transs : list trans_type)
+      (incremented_chronos : list (trans_type * option chrono_type)),
+      (forall chrono : chrono_type,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      increment_all_chronos chronos transs = Some incremented_chronos ->
+      (forall chrono' : chrono_type,
+          In (Some chrono') (snd (split incremented_chronos)) -> IsWellFormedChrono chrono').
+  Proof.
+    intros chronos transs.
+    functional induction (increment_all_chronos chronos transs)
+               using increment_all_chronos_ind; intros.
+    (* BASE CASE *)
+    - injection H0; intros; rewrite <- H2 in H1; apply (H chrono' H1).
+    (* GENERAL CASE *)
+    (* We need to prove that increment_chrono returns a list of well-formed chronos. *)
+    - apply IHo with (incremented_chronos := incremented_chronos).
+      + intros. generalize (increment_chrono_well_formed_chronos t chronos0 new_chronos H e0); intro.
+        apply (H3 chrono H2).
+      + assumption.
+      + assumption.
+    (* CASE increment_chrono returns None, 
+     * impossible regarding hypotheses 
+     *)
+    - inversion H0.
+  Qed.
   
-  (* Lemma : Proves that increment_all_chronos returns no error 
-   *         if all transitions of the list transs
-   *         are referenced in chronos.
-   *)
+  (** Proves that increment_all_chronos returns no error 
+      if all transitions of the list transs
+      are referenced in chronos. *)
+  
   Lemma increment_all_chronos_no_error :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type),
@@ -805,15 +947,15 @@ Section Chrono.
       elim H'; intros; rewrite e0 in H0; inversion H0.
   Qed.
   
-  (**************************************************************)
-  (**************************************************************)
+  (** --------------------------------------------------------- *)
+  (** --------------------------------------------------------- *)
 
-  (*  
-   * Function : Returns a new list of chronos, where the time
-   *            counter of transition t has been set to zero.
-   *            Raises an error (None value) if get_chrono returns
-   *            an error.
-   *)
+  (** Returns a new list of chronos, where the time
+      counter of transition t has been set to zero.
+   
+      Raises an error (None value) if get_chrono returns
+      an error. *)
+  
   Definition reset_chrono
              (t : trans_type) 
              (chronos : list (trans_type * option chrono_type)) :
@@ -822,9 +964,9 @@ Section Chrono.
     | Some opt_chrono =>
       match opt_chrono with
       (* Replaces old chrono by a reset chrono in chronos list. *)
-      | Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t) =>
-        Some (replace_chrono (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)
-                             (mk_chrono 0 min_t max_t max_is_infinite min_t_le_max_t)
+      | Some (mk_chrono cnt min_t max_t) =>
+        Some (replace_chrono (mk_chrono cnt min_t max_t)
+                             (mk_chrono 0 min_t max_t)
                              chronos)
       (* Otherwise, nothing to reset, t has no associated chrono. *)
       | None => Some chronos
@@ -835,7 +977,8 @@ Section Chrono.
 
   Functional Scheme reset_chrono_ind := Induction for reset_chrono Sort Prop. 
   
-  (*** Formal specification : reset_chrono ***)
+  (** Formal specification : reset_chrono *)
+
   Inductive ResetChrono (t : trans_type) :
     list (trans_type * option chrono_type) ->
     option (list (trans_type * option chrono_type)) ->
@@ -848,14 +991,13 @@ Section Chrono.
       forall (chronos : list (trans_type * option chrono_type))
              (opt_chrono : option chrono_type)
              (cnt : nat)
-             (min_t max_t : nat_star)
-             (max_is_infinite : bool)
-             (min_t_le_max_t : (int min_t) <= (int max_t))
+             (min_t : nat_star)
+             (max_t : positive_interval_bound)
              (final_chronos : list (trans_type * option chrono_type)),
         GetChrono chronos t (Some opt_chrono) ->
-        opt_chrono = Some (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t) ->
-        ReplaceChrono (mk_chrono cnt min_t max_t max_is_infinite min_t_le_max_t)
-                      (mk_chrono 0 min_t max_t max_is_infinite min_t_le_max_t)
+        opt_chrono = Some (mk_chrono cnt min_t max_t) ->
+        ReplaceChrono (mk_chrono cnt min_t max_t)
+                      (mk_chrono 0 min_t max_t)
                       chronos
                       final_chronos ->
         ResetChrono t chronos (Some final_chronos)
@@ -866,7 +1008,8 @@ Section Chrono.
         opt_chrono = None ->
         ResetChrono t chronos (Some chronos).
   
-  (*** Correctness proof : reset_chrono ***)
+  (** Correctness proof : reset_chrono *)
+  
   Theorem reset_chrono_correct :
     forall (t : trans_type)
            (chronos : list (trans_type * option chrono_type))
@@ -881,14 +1024,10 @@ Section Chrono.
     - rewrite <- H; apply ResetChrono_some
                       with (opt_chrono := (Some {| cnt := cnt0;
                                                    min_t := min_t0;
-                                                   max_t := max_t0;
-                                                   max_is_infinite := max_is_infinite0;
-                                                   min_t_le_max_t := min_t_le_max_t0 |}))
+                                                   max_t := max_t0; |}))
                            (cnt := cnt0)
                            (min_t := min_t0)
-                           (max_t := max_t0)
-                           (max_is_infinite := max_is_infinite0)
-                           (min_t_le_max_t := min_t_le_max_t0).
+                           (max_t := max_t0).
       + apply get_chrono_correct; auto.
       + auto.
       + apply replace_chrono_correct; auto.
@@ -900,7 +1039,8 @@ Section Chrono.
     - rewrite <- H; apply ResetChrono_err; apply get_chrono_correct; auto.
   Qed.
 
-  (*** Completeness proof reset_chrono ***)
+  (** Completeness proof : reset_chrono *)
+  
   Theorem reset_chrono_complete :
     forall (t : trans_type)
            (chronos : list (trans_type * option chrono_type))
@@ -918,9 +1058,9 @@ Section Chrono.
     - apply get_chrono_compl in H0; unfold reset_chrono; rewrite H0; rewrite H1; auto.
   Qed.
 
-  (* Lemma : Proves that reset_chrono preserves
-   *         the structure of the chronos passed as argument.  
-   *)
+  (** Proves that reset_chrono preserves
+      the structure of the chronos passed as argument. *)
+  
   Lemma reset_chrono_same_struct :
     forall (t : trans_type)
            (chronos chronos': list (trans_type * option chrono_type)),
@@ -938,11 +1078,39 @@ Section Chrono.
     - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
     - inversion H.
   Qed.
+
+  (** If all chronos in [chronos] are well-formed, then [reset_chrono] returns
+      a list [chronos'] of well-formed chronos. *)
   
-  (* Lemma : For all transition t and chronos, 
-   *         reset_chrono t chronos returns no error
-   *         if t is referenced in chronos.
-   *)
+  Lemma reset_chrono_well_formed_chronos :
+    forall (t : trans_type)
+      (chronos chronos': list (trans_type * option chrono_type)),
+      (forall chrono : chrono_type,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) -> 
+      reset_chrono t chronos = Some chronos' ->
+      (forall chrono' : chrono_type,
+          In (Some chrono') (snd (split chronos')) -> IsWellFormedChrono chrono').
+  Proof.
+    intros t chronos.
+    functional induction (reset_chrono t chronos) using reset_chrono_ind; intros.
+    (* GENERAL CASE (all went well) *)
+    (* We need to prove that replace_chrono returns a list of well-formed chronos. *)
+    - generalize (get_chrono_in chronos t (Some {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}) e); intro. 
+      apply H in H2.
+      injection H0; intro.
+      generalize (replace_chrono_well_formed_chronos
+                    {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}
+                    {| cnt := 0; min_t := min_t0; max_t := max_t0 |}
+                    chronos H2 H); intro.
+      rewrite H3 in H4.
+      apply (H4 chrono' H1).
+    - injection H0; intro; rewrite <- H2 in H1; apply (H chrono' H1).
+    - inversion H0.
+  Qed.
+      
+  (** For all transition t and chronos, reset_chrono t chronos returns no error
+      if t is referenced in chronos. *)
+  
   Lemma reset_chrono_no_error :
     forall (t : trans_type)
            (chronos : list (trans_type * option chrono_type)),
@@ -957,14 +1125,10 @@ Section Chrono.
     - exists(replace_chrono
                {| cnt := cnt0;
                   min_t := min_t0;
-                  max_t := max_t0;
-                  max_is_infinite := max_is_infinite0;
-                  min_t_le_max_t := min_t_le_max_t0 |}
+                  max_t := max_t0 |}
                {| cnt := 0;
                   min_t := min_t0;
-                  max_t := max_t0;
-                  max_is_infinite := max_is_infinite0;
-                  min_t_le_max_t := min_t_le_max_t0 |}
+                  max_t := max_t0 |}
                chronos).
       auto.
     (* Case opt_chrono = None *)
@@ -973,26 +1137,14 @@ Section Chrono.
     - apply get_chrono_no_error in H.
       elim H; intros; rewrite H0 in e; inversion e.      
   Qed.
+    
+  (** Returns an option to a list of pair (trans, option chrono_type),
+      where all chronos associated to transition in the list 
+      transs have been set to zero.
+               
+      Raises an error (None value) if a reseting
+      went wrong for one of the transition of the list. *)
   
-  (* 
-   * Reseting the counter ought to be smarter :
-   * 
-   * 1) When should it be done ?  
-   *  ----> at the end of a cycle or rather in stpn_sub_fire_pre !
-   * 2) Which transitions are concerned ?
-   *  ----> The ones disabled during the cycle, even in a transitive way.
-   *
-   *)
-  
-  (*  
-   * Function : Returns an option to a list of pair (trans, option chrono_type),
-   *            where all chronos associated to transition in the list 
-   *            transs have been set to zero.
-   *            
-   *            Raises an error (None value) if a reseting
-   *            went wrong for one of the transition of the list.
-   * 
-   *)
   Fixpoint reset_all_chronos
            (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type) :
@@ -1014,7 +1166,8 @@ Section Chrono.
 
   Functional Scheme reset_all_chronos_ind := Induction for reset_all_chronos Sort Prop.
   
-  (*** Formal specification : reset_all_chronos ***)
+  (** Formal specification : reset_all_chronos *)
+
   Inductive ResetAllChronos (chronos : list (trans_type * option chrono_type)) :       
     list trans_type ->
     option (list (trans_type * option chrono_type)) ->
@@ -1035,7 +1188,8 @@ Section Chrono.
         ResetChrono t chronos None ->
         ResetAllChronos chronos (t :: transs) None.
   
-  (*** Correctness proof : reset_all_chronos ***)
+  (** Correctness proof : reset_all_chronos *)
+
   Theorem reset_all_chronos_correct :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type)
@@ -1056,7 +1210,8 @@ Section Chrono.
     - rewrite <- H; apply ResetAllChronos_err; apply reset_chrono_correct; auto.
   Qed.
 
-  (*** Completeness proof : reset_all_chronos ***)
+  (** Completeness proof : reset_all_chronos *)
+  
   Theorem reset_all_chronos_complete :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type)
@@ -1075,13 +1230,13 @@ Section Chrono.
       unfold reset_all_chronos; rewrite H0; auto.
   Qed.
 
-  (* Lemma : Proves that reset_all_chronos preserves
-   *         the structure of the chronos passed as argument.  
-   *)
+  (** Proves that reset_all_chronos preserves
+      the structure of the chronos passed as argument. *)
+  
   Lemma reset_all_chronos_same_struct :
     forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (reset_chronos : list (trans_type * option chrono_type)),
+      (transs : list trans_type)
+      (reset_chronos : list (trans_type * option chrono_type)),
       reset_all_chronos chronos transs = Some reset_chronos ->
       ChronosHaveSameStruct chronos reset_chronos.
   Proof.
@@ -1097,11 +1252,42 @@ Section Chrono.
       transitivity (fst (split new_chronos)); [auto | auto].
     - inversion H.
   Qed.
+
+  (** If all chrono in [chronos] are well-formed, then [reset_all_chronos] 
+      returns a list [reset_chronos] of well-formed chronos. *)
+
+  Lemma reset_all_chronos_well_formed_chronos :
+    forall (chronos : list (trans_type * option chrono_type))
+      (transs : list trans_type)
+      (reset_chronos : list (trans_type * option chrono_type)),
+      (forall chrono : chrono_type,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      reset_all_chronos chronos transs = Some reset_chronos ->
+      (forall chrono' : chrono_type,
+          In (Some chrono') (snd (split reset_chronos)) -> IsWellFormedChrono chrono').
+  Proof.
+    intros chronos transs.
+    functional induction (reset_all_chronos chronos transs)
+               using reset_all_chronos_ind; intros.
+    (* BASE CASE *)
+    - injection H0; intros; rewrite <- H2 in H1; apply (H chrono' H1).
+    (* GENERAL CASE *)
+    (* We need to prove that reset_chrono returns a list of well-formed chronos. *)
+    - apply IHo with (reset_chronos := reset_chronos).
+      + intros. generalize (reset_chrono_well_formed_chronos t chronos0 new_chronos H e0); intro.
+        apply (H3 chrono H2).
+      + assumption.
+      + assumption.
+    (* CASE reset_chrono returns None, 
+     * impossible regarding hypotheses 
+     *)
+    - inversion H0.
+  Qed.
   
-  (* Lemma : Proves that reset_all_chronos returns no error 
-   *         if all transitions of the list transs
-   *         are referenced in chronos.
-   *)
+  (** Proves that reset_all_chronos returns no error 
+      if all transitions of the list transs
+      are referenced in chronos. *)
+  
   Lemma reset_all_chronos_no_error :
     forall (chronos : list (trans_type * option chrono_type))
            (transs : list trans_type),

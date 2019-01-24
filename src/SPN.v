@@ -281,7 +281,7 @@ Section Marking.
 
   Functional Scheme get_m_ind := Induction for get_m Sort Prop.
 
-  (*** Formal specification for get_m ***)
+  (** Formal specification for get_m *)
   Inductive GetM : marking_type -> nat -> option nat -> Prop :=
   | GetM_err :
       forall (p : place_type), GetM [] p None
@@ -302,7 +302,7 @@ Section Marking.
         GetM m' p opt_nboftokens ->
         GetM m p opt_nboftokens.
 
-  (*** Correctness proof : get_m ***)
+  (** Correctness proof : get_m ***)
   Theorem get_m_correct :
     forall (m : marking_type)
            (p : place_type)
@@ -323,7 +323,7 @@ Section Marking.
       + rewrite <- H. apply IHo with (opt_nboftokens := (get_m tail p)). auto.
   Qed.
 
-  (*** Completeness proof : get_m ***)
+  (** Completeness proof : get_m ***)
   Theorem get_m_compl :
     forall (m : marking_type) (p : place_type) (opt_nboftokens : option nat),
       GetM m p opt_nboftokens -> get_m m p = opt_nboftokens.
