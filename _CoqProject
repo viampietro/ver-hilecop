@@ -4,6 +4,7 @@
 
 src/utils/HilecopTactics.v
 src/utils/HilecopLemmas.v
+src/utils/STPNTactics.v
 src/SPN.v
 src/SPNAnimator.v
 src/STPN.v
@@ -12,3 +13,5 @@ src/SITPN.v
 src/SITPNAnimator.v
 
 test/spn_examples.v
+test/stpn.examples.v
+test/sitpn_examples.v

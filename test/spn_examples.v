@@ -1,13 +1,15 @@
 Require Export Hilecop.SPN.
                                
-(*====================================================*)  
-(*                  FIRST SPN EXAMPLE                 *)
-(*====================================================*)
+(*! ================================================== !*) 
+(*!                  FIRST SPN EXAMPLE                 !*)
+(*! ================================================== !*)
 
 (* List of places *)
+
 Definition ex_places : (list place_type) := [ 0; 1; 2; 3; 4; 5; 7; 8; 9; 10; 11; 12 ].
 
 (* Initial marking *)
+
 Definition ex_marking :=
   [ (0, 2); (1, 1); (2, 0); (3, 0); (4, 0); (5, 0);
       (7, 1); (8, 0); (9, 0); (10, 0); (11, 0); (12, 1) ].
@@ -16,12 +18,13 @@ Definition ex_marking :=
 Definition ex_transs : (list trans_type) :=
   [ 0; 1; 2; 3; 4; 5; 6; 8; 9; 12; 13; 14; 16 ].
 
-(**********************************************)
-Lemma one_positive : 1 > 0. Proof. omega. Qed.
-Lemma two_positive : 2 > 0. Proof. omega. Qed.
 (* One lemma for each arc weight ... *)
 
+Lemma one_positive : 1 > 0. Proof. omega. Qed.
+Lemma two_positive : 2 > 0. Proof. omega. Qed.
+
 (* List of neighbour places for all transitions of the example. *)
+
 Definition ex_lneighbours : list (trans_type * neighbours_type) :=
   [
     (0, (mk_neighbours [0; 7; 12] [] [] [4; 5; 12]));
@@ -40,6 +43,7 @@ Definition ex_lneighbours : list (trans_type * neighbours_type) :=
   ].
 
 (* Incoming arcs, from place to transition. *)
+
 Definition ex_pre (t : trans_type) (p : place_type) : option nat_star :=
   match (t, p) with
   (* trans 0 *)
@@ -76,6 +80,7 @@ Definition ex_pre (t : trans_type) (p : place_type) : option nat_star :=
   end.
 
 (* Outcoming arcs, from transition to place. *)
+
 Definition ex_post (t : trans_type) (p : place_type) : option nat_star :=
   match (t, p) with
   (* trans 0 *)
@@ -112,6 +117,7 @@ Definition ex_post (t : trans_type) (p : place_type) : option nat_star :=
   end.
 
 (* Test arcs, from place to transition. *)
+
 Definition ex_test (t : trans_type) (p : place_type) :=
   match (t, p) with
   (* trans 5 *)
@@ -121,6 +127,7 @@ Definition ex_test (t : trans_type) (p : place_type) :=
   end.
 
 (* Inhibitor arcs, from place to transition. *)
+
 Definition ex_inhib (t : trans_type) (p : place_type) :=
   match (t, p) with
   (* trans 2 *)
@@ -130,8 +137,11 @@ Definition ex_inhib (t : trans_type) (p : place_type) :=
   | _ => None
   end.
 
-Definition ex_priority_groups :=
-  [ [1 ; 12]; [0 ; 2 ; 5]; [3 ; 8 ; 16]; [4 ; 9 ; 13 ; 14]; [6] ].
+Definition ex_priority_groups := [ [1 ; 12];
+                                     [0 ; 2 ; 5];
+                                     [3 ; 8 ; 16];
+                                     [4 ; 9 ; 13 ; 14];
+                                     [6] ].
                            
 Definition spn1 := mk_SPN
                      ex_places
@@ -144,11 +154,9 @@ Definition spn1 := mk_SPN
                      ex_priority_groups
                      ex_lneighbours.
 
-(*==== PERFORMANCE TESTS. ====*)
-(* Time Compute (spn_animate spn1 100 []). *)
-(* Time Compute (spn_animate spn1 1000 []). *)
-(* Time Compute (spn_animate spn1 2000 []). *)
-(* Time Compute (spn_animate spn1 4000 []). *)
+(*! ================================ !*)
+(*! PROVING ISWELLSTRUCTUREDSPN SPN1 !*)
+(*! ================================ !*)
 
 (*  
  * Proving that spn1 is well-structured, and thus spn_animate
@@ -262,20 +270,34 @@ Proof.
   auto.
 Qed.
 
-(*====================================================*)  
-(*                  SECOND SPN EXAMPLE                *)
-(*====================================================*)
+(*! ========================== !*)
+(*! === PERFORMANCE TESTS. === !*)
+(*! ========================== !*)
+
+(* Time Compute (spn_animate spn1 100 []). *)
+(* Time Compute (spn_animate spn1 1000 []). *)
+(* Time Compute (spn_animate spn1 2000 []). *)
+(* Time Compute (spn_animate spn1 4000 []). *)
+
+
+(*! ================================================ !*)  
+(*!                SECOND SPN EXAMPLE                !*)
+(*! ================================================ !*)
 
 (* List of places. *)
+
 Definition ex2_places : (list place_type) := [ 1; 2; 3; 4; 5; 6; 7 ].
 
 (* Initial marking. *)
+
 Definition ex2_marking := [ (1, 1); (2, 0); (3, 0); (4, 0); (5, 0); (6, 0); (7, 0) ].
 
 (* List of transitions. *)
+
 Definition ex2_transs : (list trans_type) := [ 1; 2; 3; 4; 5; 6 ].
 
 (* List of pairs (transition, neighbours) *)
+
 Definition ex2_lneighbours :=
   [
     (1, mk_neighbours [1] [] [2] [2; 3; 4]);
@@ -286,7 +308,8 @@ Definition ex2_lneighbours :=
     (6, mk_neighbours [7] [] [] [1])
   ].
 
-(* 7 arcs PT (place transition)  "incoming" *) 
+(* 7 arcs PT (place transition)  "incoming" *)
+
 Definition ex2_pre (t : trans_type) (p : place_type) : option nat_star :=
   match (t,p) with
   | (1, 1) => Some (mk_nat_star 1 one_positive)
@@ -313,6 +336,7 @@ Definition ex2_inhib (t : trans_type) (p : place_type) :=
   end.
 
 (* 7 arcs TP "outcoming" *)
+
 Definition ex2_post (t : trans_type) (p : place_type) : option nat_star :=
   match (t, p) with
   (* trans 1 *)
@@ -345,7 +369,10 @@ Definition spn2 := mk_SPN
                      ex2_priority_groups
                      ex2_lneighbours.
 
-(*==== PERFORMANCE TESTS. ====*)
+(*! ========================== !*)
+(*! === PERFORMANCE TESTS. === !*)
+(*! ========================== !*)
+
 (* Time Compute (spn_animate spn2 100 []). *)
 (* Time Compute (spn_animate spn2 200 []). *)
 (* Time Compute (spn_animate spn2 400 []). *)

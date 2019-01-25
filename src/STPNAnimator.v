@@ -3080,9 +3080,9 @@ Section AnimateStpn.
       apply stpn_fire_compl in H3; rewrite H3; auto.
   Qed.
 
-  (** For all [stpn] with properties [NoUnknownInPriorityGroups]
+  (** For all [STPN] with properties [NoUnknownInPriorityGroups]
       and [NoUnknownTransInChronos] then transitions
-      in [stpn.(priority_groups)] are referenced in [stpn.(chronos)].
+      in [STPN.(priority_groups)] are referenced in [STPN.(chronos)].
           
       Useful to apply [stpn_fire_no_error] while proving [stpn_cycle_no_error]. *)
   
@@ -3102,10 +3102,9 @@ Section AnimateStpn.
     auto.
   Qed.
   
-  (*  
-   * Theorem : For all stpn verifying the predicate IsWellStructuredStpn,
-   *           stpn_cycle raises no error (alays returns Some value). 
-   *)
+  (** For all [STPN] verifying the predicate [IsWellStructuredStpn],
+      [stpn_cycle] returns no error (always returns Some value). *)
+  
   Theorem stpn_cycle_no_error :
     forall (stpn : STPN),
       IsWellStructuredStpn stpn ->
@@ -3281,12 +3280,12 @@ Section AnimateStpn.
   (** -------------------------------------------------------------------------- *)
   (** -------------------------------------------------------------------------- *)
   
-  (*******************************************)
-  (******** ANIMATING DURING N CYCLES ********)
-  (*******************************************)
+  (*! ========================================= !*)
+  (*! ====== ANIMATING DURING N CYCLES ======== !*)
+  (*! ========================================= !*)
   
   (** Returns the list of (transitions_fired(i), STPN(i)) for each cycle i, 
-      from 0 to n, representing the evolution of the Petri net stpn. *)
+      from 0 to n, representing the evolution of the Petri net [stpn]. *)
   
   Fixpoint stpn_animate_aux 
            (stpn : STPN)
@@ -3386,8 +3385,8 @@ Section AnimateStpn.
       rewrite H0; auto.
   Qed.
 
-  (** For all stpn verifying the property IsWellStructuredStpn, and for all number n 
-      of evolution cycles, stpn_animate_aux returns no error. *)
+  (** For all [STPN] verifying the property [IsWellStructuredStpn], and for all number [n] 
+      of evolution cycles, [stpn_animate_aux] returns no error. *)
   Theorem stpn_animate_aux_no_error :
     forall (stpn : STPN)
            (n : nat)

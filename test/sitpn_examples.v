@@ -1,90 +1,71 @@
-Require Import SITPN stpn_examples.
+Require Import Hilecop.SITPN Hilecop.SITPNAnimator Hilecop.Test.stpn_examples Coq.Arith.Even.
 
-(*======================================================*)  
-(*                  FIRST SITPN EXAMPLE                 *)
-(*======================================================*)
+(*! ================================================== !*)  
+(*!                  FIRST SITPN EXAMPLE               !*)
+(*! ================================================== !*)  
 
-(*  Defines conditions functions, and scenario for first SITPN example. *)
-Definition ex_conds_cycle1 (t : trans_type) : option bool :=
-  match t with
-  | 0  => Some true
-  | 2  => Some false
-  | _ => None
-  end.
+Definition cond1 (time_value : nat) : bool := Nat.even time_value.
+Definition cond2 (time_value : nat) : bool := Nat.odd time_value.
+Definition cond3 (time_value : nat) : bool := (time_value mod 4) =? 0.
 
-Definition ex_conds_cycle2 (t : trans_type) : option bool :=
-  match t with
-  | 0  => Some true
-  | 2  => Some true
-  | _ => None
-  end.
+(* Defines conditions on transitions for sitpn1 *)
 
-Definition ex_conds_cycle3 (t : trans_type) : option bool :=
-  match t with
-  | 0  => Some true
-  | 2  => Some true
-  | 3  => Some false
-  | _ => None
-  end.
-
-Definition ex_conds_cycle4 (t : trans_type) : option bool :=
-  match t with
-  | 0  => Some true
-  | 2  => Some true
-  | 3  => Some false
-  | _ => None
-  end.
-
-Definition ex_conds_cycle5 (t : trans_type) : option bool :=
-  match t with
-  | 0  => Some true
-  | 2  => Some true
-  | 3  => Some false
-  | _ => None
-  end.
-
-(* A scenario is a list of functions associating, option bool to transitions. *)
-(* Here, ex_scenario defines conditions value for 20 cycles. *)
-Definition ex_scenario := [ ex_conds_cycle1;
-                              ex_conds_cycle2;
-                              ex_conds_cycle3;
-                              ex_conds_cycle4;
-                              ex_conds_cycle5;
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None);
-                              (fun t => None) ].
+Definition ex_lconditions :=
+  [ (0, Some cond1); (1, Some cond1); (2, Some cond2); (3, Some cond3);
+      (4, None); (5, Some cond2); (6, Some cond3); (8, None); (9, None);
+        (12, None); (13, None); (14, Some cond1); (16, Some cond2)
+  ].
 
 (* Defines a SITPN instance. *)
-Definition sitpn1 := mk_SITPN ex_scenario stpn1.
 
-(*=== ERRORS TESTS. ===*)
+Definition sitpn1 := mk_SITPN ex_lconditions stpn1.
 
-(* The following examples must return None, because the number of evolution
- * cycles passed as argument is greater than the size of the scenario list (length scenario = 20).
- *)
-Example sitpn_animate_err1 : (sitpn_animate sitpn1 21 []) = None. compute; reflexivity. Qed.
-Example sitpn_animate_err2 : (sitpn_animate sitpn1 200 []) = None. compute; reflexivity. Qed.
-Example sitpn_animate_err3 : (sitpn_animate sitpn1 2000 []) = None. compute; reflexivity. Qed.
+(*! ==================================== !*)
+(*! PROVING ISWELLSTRUCTUREDSITPN SITPN1 !*)
+(*! ==================================== !*)
 
-(*==== PERFORMANCE TESTS. ====*)
-(* Not easy to do performance tests here, because when have to define 
- * a scenario of significant size to test sitpn_animate with big entries.
- *)
+Lemma no_unknown_trans_in_lconditions_sitpn1 :
+  NoUnknownTransInLconditions sitpn1.
+Proof.
+  unfold NoUnknownTransInLconditions; auto.
+Qed.
 
-(* Normally, performance test results for sitpn_animate are equivalent
- * to the ones for stpn_animate, since we are only adding a O(1) test (condition test) to
- * the algorithm.
- *)
-Time Eval compute in (sitpn_animate sitpn1 20 []).
+Lemma is_well_structured_sitpn1 :
+  IsWellStructuredSitpn sitpn1.
+Proof.
+  unfold IsWellStructuredSitpn.
+  assert (H := (conj no_unknown_trans_in_lconditions_sitpn1
+                     is_well_structured_stpn1)).
+  auto.
+Qed.
+
+(*! ========================== !*)
+(*! === PERFORMANCE TESTS. === !*)
+(*! ========================== !*)
+
+(** Some functions to display the evolution of the [SITPN] being animated.  *)
+
+Fixpoint sitpn_display_evolution_aux (sitpn_evolution : list (list trans_type * SITPN)) {struct sitpn_evolution} :
+  list (list trans_type * marking_type * list (trans_type * option chrono_type)) :=
+  match sitpn_evolution with
+  | (fired, sitpn) :: tail => [(fired, (marking sitpn), (chronos sitpn))] ++ sitpn_display_evolution_aux tail
+  | [] => []
+  end.
+
+Definition sitpn_display_evolution
+           (opt_sitpn_evolution : option (list (list trans_type * SITPN))) :
+  list (list trans_type * marking_type * list (trans_type * option chrono_type)) :=
+  match opt_sitpn_evolution with
+  | Some evolution_list => sitpn_display_evolution_aux evolution_list
+  | None => []
+  end.
+
+Definition test_sitpn_animate := sitpn_animate sitpn1 1000.
+
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 9). *)
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 50). *)
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 100). *)
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 500). *)
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 1000). *)
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 2000). *)
+(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 400). *)

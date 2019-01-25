@@ -1,14 +1,15 @@
 Require Import Hilecop.Utils.HilecopLemmas.
 
-(*==========================================================*  
- *                                                          *
- *         TACTIC FUNCTIONS FOR THE HILECOP PROGRAM         *
- *                                                          *
- *==========================================================*)
+(*! ====================================================== !*)  
+(*!                                                        !*)
+(*!         TACTIC FUNCTIONS FOR THE HILECOP PROGRAM       !*)
+(*!                                                        !*)
+(*! ====================================================== !*)
 
 (*
  * Decides that an accessor function returns no error.  
  *)
+
 Ltac decide_accessor_no_err :=
   match goal with
   | [ H : In ?e (fst (split nil)) |- _ ] => elim H; decide_accessor_no_err
@@ -47,3 +48,4 @@ Ltac decide_incl :=
                       decompose [or] H;
                       repeat (auto || right)
   end.
+

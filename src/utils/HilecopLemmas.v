@@ -1,4 +1,5 @@
-Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool Coq.Lists.ListDec FunInd Coq.Logic.Classical_Prop.
+Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool Coq.Lists.ListDec FunInd
+        Coq.Logic.Classical_Prop.
 Require Export Coq.Sorting.Sorting.
 Require Export Coq.Program.Equality.
 
