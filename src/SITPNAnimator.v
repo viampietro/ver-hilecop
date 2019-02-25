@@ -206,7 +206,6 @@ Section FireSitpn.
                                            H0 H1 H2 H3); intros.
       elim H4; intros; rewrite H5 in e; inversion e.
   Qed.
-
   
   (** -------------------------------------------------------------------------- *)
   (** -------------------------------------------------------------------------- *)
@@ -1003,7 +1002,7 @@ Section FireSitpn.
                            option_final_couple
   | SitpnMapFirePreAux_err :
       forall (pgroup : list trans_type)
-             (priority_groups : list (list trans_type)),
+        (priority_groups : list (list trans_type)),
         SitpnFirePre lneighbours pre test inhib steadym decreasingm chronos lconditions time_value pgroup None ->
         SitpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
                            pre_fired_transitions
@@ -1013,14 +1012,14 @@ Section FireSitpn.
   
   Theorem sitpn_map_fire_pre_aux_correct :
     forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (lconditions : list (trans_type * option condition_type))
-           (time_value : nat)
-           (priority_groups : list (list trans_type))
-           (pre_fired_transitions : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+      (pre test inhib : weight_type)
+      (steadym decreasingm : marking_type)
+      (chronos : list (trans_type * option chrono_type))
+      (lconditions : list (trans_type * option condition_type))
+      (time_value : nat)
+      (priority_groups : list (list trans_type))
+      (pre_fired_transitions : list trans_type)
+      (option_final_couple : option (list trans_type * marking_type)),
       sitpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
                              pre_fired_transitions priority_groups = option_final_couple ->
       SitpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos lconditions time_value
@@ -2090,9 +2089,7 @@ Section AnimateSitpn.
         (time_value : nat),
         ListSensitized lneighbours pre test inhib marking transs None ->
         SitpnCycle
-          (mk_SITPN
-             lconditions
-             (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
+          (mk_SITPN lconditions (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
           time_value
           None
   | SitpnCycle_increment_chronos_err :
@@ -2109,9 +2106,7 @@ Section AnimateSitpn.
         ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
         IncrementAllChronos chronos sensitized_transs None ->
         SitpnCycle
-          (mk_SITPN
-             lconditions
-             (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
+          (mk_SITPN lconditions (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
           time_value
           None
   | SitpnCycle_fire_err :
@@ -2130,9 +2125,7 @@ Section AnimateSitpn.
         IncrementAllChronos chronos sensitized_transs (Some updated_chronos) ->
         SitpnFire lneighbours pre test inhib post marking updated_chronos lconditions time_value transs priority_groups None -> 
         SitpnCycle
-          (mk_SITPN
-             lconditions
-             (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
+          (mk_SITPN lconditions (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
           time_value
           None
   | SitpnCycle_cons :
@@ -2152,17 +2145,11 @@ Section AnimateSitpn.
              (time_value : nat),
         ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
         IncrementAllChronos chronos sensitized_transs (Some updated_chronos) ->
-        SitpnFire lneighbours pre test inhib post marking updated_chronos lconditions time_value transs priority_groups
-                  (Some (fired_transitions, nextm, next_chronos)) -> 
+        SitpnFire lneighbours pre test inhib post marking updated_chronos lconditions time_value transs priority_groups (Some (fired_transitions, nextm, next_chronos)) -> 
         SitpnCycle
-          (mk_SITPN
-             lconditions
-             (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
+          (mk_SITPN lconditions (mk_STPN chronos (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)))
           time_value
-          (Some (fired_transitions,
-                 (mk_SITPN
-                    lconditions
-                    (mk_STPN next_chronos (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours))))).
+          (Some (fired_transitions, (mk_SITPN lconditions (mk_STPN next_chronos (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours))))).
 
   (** Correctness proof : sitpn_cycle *)
 

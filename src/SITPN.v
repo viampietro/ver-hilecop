@@ -1,9 +1,9 @@
 Require Export Hilecop.STPN.
 
-(*** ============================================= ***)
-(*** TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS, ***)
-(*** TEMPORAL AND INTERPRETED PETRI NETS (SITPN).  ***)
-(*** ============================================= ***)
+(*! ============================================= !*)
+(*! TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS, !*)
+(*! TIME AND INTERPRETED PETRI NETS (SITPN).      !*)
+(*! ============================================= !*)
 
 (** * Interpreted Petri nets : associating conditions to transitions. *)
 
@@ -38,7 +38,7 @@ Definition NoUnknownTransInLconditions (sitpn : SITPN) : Prop :=
 Definition IsWellStructuredSitpn (sitpn : SITPN) : Prop :=
   NoUnknownTransInLconditions sitpn /\ IsWellStructuredStpn sitpn.
 
-(** *** Helper properties fir SITPN *)
+(** *** Helper properties for SITPN *)
 
 Definition PriorityGroupsAreRefInLconditions 
            (priority_groups : list (list trans_type))

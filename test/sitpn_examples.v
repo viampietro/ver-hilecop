@@ -62,10 +62,11 @@ Definition sitpn_display_evolution
 
 Definition test_sitpn_animate := sitpn_animate sitpn1 1000.
 
+(* Extraction "SITPN_Animator" sitpn_animate sitpn_display_evolution sitpn1. *)
+
 (* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 9). *)
 (* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 50). *)
 (* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 100). *)
 (* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 500). *)
 (* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 1000). *)
-(* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 2000). *)
 (* Time Compute sitpn_display_evolution (sitpn_animate sitpn1 400). *)

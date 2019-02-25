@@ -2,16 +2,16 @@
 -Q src/utils Hilecop.Utils
 -Q test/ Hilecop.Test
 
-src/utils/HilecopTactics.v
 src/utils/HilecopLemmas.v
-src/utils/STPNTactics.v
+src/utils/HilecopTactics.v
 src/SPN.v
 src/SPNAnimator.v
 src/STPN.v
 src/STPNAnimator.v
+src/utils/STPNTactics.v
 src/SITPN.v
 src/SITPNAnimator.v
 
 test/spn_examples.v
-test/stpn.examples.v
+test/stpn_examples.v
 test/sitpn_examples.v

@@ -1,8 +1,8 @@
 Require Export Hilecop.SPN.
 
-(*==============================================================*)
-(*================= FIRING ALGORITHM for SPN ===================*)
-(*==============================================================*)
+(*! ============================================================ !*)
+(*! ================ FIRING ALGORITHM for SPN ================== !*)
+(*! ============================================================ !*)
 
 Section FireSpn.
 
@@ -53,7 +53,8 @@ Section FireSpn.
       CheckInhib (inhib t) steadym (inhib_pl neighbours_t) true None ->
       SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None.
 
-  (*** Correctness proof : spn_is_firable *)
+  (** Correctness proof : spn_is_firable *)
+  
   Theorem spn_is_firable_correct :
     forall (t : trans_type)
            (neighbours_t : neighbours_type)

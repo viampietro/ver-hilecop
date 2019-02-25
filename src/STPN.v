@@ -1,11 +1,11 @@
 Require Export Hilecop.SPN.
 
-(*** ================================================ ***)
-(*** TYPES FOR GENERALIZED, EXTENDED, SYNCHRONOUS AND ***)
-(*** TEMPORAL PETRI NETS.                             ***)
-(*** ================================================ ***)
+(*! ====================================== !*)
+(*! TYPES FOR GENERALIZED, EXTENDED, TIME  !*)
+(*! PETRI NETS, SYNCHRONOUSLY EXECUTED.    !*)
+(*! ====================================== !*)
 
-(** * Types for generalized, extended, synchronous and temporal Petri nets *)
+(** * Types for generalized, extended, synchronous and time Petri nets *)
 
 (** Defines the inductive type to express positive or (positively) infinite values. 
     Useful to type the upper bound of the time interval in [chrono_type]. *)

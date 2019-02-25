@@ -129,7 +129,7 @@ Proof.
   - simpl; rewrite IHFlattenLneighbours; auto.
 Qed.
 
-(** ** Structure of synchronous Petri nets. *)
+(** ** Structure of Synchronous Petri Nets. *)
 
 (*==================================================================*)
 (*============== STRUCTURE OF SYNCHRONOUS PETRI NETS ===============*)
@@ -148,7 +148,7 @@ Structure SPN : Set :=
 
       (* Each list of transitions contained in priority_groups is 
        * a priority-ordered list of transitions.
-       * Defines priority relations between transitions,
+       * Defines priority relation between transitions,
        * necessary to obtain a deterministic Petri net.*)
       priority_groups : list (list trans_type);
 

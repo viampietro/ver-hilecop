@@ -2876,9 +2876,9 @@ End FireStpn.
 
 (** * STPN cycle evolution *)
 
-(*** ==================== ***)
-(*** STPN CYCLE EVOLUTION ***)
-(*** ==================== ***)
+(*! ==================== !*)
+(*! STPN CYCLE EVOLUTION !*)
+(*! ==================== !*)
 
 Section AnimateStpn.
   
