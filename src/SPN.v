@@ -158,6 +158,20 @@ Structure SPN : Set :=
       
     }.
 
+(** ** Setter for SPN structure. *)
+
+Definition set_m (spn : SPN) (newm : marking_type) : SPN :=
+  {| places := spn.(places);
+     transs := spn.(transs);
+     pre := spn.(pre);
+     post := spn.(post);
+     test := spn.(test);
+     inhib := spn.(inhib);
+     marking := newm;
+     priority_groups := spn.(priority_groups);
+     lneighbours := spn.(lneighbours)
+  |}.
+
 (** ------------------------------------------------------- *)
 (** ------------------------------------------------------- *)
 
@@ -398,7 +412,8 @@ Section Marking.
 
   Functional Scheme replace_occ_ind := Induction for replace_occ Sort Prop.
 
-  (*** Formal specification : replace_occ ***)
+  (** Formal specification : replace_occ *)
+  
   Inductive ReplaceOcc
             {A : Type}
             (eq_dec : forall x y : A, {x = y} + {x <> y})
@@ -417,7 +432,8 @@ Section Marking.
         ReplaceOcc eq_dec occ repl l l' ->
         ReplaceOcc eq_dec occ repl (x :: l) (x :: l').
 
-  (*** Correctness proof : replace_occ ***)
+  (** Correctness proof : replace_occ *)
+  
   Theorem replace_occ_correct {A : Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l l' : list A),
       replace_occ eq_dec occ repl l = l' -> ReplaceOcc eq_dec occ repl l l'.
@@ -432,7 +448,8 @@ Section Marking.
     - rewrite <- H; apply ReplaceOcc_else; [auto |apply IHl0; auto].
   Qed.
 
-  (*** Completeness proof : replace_occ ***)
+  (** Completeness proof : replace_occ *)
+  
   Theorem replace_occ_compl {A : Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l l' : list A),
       ReplaceOcc eq_dec occ repl l l' -> replace_occ eq_dec occ repl l = l'.
@@ -446,10 +463,9 @@ Section Marking.
     - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHReplaceOcc; auto].
   Qed.
 
-  (* Lemma : Auxiliary lemma to prove replace_occ_nodup 
-   *         and replace_occ_nodup_marking. 
-   *
-   *)
+  (** Lemma : Auxiliary lemma to prove replace_occ_nodup 
+              and replace_occ_nodup_marking. *)
+  
   Lemma replace_occ_no_change {A: Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
       ~In occ l -> replace_occ eq_dec occ repl l = l.
@@ -466,9 +482,9 @@ Section Marking.
       + apply not_in_cons in H. elim H; auto.
   Qed.
 
-  (* Lemma : Auxiliary lemma to prove replace_occ_nodup
-   *         and replace_occ_nodup_marking.
-   *)
+  (** Lemma : Auxiliary lemma to prove replace_occ_nodup
+              and replace_occ_nodup_marking. *)
+  
   Lemma replace_occ_not_in {A :Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl a : A) (l : list A),
       a <> repl /\ ~In a l -> ~In a (replace_occ eq_dec occ repl l).
@@ -491,10 +507,9 @@ Section Marking.
           [ auto | apply not_in_cons in H1; elim H1; auto ].
   Qed.
 
-  (* Lemma : For all list l, if NoDup l and repl not in l
-   *         then NoDup (replace_occ occ repl l).
-   *         
-   *) 
+  (** Lemma : For all list l, if NoDup l and repl not in l
+              then NoDup (replace_occ occ repl l). *)
+  
   Lemma replace_occ_nodup {A : Type} :
     forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l : list A),
       NoDup l -> ~In repl l -> NoDup (replace_occ eq_dec occ repl l).
@@ -524,8 +539,8 @@ Section Marking.
          ++ apply not_in_cons in H0; elim H0; intros; auto.
   Qed.
 
-  (* Lemma : Auxiliary lemma to prove replace_occ_nodup_marking.
-   *)
+  (** Lemma : Auxiliary lemma to prove replace_occ_nodup_marking. *)
+  
   Lemma not_in_fst_split_replace_occ :
     forall (l : list (nat * nat)) (x : nat) (y y' : nat) (a : nat),
       ~In a (fst (split l)) -> a <> x -> ~In a (fst (split (replace_occ prodnat_eq_dec (x, y) (x, y') l))).
@@ -554,11 +569,11 @@ Section Marking.
         -- auto.
   Qed.
 
-  (*  
-   * Lemma : If no duplicates in (fst (split m))
-   *         then no duplicates in (replace_occ (p, n) (p, n') m).
-   *         This holds because (fst (p, n)) = (fst (p, n')).
-   *)
+  (** Lemma : If no duplicates in (fst (split m))
+              then no duplicates in (replace_occ (p, n) (p, n') m).
+              
+              This holds because (fst (p, n)) = (fst (p, n')). *)
+  
   Lemma replace_occ_nodup_marking :
     forall (m : marking_type) (p : place_type) (n n' : nat),
       NoDup (fst (split m)) ->
@@ -605,10 +620,10 @@ Section Marking.
         auto.
   Qed.
   
-  (* Lemma : Proves that replace_occ preserves structure
-   *         of a marking m passed as argument when 
-   *         (fst occ) = (fst repl).
-   *)
+  (** Lemma : Proves that replace_occ preserves structure
+              of a marking m passed as argument when 
+              (fst occ) = (fst repl). *)
+  
   Lemma replace_occ_same_struct :
     forall (m : marking_type)
            (p : place_type)
@@ -638,26 +653,26 @@ Section Marking.
       auto.
   Qed.
   
-  (* Function : Given a marking m, add/remove nboftokens tokens (if not None)
-   *            inside place p and returns the new marking.
-   *
-   * Param nboftokens : number of tokens to add or sub for place p.
-   *
-   * Param op : addition or substraction operator.
-   *)
+  (** Function : Given a marking m, add/remove nboftokens tokens (if not None)
+                 inside place p and returns the new marking.
+   
+      Param nboftokens : number of tokens to add or sub for place p.
+   
+      Param op : addition or substraction operator. *)
+  
   Definition modify_m
-             (m : marking_type)
+             (marking : marking_type)
              (p : place_type)
              (op : nat -> nat -> nat)
              (nboftokens : option nat_star) : option marking_type :=
     match nboftokens with
-    | None => Some m
+    | None => Some marking
     | Some (mk_nat_star n' _) =>
-      let opt_n := get_m m p in
+      let opt_n := get_m marking p in
       match opt_n with
       (* The couple (i, n) to remove must be unique. *)
       | Some n =>
-        Some (replace_occ prodnat_eq_dec (p, n) (p, (op n n')) m)
+        Some (replace_occ prodnat_eq_dec (p, n) (p, (op n n')) marking)
       (* If couple with first member i doesn't exist
        * in m, then returns None (it's an exception). *)
       | None => None 
@@ -666,531 +681,530 @@ Section Marking.
 
   Functional Scheme modify_m_ind := Induction for modify_m Sort Prop.
 
-  (*** Formal specification : modify_m ***)
+  (** Formal specification : modify_m *)
+  
   Inductive ModifyM
-            (m : marking_type)
+            (marking : marking_type)
             (p : place_type)
             (op : nat -> nat -> nat) :
     option nat_star -> option marking_type -> Prop :=
   | ModifyM_tokens_none :
-      ModifyM m p op None (Some m)
+      ModifyM marking p op None (Some marking)
   (* Case place of index i is not in the marking,
    * which is a exception case. *)
   | ModifyM_err :
       forall (n : nat_star),
-        GetM m p None ->
-        ModifyM m p op (Some n) None
+        GetM marking p None ->
+        ModifyM marking p op (Some n) None
   (* Case place of index i exists in the marking *)
   | ModifyM_some_repl :
       forall (nboftokens : option nat_star)
-             (n n' : nat)
-             (is_positive : n' > 0)
-             (m' : marking_type),
+        (n n' : nat)
+        (is_positive : n' > 0)
+        (m' : marking_type),
         nboftokens = Some (mk_nat_star n' is_positive) ->
-        GetM m p (Some n) ->
-        ReplaceOcc prodnat_eq_dec (p, n) (p, (op n n')) m m' ->
-        ModifyM m p op nboftokens (Some m').
+        GetM marking p (Some n) ->
+        ReplaceOcc prodnat_eq_dec (p, n) (p, (op n n')) marking m' ->
+        ModifyM marking p op nboftokens (Some m').
 
-  (*** Correctness proof : modify_m ***)
-  Theorem modify_m_correct :
-    forall (m : marking_type)
-           (optionm : option marking_type)
-           (p : place_type)
-           (op : nat -> nat -> nat)
-           (nboftokens : option nat_star),
-      modify_m m p op nboftokens = optionm -> ModifyM m p op nboftokens optionm.
-  Proof.
-    do 5 intro; functional induction (modify_m m p op nboftokens)
-                           using modify_m_ind; intros.
-    (* Case (pl i) exists in marking m *)
-    - rewrite <- H. apply ModifyM_some_repl with (n := n0)
-                                                 (n' := n')
-                                                 (is_positive := _x).
-      + auto.
-      + apply get_m_correct in e1; auto.
-      + apply replace_occ_correct; auto.
-    (* Case (pl i) doesn't exist in marking m (error) *)
-    - rewrite <- H. apply ModifyM_err.
-      + apply get_m_correct; auto.
-    (* Case nboftokens is None *)
-    - rewrite <- H; apply ModifyM_tokens_none.
-  Qed.
-
-  (*** Completeness proof : modify_m ***)
-  Theorem modify_m_compl :
-    forall (m : marking_type)
-           (optionm : option marking_type)
-           (p : place_type)
-           (op : nat -> nat -> nat)
-           (nboftokens : option nat_star),
-      ModifyM m p op nboftokens optionm -> modify_m m p op nboftokens = optionm.
-  Proof.
-    intros; induction H.
-    (* Case  ModifyM_tokens_none *)
-    - simpl; auto.
-    (* Case ModifyM_err *)
-    - unfold modify_m; elim n; intros.
-      apply get_m_compl in H; rewrite H; auto.
-    (* Case ModifyM_some_repl *)
-    - unfold modify_m; rewrite H; apply get_m_compl in H0; rewrite H0.
-      apply replace_occ_compl in H1; rewrite H1; auto.      
-  Qed.
-
-  (* Lemma : Proves that modify_m preserves
-   *         the structure of the marking m
-   *         passed as argument.  
-   *)
-  Lemma modify_m_same_struct :
-    forall (m m' : marking_type)
-           (p : place_type)
-           (op : nat -> nat -> nat)
-           (nboftokens : option nat_star),
-      modify_m m p op nboftokens = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    do 5 intro.
-    functional induction (modify_m m p op nboftokens)
-               using modify_m_ind;
-      intros.
-    - injection H; intros.
-      rewrite <- H0.
-      unfold MarkingHaveSameStruct; symmetry.
-      apply replace_occ_same_struct.
-    - inversion H.
-    - injection H; intros.
-      rewrite H0.
-      unfold MarkingHaveSameStruct; auto.
-  Qed.
-
-  (*  
-   * Lemma : If there are no duplicates in (fst (split m)),
-   *         then modify_m returns a marking with no duplicates.
-   *)
-  Lemma modify_m_nodup :
-    forall (m m' : marking_type)
-           (p : place_type)
-           (op : nat -> nat -> nat)
-           (nboftokens : option nat_star),
-      NoDup (fst (split m)) ->
-      modify_m m p op nboftokens = Some m' ->
-      NoDup (fst (split m')).
-  Proof.
-    do 5 intro.
-    functional induction (modify_m m p op nboftokens)
-               using modify_m_ind;
-    intros.
-    (* Case get_m returns Some value. *)
-    - apply replace_occ_nodup_marking with (p := p) (n := n0) (n' := (op n0 n')) in H.
-      injection H0; intros.
-      rewrite <- H1.
-      auto.
-    (* Case get_m returns None, leads 
-     * to a contradiction.
-     *)
-    - inversion H0.
-    (* Case nboftokens = None *)
-    - injection H0; intros; rewrite <- H1; auto.
-  Qed.
+  (** Correctness proof : modify_m *)
   
-  (* Lemma : For all spn, and marking "some_marking", 
-   *         (modify_m some_marking (pl i) op nboftokens) returns no error
-   *         if (pl i) is in the list of places spn.(places) and if
-   *         some_marking verifies properties regarding spn.(marking).
-   *)
-  Lemma modify_m_no_error :
-    forall (nboftokens : option nat_star)
-           (some_marking : marking_type)
-           (op : nat -> nat -> nat)
-           (p : place_type),
-      In p (fst (split some_marking)) ->
-      exists v : marking_type,
-        modify_m some_marking p op nboftokens = Some v.
-  Proof.
-    intros.
-    functional induction (modify_m some_marking p op nboftokens)
-               using modify_m_ind.    
-    (* Base case *)
-    - exists (replace_occ prodnat_eq_dec (p, n0) (p, op n0 n') some_marking).
-      auto.
-    (* Case get_m = None, not possible. *)
-    - apply get_m_no_error in H.
-      elim H; intros.
-      rewrite H0 in e1.
-      inversion e1.
-    (* Case nboftokens = None *)
-    - exists some_marking; auto.    
-  Qed.             
+  (* Theorem modify_m_correct : *)
+  (*   forall (spn : SPN) *)
+  (*     (optionspn : option SPN) *)
+  (*     (p : place_type) *)
+  (*     (op : nat -> nat -> nat) *)
+  (*     (nboftokens : option nat_star), *)
+  (*     modify_m spn p op nboftokens = optionspn -> ModifyM spn p op nboftokens optionspn. *)
+  (* Proof. *)
+  (*   do 5 intro; functional induction (modify_m m p op nboftokens) *)
+  (*                          using modify_m_ind; intros. *)
+  (*   (* Case (pl i) exists in marking m *) *)
+  (*   - rewrite <- H. apply ModifyM_some_repl with (n := n0) *)
+  (*                                                (n' := n') *)
+  (*                                                (is_positive := _x). *)
+  (*     + auto. *)
+  (*     + apply get_m_correct in e1; auto. *)
+  (*     + apply replace_occ_correct; auto. *)
+  (*   (* Case (pl i) doesn't exist in marking m (error) *) *)
+  (*   - rewrite <- H. apply ModifyM_err. *)
+  (*     + apply get_m_correct; auto. *)
+  (*   (* Case nboftokens is None *) *)
+  (*   - rewrite <- H; apply ModifyM_tokens_none. *)
+  (* Qed. *)
+
+  (** Completeness proof : modify_m *)
+  
+  (* Theorem modify_m_compl : *)
+  (*   forall (spn : SPN) *)
+  (*     (optionspn : option SPN) *)
+  (*     (p : place_type) *)
+  (*     (op : nat -> nat -> nat) *)
+  (*     (nboftokens : option nat_star), *)
+  (*     ModifyM spn p op nboftokens optionspn -> modify_m spn p op nboftokens = optionspn. *)
+  (* Proof. *)
+  (*   intros; induction H. *)
+  (*   (* Case  ModifyM_tokens_none *) *)
+  (*   - simpl; auto. *)
+  (*   (* Case ModifyM_err *) *)
+  (*   - unfold modify_m; elim n; intros. *)
+  (*     apply get_m_compl in H; rewrite H; auto. *)
+  (*   (* Case ModifyM_some_repl *) *)
+  (*   - unfold modify_m; rewrite H; apply get_m_compl in H0; rewrite H0. *)
+  (*     apply replace_occ_compl in H1; rewrite H1; auto.       *)
+  (* Qed. *)
+
+  (** Lemma : Proves that modify_m preserves the structure of the marking m
+              passed as argument. *)
+  
+  (* Lemma modify_m_same_struct : *)
+  (*   forall (m m' : marking_type) *)
+  (*     (p : place_type) *)
+  (*     (op : nat -> nat -> nat) *)
+  (*     (nboftokens : option nat_star), *)
+  (*     modify_m m p op nboftokens = Some m' -> *)
+  (*     MarkingHaveSameStruct m m'. *)
+  (* Proof. *)
+  (*   do 5 intro. *)
+  (*   functional induction (modify_m m p op nboftokens) *)
+  (*              using modify_m_ind; *)
+  (*     intros. *)
+  (*   - injection H; intros. *)
+  (*     rewrite <- H0. *)
+  (*     unfold MarkingHaveSameStruct; symmetry. *)
+  (*     apply replace_occ_same_struct. *)
+  (*   - inversion H. *)
+  (*   - injection H; intros. *)
+  (*     rewrite H0. *)
+  (*     unfold MarkingHaveSameStruct; auto. *)
+  (* Qed. *)
+
+  (** Lemma : If there are no duplicates in (fst (split m)),
+              then modify_m returns a marking with no duplicates. *)
+  
+  (* Lemma modify_m_nodup : *)
+  (*   forall (m m' : marking_type) *)
+  (*          (p : place_type) *)
+  (*          (op : nat -> nat -> nat) *)
+  (*          (nboftokens : option nat_star), *)
+  (*     NoDup (fst (split m)) -> *)
+  (*     modify_m m p op nboftokens = Some m' -> *)
+  (*     NoDup (fst (split m')). *)
+  (* Proof. *)
+  (*   do 5 intro. *)
+  (*   functional induction (modify_m m p op nboftokens) *)
+  (*              using modify_m_ind; *)
+  (*   intros. *)
+  (*   (* Case get_m returns Some value. *) *)
+  (*   - apply replace_occ_nodup_marking with (p := p) (n := n0) (n' := (op n0 n')) in H. *)
+  (*     injection H0; intros. *)
+  (*     rewrite <- H1. *)
+  (*     auto. *)
+  (*   (* Case get_m returns None, leads  *)
+  (*    * to a contradiction. *)
+  (*    *) *)
+  (*   - inversion H0. *)
+  (*   (* Case nboftokens = None *) *)
+  (*   - injection H0; intros; rewrite <- H1; auto. *)
+  (* Qed. *)
+  
+  (** Lemma : For all spn, [modify_m] returns no error
+              if p is in referenced in [spn.(marking)]. *)
+  
+  (* Lemma modify_m_no_error : *)
+  (*   forall (spn : SPN) *)
+  (*     (nboftokens : option nat_star) *)
+  (*     (op : nat -> nat -> nat) *)
+  (*     (p : place_type), *)
+  (*     In p (fst (split some_marking)) -> *)
+  (*     exists v : marking_type, *)
+  (*       modify_m some_marking p op nboftokens = Some v. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   functional induction (modify_m some_marking p op nboftokens) *)
+  (*              using modify_m_ind.     *)
+  (*   (* Base case *) *)
+  (*   - exists (replace_occ prodnat_eq_dec (p, n0) (p, op n0 n') some_marking). *)
+  (*     auto. *)
+  (*   (* Case get_m = None, not possible. *) *)
+  (*   - apply get_m_no_error in H. *)
+  (*     elim H; intros. *)
+  (*     rewrite H0 in e1. *)
+  (*     inversion e1. *)
+  (*   (* Case nboftokens = None *) *)
+  (*   - exists some_marking; auto.     *)
+  (* Qed.              *)
   
   (*=================================================*)
   (*=============== UPDATE MARKING ==================*)
   (*=================================================*)
 
-  (*
-   * Function : Removes some tokens from pre places, according 
-   *            to the firing of t. 
-   *            Returns the resulting marking.
-   *)
+  (** Function : Removes some tokens from pre places, result  
+                 of the firing of t. 
+                 
+                 Returns a new SPN with an updated marking. *)
+  
   Fixpoint update_marking_pre
+           (spn : SPN)
            (t : trans_type)
-           (pre : weight_type)
-           (m : marking_type)
-           (places : list place_type) : option marking_type :=
+           (places : list place_type) : option SPN :=
     match places with
-    | p :: tail => match modify_m m p Nat.sub (pre t p) with
-                   | Some m' => update_marking_pre t pre m' tail
-                   (* It's a exception, p is not referenced in m. *)
+    | p :: tail => match modify_m spn.(marking) p Nat.sub (pre spn t p) with
+                   | Some m' => update_marking_pre (set_m spn m') t tail
+                   (* It's an exception, p is not referenced in spn.(marking). *)
                    | None => None
                    end
-    | [] => Some m
+    | [] => Some spn
     end.
 
   Functional Scheme update_marking_pre_ind := Induction for update_marking_pre Sort Prop.
   
-  (*** Formal specification : update_marking_pre ***)
+  (** Formal specification : update_marking_pre *)
+  
   Inductive UpdateMarkingPre
-            (t : trans_type)
-            (pre : weight_type)
-            (m : marking_type) :
-    list place_type -> option marking_type -> Prop :=
+            (spn : SPN)
+            (t : trans_type) :
+    list place_type -> option SPN -> Prop :=
   | UpdateMarkingPre_nil :
-      UpdateMarkingPre t pre m [] (Some m)
+      UpdateMarkingPre spn t [] (Some spn)
   | UpdateMarkingPre_some :
       forall (places : list place_type)
-             (m' : marking_type)
-             (optionm : option marking_type)
-             (p : place_type),
-        ModifyM m p Nat.sub (pre t p) (Some m') ->
-        UpdateMarkingPre t pre m' places optionm ->
-        UpdateMarkingPre t pre m (p :: places) optionm
+        (m' : marking_type)
+        (optionspn : option SPN)
+        (p : place_type),
+        ModifyM spn.(marking) p Nat.sub (pre spn t p) (Some m') ->
+        UpdateMarkingPre (set_m spn m') t places optionspn ->
+        UpdateMarkingPre spn t (p :: places) optionspn
   | UpdateMarkingPre_err :
       forall (p : place_type) (places : list place_type),
-        ModifyM m p Nat.sub (pre t p) None ->
-        UpdateMarkingPre t pre m (p :: places) None.
+        ModifyM spn.(marking) p Nat.sub (pre spn t p) None ->
+        UpdateMarkingPre spn t (p :: places) None.
 
-  (*** Correctness proof : update_marking_pre ***)
-  Theorem update_marking_pre_correct :
-    forall (t : trans_type)
-           (pre : weight_type)
-           (places : list place_type)
-           (m : marking_type)
-           (optionm : option marking_type),
-      update_marking_pre t pre m places = optionm ->
-      UpdateMarkingPre t pre m places optionm.
-  Proof.
-    intros t pre places m optionm;
-      functional induction (update_marking_pre t pre m places)
-                 using update_marking_pre_ind;
-      intros.
-    (* Case places is nil *)
-    - rewrite <- H; apply UpdateMarkingPre_nil.
-    (* Case p is referenced in m *)
-    - apply UpdateMarkingPre_some with (m' := m').
-      + apply modify_m_correct; auto.
-      + apply IHo; auto.
-    (* Case p is not in m *)
-    - rewrite <- H; apply UpdateMarkingPre_err;
-        [apply modify_m_correct; auto].      
-  Qed.
+  (** Correctness proof : update_marking_pre *)
+  
+  (* Theorem update_marking_pre_correct : *)
+  (*   forall (t : trans_type) *)
+  (*          (pre : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m : marking_type) *)
+  (*          (optionm : option marking_type), *)
+  (*     update_marking_pre t pre m places = optionm -> *)
+  (*     UpdateMarkingPre t pre m places optionm. *)
+  (* Proof. *)
+  (*   intros t pre places m optionm; *)
+  (*     functional induction (update_marking_pre t pre m places) *)
+  (*                using update_marking_pre_ind; *)
+  (*     intros. *)
+  (*   (* Case places is nil *) *)
+  (*   - rewrite <- H; apply UpdateMarkingPre_nil. *)
+  (*   (* Case p is referenced in m *) *)
+  (*   - apply UpdateMarkingPre_some with (m' := m'). *)
+  (*     + apply modify_m_correct; auto. *)
+  (*     + apply IHo; auto. *)
+  (*   (* Case p is not in m *) *)
+  (*   - rewrite <- H; apply UpdateMarkingPre_err; *)
+  (*       [apply modify_m_correct; auto].       *)
+  (* Qed. *)
 
-  (*** Completeness proof : update_marking_pre ***)
-  Theorem update_marking_pre_compl :
-    forall (t : trans_type)
-           (pre : weight_type)
-           (places : list place_type)
-           (m : marking_type)
-           (optionm : option marking_type),
-      UpdateMarkingPre t pre m places optionm ->
-      update_marking_pre t pre m places = optionm.
-  Proof.
-    intros t pre places m optionm Hspec; induction Hspec.
-    (* Case UpdateMarkingPre_nil *)
-    - simpl; auto.
-    (* Case UpdateMarkingPre_some *)
-    - simpl; apply modify_m_compl in H; rewrite H; rewrite IHHspec; auto.
-    (* Case UpdateMarkingPre_err *)
-    - simpl; apply modify_m_compl in H; rewrite H; auto.
-  Qed.
+  (** Completeness proof : update_marking_pre *)
   
-  (* Lemma : Proves that update_marking_pre returns no error 
-   *         if all places of the list passed as argument
-   *         are referenced in the marking (also passed as argument).
-   *)
-  Lemma update_marking_pre_no_error :
-    forall (t : trans_type)
-           (pre : weight_type)
-           (places : list place_type)
-           (marking : marking_type),
-      incl places (fst (split marking)) ->
-      exists v : marking_type, update_marking_pre t pre marking places = Some v.
-  Proof.
-    unfold incl.
-    intros t pre places marking p;
-    functional induction (update_marking_pre t pre marking places)
-               using update_marking_pre_ind;
-    intros.
-    (* Base case, some_places = []. *)
-    - exists m; auto.
-    (* Case modify_m returns some marking. *)
-    - apply IHo; intros.
-      apply (in_cons p0) in H.
-      apply p in H.
-      apply modify_m_same_struct in e0.
-      unfold MarkingHaveSameStruct in e0.
-      rewrite <- e0.
-      auto.
-    (* Case modify_m returns None, 
-     * impossible regarding the hypothesis 
-     *)
-    - cut (In p0 (p0 :: tail)).
-      + intro.
-        apply p in H.
-        apply modify_m_no_error with (nboftokens := (pre t p0))
-                                     (op := Nat.sub) in H.
-        elim H; intros.
-        rewrite e0 in H0.
-        inversion H0.
-      + apply in_eq.
-  Qed.
+  (* Theorem update_marking_pre_compl : *)
+  (*   forall (t : trans_type) *)
+  (*     (pre : weight_type) *)
+  (*     (places : list place_type) *)
+  (*     (m : marking_type) *)
+  (*     (optionm : option marking_type), *)
+  (*     UpdateMarkingPre t pre m places optionm -> *)
+  (*     update_marking_pre t pre m places = optionm. *)
+  (* Proof. *)
+  (*   intros t pre places m optionm Hspec; induction Hspec. *)
+  (*   (* Case UpdateMarkingPre_nil *) *)
+  (*   - simpl; auto. *)
+  (*   (* Case UpdateMarkingPre_some *) *)
+  (*   - simpl; apply modify_m_compl in H; rewrite H; rewrite IHHspec; auto. *)
+  (*   (* Case UpdateMarkingPre_err *) *)
+  (*   - simpl; apply modify_m_compl in H; rewrite H; auto. *)
+  (* Qed. *)
   
-  (* Lemma : Proves that update_marking_pre preserves
-   *         the structure of the marking m
-   *         passed as argument. 
-   *)
-  Lemma update_marking_pre_same_struct :
-    forall (t : trans_type)
-           (pre : weight_type)
-           (places : list place_type)
-           (m m' : marking_type),
-      update_marking_pre t pre m places = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    intros t pre places m m'.
-    functional induction (update_marking_pre t pre m places)
-               using update_marking_pre_ind;
-      intros.
-    - injection H; intros.
-      rewrite H0.
-      unfold MarkingHaveSameStruct; auto.
-    - apply IHo in H.
-      apply modify_m_same_struct in e0.
-      unfold MarkingHaveSameStruct.
-      unfold MarkingHaveSameStruct in e0.
-      unfold MarkingHaveSameStruct in H.
-      rewrite <- H; rewrite e0; auto.
-    - inversion H.    
-  Qed.
+  (** Lemma : Proves that [update_marking_pre] returns no error 
+              if all places of the list passed as argument
+              are referenced in the marking (also passed as argument). *)
+  
+  (* Lemma update_marking_pre_no_error : *)
+  (*   forall (t : trans_type) *)
+  (*          (pre : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (marking : marking_type), *)
+  (*     incl places (fst (split marking)) -> *)
+  (*     exists v : marking_type, update_marking_pre t pre marking places = Some v. *)
+  (* Proof. *)
+  (*   unfold incl. *)
+  (*   intros t pre places marking p; *)
+  (*   functional induction (update_marking_pre t pre marking places) *)
+  (*              using update_marking_pre_ind; *)
+  (*   intros. *)
+  (*   (* Base case, some_places = []. *) *)
+  (*   - exists m; auto. *)
+  (*   (* Case modify_m returns some marking. *) *)
+  (*   - apply IHo; intros. *)
+  (*     apply (in_cons p0) in H. *)
+  (*     apply p in H. *)
+  (*     apply modify_m_same_struct in e0. *)
+  (*     unfold MarkingHaveSameStruct in e0. *)
+  (*     rewrite <- e0. *)
+  (*     auto. *)
+  (*   (* Case modify_m returns None,  *)
+  (*    * impossible regarding the hypothesis  *)
+  (*    *) *)
+  (*   - cut (In p0 (p0 :: tail)). *)
+  (*     + intro. *)
+  (*       apply p in H. *)
+  (*       apply modify_m_no_error with (nboftokens := (pre t p0)) *)
+  (*                                    (op := Nat.sub) in H. *)
+  (*       elim H; intros. *)
+  (*       rewrite e0 in H0. *)
+  (*       inversion H0. *)
+  (*     + apply in_eq. *)
+  (* Qed. *)
+  
+  (** Lemma : Proves that update_marking_pre preserves
+              the structure of the marking m
+              passed as argument. *)
+  
+  (* Lemma update_marking_pre_same_struct : *)
+  (*   forall (t : trans_type) *)
+  (*          (pre : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m m' : marking_type), *)
+  (*     update_marking_pre t pre m places = Some m' -> *)
+  (*     MarkingHaveSameStruct m m'. *)
+  (* Proof. *)
+  (*   intros t pre places m m'. *)
+  (*   functional induction (update_marking_pre t pre m places) *)
+  (*              using update_marking_pre_ind; *)
+  (*     intros. *)
+  (*   - injection H; intros. *)
+  (*     rewrite H0. *)
+  (*     unfold MarkingHaveSameStruct; auto. *)
+  (*   - apply IHo in H. *)
+  (*     apply modify_m_same_struct in e0. *)
+  (*     unfold MarkingHaveSameStruct. *)
+  (*     unfold MarkingHaveSameStruct in e0. *)
+  (*     unfold MarkingHaveSameStruct in H. *)
+  (*     rewrite <- H; rewrite e0; auto. *)
+  (*   - inversion H.     *)
+  (* Qed. *)
 
-  (*  
-   * Lemma : If there are no duplicates in (fst (split m)),
-   *         then update_marking_pre returns a marking with no duplicates.
-   *)
-  Lemma update_marking_pre_nodup :
-    forall (t : trans_type)
-           (pre : weight_type)
-           (places : list place_type)
-           (m m' : marking_type),
-      NoDup (fst (split m)) ->
-      update_marking_pre t pre m places = Some m' ->
-      NoDup (fst (split m')).
-  Proof.
-    intros t pre places m.
-    functional induction (update_marking_pre t pre m places)
-               using update_marking_pre_ind;
-    intros.
-    (* Base case, places = []. *)
-    - injection H0; intros; rewrite <- H1; auto.
-    (* Case modify_m returns Some value. *)
-    - apply IHo.
-      + apply (modify_m_nodup m m' p Nat.sub (pre t p) H e0).
-      + auto.
-    (* Case modify_m returns None, leads to a contradiction. *)
-    - inversion H0.
-  Qed.
+  (** Lemma : If there are no duplicates in (fst (split m)),
+              then update_marking_pre returns a marking with no duplicates. *)
   
-  (* 
-   * Function : Adds some tokens from post places, according 
-   *            to the firing of t.
-   *            Returns a new marking application. 
-   *)
-  Fixpoint update_marking_post (* structural induction over list of places *)
+  (* Lemma update_marking_pre_nodup : *)
+  (*   forall (t : trans_type) *)
+  (*          (pre : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m m' : marking_type), *)
+  (*     NoDup (fst (split m)) -> *)
+  (*     update_marking_pre t pre m places = Some m' -> *)
+  (*     NoDup (fst (split m')). *)
+  (* Proof. *)
+  (*   intros t pre places m. *)
+  (*   functional induction (update_marking_pre t pre m places) *)
+  (*              using update_marking_pre_ind; *)
+  (*   intros. *)
+  (*   (* Base case, places = []. *) *)
+  (*   - injection H0; intros; rewrite <- H1; auto. *)
+  (*   (* Case modify_m returns Some value. *) *)
+  (*   - apply IHo. *)
+  (*     + apply (modify_m_nodup m m' p Nat.sub (pre t p) H e0). *)
+  (*     + auto. *)
+  (*   (* Case modify_m returns None, leads to a contradiction. *) *)
+  (*   - inversion H0. *)
+  (* Qed. *)
+  
+  (** Function : Adds some tokens from post places, according 
+                 to the firing of t.
+
+                 Returns a new marking application. *)
+  
+  Fixpoint update_marking_post
+           (spn : SPN)
            (t : trans_type)
-           (post : weight_type)
-           (m : marking_type)
-           (places : list place_type) : option marking_type :=
+           (places : list place_type) : option SPN :=
     match places with
-    | p :: tail => match modify_m m p Nat.add (post t p) with
-                   | Some m' => update_marking_post t post m' tail
+    | p :: tail => match modify_m spn.(marking) p Nat.add (post spn t p) with
+                   | Some m' => update_marking_post (set_m spn m') t tail
                    (* It's a exception, p is not referenced in m. *)
                    | None => None
                    end
-    | [] => Some m
+    | [] => Some spn
     end.
 
   Functional Scheme update_marking_post_ind := Induction for update_marking_post Sort Prop.
 
-  (*** Formal specification : update_marking_post ***)
+  (** Formal specification : update_marking_post *)
+  
   Inductive UpdateMarkingPost
-            (t : trans_type)
-            (post : weight_type)
-            (m : marking_type) :
-    list place_type -> option marking_type -> Prop :=
+            (spn : SPN)
+            (t : trans_type) :
+    list place_type -> option SPN -> Prop :=
   | UpdateMarkingPost_nil :
-      UpdateMarkingPost t post m [] (Some m)
+      UpdateMarkingPost spn t [] (Some spn)
   | UpdateMarkingPost_some :
       forall (p : place_type)
-             (m' : marking_type)
-             (optionm : option marking_type)
-             (places : list place_type),
-        ModifyM m p Nat.add (post t p) (Some m') ->
-        UpdateMarkingPost t post m' places optionm ->
-        UpdateMarkingPost t post m (p :: places) optionm
+        (m' : marking_type)
+        (optionspn : option SPN)
+        (places : list place_type),
+        ModifyM spn.(marking) p Nat.add (post spn t p) (Some m') ->
+        UpdateMarkingPost (set_m spn m') t places optionspn ->
+        UpdateMarkingPost spn t (p :: places) optionspn
   | UpdateMarkingPost_err :
       forall (p : place_type)
-             (places : list place_type),
-        ModifyM m p Nat.add (post t p) None ->
-        UpdateMarkingPost t post m (p :: places) None.
+        (places : list place_type),
+        ModifyM spn.(marking) p Nat.add (post spn t p) None ->
+        UpdateMarkingPost spn t (p :: places) None.
 
-  (*** Correctness proof : update_marking_post ***)
-  Theorem update_marking_post_correct :
-    forall (t : trans_type)
-           (post : weight_type)
-           (places : list place_type)
-           (m : marking_type)
-           (optionm : option marking_type),
-      update_marking_post t post m places = optionm ->
-      UpdateMarkingPost t post m places optionm.
-  Proof.
-    intros t post places m optionm;
-      functional induction (update_marking_post t post m places)
-                 using update_marking_post_ind;
-      intros.
-    (* Case places is nil *)
-    - rewrite <- H; apply UpdateMarkingPost_nil.
-    (* Case p is referenced in m. *)
-    - apply UpdateMarkingPost_some with (m' := m').
-      + apply modify_m_correct; auto.
-      + apply (IHo H); auto.
-    (* Case p not referenced in m, error! *)
-    - rewrite <- H;
-        apply UpdateMarkingPost_err;
-        apply modify_m_correct; auto.
-  Qed.
+  (** Correctness proof : update_marking_post *)
+  
+  (* Theorem update_marking_post_correct : *)
+  (*   forall (t : trans_type) *)
+  (*          (post : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m : marking_type) *)
+  (*          (optionm : option marking_type), *)
+  (*     update_marking_post t post m places = optionm -> *)
+  (*     UpdateMarkingPost t post m places optionm. *)
+  (* Proof. *)
+  (*   intros t post places m optionm; *)
+  (*     functional induction (update_marking_post t post m places) *)
+  (*                using update_marking_post_ind; *)
+  (*     intros. *)
+  (*   (* Case places is nil *) *)
+  (*   - rewrite <- H; apply UpdateMarkingPost_nil. *)
+  (*   (* Case p is referenced in m. *) *)
+  (*   - apply UpdateMarkingPost_some with (m' := m'). *)
+  (*     + apply modify_m_correct; auto. *)
+  (*     + apply (IHo H); auto. *)
+  (*   (* Case p not referenced in m, error! *) *)
+  (*   - rewrite <- H; *)
+  (*       apply UpdateMarkingPost_err; *)
+  (*       apply modify_m_correct; auto. *)
+  (* Qed. *)
 
-  (*** Completeness proof : update_marking_post ***)
-  Theorem update_marking_post_compl :
-    forall (t : trans_type)
-           (post : weight_type)
-           (places : list place_type)
-           (m : marking_type)
-           (optionm : option marking_type),
-      UpdateMarkingPost t post m places optionm ->
-      update_marking_post t post m places = optionm.
-  Proof.
-    intros t post places m optionm H; elim H; intros.
-    (* Case UpdateMarkingPost_nil *)
-    - simpl; auto.
-    (* Case UpdateMarkingPost_some *)
-    - simpl; apply modify_m_compl in H0; rewrite H0; auto.
-    (* Case UpdateMarkingPost_err *)
-    - simpl; apply modify_m_compl in H0; rewrite H0; auto.
-  Qed.
+  (** Completeness proof : update_marking_post *)
+  
+  (* Theorem update_marking_post_compl : *)
+  (*   forall (t : trans_type) *)
+  (*          (post : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m : marking_type) *)
+  (*          (optionm : option marking_type), *)
+  (*     UpdateMarkingPost t post m places optionm -> *)
+  (*     update_marking_post t post m places = optionm. *)
+  (* Proof. *)
+  (*   intros t post places m optionm H; elim H; intros. *)
+  (*   (* Case UpdateMarkingPost_nil *) *)
+  (*   - simpl; auto. *)
+  (*   (* Case UpdateMarkingPost_some *) *)
+  (*   - simpl; apply modify_m_compl in H0; rewrite H0; auto. *)
+  (*   (* Case UpdateMarkingPost_err *) *)
+  (*   - simpl; apply modify_m_compl in H0; rewrite H0; auto. *)
+  (* Qed. *)
 
-  (* Lemma : Proves that update_marking_pre returns no error 
-   *         if all places of the list passed as argument
-   *         are referenced in the marking (also passed as argument).
-   *)
-  Lemma update_marking_post_no_error :
-    forall (t : trans_type)
-           (post : weight_type)
-           (places : list place_type)
-           (marking : marking_type),
-      incl places (fst (split marking)) ->
-      exists v : marking_type,
-        update_marking_post t post marking places = Some v.
-  Proof.
-    unfold incl.
-    intros t post places marking p;
-    functional induction (update_marking_post t post marking places)
-               using update_marking_post_ind;
-    intros.
-    (* Base case, some_places = []. *)
-    - exists m; auto.
-    (* Case modify_m returns some marking. *)
-    - apply IHo; intros.
-      apply (in_cons p0) in H.
-      apply p in H.
-      apply modify_m_same_struct in e0.
-      unfold MarkingHaveSameStruct in e0.
-      rewrite <- e0.
-      auto.
-    (* Case modify_m returns None, 
-     * impossible regarding the hypothesis 
-     *)
-    - cut (In p0 (p0 :: tail)).
-      + intro.
-        apply p in H.
-        apply modify_m_no_error with (nboftokens := (post t p0))
-                                     (op := Nat.add) in H.
-        elim H; intros.
-        rewrite e0 in H0.
-        inversion H0.
-      + apply in_eq.
-  Qed.
+  (** Lemma : Proves that update_marking_pre returns no error 
+              if all places of the list passed as argument
+              are referenced in the marking (also passed as argument). *)
+  
+  (* Lemma update_marking_post_no_error : *)
+  (*   forall (t : trans_type) *)
+  (*          (post : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (marking : marking_type), *)
+  (*     incl places (fst (split marking)) -> *)
+  (*     exists v : marking_type, *)
+  (*       update_marking_post t post marking places = Some v. *)
+  (* Proof. *)
+  (*   unfold incl. *)
+  (*   intros t post places marking p; *)
+  (*   functional induction (update_marking_post t post marking places) *)
+  (*              using update_marking_post_ind; *)
+  (*   intros. *)
+  (*   (* Base case, some_places = []. *) *)
+  (*   - exists m; auto. *)
+  (*   (* Case modify_m returns some marking. *) *)
+  (*   - apply IHo; intros. *)
+  (*     apply (in_cons p0) in H. *)
+  (*     apply p in H. *)
+  (*     apply modify_m_same_struct in e0. *)
+  (*     unfold MarkingHaveSameStruct in e0. *)
+  (*     rewrite <- e0. *)
+  (*     auto. *)
+  (*   (* Case modify_m returns None,  *)
+  (*    * impossible regarding the hypothesis  *)
+  (*    *) *)
+  (*   - cut (In p0 (p0 :: tail)). *)
+  (*     + intro. *)
+  (*       apply p in H. *)
+  (*       apply modify_m_no_error with (nboftokens := (post t p0)) *)
+  (*                                    (op := Nat.add) in H. *)
+  (*       elim H; intros. *)
+  (*       rewrite e0 in H0. *)
+  (*       inversion H0. *)
+  (*     + apply in_eq. *)
+  (* Qed. *)
 
-  (* Lemma : Proves that update_marking_post preserves
-   *         the structure of the marking m
-   *         passed as argument. 
-   *)
-  Lemma update_marking_post_same_struct :
-    forall (t : trans_type)
-           (post : weight_type)
-           (places : list place_type)
-           (m m' : marking_type),
-      update_marking_post t post m places = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    intros t post places m m'.
-    functional induction (update_marking_post t post m places)
-               using update_marking_post_ind;
-      intros.
-    - injection H; intros.
-      rewrite H0.
-      unfold MarkingHaveSameStruct; auto.
-    - apply IHo in H.
-      apply modify_m_same_struct in e0.
-      unfold MarkingHaveSameStruct.
-      unfold MarkingHaveSameStruct in e0.
-      unfold MarkingHaveSameStruct in H.
-      rewrite <- H; rewrite e0; auto.
-    - inversion H.    
-  Qed.
+  (** Lemma : Proves that update_marking_post preserves
+              the structure of the marking m
+              passed as argument. *)
+  
+  (* Lemma update_marking_post_same_struct : *)
+  (*   forall (t : trans_type) *)
+  (*          (post : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m m' : marking_type), *)
+  (*     update_marking_post t post m places = Some m' -> *)
+  (*     MarkingHaveSameStruct m m'. *)
+  (* Proof. *)
+  (*   intros t post places m m'. *)
+  (*   functional induction (update_marking_post t post m places) *)
+  (*              using update_marking_post_ind; *)
+  (*     intros. *)
+  (*   - injection H; intros. *)
+  (*     rewrite H0. *)
+  (*     unfold MarkingHaveSameStruct; auto. *)
+  (*   - apply IHo in H. *)
+  (*     apply modify_m_same_struct in e0. *)
+  (*     unfold MarkingHaveSameStruct. *)
+  (*     unfold MarkingHaveSameStruct in e0. *)
+  (*     unfold MarkingHaveSameStruct in H. *)
+  (*     rewrite <- H; rewrite e0; auto. *)
+  (*   - inversion H.     *)
+  (* Qed. *)
 
-  (*  
-   * Lemma : If there are no duplicates in (fst (split m)),
-   *         then update_marking_post returns a marking with no duplicates.
-   *)
-  Lemma update_marking_post_nodup :
-    forall (t : trans_type)
-           (post : weight_type)
-           (places : list place_type)
-           (m m' : marking_type),
-      NoDup (fst (split m)) ->
-      update_marking_post t post m places = Some m' ->
-      NoDup (fst (split m')).
-  Proof.
-    intros t post places m.
-    functional induction (update_marking_post t post m places)
-               using update_marking_post_ind;
-      intros.
-    (* Base case, places = []. *)
-    - injection H0; intros; rewrite <- H1; auto.
-    (* Case modify_m returns Some value. *)
-    - apply IHo.
-      + apply (modify_m_nodup m m' p Nat.add (post t p) H e0).
-      + auto.
-    (* Case modify_m returns None, leads to a contradiction. *)
-    - inversion H0.
-  Qed.
+  (** Lemma : If there are no duplicates in (fst (split m)),
+              then update_marking_post returns a marking with no duplicates. *)
+  
+  (* Lemma update_marking_post_nodup : *)
+  (*   forall (t : trans_type) *)
+  (*          (post : weight_type) *)
+  (*          (places : list place_type) *)
+  (*          (m m' : marking_type), *)
+  (*     NoDup (fst (split m)) -> *)
+  (*     update_marking_post t post m places = Some m' -> *)
+  (*     NoDup (fst (split m')). *)
+  (* Proof. *)
+  (*   intros t post places m. *)
+  (*   functional induction (update_marking_post t post m places) *)
+  (*              using update_marking_post_ind; *)
+  (*     intros. *)
+  (*   (* Base case, places = []. *) *)
+  (*   - injection H0; intros; rewrite <- H1; auto. *)
+  (*   (* Case modify_m returns Some value. *) *)
+  (*   - apply IHo. *)
+  (*     + apply (modify_m_nodup m m' p Nat.add (post t p) H e0). *)
+  (*     + auto. *)
+  (*   (* Case modify_m returns None, leads to a contradiction. *) *)
+  (*   - inversion H0. *)
+  (* Qed. *)
   
 End Marking.
 
@@ -1200,13 +1214,12 @@ End Marking.
 
 Section Neighbours.
 
-  (*  
-   * Function : Returns the element of type neighbours_type
-   *            associated with transition t in the list lneighbours.
-   *            
-   *            Returns None if transition t is not referenced
-   *            in lneighbours.
-   *)
+  (** Function : Returns the element of type neighbours_type
+                 associated with transition t in the list lneighbours.
+               
+                 Returns None if transition t is not referenced
+                 in lneighbours. *)
+  
   Fixpoint get_neighbours
            (lneighbours : list (trans_type * neighbours_type))
            (t : trans_type) {struct lneighbours} : option neighbours_type :=
@@ -1217,7 +1230,8 @@ Section Neighbours.
     | [] => None 
     end.
 
-  (*** Formal specification : get_neighbours ***)
+  (** Formal specification : get_neighbours *)
+  
   Inductive GetNeighbours :
     list (trans_type * neighbours_type) ->
     nat ->
@@ -1241,7 +1255,8 @@ Section Neighbours.
 
   Functional Scheme get_neighbours_ind := Induction for get_neighbours Sort Prop.
   
-  (*** Correctness proof : get_neighbours ***)
+  (** Correctness proof : get_neighbours *)
+  
   Theorem get_neighbours_correct :
     forall (lneighbours : list (trans_type * neighbours_type))
            (t : trans_type)
@@ -1262,7 +1277,8 @@ Section Neighbours.
       + rewrite H; apply IHo; auto.
   Qed.
 
-  (*** Completeness proof : get_neighbours ***)
+  (** Completeness proof : get_neighbours *)
+  
   Theorem get_neighbours_compl :
     forall (lneighbours : list (trans_type * neighbours_type))
            (t : trans_type)
@@ -1285,10 +1301,10 @@ Section Neighbours.
       auto.
   Qed.
 
-  (* Lemma : For all list of neighbours lneighbours 
-   *         and transition t, (get_neighbours lneighbours t) 
-   *         returns no error if t is referenced in lneighbours.
-   **)
+  (** Lemma : For all list of neighbours lneighbours 
+              and transition t, (get_neighbours lneighbours t) 
+              returns no error if t is referenced in lneighbours. *)
+  
   Lemma get_neighbours_no_error :
     forall (lneighbours : list (trans_type * neighbours_type))
            (t : trans_type),
@@ -1303,11 +1319,10 @@ Section Neighbours.
       decide_accessor_no_err.
   Qed.
   
-  (*  
-   * Lemma : If get_neighbours returns some neighbours
-   *         for a transition t and a list lneighbours, then
-   *         the couple (t, neighbours) is in lneighbours. 
-   *)
+  (** Lemma : If get_neighbours returns some neighbours
+              for a transition t and a list lneighbours, then
+              the couple (t, neighbours) is in lneighbours. *)
+  
   Lemma get_neighbours_in :
     forall (lneighbours : list (trans_type * neighbours_type))
            (t : trans_type)
@@ -1328,6 +1343,7 @@ Section Neighbours.
       apply IHo.
       auto.
   Qed.
+  
 End Neighbours.
 
 (*===============================================================*)
@@ -1336,349 +1352,184 @@ End Neighbours.
 (*===============================================================*)
 
 Section Edges.
+
+  (** Formal specification : check_pre *)
   
-  (*
-   * Function : Returns true if all places in the places list
-   *            have a marking superior or equal to pre(t)(p)
-   *            or test(t)(p).
-   *
-   * Param pre_or_test_arcs_t : pre(t) and test(t) returning
-   *                            the weight of the edge coming
-   *                            from some place p towards transition t.
-   *                            
+  Inductive CheckPre (spn : SPN) (p : place_type) (t : trans_type) :
+    option bool -> Prop :=
+  | CheckPre_cons_some :
+      forall (weight : nat)
+             (is_positive : weight > 0)
+             (nboftokens : nat),
+        pre spn t p = Some (mk_nat_star weight is_positive) ->
+        GetM spn.(marking) p (Some nboftokens) ->
+        CheckPre spn p t (Some (weight <=? nboftokens))
+  | CheckPre_cons_none :
+      pre spn t p = None ->
+      CheckPre spn p t (Some true)
+  | CheckPre_err :
+      forall (weight : nat)
+        (is_positive : weight > 0),
+        pre spn t p = Some (mk_nat_star weight is_positive) ->
+        GetM spn.(marking) p None ->
+        CheckPre spn p t None.
+
+  (** Function : Returns [Some true] if M(p) >= pre(p, t), [Some false] otherwise. 
+                 
+                 Raises an error (i.e. None) if [get_m] fail.
    *)
-  Fixpoint check_pre_or_test
-           (pre_or_test_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool) : option bool :=
-    match places with
-    | p :: tail => match pre_or_test_arcs_t p with
-                   (* If there is no pre or test edge between p and t. *)
-                   | None => check_pre_or_test pre_or_test_arcs_t m tail check_result
-                   (* Else some pre or test edge exists. *)
-                   | Some (mk_nat_star edge_weight _) =>
-                     (* Retrieves the number of tokens associated 
-                      * with place p. *)
-                     match get_m m p with
-                     | Some n =>
-                       check_pre_or_test pre_or_test_arcs_t m tail ((edge_weight <=? n)
-                                                                      && check_result)
-                     (* If number of tokens is None, then it's an error. *)
-                     | None => None
-                     end
-                   end
-    (* check_result must be initialized to true. *)
-    | [] => Some check_result
-    end.
   
-  Functional Scheme check_pre_or_test_ind := Induction for check_pre_or_test Sort Prop. 
-  
-  (*** Formal specification : check_pre_or_test ***)
-  Inductive CheckPreOrTest
-            (pre_or_test_arcs_t : place_type -> option nat_star)
-            (m : marking_type) :
-    list place_type -> bool -> option bool -> Prop :=
-  | CheckPreOrTest_nil :
-      forall (b : bool),
-        CheckPreOrTest pre_or_test_arcs_t m [] b (Some b)
-  | CheckPreOrTest_edge_none :
-      forall (places : list place_type)
-             (p : place_type)
-             (check_result : bool)
-             (optionb : option bool),
-        pre_or_test_arcs_t p = None ->
-        CheckPreOrTest pre_or_test_arcs_t m places check_result optionb ->
-        CheckPreOrTest pre_or_test_arcs_t m (p :: places) check_result optionb
-  | CheckPreOrTest_err :
-      forall (places : list place_type)
-             (p : place_type)
-             (edge_weight : nat)
-             (check_result : bool)
-             (is_positive : edge_weight > 0),
-        pre_or_test_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
-        GetM m p None ->
-        CheckPreOrTest pre_or_test_arcs_t m (p :: places) check_result None
-  | CheckPreOrTest_tokens_some :
-      forall (places : list place_type) 
-             (n edge_weight : nat)
-             (p : place_type)
-             (is_positive : edge_weight > 0)
-             (check_result : bool)
-             (optionb : option bool),
-        pre_or_test_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
-        GetM m p (Some n) ->
-        CheckPreOrTest pre_or_test_arcs_t m places ((edge_weight <=? n) && check_result)
-                       optionb ->
-        CheckPreOrTest pre_or_test_arcs_t m (p :: places) check_result optionb.
-
-  (*** Correctness proof : check_pre_or_test ***)
-  Theorem check_pre_or_test_correct :
-    forall (pre_or_test_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool)
-           (optionb : option bool),
-      check_pre_or_test pre_or_test_arcs_t m places check_result = optionb ->
-      CheckPreOrTest pre_or_test_arcs_t m places check_result optionb.
-  Proof.
-    intros pre_or_test_arcs_t m places check_result optionb;
-      functional induction (check_pre_or_test pre_or_test_arcs_t m places check_result)
-                 using check_pre_or_test_ind;
-      intros.
-    (* Case places = [] *)
-    - rewrite <- H; apply CheckPreOrTest_nil.
-    (* Case edge and tokens exist *)
-    - apply CheckPreOrTest_tokens_some with (p := p)
-                                            (n := n0)
-                                            (edge_weight := edge_weight)
-                                            (is_positive := _x).
-      + rewrite e0; auto.
-      + apply get_m_correct; auto.
-      + apply IHo; auto. 
-    (* Case of error, get_m returns None *)
-    - rewrite <- H; apply CheckPreOrTest_err with (p := p)
-                                                  (edge_weight := edge_weight)
-                                                  (is_positive := _x).
-      + rewrite e0; auto.
-      + apply get_m_correct; auto.
-    (* Case edge doesn't exist *)
-    - apply CheckPreOrTest_edge_none.
-      + auto.
-      + apply IHo; auto.
-  Qed.
-
-  (*** Completeness proof : check_pre_or_test ***)
-  Theorem check_pre_or_test_compl :
-    forall (pre_or_test_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool)
-           (optionb : option bool),
-      CheckPreOrTest pre_or_test_arcs_t m places check_result optionb ->
-      check_pre_or_test pre_or_test_arcs_t m places check_result = optionb.
-  Proof.
-    intros pre_or_test_arcs_t m places check_result optionb H; induction H.
-    (* Case CheckPreOrTest_nil *)
-    - simpl; auto.
-    (* Case CheckPreOrTest_edge_none *)
-    - simpl; rewrite H; auto.
-    (* Case CheckPreOrTest_err *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
-    (* Case CheckPreOrTest_tokens_some *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
-  Qed.
-
-  (* Lemma : Proves that check_pre_or_test returns no error if
-   *         the places in list places are referenced in marking m.
-   *
-   *)
-  Lemma check_pre_or_test_no_error :
-    forall (pre_or_test_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool),
-      incl places (fst (split m)) ->
-      exists v : bool,
-        check_pre_or_test pre_or_test_arcs_t m places check_result = Some v.
-  Proof.
-    unfold incl.
-    intros pre_or_test_arcs_t m places check_result.
-    functional induction (check_pre_or_test pre_or_test_arcs_t m places check_result)
-               using check_pre_or_test_ind;
-    intros.
-    (* Base case, places = [] *)
-    - exists check_result; auto.
-    (* Case get_m = Some v *)
-    - apply IHo; intros.
-      apply (in_cons p) in H0.
-      apply H in H0.
-      auto.
-    (* Case get_m = None, impossible regarding the  
-     * hypothesis.
-     *)
-    - cut (In p (p :: tail)).
-      + intro.
-        apply H in H0.
-        apply get_m_no_error in H0.
-        elim H0; intros.
-        rewrite e2 in H1; inversion H1.
-      + apply in_eq.
-    (* Case pre_or_test_arcs_t = None. *)
-    - apply IHo; intros.
-      apply (in_cons p) in H0.
-      apply H in H0.
-      auto.
-  Qed.
-  
-  (**************************************************)
-  (**************************************************)
-
-  (*
-   * Function : Returns true if all places in the places list
-   *            have a marking less equal than inhib(t)(p).
-   *            inhib(t)(p) denoting the function associating
-   *            a weight to a inhibiting edge coming from place
-   *            p to transition t. 
-   *)
-  Fixpoint check_inhib
-           (inhib_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool) : option bool :=
-    match places with
-    | p :: tail => match inhib_arcs_t p with
-                   (* If there is inhib edge between (pl i) and t. *)
-                   | None => check_inhib inhib_arcs_t m tail check_result
-                   (* Else some inhib edge exists. *)
-                   | Some (mk_nat_star edge_weight _) =>
-                     match get_m m p with
-                     | Some n => check_inhib inhib_arcs_t m tail (check_result
-                                                                    && (n <? edge_weight))
-                     (* Case of error, place i is not in m. *)
-                     | None => None
-                     end
-                   end
-    | [] => Some check_result
+  Definition check_pre (spn : SPN) (p : place_type) (t : trans_type) : option bool :=
+    match pre spn t p with
+    | None => Some true
+    | Some (mk_nat_star weight _) =>
+      match get_m spn.(marking) p with
+      | Some nboftokens => Some (weight <=? nboftokens)
+      | None => None
+      end
     end.
 
-  Functional Scheme check_inhib_ind := Induction for check_inhib Sort Prop.
-
-  (*** Formal specification ***)
-  Inductive CheckInhib
-            (inhib_arcs_t : place_type -> option nat_star)
-            (m : marking_type) :
-    list place_type -> bool -> option bool -> Prop :=
-  | CheckInhib_nil :
-      forall (b : bool),
-        CheckInhib inhib_arcs_t m [] b (Some b)
-  | CheckInhib_edge_none :
-      forall (places : list place_type)
-             (p : place_type)
-             (check_result : bool)
-             (optionb : option bool),
-        inhib_arcs_t p = None ->
-        CheckInhib inhib_arcs_t m places check_result optionb->
-        CheckInhib inhib_arcs_t m (p :: places) check_result optionb
-  | CheckInhib_err :
-      forall (places : list place_type)
-             (p : place_type)
-             (edge_weight : nat)
-             (is_positive : edge_weight > 0)
-             (check_result : bool),
-        inhib_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
-        GetM m p None ->
-        CheckInhib inhib_arcs_t m (p :: places) check_result None
-  | CheckInhib_tokens_some :
-      forall (places : list place_type)
-             (p : place_type)
-             (n edge_weight : nat)
-             (is_positive : edge_weight > 0)
-             (check_result : bool)
-             (optionb : option bool),
-        inhib_arcs_t p = Some (mk_nat_star edge_weight is_positive) ->
-        GetM m p (Some n) ->
-        CheckInhib inhib_arcs_t m places (check_result && (n <? edge_weight)) optionb ->
-        CheckInhib inhib_arcs_t m (p :: places) check_result optionb.
-
-  (*** Correctness proof : check_inhib ***)
-  Theorem check_inhib_correct :
-    forall (inhib_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool)
-           (optionb : option bool),
-      check_inhib inhib_arcs_t m places check_result = optionb ->
-      CheckInhib inhib_arcs_t m places check_result optionb.
+  Functional Scheme check_pre_ind := Induction for check_pre Sort Prop.
+  
+  Theorem check_pre_correct :
+    forall (spn : SPN) (p : place_type) (t : trans_type) (optb : option bool),
+      check_pre spn p t = optb -> CheckPre spn p t optb.
   Proof.
-    intros inhib_arcs_t m places check_result optionb;
-      functional induction (check_inhib inhib_arcs_t m places check_result)
-                 using check_inhib_ind;
-      intros.
-    (* Case places = [] *)
-    - rewrite <- H; apply CheckInhib_nil.
-    (* Case edge and tokens exist *)
-    - apply CheckInhib_tokens_some with (p := p)
-                                        (n := n0)
-                                        (edge_weight := edge_weight)
-                                        (is_positive := _x).
-      + rewrite e0; auto.
-      + apply get_m_correct; auto.
-      + apply IHo; auto.
-    (* Case edge exists but no tokens, case of error! *)
-    - rewrite <- H; apply CheckInhib_err with (p := p)
-                                              (edge_weight := edge_weight)
-                                              (is_positive := _x).
-      + rewrite e0; auto.
-      + apply get_m_correct; auto.
-    (* Case edge doesn't exist *)
-    - apply CheckInhib_edge_none.
-      + auto.
-      + apply IHo; auto.
+    intros spn p t; functional induction (check_pre spn p t) using check_pre_ind; intros.
+    - rewrite <- H; apply CheckPre_cons_some with (is_positive := _x);
+        [auto | apply get_m_correct; assumption].
+    - rewrite <- H; apply CheckPre_err with (weight := weight) (is_positive := _x);
+        [auto | apply get_m_correct; assumption].
+    - rewrite <- H; apply CheckPre_cons_none; assumption.
   Qed.
+  
+  Inductive MapCheckPreAux
+            (spn : SPN)
+            (t : trans_type) :
+    list place_type -> option bool -> Prop :=
+  | MapCheckPreAux_true :
+      forall (pre_places : list trans_type),
+        (forall p : place_type, In p pre_places -> CheckPre spn p t (Some true)) ->
+        MapCheckPreAux spn t pre_places (Some true)
+  | MapCheckPreAux_false :
+      forall (pre_places : list trans_type),
+        (exists p : place_type, In p pre_places -> CheckPre spn p t (Some false)) ->
+        MapCheckPreAux spn t pre_places (Some false)
+  | MapCheckPreAux_err :
+      forall (pre_places : list trans_type),
+        (exists p : place_type, In p pre_places -> CheckPre spn p t None) ->
+        MapCheckPreAux spn t pre_places None.
+  
+  (** Function : Returns [Some true] if ∀ p ∈ [pre_places], M(p) >= pre(p, t).
+                 
+                 Raises an error if [get_m] fails. *)
+  
+  Fixpoint map_check_pre_aux
+           (spn : SPN)
+           (t : trans_type)
+           (pre_places : list place_type)
+           (check_result : bool) {struct pre_places} : option bool :=
+    match pre_places with
+    | p :: tail =>
+      match check_pre spn p t with
+      | None => None
+      | Some b =>
+        map_check_pre_aux spn t tail (b && check_result)
+      end 
+    | [] => Some check_result
+    end.  
 
-  (*** Completeness proof : check_inhib ***)
-  Theorem check_inhib_compl :
-    forall (inhib_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool)
-           (optionb : option bool),
-      CheckInhib inhib_arcs_t m places check_result optionb ->
-      check_inhib inhib_arcs_t m places check_result = optionb.
-  Proof.
-    intros inhib_arcs_t m places check_result optionb H; induction H.
-    (* Case CheckInhib_nil *)
-    - simpl; auto.
-    (* Case CheckInhib_edge_none *)
-    - simpl; rewrite H; auto.
-    (* Case CheckInhib_err *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
-    (* Case CheckInhib_tokens_some *)
-    - simpl; rewrite H; apply get_m_compl in H0; rewrite H0; auto.
-  Qed.
+  (** Function : Wrapper around [map_check_pre_aux]. *)
+  
+  Definition map_check_pre (spn : SPN) (pre_places : list place_type) (t : trans_type) : option bool :=
+    map_check_pre_aux spn t pre_places true.
+  
 
-  (* Lemma : Proves that check_inhib returns no error if
-   *         the places in list places are referenced in marking m.
-   *
+  (** Function : Returns [Some true] if M(p) >= test(p, t), [Some false] otherwise. 
+                 
+                 Raises an error (i.e. None) if [get_m] fail.
    *)
-  Lemma check_inhib_no_error :
-    forall (inhib_arcs_t : place_type -> option nat_star)
-           (m : marking_type)
-           (places : list place_type)
-           (check_result : bool),
-      incl places (fst (split m)) ->
-      exists v : bool,
-        check_inhib inhib_arcs_t m places check_result = Some v.
-  Proof.
-    unfold incl.
-    intros inhib_arcs_t m places check_result.
-    functional induction (check_inhib inhib_arcs_t m places check_result)
-               using check_inhib_ind;
-    intros.
-    (* Base case, places = [] *)
-    - exists check_result; auto.
-    (* Case get_m = Some v *)
-    - apply IHo; intros.
-      apply (in_cons p) in H0.
-      apply H in H0.
-      auto.
-    (* Case get_m = None, impossible regarding the  
-     * hypothesis.
-     *)
-    - cut (In p (p :: tail)).
-      + intro.
-        apply H in H0.
-        apply get_m_no_error in H0.
-        elim H0; intros.
-        rewrite e2 in H1; inversion H1.
-      + apply in_eq.
-    (* Case pre_or_test_arcs_t = None. *)
-    - apply IHo; intros.
-      apply (in_cons p) in H0.
-      apply H in H0.
-      auto.
-  Qed.
-    
+  
+  Definition check_test (spn : SPN) (p : place_type) (t : trans_type) : option bool :=
+    match test spn t p with
+    | None => Some true
+    | Some (mk_nat_star weight _) =>
+      match get_m spn.(marking) p with
+      | Some nboftokens => Some (weight <=? nboftokens)
+      | None => None
+      end
+    end.
+
+  (** Function : Returns [Some true] if ∀ p ∈ [test_places], M(p) >= test(p, t).
+                 
+                 Raises an error if [get_m] fails.
+   *)
+  
+  Fixpoint map_check_test_aux
+           (spn : SPN)
+           (t : trans_type)
+           (test_places : list place_type)
+           (check_result : bool) {struct test_places} : option bool :=
+    match test_places with
+    | p :: tail =>
+      match check_test spn p t with
+      | None => None
+      | Some b =>
+        map_check_test_aux spn t tail (b && check_result)
+      end 
+    | [] => Some check_result
+    end.  
+
+  (** Function : Returns [Some true] if ∀ p ∈ test places of t, M(p) >= test(p, t) 
+                 
+                 Raises an error if [get_neighbours] or [check_test_aux] fail.
+   *)
+  
+  Definition map_check_test (spn : SPN) (test_places : list place_type) (t : trans_type) : option bool :=
+    map_check_test_aux spn t test_places true.
+
+  (** Function : Returns [Some true] if M(p) >= inhib(p, t), [Some false] otherwise. 
+                 
+                 Raises an error (i.e. None) if [get_m] fail.
+   *)
+  
+  Definition check_inhib (spn : SPN) (p : place_type) (t : trans_type) : option bool :=
+    match inhib spn t p with
+    | None => Some true
+    | Some (mk_nat_star weight _) =>
+      match get_m spn.(marking) p with
+      | Some nboftokens => Some (weight <=? nboftokens)
+      | None => None
+      end
+    end.
+
+  (** Function : Returns [Some true] if ∀ p ∈ [inhib_places], M(p) >= inhib(p, t).
+                 
+                 Raises an error if [get_m] fails.
+   *)
+  
+  Fixpoint map_check_inhib_aux
+           (spn : SPN)
+           (t : trans_type)
+           (inhib_places : list place_type)
+           (check_result : bool) {struct inhib_places} : option bool :=
+    match inhib_places with
+    | p :: tail =>
+      match check_inhib spn p t with
+      | None => None
+      | Some b =>
+        map_check_inhib_aux spn t tail (b && check_result)
+      end 
+    | [] => Some check_result
+    end.  
+
+  (** Function : Returns [Some true] if ∀ p ∈ inhib places of t, M(p) >= inhib(p, t) 
+                 
+                 Raises an error if [get_neighbours] or [check_inhib_aux] fail.
+   *)
+  
+  Definition map_check_inhib (spn : SPN) (inhib_places : list place_type) (t : trans_type) : option bool :=
+    map_check_inhib_aux spn t inhib_places true.
+  
 End Edges.
 

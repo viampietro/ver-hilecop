@@ -6,156 +6,92 @@ Require Export Hilecop.SPN.
 
 Section FireSpn.
 
-  (** Returns true if a certain transition t is firable according to a marking [steadym]
-      (or [decreasingm]) on the neighbour places of t and to some 
-      weight functions [pre_arcs_t], [test_arcs_t] and [inhib_arcs_t]. *)
-  Definition spn_is_firable
-             (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (pre test inhib : weight_type)
-             (steadym decreasingm : marking_type) : option bool :=
-    match (check_pre_or_test (pre t) decreasingm (pre_pl neighbours_t) true) with
-    | Some check_pre_result =>  
-      match (check_pre_or_test (test t) steadym (test_pl neighbours_t) true) with
-      | Some check_test_result =>
-        match check_inhib (inhib t) steadym (inhib_pl neighbours_t) true with
-        | Some check_inhib_result => Some (check_pre_result
-                                             && check_test_result
-                                             && check_inhib_result)
+  (** Returns [Some true] if [t] is sensitized in marking [spn.(marking)], 
+      [Some false] otherwise. 
+                 
+      Raises an error if [check_pre], [check_test], [check_inhib] or
+      [get_neighbours] fail. *)
+  
+  Definition is_sensitized
+             (spn : SPN)
+             (t : trans_type) : option bool :=
+    match get_neighbours spn.(lneighbours) t with
+    | Some neighbours_of_t =>      
+      match map_check_pre spn (pre_pl neighbours_of_t) t with
+      | Some check_pre_result =>  
+        match map_check_test spn (test_pl neighbours_of_t) t with
+        | Some check_test_result =>
+          match map_check_inhib spn (inhib_pl neighbours_of_t) t with
+          | Some check_inhib_result =>
+            Some (check_pre_result && check_test_result && check_inhib_result)
+          (* Case of error!! *)
+          | None => None
+          end
         (* Case of error!! *)
         | None => None
         end
       (* Case of error!! *)
       | None => None
       end
-    (* Case of error!! *)
+    (* Case of error, get_neighbours failed!! *)
+    | None => None
+    end.
+  
+  (** Returns true if t ∈ firable(spn) . *)
+  
+  Definition spn_is_firable
+             (spn : SPN)
+             (residual_marking : marking_type)
+             (t : trans_type) : option bool :=
+    match get_neighbours spn.(lneighbours) t with
+    | Some neighbours_of_t =>      
+      match map_check_pre (set_m spn residual_marking) (pre_pl neighbours_of_t) t with
+      | Some check_pre_result =>  
+        match map_check_test spn (test_pl neighbours_of_t) t with
+        | Some check_test_result =>
+          match map_check_inhib spn (inhib_pl neighbours_of_t) t with
+          | Some check_inhib_result =>
+            Some (check_pre_result && check_test_result && check_inhib_result)
+          (* Case of error!! *)
+          | None => None
+          end
+        (* Case of error!! *)
+        | None => None
+        end
+      (* Case of error!! *)
+      | None => None
+      end
+    (* Case of error, get_neighbours failed!! *)
     | None => None
     end.
 
-  Functional Scheme spn_is_firable_ind := Induction for spn_is_firable Sort Prop.
+  Fixpoint update_residual_marking_aux
+           (spn : SPN)
+           (residual_marking : marking_type)
+           (t : trans_type)
+           (pre_places : list place_type) {struct pre_places} :
+    option marking_type :=
+  match pre_places with
+  | p :: tail =>
+    match modify_m spn.(marking) p Nat.sub (pre spn t p) with
+    | Some residual_marking' =>
+      update_residual_marking_aux spn residual_marking' t tail
+    (* It's an exception, p is not referenced in spn.(marking). *)
+    | None => None
+    end
+  | [] => Some (residual_marking)
+  end.  
 
-  (** Formal specification : spn_is_firable *)
-  Inductive SpnIsFirable
-            (t : trans_type)
-            (neighbours_t : neighbours_type)
-            (pre test inhib : weight_type)
-            (steadym decreasingm : marking_type) : option bool -> Prop :=
-  | SpnIsFirable_some :
-      forall (check_pre_result check_test_result check_inhib_result : bool),
-        CheckPreOrTest (pre t) decreasingm (pre_pl neighbours_t) true (Some check_pre_result) /\
-        CheckPreOrTest (test t) steadym (test_pl neighbours_t) true (Some check_test_result) /\
-        CheckInhib (inhib t) steadym (inhib_pl neighbours_t) true (Some check_inhib_result) ->
-        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm
-                     (Some (check_pre_result && check_test_result && check_inhib_result))
-  | SpnIsFirable_err :
-      CheckPreOrTest (pre t) decreasingm (pre_pl neighbours_t) true None \/
-      CheckPreOrTest (test t) steadym (test_pl neighbours_t) true None \/
-      CheckInhib (inhib t) steadym (inhib_pl neighbours_t) true None ->
-      SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None.
+  Definition update_residual_marking
+             (spn : SPN)
+             (residual_marking : marking_type)
+             (t : trans_type) : option marking_type :=
+    match get_neighbours spn.(lneighbours) t with
+    | Some (neighbours_of_t) =>
+      update_residual_marking_aux spn residual_marking t (pre_pl neighbours_of_t)
+    | None => None
+    end.
 
-  (** Correctness proof : spn_is_firable *)
-  
-  Theorem spn_is_firable_correct :
-    forall (t : trans_type)
-           (neighbours_t : neighbours_type)
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (optionb : option bool),
-      spn_is_firable t neighbours_t pre test inhib steadym decreasingm = optionb ->
-      SpnIsFirable t neighbours_t pre test inhib steadym decreasingm optionb.
-  Proof.
-    intros t neighbours_t pre test inhib steadym decreasingm. 
-    functional induction (spn_is_firable t neighbours_t pre test inhib steadym decreasingm)
-               using spn_is_firable_ind; intros.
-    (* Case check_pre, check_test and check_inhib returned some value. *)
-    - rewrite <- H; apply SpnIsFirable_some.
-      split; [apply check_pre_or_test_correct; auto |
-              split; [apply check_pre_or_test_correct; auto |
-                      apply check_inhib_correct; auto]].            
-    (* Case of error 1. check_inhib returns None. *)
-    - rewrite <- H; apply SpnIsFirable_err.
-      apply check_inhib_correct in e1; auto.
-    (* Case of error 2. check_test returns None.  *)
-    - rewrite <- H; apply SpnIsFirable_err.
-      apply check_pre_or_test_correct in e0; auto.
-    (* Case of error 3. check_pre returns None. *)
-    - rewrite <- H; apply SpnIsFirable_err.
-      apply check_pre_or_test_correct in e; auto.
-  Qed.
-
-  (*** Completeness proof : spn_is_firable ***)
-  Theorem spn_is_firable_compl :
-    forall (t : trans_type)
-           (neighbours_t : neighbours_type)
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (optionb : option bool),
-      SpnIsFirable t neighbours_t pre test inhib steadym decreasingm optionb ->
-      spn_is_firable t neighbours_t pre test inhib steadym decreasingm = optionb.
-  Proof.
-    intros t neighbours_t pre test inhib steadym decreasingm optionb H; elim H; intros.
-    (* Case SpnIsFirable_some *)
-    - unfold spn_is_firable.
-      elim H0; clear H0; intros.
-      elim H1; clear H1; intros.
-      repeat (((apply check_pre_or_test_compl in H0; rewrite H0) ||
-               (apply check_pre_or_test_compl in H1; rewrite H1) ||
-               (apply check_inhib_compl in H2; rewrite H2));
-              auto).
-    (* Case SpnIsFirable_err *)
-    - unfold spn_is_firable.
-      elim H0; clear H0; intros.
-      + apply check_pre_or_test_compl in H0; rewrite H0; auto.
-      + elim H0; clear H0; intros.
-        -- case (check_pre_or_test (pre t) decreasingm (pre_pl neighbours_t) true).
-           ++ intro; apply check_pre_or_test_compl in H0; rewrite H0; auto.
-           ++ auto.
-        -- case (check_pre_or_test (pre t) decreasingm (pre_pl neighbours_t) true).
-           +++ case (check_pre_or_test (test t) steadym (test_pl neighbours_t) true);
-                 [ apply check_inhib_compl in H0; rewrite H0; auto | intro; auto ].
-           +++ auto.
-  Qed.
-
-  (* Lemma : Proves that spn_is_firable returns no error if
-   *         the places in (pre_pl neighbours_t), (inhib_pl neighbours_t) 
-   *         and (test_pl neighbours_t) are referenced in markings steadym
-   *         and decreasingm.  
-   *
-   *)
-  Lemma spn_is_firable_no_error :
-    forall (t : trans_type)
-           (neighbours_t : neighbours_type)
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type),
-      incl (pre_pl neighbours_t) (fst (split decreasingm)) ->
-      incl (test_pl neighbours_t) (fst (split steadym)) ->
-      incl (inhib_pl neighbours_t) (fst (split steadym)) ->
-      exists v : bool,
-        spn_is_firable t neighbours_t pre test inhib steadym decreasingm = Some v.
-  Proof.
-    unfold incl.
-    intros t neighbours_t pre test inhib steadym decreasingm.
-    functional induction (spn_is_firable t neighbours_t pre test inhib steadym decreasingm)
-               using spn_is_firable_ind; intros.
-    (* Case all went well. *)
-    - exists (check_pre_result && check_test_result && check_inhib_result); auto.
-    (* Case check_inhib = None, impossible regarding hypothesis. *)
-    - apply check_inhib_no_error with (inhib_arcs_t := inhib t)
-                                      (check_result := true) in H1.
-      elim H1; intros.
-      rewrite e1 in H2; inversion H2.
-    (* Case check_test = None, impossible regarding hypothesis. *)
-    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := test t)
-                                            (check_result := true) in H0.
-      elim H0; intros.
-      rewrite e0 in H2; inversion H2.
-    (* Case check_pre = None, impossible regarding hypothesis. *)
-    - apply check_pre_or_test_no_error with (pre_or_test_arcs_t := pre t)
-                                            (check_result := true) in H.
-      elim H; intros.
-      rewrite e in H2; inversion H2.
-  Qed.
-    
   (* 
    * There are 2 parallel calculus in spn_fire_pre_aux : 
    * 1. pumping tokens to get "decreasingm" (fired pre)
@@ -163,55 +99,50 @@ Section FireSpn.
    *
    * and 2 markings are recorded : 
    * 1. the initial one to check with inhib and test arcs
-   * 2. a floating (decreasing) intermediate marking to check classic arcs
+   * 2. a residual marking to check classic arcs
    *)
   
-  (* Function : Given 1 priority group of transitions (a list pgroup), 
-   *            returns 1 list of transitions "fired_pre_group" 
-   *            and marking "decreasingm" accordingly ...
-   *
-   *            Returns a couple (list of transitions, marking)
-   *            For each sensitized transition of the list,
-   *            the marking of the pre-condition places are updated (the 
-   *            transition is fired). "decreasingm" is then the resulting marking.
-   *)
+  (** Given 1 priority group of transitions (a list pgroup), 
+      returns 1 list of transitions "fired_pre_group" 
+      and marking "decreasingm" accordingly ...
+   
+      Returns a couple (list of transitions, marking).
+
+      For each sensitized transition of the list,
+      the marking of the pre-condition places are updated (the 
+      transition is fired). 
+      [decreasingm] is then the resulting marking. *)
+  
   Fixpoint spn_fire_pre_aux
-           (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)  
-           (steadym : marking_type)
-           (decreasingm : marking_type)
-           (fired_pre_group pgroup : list trans_type) :
-    option (list trans_type * marking_type) :=
+           (spn : SPN)
+           (residual_marking : marking_type)
+           (fired pgroup : list trans_type) :
+    option (list trans_type) :=
     match pgroup with
     | t :: tail =>
-      match get_neighbours lneighbours t with
-      (* Checks neighbours of t. *)
-      | Some neighbours_t =>
-        match spn_is_firable t neighbours_t pre test inhib steadym decreasingm with
-        (* If t is firable, updates the marking for the pre places neighbours of t. *)
-        | Some true =>
-          match update_marking_pre t pre decreasingm (pre_pl neighbours_t) with
-          (* Recursive call with new marking *)
-          | Some marking' =>
-            spn_fire_pre_aux lneighbours pre test inhib steadym marking' (fired_pre_group ++ [t]) tail
-          (* Something went wrong, error! *)
-          | None => None
-          end
-        (* Else no changes but inductive progress. *)
-        | Some false =>
-          spn_fire_pre_aux lneighbours pre test inhib steadym decreasingm fired_pre_group tail
+      match spn_is_firable spn residual_marking t with
+      (* If t is firable, updates the residual_marking, and add t to the fired transitions. *)
+      | Some true =>
+        match update_residual_marking spn residual_marking t with
+        (* Recursive call with new marking *)
+        | Some residual_marking' =>
+          spn_fire_pre_aux spn residual_marking' (fired ++ [t]) tail
         (* Something went wrong, error! *)
         | None => None
         end
-      (* If transition t have no neighbours, then error! *)
+      (* Else no changes but inductive progress. *)
+      | Some false =>
+        spn_fire_pre_aux spn residual_marking fired tail
+      (* Something went wrong, error! *)
       | None => None
       end
-    | []  => Some (fired_pre_group, decreasingm)
+    | []  => Some fired
     end.
 
   Functional Scheme spn_fire_pre_aux_ind := Induction for spn_fire_pre_aux Sort Prop. 
   
-  (*** Formal specification : spn_fire_pre_aux ***)
+  (** Formal specification : spn_fire_pre_aux *)
+  
   Inductive SpnFirePreAux
             (lneighbours : list (trans_type * neighbours_type))
             (pre test inhib : weight_type) 
@@ -229,18 +160,18 @@ Section FireSpn.
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* Case spn_is_firable returns an error. *)
   | SpnFirePreAux_firable_err :
-      forall (t : trans_type) (pgroup : list trans_type) (neighbours_t : neighbours_type),
-        GetNeighbours lneighbours t (Some neighbours_t) ->
-        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None ->
+      forall (t : trans_type) (pgroup : list trans_type) (neighbours_of_t : neighbours_type),
+        GetNeighbours lneighbours t (Some neighbours_of_t) ->
+        SpnIsFirable t neighbours_of_t pre test inhib steadym decreasingm None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* Case spn_is_firable returns false. *)
   | SpnFirePreAux_firable_false :
       forall (t : trans_type)
              (pgroup : list trans_type)
-             (neighbours_t : neighbours_type)
+             (neighbours_of_t : neighbours_type)
              (option_final_couple : option (list trans_type * marking_type)),
-        GetNeighbours lneighbours t (Some neighbours_t) ->
-        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some false) ->
+        GetNeighbours lneighbours t (Some neighbours_of_t) ->
+        SpnIsFirable t neighbours_of_t pre test inhib steadym decreasingm (Some false) ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group pgroup
                       option_final_couple ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup)
@@ -248,22 +179,22 @@ Section FireSpn.
   (* Case update_marking_pre returns an error. *)
   | SpnFirePreAux_update_err :
       forall (t : trans_type)
-             (neighbours_t : neighbours_type)
+             (neighbours_of_t : neighbours_type)
              (pgroup : list trans_type),
-        GetNeighbours lneighbours t (Some neighbours_t) ->
-        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some true) ->
-        UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) None ->
+        GetNeighbours lneighbours t (Some neighbours_of_t) ->
+        SpnIsFirable t neighbours_of_t pre test inhib steadym decreasingm (Some true) ->
+        UpdateMarkingPre t pre decreasingm (pre_pl neighbours_of_t) None ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup) None
   (* General case, all went well. *)
   | SpnFirePreAux_cons :
       forall (t : trans_type)
-             (neighbours_t : neighbours_type)
+             (neighbours_of_t : neighbours_type)
              (pgroup : list trans_type)
              (modifiedm : marking_type)
              (option_final_couple : option (list trans_type * marking_type)),
-        GetNeighbours lneighbours t (Some neighbours_t) ->
-        SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some true) ->
-        UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) (Some modifiedm) ->
+        GetNeighbours lneighbours t (Some neighbours_of_t) ->
+        SpnIsFirable t neighbours_of_t pre test inhib steadym decreasingm (Some true) ->
+        UpdateMarkingPre t pre decreasingm (pre_pl neighbours_of_t) (Some modifiedm) ->
         SpnFirePreAux lneighbours pre test inhib steadym modifiedm (fired_pre_group ++ [t]) pgroup
                       option_final_couple ->
         SpnFirePreAux lneighbours pre test inhib steadym decreasingm fired_pre_group (t :: pgroup)
@@ -288,23 +219,23 @@ Section FireSpn.
     - rewrite <- H; apply SpnFirePreAux_nil.
     (* General case, all went well. *)
     - apply SpnFirePreAux_cons with (modifiedm := marking')
-                                    (neighbours_t := neighbours_t).
+                                    (neighbours_of_t := neighbours_of_t).
       + apply get_neighbours_correct; auto.
       + apply spn_is_firable_correct; auto.
       + apply update_marking_pre_correct; auto.
       + apply IHo; auto.
     (* Case update_marking_pre error. *)
-    - rewrite <- H; apply SpnFirePreAux_update_err with (neighbours_t := neighbours_t).
+    - rewrite <- H; apply SpnFirePreAux_update_err with (neighbours_of_t := neighbours_of_t).
       + apply get_neighbours_correct; auto.
       + apply spn_is_firable_correct; auto.
       + apply update_marking_pre_correct; auto.
     (* Case spn_is_firable returns false. *)
-    - apply SpnFirePreAux_firable_false with (neighbours_t := neighbours_t).
+    - apply SpnFirePreAux_firable_false with (neighbours_of_t := neighbours_of_t).
       + apply get_neighbours_correct; auto.
       + apply spn_is_firable_correct; auto.
       + apply IHo; auto.
     (* Case spn_is_firable returns an error. *)
-    - rewrite <- H; apply SpnFirePreAux_firable_err with (neighbours_t := neighbours_t).
+    - rewrite <- H; apply SpnFirePreAux_firable_err with (neighbours_of_t := neighbours_of_t).
       + apply get_neighbours_correct; auto.
       + apply spn_is_firable_correct; auto.
     (* Case get_neighbours returns an error. *)
@@ -398,10 +329,10 @@ Section FireSpn.
      *)
     - cut (In t (t :: tail)); intros.
       + apply get_neighbours_in in e0.
-        generalize ((H0 t neighbours_t) e0).
+        generalize ((H0 t neighbours_of_t) e0).
         intros.
         elim H2; intros.
-        apply (update_marking_pre_no_error t pre (pre_pl neighbours_t) decreasingm) in H3.
+        apply (update_marking_pre_no_error t pre (pre_pl neighbours_of_t) decreasingm) in H3.
         elim H3; intros.
         rewrite H5 in e3; inversion e3.
       + apply in_eq.
@@ -414,12 +345,12 @@ Section FireSpn.
      *)
     - cut (In t (t :: tail)); intros.
       + apply get_neighbours_in in e0.
-        generalize ((H0 t neighbours_t) e0).
+        generalize ((H0 t neighbours_of_t) e0).
         intros.
         elim H2; intros; clear H2.
         elim H4; intros; clear H4.
         (* Applies spn_is_firable_no_error to create a contradiction. *)
-        apply (spn_is_firable_no_error t neighbours_t pre test inhib
+        apply (spn_is_firable_no_error t neighbours_of_t pre test inhib
                                        steadym decreasingm H3 H5) in H2.
         elim H2; intros.
         rewrite H4 in e1.
@@ -1241,8 +1172,8 @@ Section FireSpn.
       match get_neighbours lneighbours t with
       (* Updates the marking
        * for all neighbour post places of t. *)
-      | Some neighbours_t =>
-        match update_marking_post t post increasingm (post_pl neighbours_t) with
+      | Some neighbours_of_t =>
+        match update_marking_post t post increasingm (post_pl neighbours_of_t) with
         | Some new_marking => (fire_post lneighbours post new_marking tail)
         (* Something went wrong, case of error. *)
         | None => None
@@ -1270,21 +1201,21 @@ Section FireSpn.
   (* General case *)
   | FirePost_cons :
       forall (t : trans_type)
-             (neighbours_t : neighbours_type)
+             (neighbours_of_t : neighbours_type)
              (pre_fired_transitions : list trans_type)
              (modifiedm : marking_type)
              (optionm : option marking_type),
-        GetNeighbours lneighbours t (Some neighbours_t) ->
-        UpdateMarkingPost t post increasingm (post_pl neighbours_t) (Some modifiedm) ->
+        GetNeighbours lneighbours t (Some neighbours_of_t) ->
+        UpdateMarkingPost t post increasingm (post_pl neighbours_of_t) (Some modifiedm) ->
         FirePost lneighbours post modifiedm pre_fired_transitions optionm ->
         FirePost lneighbours post increasingm (t :: pre_fired_transitions) optionm
   (* Case update_marking_post returns an error. *)
   | FirePost_update_err :
       forall (t : trans_type)
-             (neighbours_t : neighbours_type)
+             (neighbours_of_t : neighbours_type)
              (pre_fired_transitions : list trans_type),
-        GetNeighbours lneighbours t (Some neighbours_t) ->
-        UpdateMarkingPost t post increasingm (post_pl neighbours_t) None ->
+        GetNeighbours lneighbours t (Some neighbours_of_t) ->
+        UpdateMarkingPost t post increasingm (post_pl neighbours_of_t) None ->
         FirePost lneighbours post increasingm (t :: pre_fired_transitions) None.
 
   Functional Scheme fire_post_ind := Induction for fire_post Sort Prop.
@@ -1795,7 +1726,8 @@ Section AnimateSpn.
       + apply spn_fire_correct; auto.
   Qed.
 
-  (*** Completeness proof : spn_cycle ***)
+  (** Completeness proof : spn_cycle *)
+  
   Theorem spn_cycle_compl :
     forall (spn : SPN)
            (option_final_couple : option (list trans_type * SPN)),
