@@ -1,4 +1,4 @@
-Require Export Hilecop.SPN.
+Require Export Hilecop.SPN Hilecop.SPNAnimator.
                                
 (*! ================================================== !*) 
 (*!                  FIRST SPN EXAMPLE                 !*)
@@ -274,10 +274,24 @@ Qed.
 (*! === PERFORMANCE TESTS. === !*)
 (*! ========================== !*)
 
-(* Time Compute (spn_animate spn1 100 []). *)
-(* Time Compute (spn_animate spn1 1000 []). *)
-(* Time Compute (spn_animate spn1 2000 []). *)
-(* Time Compute (spn_animate spn1 4000 []). *)
+Fixpoint spn_display_states_aux (states : list ((list trans_type) * SPN)) {struct states} :
+  list ((list trans_type) * marking_type) :=
+  match states with
+  | (fired, spn) :: tail => (fired, spn.(marking)) :: spn_display_states_aux tail
+  | [] => []
+  end.
+
+Definition spn_display_states (opt_states : option (list (list trans_type * SPN))) :
+  list (list trans_type * marking_type) :=
+  match opt_states with
+  | None => []
+  | Some states => spn_display_states_aux states
+  end.
+
+Time Compute spn_display_states (spn_animate spn1 1000).
+(* Time Compute (spn_animate spn1 1000). *)
+(* Time Compute (spn_animate spn1 2000). *)
+(* Time Compute (spn_animate spn1 4000). *)
 
 
 (*! ================================================ !*)  
