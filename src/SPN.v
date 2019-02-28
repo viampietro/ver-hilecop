@@ -26,20 +26,13 @@ Definition place_type := nat.
 
 Definition trans_type := nat.
 
-(** Set of natural numbers that are strictly over zero. *)
-(** The second member, posi, must be a lemma of the form [n > 0]. *)
-
-Structure nat_star : Set := mk_nat_star { int : nat ; posi : int > 0 }.
-
 (** There are 4 kinds of edges : pre, post, inhib, test 
     along with "some" positive weight (default is 1 usually). *)
 
 (** A given edge, either reaching in or coming out of a place,
-    has some weight over 0 or no weight at all, meaning it
-    doesn't exist (which is why weight_type returns a option nat_star 
-    that can take the None value). *)
+    has some weight over 0 or 0 if the edge doesn't exist *)
 
-Definition weight_type := trans_type -> place_type -> option nat_star.
+Definition weight_type := trans_type -> place_type -> nat.
 
 (** The marking in a Petri net is represented as
     a list of couples (index, nboftokens), where index is
@@ -277,13 +270,32 @@ Defined.
 (*====================================================*)
 Section Marking.
 
-  (*  
-   * Function : Returns the number of tokens
-   *            associated with the place [p]
-   *            in marking [marking].
-   *            Returns None if [p] doesn't belong
-   *            to the marking.
-   *)
+  (** Formal specification for [get_m] *)
+  
+  Inductive GetM : marking_type -> place_type -> option nat -> Prop :=
+  | GetM_hd :
+      forall (marking : marking_type)
+        (p : place_type)
+        (n : nat),
+        GetM ((p, n) :: marking) p (Some n)
+  | GetM_cons :
+      forall (marking : marking_type)
+             (p p' : place_type)
+             (n : nat)
+             (opt_n : option nat),
+        p' <> p ->
+        GetM marking p opt_n ->
+        GetM ((p', n) :: marking) p opt_n
+  | GetM_err :
+      forall (marking : marking_type)
+        (p : place_type),
+        ~In p (fst (split marking)) -> GetM marking p None.
+  
+  (** Returns the number of tokens associated with the place [p]
+      in marking [marking].
+      
+       Returns None if [p] doesn't belong to the marking. *)
+  
   Fixpoint get_m (marking : marking_type) (p : place_type) : option nat :=
     match marking with
     | (place, nboftokens) :: tail => if p =? place then
@@ -292,11 +304,50 @@ Section Marking.
     (* Exception : p is not in marking. *)
     | [] => None
     end.
+
+  Functional Scheme get_m_ind := Induction for get_m Sort Prop.
+
+  (** Correctness proof for get_m and GetM *)
   
-  (*
-   * Equality decidability between two pairs of nat. 
-   * Necessary to use the replace_occ function.
-   *)
+  Theorem get_m_correct :
+    forall (marking : marking_type)
+           (p : place_type)
+           (opt_n : option nat),
+      get_m marking p = opt_n -> GetM marking p opt_n.
+  Proof.
+    intros marking p; functional induction (get_m marking p) using get_m_ind; intros.
+    - rewrite <- H; eapply GetM_err; auto.
+    - apply beq_nat_true in e1; rewrite <- e1; rewrite <- H; apply GetM_hd.
+    - apply GetM_cons; [apply beq_nat_false in e1; auto | apply IHo; rewrite H; reflexivity].      
+  Qed.
+
+  (** Completeness proof for get_m and GetM *)
+  
+  Theorem get_m_complete :
+    forall (marking : marking_type)
+           (p : place_type)
+           (opt_n : option nat),
+      GetM marking p opt_n -> get_m marking p = opt_n.
+  Proof.
+    intros; elim H; intros.
+    - simpl; rewrite Nat.eqb_refl; reflexivity.
+    - simpl; rewrite Nat.eqb_sym; apply Nat.eqb_neq in H0; rewrite H0; assumption.
+    - induction marking1.
+      + simpl; reflexivity.
+      + dependent induction a; intros; simpl.
+        rewrite fst_split_cons_app in H0.
+        simpl in H0.
+        apply not_or_and in H0.
+        elim H0; intros.
+        apply Nat.neq_sym in H1.
+        apply Nat.eqb_neq in H1.
+        rewrite H1.
+        apply IHmarking1; assumption.
+  Qed.
+
+  (** Equality decidability between two pairs of nat. 
+      Necessary to use the replace_occ function. *)
+  
   Definition prodnat_eq_dec :
     forall (x y : (nat * nat)), {x = y} + {x <> y}.
   Proof.
@@ -325,6 +376,59 @@ Section Marking.
                  else x :: (replace_occ eq_dec occ repl tl)
     | [] => l
     end.
+
+  Functional Scheme replace_occ_ind := Induction for replace_occ Sort Prop.
+  
+  (** Formal specification : replace_occ ***)
+  
+  Inductive ReplaceOcc
+            {A : Type}
+            (eq_dec : forall x y : A, {x = y} + {x <> y})
+            (occ : A)
+            (repl : A) :
+    list A -> list A -> Prop :=
+  | ReplaceOcc_nil :
+      ReplaceOcc eq_dec occ repl [] []
+  | ReplaceOcc_if :
+      forall (l l' : list A),
+        ReplaceOcc eq_dec occ repl l l' ->
+        ReplaceOcc eq_dec occ repl (occ :: l) (repl :: l')
+  | ReplaceOcc_else :
+      forall (l l' : list A) (x : A),
+        x <> occ ->
+        ReplaceOcc eq_dec occ repl l l' ->
+        ReplaceOcc eq_dec occ repl (x :: l) (x :: l').
+
+  (** Correctness proof : replace_occ ***)
+  
+  Theorem replace_occ_correct {A : Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l l' : list A),
+      replace_occ eq_dec occ repl l = l' -> ReplaceOcc eq_dec occ repl l l'.
+  Proof.
+    do 4 intro; functional induction (replace_occ eq_dec occ repl l)
+                           using replace_occ_ind; intros.
+    (* Case l = nil *)
+    - rewrite <- H; apply ReplaceOcc_nil.
+    (* Case occ is head *)
+    - rewrite <- H; apply ReplaceOcc_if; apply IHl0; auto.
+    (* Case occ is not head *)
+    - rewrite <- H; apply ReplaceOcc_else; [auto |apply IHl0; auto].
+  Qed.
+
+  (** Completeness proof : replace_occ ***)
+  
+  Theorem replace_occ_compl {A : Type} :
+    forall (eq_dec : forall x y : A, {x = y} + {x <> y}) (occ repl : A) (l l' : list A),
+      ReplaceOcc eq_dec occ repl l l' -> replace_occ eq_dec occ repl l = l'.
+  Proof.
+    intros; induction H.
+    (* Case ReplaceOcc_nil *)
+    - simpl; auto.
+    (* Case ReplaceOcc_if *)
+    - simpl. elim eq_dec; [intro; rewrite IHReplaceOcc; auto | intro; contradiction].
+    (* Case ReplaceOcc_else *)
+    - simpl. elim eq_dec; [intro; contradiction | intro; rewrite IHReplaceOcc; auto].
+  Qed.
   
   (** Function : Given a marking m, add/remove nboftokens tokens (if not None)
                  inside place p and returns the new marking.
@@ -337,19 +441,12 @@ Section Marking.
              (marking : marking_type)
              (p : place_type)
              (op : nat -> nat -> nat)
-             (nboftokens : option nat_star) : option marking_type :=
-    match nboftokens with
-    | None => Some marking
-    | Some (mk_nat_star n' _) =>
-      let opt_n := get_m marking p in
-      match opt_n with
-      (* The couple (i, n) to remove must be unique. *)
-      | Some n =>
-        Some (replace_occ prodnat_eq_dec (p, n) (p, (op n n')) marking)
-      (* If couple with first member i doesn't exist
-       * in m, then returns None (it's an exception). *)
-      | None => None 
-      end
+             (nboftokens : nat) : option marking_type :=
+    match get_m marking p with
+    (* The couple (i, n) to remove must be unique. *)
+    | Some n =>
+      Some (replace_occ prodnat_eq_dec (p, n) (p, (op n nboftokens)) marking)
+    | None => None 
     end.
   
 End Marking.
@@ -385,150 +482,636 @@ End Neighbours.
 
 Section Edges.
 
-  (** Function : Returns [Some true] if M(p) >= pre(p, t), [Some false] otherwise. 
+  (** Formal specification for check_pre *)
+  
+  Inductive CheckPre
+            (spn : SPN)
+            (marking : marking_type)
+            (p : place_type)
+            (t : trans_type) :
+    option bool -> Prop := 
+  | CheckPre_cons :
+      forall (tokens : nat),
+        GetM marking p (Some tokens) ->
+        CheckPre spn marking p t (Some ((pre spn t p) <=? tokens))
+  | CheckPre_err :
+      GetM marking p None ->
+      CheckPre spn marking p t None.
+  
+  (** Returns [Some true] if M(p) >= pre(p, t), [Some false] otherwise. 
                  
-                 Raises an error (i.e. None) if [get_m] fail.
-   *)
+      Raises an error (i.e. None) if [get_m] fail. *)
   
   Definition check_pre
-             (pre : weight_type)
+             (spn : SPN)
              (marking : marking_type)
              (p : place_type)
              (t : trans_type) : option bool :=
-    match pre t p with
-    | None => Some true
-    | Some (mk_nat_star weight _) =>
-      match get_m marking p with
-      | Some nboftokens => Some (weight <=? nboftokens)
-      | None => None
-      end
+    match get_m marking p with
+    | Some nboftokens => Some ((pre spn t p) <=? nboftokens)
+    | None => None
     end.
+
+  Functional Scheme check_pre_ind := Induction for check_pre Sort Prop.
+  
+  (** Soundness proof for check_pre and CheckPre. *)
+  
+  Theorem check_pre_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (p : place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      check_pre spn marking p t = opt_b -> CheckPre spn marking p t opt_b.
+  Proof.
+    intros spn marking p t;
+      functional induction (check_pre spn marking p t) using check_pre_ind;
+      intros.
+    - rewrite <- H;
+        apply CheckPre_cons;
+        apply get_m_correct; assumption.
+    - rewrite <- H;
+        apply CheckPre_err;
+        apply get_m_correct; assumption.
+  Qed.
+
+  (** Completeness proof for check_pre and CheckPre. *)
+  
+  Theorem check_pre_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (p : place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      CheckPre spn marking p t opt_b -> check_pre spn marking p t = opt_b.
+  Proof.
+    intros; elim H; intros.
+    - apply get_m_complete in H0.
+      unfold check_pre; rewrite H0; reflexivity.
+    - apply get_m_complete in H0.
+      unfold check_pre; rewrite H0; reflexivity.
+  Qed.
+
+   (** Formal specification for map_check_pre. *)
+
+  Inductive MapCheckPreAux
+            (spn : SPN)
+            (marking : marking_type) :
+    list place_type -> trans_type -> bool -> option bool -> Prop :=
+  | MapCheckPreAux_nil :
+      forall (t : trans_type)
+        (check_result : bool),
+        MapCheckPreAux spn marking [] t check_result (Some check_result)
+  | MapCheckPreAux_cons :
+      forall (pre_places : list place_type)
+        (t : trans_type)
+        (p : place_type)
+        (b check_result : bool)
+        (opt_b : option bool),
+        CheckPre spn marking p t (Some b) ->
+        MapCheckPreAux spn marking pre_places t (b && check_result) opt_b ->
+        MapCheckPreAux spn marking (p :: pre_places) t check_result opt_b
+  | MapCheckPreAux_err :
+      forall (pre_places : list place_type)
+        (t : trans_type)
+        (p : place_type)
+        (check_result : bool),
+        CheckPre spn marking p t None ->
+        MapCheckPreAux spn marking (p :: pre_places) t check_result None.
   
   (** Function : Returns [Some true] if ∀ p ∈ [pre_places], M(p) >= pre(p, t).
                  
                  Raises an error if [get_m] fails. *)
   
   Fixpoint map_check_pre_aux
-           (pre : weight_type)
+           (spn : SPN)
            (marking : marking_type)
            (pre_places : list place_type)
            (t : trans_type)
            (check_result : bool) {struct pre_places} : option bool :=
     match pre_places with
     | p :: tail =>
-      match check_pre pre marking p t with
+      match check_pre spn marking p t with
       | None => None
       | Some b =>
-        map_check_pre_aux pre marking tail t (b && check_result)
+        map_check_pre_aux spn marking tail t (b && check_result)
       end 
     | [] => Some check_result
     end.  
 
-  (** Function : Wrapper around [map_check_pre_aux]. *)
+  Functional Scheme map_check_pre_aux_ind := Induction for map_check_pre_aux Sort Prop.
+
+  (** Soundness proof map_check_pre_aux and MapCheckPreAux. *)
+  
+  Theorem map_check_pre_aux_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (pre_places : list place_type)
+      (t : trans_type)
+      (check_result : bool)
+      (opt_b : option bool),
+      map_check_pre_aux spn marking pre_places t check_result = opt_b ->
+      MapCheckPreAux spn marking pre_places t check_result opt_b.
+  Proof.
+    intros spn marking pre_places t check_result;
+      functional induction (map_check_pre_aux spn marking pre_places t check_result)
+                 using map_check_pre_aux_ind;
+      intros.
+    - rewrite <- H; apply MapCheckPreAux_nil.
+    - apply MapCheckPreAux_cons with (b := b); [apply check_pre_correct; assumption |
+                                                apply IHo; assumption].
+    - rewrite <- H; apply MapCheckPreAux_err; apply check_pre_correct; assumption.
+  Qed.
+
+  (** Completeness proof map_check_pre_aux and MapCheckPreAux. *)
+
+  Theorem map_check_pre_aux_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (pre_places : list place_type)
+      (t : trans_type)
+      (check_result : bool)
+      (opt_b : option bool),
+      MapCheckPreAux spn marking pre_places t check_result opt_b ->
+      map_check_pre_aux spn marking pre_places t check_result = opt_b.
+  Proof.
+    intros; elim H; intros.
+    - simpl; reflexivity.
+    - simpl; apply check_pre_complete in H0; rewrite H0; assumption.
+    - simpl; apply check_pre_complete in H0; rewrite H0; reflexivity.
+  Qed.
+  
+  (** Wrapper around [map_check_pre_aux]. *)
   
   Definition map_check_pre
-             (pre : weight_type)
+             (spn : SPN)
              (marking : marking_type)
              (pre_places : list place_type)
              (t : trans_type) : option bool :=
-    map_check_pre_aux pre marking pre_places t true.
+    map_check_pre_aux spn marking pre_places t true.
 
-  (** Function : Returns [Some true] if M(p) >= test(p, t), [Some false] otherwise. 
+  (** Formal specification for map_check_pre *)
+  Inductive MapCheckPre
+            (spn : SPN)
+            (marking : marking_type)
+            (pre_places : list place_type)
+            (t : trans_type) :
+    option bool -> Prop := 
+  | MapCheckPre_cons :
+      forall opt_b : option bool,
+        MapCheckPreAux spn marking pre_places t  true opt_b ->
+        MapCheckPre spn marking pre_places t opt_b.
+  
+  (** Soundness proof for map_check_pre and MapCheckPre. *)
+  
+  Theorem map_check_pre_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (pre_places : list place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      map_check_pre spn marking pre_places t = opt_b ->
+      MapCheckPre spn marking pre_places t opt_b.
+  Proof.
+    intros spn marking pre_places t; unfold map_check_pre; intros.
+    apply MapCheckPre_cons; apply map_check_pre_aux_correct; assumption.
+  Qed.
+
+  (** Completeness proof for map_check_pre and MapCheckPre. *)
+
+  Theorem map_check_pre_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (pre_places : list place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      MapCheckPre spn marking pre_places t opt_b ->
+      map_check_pre spn marking pre_places t = opt_b.
+  Proof.
+    intros; elim H; intros.
+    unfold map_check_pre; apply map_check_pre_aux_complete; assumption.
+  Qed.
+
+  (** Formal specification for check_test *)
+  
+  Inductive CheckTest
+            (spn : SPN)
+            (marking : marking_type)
+            (p : place_type)
+            (t : trans_type) :
+    option bool -> Prop := 
+  | CheckTest_cons :
+      forall (tokens : nat),
+        GetM marking p (Some tokens) ->
+        CheckTest spn marking p t (Some ((test spn t p) <=? tokens))
+  | CheckTest_err :
+      GetM marking p None ->
+      CheckTest spn marking p t None.
+  
+  (** Returns [Some true] if M(p) >= test(p, t), [Some false] otherwise. 
                  
-                 Raises an error (i.e. None) if [get_m] fail.
-   *)
+      Raises an error (i.e. None) if [get_m] fail. *)
   
   Definition check_test
-             (test : weight_type)
+             (spn : SPN)
              (marking : marking_type)
              (p : place_type)
              (t : trans_type) : option bool :=
-    match test t p with
-    | None => Some true
-    | Some (mk_nat_star weight _) =>
-      match get_m marking p with
-      | Some nboftokens => Some (weight <=? nboftokens)
-      | None => None
-      end
+    match get_m marking p with
+    | Some nboftokens => Some ((test spn t p) <=? nboftokens)
+    | None => None
     end.
+
+  Functional Scheme check_test_ind := Induction for check_test Sort Prop.
+  
+  (** Soundness proof for check_test and CheckTest. *)
+  
+  Theorem check_test_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (p : place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      check_test spn marking p t = opt_b -> CheckTest spn marking p t opt_b.
+  Proof.
+    intros spn marking p t;
+      functional induction (check_test spn marking p t) using check_test_ind;
+      intros.
+    - rewrite <- H;
+        apply CheckTest_cons;
+        apply get_m_correct; assumption.
+    - rewrite <- H;
+        apply CheckTest_err;
+        apply get_m_correct; assumption.
+  Qed.
+
+  (** Completeness proof for check_test and CheckTest. *)
+  
+  Theorem check_test_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (p : place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      CheckTest spn marking p t opt_b -> check_test spn marking p t = opt_b.
+  Proof.
+    intros; elim H; intros.
+    - apply get_m_complete in H0.
+      unfold check_test; rewrite H0; reflexivity.
+    - apply get_m_complete in H0.
+      unfold check_test; rewrite H0; reflexivity.
+  Qed.
+
+  (** Formal specification for map_check_test. *)
+
+  Inductive MapCheckTestAux
+            (spn : SPN)
+            (marking : marking_type) :
+    list place_type -> trans_type -> bool -> option bool -> Prop :=
+  | MapCheckTestAux_nil :
+      forall (t : trans_type)
+        (check_result : bool),
+        MapCheckTestAux spn marking [] t check_result (Some check_result)
+  | MapCheckTestAux_cons :
+      forall (test_places : list place_type)
+        (t : trans_type)
+        (p : place_type)
+        (b check_result : bool)
+        (opt_b : option bool),
+        CheckTest spn marking p t (Some b) ->
+        MapCheckTestAux spn marking test_places t (b && check_result) opt_b ->
+        MapCheckTestAux spn marking (p :: test_places) t check_result opt_b
+  | MapCheckTestAux_err :
+      forall (test_places : list place_type)
+        (t : trans_type)
+        (p : place_type)
+        (check_result : bool),
+        CheckTest spn marking p t None ->
+        MapCheckTestAux spn marking (p :: test_places) t check_result None.
   
   (** Function : Returns [Some true] if ∀ p ∈ [test_places], M(p) >= test(p, t).
                  
                  Raises an error if [get_m] fails. *)
   
   Fixpoint map_check_test_aux
-           (test : weight_type)
+           (spn : SPN)
            (marking : marking_type)
            (test_places : list place_type)
            (t : trans_type)
            (check_result : bool) {struct test_places} : option bool :=
     match test_places with
     | p :: tail =>
-      match check_test test marking p t with
+      match check_test spn marking p t with
       | None => None
       | Some b =>
-        map_check_test_aux test marking tail t (b && check_result)
+        map_check_test_aux spn marking tail t (b && check_result)
       end 
     | [] => Some check_result
     end.  
 
-  (** Function : Wrapper around [map_check_test_aux]. *)
+  Functional Scheme map_check_test_aux_ind := Induction for map_check_test_aux Sort Prop.
+
+  (** Soundness proof map_check_test_aux and MapCheckTestAux. *)
+  
+  Theorem map_check_test_aux_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (test_places : list place_type)
+      (t : trans_type)
+      (check_result : bool)
+      (opt_b : option bool),
+      map_check_test_aux spn marking test_places t check_result = opt_b ->
+      MapCheckTestAux spn marking test_places t check_result opt_b.
+  Proof.
+    intros spn marking test_places t check_result;
+      functional induction (map_check_test_aux spn marking test_places t check_result)
+                 using map_check_test_aux_ind;
+      intros.
+    - rewrite <- H; apply MapCheckTestAux_nil.
+    - apply MapCheckTestAux_cons with (b := b); [apply check_test_correct; assumption |
+                                                apply IHo; assumption].
+    - rewrite <- H; apply MapCheckTestAux_err; apply check_test_correct; assumption.
+  Qed.
+
+  (** Completeness proof map_check_test_aux and MapCheckTestAux. *)
+
+  Theorem map_check_test_aux_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (test_places : list place_type)
+      (t : trans_type)
+      (check_result : bool)
+      (opt_b : option bool),
+      MapCheckTestAux spn marking test_places t check_result opt_b ->
+      map_check_test_aux spn marking test_places t check_result = opt_b.
+  Proof.
+    intros; elim H; intros.
+    - simpl; reflexivity.
+    - simpl; apply check_test_complete in H0; rewrite H0; assumption.
+    - simpl; apply check_test_complete in H0; rewrite H0; reflexivity.
+  Qed.
+  
+  (** Wrapper around [map_check_test_aux]. *)
   
   Definition map_check_test
-             (test : weight_type)
+             (spn : SPN)
              (marking : marking_type)
              (test_places : list place_type)
              (t : trans_type) : option bool :=
-    map_check_test_aux test marking test_places t true.
+    map_check_test_aux spn marking test_places t true.
 
-  (** Function : Returns [Some true] if M(p) >= inhib(p, t), [Some false] otherwise. 
+  (** Formal specification for map_check_test *)
+  Inductive MapCheckTest
+            (spn : SPN)
+            (marking : marking_type)
+            (test_places : list place_type)
+            (t : trans_type) :
+    option bool -> Prop := 
+  | MapCheckTest_cons :
+      forall opt_b : option bool,
+        MapCheckTestAux spn marking test_places t  true opt_b ->
+        MapCheckTest spn marking test_places t opt_b.
+  
+  (** Soundness proof for map_check_test and MapCheckTest. *)
+  
+  Theorem map_check_test_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (test_places : list place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      map_check_test spn marking test_places t = opt_b ->
+      MapCheckTest spn marking test_places t opt_b.
+  Proof.
+    intros spn marking test_places t; unfold map_check_test; intros.
+    apply MapCheckTest_cons; apply map_check_test_aux_correct; assumption.
+  Qed.
+
+  (** Completeness proof for map_check_test and MapCheckTest. *)
+
+  Theorem map_check_test_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (test_places : list place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      MapCheckTest spn marking test_places t opt_b ->
+      map_check_test spn marking test_places t = opt_b.
+  Proof.
+    intros; elim H; intros.
+    unfold map_check_test; apply map_check_test_aux_complete; assumption.
+  Qed.
+
+  (** Formal specification for check_inhib *)
+  
+  Inductive CheckInhib
+            (spn : SPN)
+            (marking : marking_type)
+            (p : place_type)
+            (t : trans_type) :
+    option bool -> Prop := 
+  | CheckInhib_cons :
+      forall (tokens : nat),
+        GetM marking p (Some tokens) ->
+        CheckInhib spn marking p t (Some (tokens <? (inhib spn t p)))
+  | CheckInhib_err :
+      GetM marking p None ->
+      CheckInhib spn marking p t None.
+  
+  (** Returns [Some true] if M(p) >= inhib(p, t), [Some false] otherwise. 
                  
-                 Raises an error (i.e. None) if [get_m] fail.
-   *)
+      Raises an error (i.e. None) if [get_m] fail. *)
   
   Definition check_inhib
-             (inhib : weight_type)
+             (spn : SPN)
              (marking : marking_type)
              (p : place_type)
              (t : trans_type) : option bool :=
-    match inhib t p with
-    | None => Some true
-    | Some (mk_nat_star weight _) =>
-      match get_m marking p with
-      | Some nboftokens => Some (nboftokens <? weight)
-      | None => None
-      end
+    match get_m marking p with
+    | Some nboftokens => Some (nboftokens <? (inhib spn t p))
+    | None => None
     end.
+
+  Functional Scheme check_inhib_ind := Induction for check_inhib Sort Prop.
+  
+  (** Soundness proof for check_inhib and CheckInhib. *)
+  
+  Theorem check_inhib_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (p : place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      check_inhib spn marking p t = opt_b -> CheckInhib spn marking p t opt_b.
+  Proof.
+    intros spn marking p t;
+      functional induction (check_inhib spn marking p t) using check_inhib_ind;
+      intros.
+    - rewrite <- H;
+        apply CheckInhib_cons;
+        apply get_m_correct; assumption.
+    - rewrite <- H;
+        apply CheckInhib_err;
+        apply get_m_correct; assumption.
+  Qed.
+
+  (** Completeness proof for check_inhib and CheckInhib. *)
+  
+  Theorem check_inhib_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (p : place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      CheckInhib spn marking p t opt_b -> check_inhib spn marking p t = opt_b.
+  Proof.
+    intros; elim H; intros.
+    - apply get_m_complete in H0.
+      unfold check_inhib; rewrite H0; reflexivity.
+    - apply get_m_complete in H0.
+      unfold check_inhib; rewrite H0; reflexivity.
+  Qed.
+
+  (** Formal specification for map_check_inhib. *)
+
+  Inductive MapCheckInhibAux
+            (spn : SPN)
+            (marking : marking_type) :
+    list place_type -> trans_type -> bool -> option bool -> Prop :=
+  | MapCheckInhibAux_nil :
+      forall (t : trans_type)
+        (check_result : bool),
+        MapCheckInhibAux spn marking [] t check_result (Some check_result)
+  | MapCheckInhibAux_cons :
+      forall (inhib_places : list place_type)
+        (t : trans_type)
+        (p : place_type)
+        (b check_result : bool)
+        (opt_b : option bool),
+        CheckInhib spn marking p t (Some b) ->
+        MapCheckInhibAux spn marking inhib_places t (b && check_result) opt_b ->
+        MapCheckInhibAux spn marking (p :: inhib_places) t check_result opt_b
+  | MapCheckInhibAux_err :
+      forall (inhib_places : list place_type)
+        (t : trans_type)
+        (p : place_type)
+        (check_result : bool),
+        CheckInhib spn marking p t None ->
+        MapCheckInhibAux spn marking (p :: inhib_places) t check_result None.
   
   (** Function : Returns [Some true] if ∀ p ∈ [inhib_places], M(p) >= inhib(p, t).
                  
                  Raises an error if [get_m] fails. *)
   
   Fixpoint map_check_inhib_aux
-           (inhib : weight_type)
+           (spn : SPN)
            (marking : marking_type)
            (inhib_places : list place_type)
            (t : trans_type)
            (check_result : bool) {struct inhib_places} : option bool :=
     match inhib_places with
     | p :: tail =>
-      match check_inhib inhib marking p t with
+      match check_inhib spn marking p t with
       | None => None
       | Some b =>
-        map_check_inhib_aux inhib marking tail t (b && check_result)
+        map_check_inhib_aux spn marking tail t (b && check_result)
       end 
     | [] => Some check_result
     end.  
 
-  (** Function : Wrapper around [map_check_inhib_aux]. *)
+  Functional Scheme map_check_inhib_aux_ind := Induction for map_check_inhib_aux Sort Prop.
+
+  (** Soundness proof map_check_inhib_aux and MapCheckInhibAux. *)
+  
+  Theorem map_check_inhib_aux_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (inhib_places : list place_type)
+      (t : trans_type)
+      (check_result : bool)
+      (opt_b : option bool),
+      map_check_inhib_aux spn marking inhib_places t check_result = opt_b ->
+      MapCheckInhibAux spn marking inhib_places t check_result opt_b.
+  Proof.
+    intros spn marking inhib_places t check_result;
+      functional induction (map_check_inhib_aux spn marking inhib_places t check_result)
+                 using map_check_inhib_aux_ind;
+      intros.
+    - rewrite <- H; apply MapCheckInhibAux_nil.
+    - apply MapCheckInhibAux_cons with (b := b); [apply check_inhib_correct; assumption |
+                                                apply IHo; assumption].
+    - rewrite <- H; apply MapCheckInhibAux_err; apply check_inhib_correct; assumption.
+  Qed.
+
+  (** Completeness proof map_check_inhib_aux and MapCheckInhibAux. *)
+
+  Theorem map_check_inhib_aux_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (inhib_places : list place_type)
+      (t : trans_type)
+      (check_result : bool)
+      (opt_b : option bool),
+      MapCheckInhibAux spn marking inhib_places t check_result opt_b ->
+      map_check_inhib_aux spn marking inhib_places t check_result = opt_b.
+  Proof.
+    intros; elim H; intros.
+    - simpl; reflexivity.
+    - simpl; apply check_inhib_complete in H0; rewrite H0; assumption.
+    - simpl; apply check_inhib_complete in H0; rewrite H0; reflexivity.
+  Qed.
+  
+  (** Wrapper around [map_check_inhib_aux]. *)
   
   Definition map_check_inhib
-             (inhib : weight_type)
+             (spn : SPN)
              (marking : marking_type)
              (inhib_places : list place_type)
              (t : trans_type) : option bool :=
-    map_check_inhib_aux inhib marking inhib_places t true.
+    map_check_inhib_aux spn marking inhib_places t true.
 
+  (** Formal specification for map_check_inhib *)
+  Inductive MapCheckInhib
+            (spn : SPN)
+            (marking : marking_type)
+            (inhib_places : list place_type)
+            (t : trans_type) :
+    option bool -> Prop := 
+  | MapCheckInhib_cons :
+      forall opt_b : option bool,
+        MapCheckInhibAux spn marking inhib_places t  true opt_b ->
+        MapCheckInhib spn marking inhib_places t opt_b.
+  
+  (** Soundness proof for map_check_inhib and MapCheckInhib. *)
+  
+  Theorem map_check_inhib_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (inhib_places : list place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      map_check_inhib spn marking inhib_places t = opt_b ->
+      MapCheckInhib spn marking inhib_places t opt_b.
+  Proof.
+    intros spn marking inhib_places t; unfold map_check_inhib; intros.
+    apply MapCheckInhib_cons; apply map_check_inhib_aux_correct; assumption.
+  Qed.
+
+  (** Completeness proof for map_check_inhib and MapCheckInhib. *)
+
+  Theorem map_check_inhib_complete :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (inhib_places : list place_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      MapCheckInhib spn marking inhib_places t opt_b ->
+      map_check_inhib spn marking inhib_places t = opt_b.
+  Proof.
+    intros; elim H; intros.
+    unfold map_check_inhib; apply map_check_inhib_aux_complete; assumption.
+  Qed.
   
 End Edges.
+
 

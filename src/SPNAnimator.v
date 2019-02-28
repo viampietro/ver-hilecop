@@ -6,7 +6,19 @@ Require Export Hilecop.SPN.
 
 Section FireSpn.
 
-  (** Returns [Some true] if [t] is sensitized in marking [spn.(marking)], 
+  (** Formal specification for is_sensitized *)
+
+  Definition IsSensitized
+             (spn : SPN)
+             (marking : marking_type)
+             (t : trans_type) : Prop :=
+    forall (p : place_type)
+      (n : nat),
+      In p spn.(places) ->
+      GetM marking p (Some n) ->
+      n >= (pre spn t p) /\ n >= (test spn t p) /\ n < (inhib spn t p).
+  
+  (** Returns [Some true] if [t] is sensitized in marking [marking], 
       [Some false] otherwise. 
                  
       Raises an error if [map_check_pre], [map_check_test], [map_check_inhib] or
@@ -14,43 +26,14 @@ Section FireSpn.
   
   Definition is_sensitized
              (spn : SPN)
-             (t : trans_type) : option bool :=
-    match get_neighbours spn.(lneighbours) t with
-    | Some neighbours_of_t =>      
-      match map_check_pre spn.(pre) spn.(marking) (pre_pl neighbours_of_t) t with
-      | Some check_pre_result =>  
-        match map_check_test spn.(test) spn.(marking) (test_pl neighbours_of_t) t with
-        | Some check_test_result =>
-          match map_check_inhib spn.(inhib) spn.(marking) (inhib_pl neighbours_of_t) t with
-          | Some check_inhib_result =>
-            Some (check_pre_result && check_test_result && check_inhib_result)
-          (* Case of error!! *)
-          | None => None
-          end
-        (* Case of error!! *)
-        | None => None
-        end
-      (* Case of error!! *)
-      | None => None
-      end
-    (* Case of error, get_neighbours failed!! *)
-    | None => None
-    end.
-  
-  (** Returns true if t ∈ firable(spn). *)
-  
-  Definition spn_is_firable
-             (spn : SPN)
-             (residual_marking : marking_type)
+             (marking : marking_type)
              (neighbours_of_t : neighbours_type)
-             (t : trans_type) : option bool :=
-    (* Checks pre-places of t with residual_marking. *)
-    match map_check_pre spn.(pre) residual_marking (pre_pl neighbours_of_t) t with
-    | Some check_pre_result =>
-      (* Checks test and inhib places of t, with the current spn marking. *)
-      match map_check_test spn.(test) spn.(marking) (test_pl neighbours_of_t) t with
+             (t : trans_type) : option bool :=    
+    match map_check_pre spn marking (pre_pl neighbours_of_t) t with
+    | Some check_pre_result =>  
+      match map_check_test spn marking (test_pl neighbours_of_t) t with
       | Some check_test_result =>
-        match map_check_inhib spn.(inhib) spn.(marking) (inhib_pl neighbours_of_t) t with
+        match map_check_inhib spn marking (inhib_pl neighbours_of_t) t with
         | Some check_inhib_result =>
           Some (check_pre_result && check_test_result && check_inhib_result)
         (* Case of error!! *)
@@ -59,9 +42,32 @@ Section FireSpn.
       (* Case of error!! *)
       | None => None
       end
-    (* Case of error, get_neighbours failed!! *)
+    (* Case of error!! *)
     | None => None
     end.
+
+  Functional Scheme is_sensitized_ind := Induction for is_sensitized Sort Prop.
+
+  (** Soundness proof for is_sensitized and IsSensitized. *)
+
+  Theorem is_sensitized_correct :
+    forall (spn : SPN)
+      (marking : marking_type)
+      (neighbours_of_t : neighbours_type)
+      (t : trans_type)
+      (opt_b : option bool),
+      is_sensitized spn marking neighbours_of_t t = opt_b ->
+      IsSensitized spn marking neighbours_of_t t opt_b.
+  Proof.
+
+  (** Returns true if t ∈ sensitized(spn). *)
+  
+  Definition spn_is_firable
+             (spn : SPN)
+             (marking : marking_type)
+             (neighbours_of_t : neighbours_type)
+             (t : trans_type) : option bool :=
+    is_sensitized spn marking neighbours_of_t t.
 
   (** Returns a marking M' where 
       M' = [residual_marking] - ∀ p ∈ [pre_places], ∑ pre(p, t)  *)
