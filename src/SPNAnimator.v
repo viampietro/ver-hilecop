@@ -1,23 +1,11 @@
 Require Export Hilecop.SPN.
 
 (*! ============================================================ !*)
-(*! ================ FIRING ALGORITHM for SPN ================== !*)
+(*! ================ FIRING ALGORITHM for Spn ================== !*)
 (*! ============================================================ !*)
 
 Section FireSpn.
 
-  (** Formal specification for is_sensitized *)
-
-  Definition IsSensitized
-             (spn : SPN)
-             (marking : marking_type)
-             (t : trans_type) : Prop :=
-    forall (p : place_type)
-      (n : nat),
-      In p spn.(places) ->
-      GetM marking p (Some n) ->
-      n >= (pre spn t p) /\ n >= (test spn t p) /\ n < (inhib spn t p).
-  
   (** Returns [Some true] if [t] is sensitized in marking [marking], 
       [Some false] otherwise. 
                  
@@ -25,7 +13,7 @@ Section FireSpn.
       [get_neighbours] fail. *)
   
   Definition is_sensitized
-             (spn : SPN)
+             (spn : Spn)
              (marking : marking_type)
              (neighbours_of_t : neighbours_type)
              (t : trans_type) : option bool :=    
@@ -46,41 +34,28 @@ Section FireSpn.
     | None => None
     end.
 
-  Functional Scheme is_sensitized_ind := Induction for is_sensitized Sort Prop.
-
-  (** Soundness proof for is_sensitized and IsSensitized. *)
-
-  Theorem is_sensitized_correct :
-    forall (spn : SPN)
-      (marking : marking_type)
-      (neighbours_of_t : neighbours_type)
-      (t : trans_type)
-      (opt_b : option bool),
-      is_sensitized spn marking neighbours_of_t t = opt_b ->
-      IsSensitized spn marking neighbours_of_t t opt_b.
-  Proof.
-
-  (** Returns true if t ∈ sensitized(spn). *)
+  (** Returns true if t ∈ sensitized(s). *)
   
   Definition spn_is_firable
-             (spn : SPN)
-             (marking : marking_type)
+             (spn : Spn)
+             (state : SpnState)
+             (residual_marking : marking_type)
              (neighbours_of_t : neighbours_type)
              (t : trans_type) : option bool :=
-    is_sensitized spn marking neighbours_of_t t.
-
+    is_sensitized spn residual_marking neighbours_of_t t.
+  
   (** Returns a marking M' where 
       M' = [residual_marking] - ∀ p ∈ [pre_places], ∑ pre(p, t)  *)
   
   Fixpoint update_residual_marking_aux
-           (spn : SPN)
+           (spn : Spn)
            (residual_marking : marking_type)
            (t : trans_type)
            (pre_places : list place_type) {struct pre_places} :
     option marking_type :=
     match pre_places with
     | p :: tail =>
-      match modify_m spn.(marking) p Nat.sub (pre spn t p) with
+      match modify_m residual_marking p Nat.sub (pre spn t p) with
       | Some residual_marking' =>
         update_residual_marking_aux spn residual_marking' t tail
       (* It's an exception, p is not referenced in spn.(marking). *)
@@ -92,27 +67,18 @@ Section FireSpn.
   (** Wrapper around update_residual_marking. *)
   
   Definition update_residual_marking
-             (spn : SPN)
+             (spn : Spn)
              (residual_marking : marking_type)
              (neighbours_of_t : neighbours_type)
              (t : trans_type) : option marking_type :=
     update_residual_marking_aux spn residual_marking t (pre_pl neighbours_of_t).
-  
-  (* 
-   * There are 2 parallel calculus in spn_fire_pre_aux : 
-   * 1. pumping tokens to get "decreasingm" (fired pre)
-   * 2. returning group of transitions (fired_pre_group)
-   *
-   * and 2 markings are recorded : 
-   * 1. the initial one to check with inhib and test arcs
-   * 2. a residual marking to check classic arcs
-   *)
-  
+    
   (** Returns the list of fired transitions in priority group [pgroup]
       at the current state of [spn]. *)
   
   Fixpoint spn_fire_aux
-           (spn : SPN)
+           (spn : Spn)
+           (state : SpnState)
            (residual_marking : marking_type)
            (fired : list trans_type)
            (pgroup : list trans_type):
@@ -121,19 +87,19 @@ Section FireSpn.
     | t :: tail =>
       match get_neighbours spn.(lneighbours) t with
       | Some neighbours_of_t =>
-        match spn_is_firable spn residual_marking neighbours_of_t t with
+        match spn_is_firable spn state residual_marking neighbours_of_t t with
         (* If t is firable, updates the residual_marking, and add t to the fired transitions. *)
         | Some true =>
           match update_residual_marking spn residual_marking neighbours_of_t t with
           (* Recursive call with new marking *)
           | Some residual_marking' =>
-            spn_fire_aux spn residual_marking' (fired ++ [t]) tail
+            spn_fire_aux spn state residual_marking' (fired ++ [t]) tail
           (* Something went wrong, error! *)
           | None => None
           end
         (* Else no changes but inductive progress. *)
         | Some false =>
-          spn_fire_aux spn residual_marking fired tail
+          spn_fire_aux spn state residual_marking fired tail
         (* Something went wrong, error! *)
         | None => None
         end
@@ -149,10 +115,11 @@ Section FireSpn.
   (** Wrapper function around spn_fire_pre_aux. *)
   
   Definition spn_fire
-             (spn : SPN)
+             (spn : Spn)
+             (state : SpnState)
              (pgroup : list trans_type) :
     option (list trans_type) :=
-    spn_fire_aux spn spn.(marking) [] pgroup.
+    spn_fire_aux spn state state.(marking) [] pgroup.
   
   (***********************************************************************)
   (***********************************************************************)
@@ -162,7 +129,8 @@ Section FireSpn.
       Applies spn_fire over ALL priority group of transitions. *)
   
   Fixpoint spn_map_fire_aux
-           (spn : SPN)
+           (spn : Spn)
+           (state : SpnState)
            (fired_transitions : list trans_type)
            (priority_groups : list (list trans_type)) :
     option (list trans_type) :=
@@ -170,11 +138,11 @@ Section FireSpn.
     (* Loops over all priority group of transitions (pgroup) and
      * calls spn_fire. *)
     | pgroup :: pgroups_tail =>
-      match spn_fire spn pgroup with
+      match spn_fire spn state pgroup with
       (* If spn_fire succeeds, then adds the fired transitions
        * in fired_transitions list. *)
       | Some (fired_trs) =>
-        spn_map_fire_aux spn (fired_transitions ++ fired_trs) pgroups_tail
+        spn_map_fire_aux spn state (fired_transitions ++ fired_trs) pgroups_tail
       (* Case of error! *)
       | None => None
       end
@@ -186,9 +154,9 @@ Section FireSpn.
   
   (** Wrapper around spn_map_fire_aux function. *)
   
-  Definition spn_map_fire (spn : SPN) :
+  Definition spn_map_fire (spn : Spn) (state : SpnState) :
     option (list trans_type) :=
-    spn_map_fire_aux spn [] spn.(priority_groups).
+    spn_map_fire_aux spn state [] spn.(priority_groups).
   
   (***********************************************************************)
   (***********************************************************************)
@@ -203,7 +171,7 @@ Section UpdateMarkingSpn.
                  Returns a new [spn] with an updated marking. *)
   
   Fixpoint update_marking_pre_aux
-           (spn : SPN)
+           (spn : Spn)
            (marking : marking_type)
            (t : trans_type)
            (pre_places : list place_type) : option marking_type :=
@@ -220,7 +188,7 @@ Section UpdateMarkingSpn.
   (** Wrapper around [update_marking_pre_aux]. *)
   
   Definition update_marking_pre
-             (spn : SPN)
+             (spn : Spn)
              (marking : marking_type)
              (t : trans_type) : option marking_type :=
     match get_neighbours spn.(lneighbours) t with
@@ -233,7 +201,7 @@ Section UpdateMarkingSpn.
        and returns the resulting [spn] *)
   
   Fixpoint map_update_marking_pre
-           (spn : SPN)
+           (spn : Spn)
            (marking : marking_type)
            (fired : list trans_type) {struct fired} :
     option marking_type :=
@@ -249,10 +217,10 @@ Section UpdateMarkingSpn.
   (** Function : Adds some tokens to the post places of [t], result 
                  of the firing of [t].
 
-                 Returns a new SPN with an updated marking. *)
+                 Returns a new Spn with an updated marking. *)
   
   Fixpoint update_marking_post_aux
-           (spn : SPN)
+           (spn : Spn)
            (marking : marking_type)
            (t : trans_type)
            (post_places : list place_type) : option marking_type :=
@@ -269,7 +237,7 @@ Section UpdateMarkingSpn.
   (** Wrapper around update_marking_post_aux. *)
   
   Definition update_marking_post
-             (spn : SPN)
+             (spn : Spn)
              (marking : marking_type)
              (t : trans_type) : option marking_type :=
     match get_neighbours spn.(lneighbours) t with
@@ -282,7 +250,7 @@ Section UpdateMarkingSpn.
        and returns the resulting [spn] *)
   
   Fixpoint map_update_marking_post
-           (spn : SPN)
+           (spn : Spn)
            (marking : marking_type)
            (fired : list trans_type) {struct fired} :
     option marking_type :=
@@ -297,32 +265,44 @@ Section UpdateMarkingSpn.
 
   (** Updates the marking of [spn] ∀ t ∈ fired. Returns the resulting [spn].*)
   
-  Definition spn_update_marking (spn : SPN) (fired : list trans_type) :
-    option marking_type :=
-    match map_update_marking_pre spn spn.(marking) fired with
-    | Some m' => map_update_marking_post spn m' fired
+  Definition spn_update_marking
+             (spn : Spn)
+             (state : SpnState)
+             (fired : list trans_type) :
+    option SpnState :=
+    match map_update_marking_pre spn state.(marking) fired with
+    | Some m' =>
+      match map_update_marking_post spn m' fired with
+      | Some m'' => Some (mk_SpnState m'')
+      | None => None
+      end
     | None => None
     end.
   
 End UpdateMarkingSpn.
 
 (*==========================================================*)
-(*================= SPN CYCLE EVOLUTION ====================*)
+(*================= Spn CYCLE EVOLUTION ====================*)
 (*==========================================================*)
 
 Section AnimateSpn.
   
   (** Executes one evolution cycle for [spn], 
-      returns the transitions fired at this cycle, and the new state of [spn]. *)
+      returns a tuplet (intermediate state, fired transitions, final state). *)
   
-  Definition spn_cycle (spn : SPN) : option (list trans_type * SPN) :=
+  Definition spn_cycle (spn : Spn) (starting_state : SpnState) :
+    option (SpnState * list trans_type * SpnState) :=
     (* Fires/Determines the fired transitions in spn. *)
-    match spn_map_fire spn with
-    | Some fired_transitions =>
+    match spn_map_fire spn starting_state with
+    | Some fired =>
       (* Updates the marking in spn. *)
-      match spn_update_marking spn fired_transitions with
-      (* Sets m' has the new marking of spn. *)
-      | Some m' => Some (fired_transitions, (set_m spn m'))
+      (* In the case of Spn, there is no intermediate state, or rather, 
+         starting state and intermediate state are the same. 
+         That's why starting_state is passed to spn_update_marking.
+       *)
+      match spn_update_marking spn starting_state fired with
+      (* Returns the last spn state. *)
+      | Some final_state => Some (starting_state, fired, final_state)
       | None => None
       end
     | None => None
@@ -332,19 +312,21 @@ Section AnimateSpn.
   (******** ANIMATING DURING N CYCLES ********)
   (*******************************************)
 
-  (** Returns the list of (fired_transitions(i), SPN(i)) for each cycle i, 
+  (** Returns the list of (fired_transitions(i), Spn(i)) for each cycle i, 
       from 0 to n, representing the evolution of the Petri net [spn]. *)
   
   Fixpoint spn_animate_aux
-           (spn : SPN)
+           (spn : Spn)
+           (starting_state : SpnState)
            (n : nat)
-           (states : list (list trans_type * SPN)) :
-    option (list (list trans_type * SPN)) :=
+           (states : list (SpnState * list trans_type * SpnState)) :
+    option (list (SpnState * list trans_type * SpnState)) :=
     match n with
-    | O => Some states
-    | S n' => match spn_cycle spn with
-             | Some (fired_at_n, spn_at_n) =>
-               spn_animate_aux spn_at_n n' (states ++ [(fired_at_n, spn_at_n)])
+    (* Adds the initial at the beginning of the states list. *)
+    | O => Some (((mk_SpnState []), [], (mk_SpnState spn.(initial_marking))) :: states)
+    | S n' => match spn_cycle spn starting_state with
+             | Some (inter_state, fired, final_state) =>
+               spn_animate_aux spn final_state n' (states ++ [(inter_state, fired, final_state)])
              (* Case of error!! *)
              | None => None
              end
@@ -355,7 +337,8 @@ Section AnimateSpn.
 
   (** Wrapper function around spn_animate_aux. Here, spn_evolution is initialized to nil. *)
   
-  Definition spn_animate (spn : SPN) (n : nat) :
-    option (list (list trans_type * SPN)) := spn_animate_aux spn n [].
+  Definition spn_animate (spn : Spn) (n : nat) :
+    option (list (SpnState * list trans_type * SpnState)) :=
+    spn_animate_aux spn (mk_SpnState spn.(initial_marking)) n [].
   
 End AnimateSpn.
