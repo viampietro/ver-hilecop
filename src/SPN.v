@@ -20,11 +20,11 @@ Require Export Hilecop.Utils.HilecopTactics.
 
 (** A place is identified by a unique index. *)
 
-Definition place_type := nat.
+Definition Place := nat.
 
 (** A transition is identified by a unique index. *)
 
-Definition trans_type := nat.
+Definition Trans := nat.
 
 (** There are 4 kinds of edges : pre, post, inhib, test 
     along with "some" positive weight (default is 1 usually). *)
@@ -32,32 +32,25 @@ Definition trans_type := nat.
 (** A given edge, either reaching in or coming out of a place,
     has some weight over 0 or 0 if the edge doesn't exist *)
 
-Definition weight_type := trans_type -> place_type -> nat.
-
-(** The marking in a Petri net is represented as
-    a list of couples (index, nboftokens), where index is
-    the index of a place in the Petri net, and nboftokens
-    is the number of tokens currently assoicated to the place. *)
-
-Definition marking_type := list (place_type * nat).
+Definition Weight := Trans -> Place -> nat.
 
 (** Defines a structure containing multiple list of places,
     each one of them corresponding to the pre, test, inhib and post neighbour places
     which will be associated with a transition t (see the lneighbours
     attribute in the Spn Structure). *)
 
-Structure neighbours_type : Set := mk_neighbours {
-                                       pre_pl : list place_type;
-                                       test_pl : list place_type;
-                                       inhib_pl : list place_type;
-                                       post_pl : list place_type
-                                     }.
+Structure Neighbours : Set := mk_neighbours {
+                                  pre_pl : list Place;
+                                  test_pl : list Place;
+                                  inhib_pl : list Place;
+                                  post_pl : list Place
+                                }.
 
 (** Returns the concatenation of all list of places contained in neighb. 
     
     Useful for [NoIsolatedPlace] spn's property. *)
 
-Definition flatten_neighbours (neighb : neighbours_type) : list place_type :=
+Definition flatten_neighbours (neighb : Neighbours) : list Place :=
   neighb.(pre_pl) ++ neighb.(test_pl) ++ neighb.(inhib_pl) ++ neighb.(post_pl).
 
 (** Returns the list of all places referenced in lneighbours.
@@ -66,8 +59,8 @@ Definition flatten_neighbours (neighb : neighbours_type) : list place_type :=
     
     Useful for NoIsolatedPlace spn's property. *)
 
-Fixpoint flatten_lneighbours (lneighbours : list (trans_type * neighbours_type)) :
-  list place_type :=
+Fixpoint flatten_lneighbours (lneighbours : list (Trans * Neighbours)) :
+  list Place :=
   match lneighbours with
   | (t, neighb) :: tail => (flatten_neighbours neighb) ++ (flatten_lneighbours tail)
   | [] => []
@@ -78,14 +71,14 @@ Functional Scheme flatten_lneighbours_ind := Induction for flatten_lneighbours S
 (** Formal specification : flatten_lneighbours. *)
 
 Inductive FlattenLneighbours :
-  list (trans_type * neighbours_type) -> list place_type -> Prop :=
+  list (Trans * Neighbours) -> list Place -> Prop :=
 | FlattenLneighbours_nil :
     FlattenLneighbours [] []
 | FlattenLneighbours_cons :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (places : list place_type)
-           (t : trans_type)
-           (neighbours : neighbours_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (places : list Place)
+      (t : Trans)
+      (neighbours : Neighbours),
       FlattenLneighbours lneighbours places ->
       FlattenLneighbours ((t, neighbours) :: lneighbours)
                          ((flatten_neighbours neighbours) ++ places).
@@ -93,14 +86,14 @@ Inductive FlattenLneighbours :
 (** Correctness proof : flatten_lneighbours *)
 
 Theorem flatten_lneighbours_correct :
-  forall (lneighbours : list (trans_type * neighbours_type))
-         (places : list place_type),
+  forall (lneighbours : list (Trans * Neighbours))
+    (places : list Place),
     flatten_lneighbours lneighbours = places -> FlattenLneighbours lneighbours places.
 Proof.
   intros lneighbours.
   functional induction (flatten_lneighbours lneighbours)
              using flatten_lneighbours_ind;
-  intros.
+    intros.
   (* Base case : lneighbours = []. *)
   - rewrite <- H; apply FlattenLneighbours_nil.
   (* General case. *)
@@ -110,8 +103,8 @@ Qed.
 (** Completeness proof : flatten_lneighbours *)
 
 Theorem flatten_lneighbours_compl :
-  forall (lneighbours : list (trans_type * neighbours_type))
-         (places : list place_type),
+  forall (lneighbours : list (Trans * Neighbours))
+         (places : list Place),
     FlattenLneighbours lneighbours places -> flatten_lneighbours lneighbours = places.
 Proof.
   intros.
@@ -131,32 +124,31 @@ Qed.
 Structure Spn : Set :=
   mk_Spn {
       
-      places : list place_type;
-      transs : list trans_type;
-      pre : weight_type;
-      post : weight_type;
-      test : weight_type;
-      inhib : weight_type;
-      initial_marking : marking_type;
+      places : list Place;
+      transs : list Trans;
+      pre : Weight;
+      post : Weight;
+      test : Weight;
+      inhib : Weight;
+      initial_marking : list (Place * nat);
 
       (* Each list of transitions contained in priority_groups is 
        * a priority-ordered list of transitions.
        * Defines priority relation between transitions,
        * necessary to obtain a deterministic Petri net.*)
-      priority_groups : list (list trans_type);
+      priority_groups : list (list Trans);
 
       (* Contains the list of pre, test, inhib and post places 
        * associated with each transition of the Spn. *)
-      lneighbours : list (trans_type * neighbours_type);
+      lneighbours : list (Trans * Neighbours);
       
     }.
 
 (** ** Spn state. *)
 
-(** Defines the state of an Spn. 
-    Equivalent to marking_type in the case of Spn. *)
+(** Defines the state of an Spn. *)
 
-Structure SpnState := mk_SpnState { marking :marking_type }.
+Structure SpnState := mk_SpnState { fired : list Trans; marking : list (Place * nat) }.
 
 (** ------------------------------------------------------- *)
 (** ------------------------------------------------------- *)
@@ -170,15 +162,15 @@ Structure SpnState := mk_SpnState { marking :marking_type }.
 (** *** Spn helpers predicates *)
 
 Definition MarkingHaveSameStruct
-           (m1 : marking_type)
-           (m2 : marking_type) := fst (split m1) = fst (split m2).
+           (m1 : list (Place * nat))
+           (m2 : list (Place * nat)) := fst (split m1) = fst (split m2).
 
 Definition PriorityGroupsAreRefInLneighbours
-           (priority_groups : list (list trans_type))
-           (lneighbours : list (trans_type * neighbours_type)) :=
-  (forall pgroup : list trans_type,
+           (priority_groups : list (list Trans))
+           (lneighbours : list (Trans * Neighbours)) :=
+  (forall pgroup : list Trans,
       In pgroup priority_groups ->
-      (forall t : trans_type, In t pgroup -> In t (fst (split lneighbours)))).
+      (forall t : Trans, In t pgroup -> In t (fst (split lneighbours)))).
 
 (** *** Properties on places and transitions *)
 
@@ -223,7 +215,7 @@ Definition NoUnknownTransInLNeighbours (spn : Spn) :=
     i.e. A transition has at least one neighbour place. *)
 
 Definition NoIsolatedTrans (spn : Spn) :=
-  forall (t : trans_type) (neighbours_of_t : neighbours_type),
+  forall (t : Trans) (neighbours_of_t : Neighbours),
     In (t, neighbours_of_t) spn.(lneighbours) ->
     (flatten_neighbours neighbours_of_t) <> [].
 
@@ -251,10 +243,10 @@ Definition IsWellDefinedSpn (spn : Spn) :=
 (*===== EQUALITY DECIDABILITY FOR Spn TYPES =====*)
 (*===============================================*)
 
-(** *** Equality decidability for neighbours_type *)
+(** *** Equality decidability for Neighbours *)
 
 Definition neighbours_eq_dec :
-  forall x y : neighbours_type, {x = y} + {x <> y}.
+  forall x y : Neighbours, {x = y} + {x <> y}.
 Proof.
   repeat decide equality.    
 Defined.
@@ -270,7 +262,7 @@ Section Marking.
       
        Returns None if [p] doesn't belong to the marking. *)
   
-  Fixpoint get_m (marking : marking_type) (p : place_type) : option nat :=
+  Fixpoint get_m (marking : list (Place * nat)) (p : Place) : option nat :=
     match marking with
     | (place, nboftokens) :: tail => if p =? place then
                                        Some nboftokens
@@ -318,10 +310,10 @@ Section Marking.
       Param op : addition or substraction operator. *)
   
   Definition modify_m
-             (marking : marking_type)
-             (p : place_type)
+             (marking : list (Place * nat))
+             (p : Place)
              (op : nat -> nat -> nat)
-             (nboftokens : nat) : option marking_type :=
+             (nboftokens : nat) : option (list (Place * nat)) :=
     match get_m marking p with
     (* The couple (i, n) to remove must be unique. *)
     | Some n =>
@@ -337,15 +329,15 @@ End Marking.
 
 Section Neighbours.
 
-  (** Function : Returns the element of type neighbours_type
+  (** Function : Returns the element of type Neighbours
                  associated with transition t in the list lneighbours.
                
                  Returns None if transition t is not referenced
                  in lneighbours. *)
   
   Fixpoint get_neighbours
-           (lneighbours : list (trans_type * neighbours_type))
-           (t : trans_type) {struct lneighbours} : option neighbours_type :=
+           (lneighbours : list (Trans * Neighbours))
+           (t : Trans) {struct lneighbours} : option Neighbours :=
     match lneighbours with
     | (t', neighbours) :: tail => if t' =? t then
                                     Some neighbours
@@ -368,9 +360,9 @@ Section Edges.
   
   Definition check_pre
              (spn : Spn)
-             (marking : marking_type)
-             (p : place_type)
-             (t : trans_type) : option bool :=
+             (marking : list (Place * nat))
+             (p : Place)
+             (t : Trans) : option bool :=
     match get_m marking p with
     | Some nboftokens => Some ((pre spn t p) <=? nboftokens)
     | None => None
@@ -382,9 +374,9 @@ Section Edges.
   
   Fixpoint map_check_pre_aux
            (spn : Spn)
-           (marking : marking_type)
-           (pre_places : list place_type)
-           (t : trans_type)
+           (marking : list (Place * nat))
+           (pre_places : list Place)
+           (t : Trans)
            (check_result : bool) {struct pre_places} : option bool :=
     match pre_places with
     | p :: tail =>
@@ -400,9 +392,9 @@ Section Edges.
   
   Definition map_check_pre
              (spn : Spn)
-             (marking : marking_type)
-             (pre_places : list place_type)
-             (t : trans_type) : option bool :=
+             (marking : list (Place * nat))
+             (pre_places : list Place)
+             (t : Trans) : option bool :=
     map_check_pre_aux spn marking pre_places t true.
   
   (** Returns [Some true] if M(p) >= test(p, t), [Some false] otherwise. 
@@ -411,9 +403,9 @@ Section Edges.
   
   Definition check_test
              (spn : Spn)
-             (marking : marking_type)
-             (p : place_type)
-             (t : trans_type) : option bool :=
+             (marking : list (Place * nat))
+             (p : Place)
+             (t : Trans) : option bool :=
     match get_m marking p with
     | Some nboftokens => Some ((test spn t p) <=? nboftokens)
     | None => None
@@ -425,9 +417,9 @@ Section Edges.
   
   Fixpoint map_check_test_aux
            (spn : Spn)
-           (marking : marking_type)
-           (test_places : list place_type)
-           (t : trans_type)
+           (marking : list (Place * nat))
+           (test_places : list Place)
+           (t : Trans)
            (check_result : bool) {struct test_places} : option bool :=
     match test_places with
     | p :: tail =>
@@ -443,9 +435,9 @@ Section Edges.
   
   Definition map_check_test
              (spn : Spn)
-             (marking : marking_type)
-             (test_places : list place_type)
-             (t : trans_type) : option bool :=
+             (marking : list (Place * nat))
+             (test_places : list Place)
+             (t : Trans) : option bool :=
     map_check_test_aux spn marking test_places t true.
   
   (** Returns [Some true] if M(p) >= inhib(p, t), [Some false] otherwise. 
@@ -454,9 +446,9 @@ Section Edges.
   
   Definition check_inhib
              (spn : Spn)
-             (marking : marking_type)
-             (p : place_type)
-             (t : trans_type) : option bool :=
+             (marking : list (Place * nat))
+             (p : Place)
+             (t : Trans) : option bool :=
     match get_m marking p with
     | Some nboftokens => Some ((nboftokens <? (inhib spn t p)) || ((inhib spn t p) =? 0))
     | None => None
@@ -468,9 +460,9 @@ Section Edges.
   
   Fixpoint map_check_inhib_aux
            (spn : Spn)
-           (marking : marking_type)
-           (inhib_places : list place_type)
-           (t : trans_type)
+           (marking : list (Place * nat))
+           (inhib_places : list Place)
+           (t : Trans)
            (check_result : bool) {struct inhib_places} : option bool :=
     match inhib_places with
     | p :: tail =>
@@ -486,9 +478,9 @@ Section Edges.
   
   Definition map_check_inhib
              (spn : Spn)
-             (marking : marking_type)
-             (inhib_places : list place_type)
-             (t : trans_type) : option bool :=
+             (marking : list (Place * nat))
+             (inhib_places : list Place)
+             (t : Trans) : option bool :=
     map_check_inhib_aux spn marking inhib_places t true.
   
 End Edges.

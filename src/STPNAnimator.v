@@ -29,12 +29,12 @@ Section ListSensitized.
       is_sensitized return None. *)
   
   Fixpoint list_sensitized_aux 
-           (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (m : marking_type)
-           (sensitized_transs : list trans_type)
-           (transs : list trans_type) :
-    option (list trans_type) :=
+           (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (m : list (Place * nat))
+           (sensitized_transs : list Trans)
+           (transs : list Trans) :
+    option (list Trans) :=
     match transs with
     | t :: tail =>
       (* Checks if t has neighbours *)
@@ -62,33 +62,33 @@ Section ListSensitized.
   (** Formal specification : list_sensitized_aux *)
 
   Inductive ListSensitizedAux
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type) 
-            (m : marking_type)
-            (sensitized_transs : list trans_type) :
-    list trans_type -> (* sometranss *)
-    option (list trans_type) -> (* opt_sensitized_transs *)
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight) 
+            (m : list (Place * nat))
+            (sensitized_transs : list Trans) :
+    list Trans -> (* sometranss *)
+    option (list Trans) -> (* opt_sensitized_transs *)
     Prop :=
   | ListSensitizedAux_nil :
       ListSensitizedAux lneighbours pre test inhib m sensitized_transs []
                         (Some sensitized_transs)      
   | ListSensitizedAux_get_neighbours_err :
-      forall (transs : list trans_type)
-             (t : trans_type),
+      forall (transs : list Trans)
+             (t : Trans),
         GetNeighbours lneighbours t None ->
         ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs) None      
   | ListSensitizedAux_is_sensitized_err :
-      forall (transs : list trans_type)
-             (t : trans_type)
-             (neighbours_t : neighbours_type),
+      forall (transs : list Trans)
+             (t : Trans)
+             (neighbours_t : Neighbours),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         IsSensitized neighbours_t pre test inhib m t None ->
         ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs) None
   | ListSensitizedAux_is_sensitized_true :
-      forall (transs : list trans_type)
-             (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (opt_sensitized_transs : option (list trans_type)),
+      forall (transs : list Trans)
+             (t : Trans)
+             (neighbours_t : Neighbours)
+             (opt_sensitized_transs : option (list Trans)),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         IsSensitized neighbours_t pre test inhib m t (Some true) ->
         ListSensitizedAux lneighbours pre test inhib m (t :: sensitized_transs) transs
@@ -96,10 +96,10 @@ Section ListSensitized.
         ListSensitizedAux lneighbours pre test inhib m sensitized_transs (t :: transs)
                           opt_sensitized_transs
   | ListSensitizedAux_is_sensitized_false :
-      forall (transs : list trans_type)
-        (t : trans_type)
-        (neighbours_t : neighbours_type)
-        (opt_sensitized_transs : option (list trans_type)),
+      forall (transs : list Trans)
+        (t : Trans)
+        (neighbours_t : Neighbours)
+        (opt_sensitized_transs : option (list Trans)),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         IsSensitized neighbours_t pre test inhib m t (Some false) ->
         ListSensitizedAux lneighbours pre test inhib m sensitized_transs transs
@@ -112,11 +112,11 @@ Section ListSensitized.
   (** Correctness proof : list_sensitized_aux *)
 
   Theorem list_sensitized_aux_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (m : marking_type)
-      (sensitized_transs transs : list trans_type)
-      (opt_sensitized_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (m : list (Place * nat))
+      (sensitized_transs transs : list Trans)
+      (opt_sensitized_transs : option (list Trans)),
       list_sensitized_aux lneighbours pre test inhib m
                           sensitized_transs transs = opt_sensitized_transs ->
       ListSensitizedAux lneighbours pre test inhib m
@@ -150,11 +150,11 @@ Section ListSensitized.
   (** Completeness proof : list_sensitized_aux *)
   
   Theorem list_sensitized_aux_complete :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (sensitized_transs transs : list trans_type)
-           (opt_sensitized_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (sensitized_transs transs : list Trans)
+           (opt_sensitized_transs : option (list Trans)),
       ListSensitizedAux lneighbours pre test inhib m sensitized_transs
                         transs opt_sensitized_transs ->
       list_sensitized_aux lneighbours pre test inhib m sensitized_transs
@@ -183,10 +183,10 @@ Section ListSensitized.
       all transitions in final_sensitized are in sensitized_transs ++ transs. *)
   
   Lemma list_sensitized_aux_incl_transs :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (sensitized_transs transs final_sensitized : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (sensitized_transs transs final_sensitized : list Trans),
       list_sensitized_aux lneighbours pre test inhib m sensitized_transs transs =
       Some final_sensitized ->
       incl final_sensitized (sensitized_transs ++ transs).
@@ -237,17 +237,17 @@ Section ListSensitized.
       in [lneighbours] are referenced in the marking [m]. *)
   
   Lemma list_sensitized_aux_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (sensitized_transs transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (sensitized_transs transs : list Trans),
       incl transs (fst (split lneighbours)) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split m)) /\
            incl neighbours.(inhib_pl) (fst (split m)) /\
            incl neighbours.(test_pl) (fst (split m)))) ->
-      exists v : list trans_type,
+      exists v : list Trans,
         list_sensitized_aux lneighbours pre test inhib m sensitized_transs transs = Some v.
   Proof.
     unfold incl.
@@ -293,23 +293,23 @@ Section ListSensitized.
   (** Wrapper around list_sensitized_aux. *)
   
   Definition list_sensitized 
-             (lneighbours : list (trans_type * neighbours_type))
-             (pre test inhib : weight_type) 
-             (m : marking_type)
-             (transs : list trans_type) : option (list trans_type) :=
+             (lneighbours : list (Trans * Neighbours))
+             (pre test inhib : Weight) 
+             (m : list (Place * nat))
+             (transs : list Trans) : option (list Trans) :=
     list_sensitized_aux lneighbours pre test inhib m [] transs.
 
   (** Formal specification : list_sensitized *)
   
   Inductive ListSensitized
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type) 
-            (m : marking_type) :
-    list trans_type ->
-    option (list trans_type) -> Prop :=
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight) 
+            (m : list (Place * nat)) :
+    list Trans ->
+    option (list Trans) -> Prop :=
   | ListSensitized_cons :
-      forall (transs : list trans_type)
-             (opt_sensitized_transs : option (list trans_type)),
+      forall (transs : list Trans)
+             (opt_sensitized_transs : option (list Trans)),
         ListSensitizedAux lneighbours pre test inhib m [] transs opt_sensitized_transs ->
         ListSensitized lneighbours pre test inhib m transs opt_sensitized_transs.
 
@@ -318,11 +318,11 @@ Section ListSensitized.
   (** Correctness proof : list_sensitized *)
   
   Theorem list_sensitized_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs : list trans_type)
-           (opt_sensitized_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs : list Trans)
+           (opt_sensitized_transs : option (list Trans)),
       list_sensitized lneighbours pre test inhib m transs = opt_sensitized_transs ->
       ListSensitized lneighbours pre test inhib m transs opt_sensitized_transs.
   Proof.
@@ -336,11 +336,11 @@ Section ListSensitized.
   (** Completeness proof : list_sensitized *)
   
   Theorem list_sensitized_complete :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs : list trans_type)
-           (opt_sensitized_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs : list Trans)
+           (opt_sensitized_transs : option (list Trans)),
       ListSensitized lneighbours pre test inhib m transs opt_sensitized_transs ->
       list_sensitized lneighbours pre test inhib m transs = opt_sensitized_transs.
   Proof.
@@ -352,10 +352,10 @@ Section ListSensitized.
       are in transs. *)
   
   Lemma list_sensitized_incl_transs :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs sensitized_transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs sensitized_transs : list Trans),
       list_sensitized lneighbours pre test inhib m transs = Some sensitized_transs ->
       incl sensitized_transs transs.
   Proof.
@@ -374,17 +374,17 @@ Section ListSensitized.
       [lneighbours] are referenced in the marking [m]. *)
   
   Lemma list_sensitized_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs : list Trans),
       incl transs (fst (split lneighbours)) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split m)) /\
            incl neighbours.(inhib_pl) (fst (split m)) /\
            incl neighbours.(test_pl) (fst (split m)))) ->
-      exists v : list trans_type,
+      exists v : list Trans,
         list_sensitized lneighbours pre test inhib m transs = Some v.
   Proof.
     intros lneighbours pre test inhib m transs; intros.
@@ -408,12 +408,12 @@ Section ListDisabled.
       is_sensitized return None. *)
   
   Fixpoint list_disabled_aux 
-           (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (m : marking_type)
-           (disabled_transs : list trans_type)
-           (transs : list trans_type) :
-    option (list trans_type) :=
+           (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (m : list (Place * nat))
+           (disabled_transs : list Trans)
+           (transs : list Trans) :
+    option (list Trans) :=
     match transs with
     | t :: tail =>
       (* Checks if t has neighbours *)
@@ -441,33 +441,33 @@ Section ListDisabled.
   (** Formal specification : list_disabled_aux *)
   
   Inductive ListDisabledAux
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type) 
-            (m : marking_type)
-            (disabled_transs : list trans_type) :
-    list trans_type -> (* sometranss *)
-    option (list trans_type) -> (* opt_disabled_transs *)
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight) 
+            (m : list (Place * nat))
+            (disabled_transs : list Trans) :
+    list Trans -> (* sometranss *)
+    option (list Trans) -> (* opt_disabled_transs *)
     Prop :=
   | ListDisabledAux_nil :
       ListDisabledAux lneighbours pre test inhib m disabled_transs []
                         (Some disabled_transs)      
   | ListDisabledAux_get_neighbours_err :
-      forall (transs : list trans_type)
-             (t : trans_type),
+      forall (transs : list Trans)
+             (t : Trans),
         GetNeighbours lneighbours t None ->
         ListDisabledAux lneighbours pre test inhib m disabled_transs (t :: transs) None      
   | ListDisabledAux_is_sensitized_err :
-      forall (transs : list trans_type)
-             (t : trans_type)
-             (neighbours_t : neighbours_type),
+      forall (transs : list Trans)
+             (t : Trans)
+             (neighbours_t : Neighbours),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         IsSensitized neighbours_t pre test inhib m t None ->
         ListDisabledAux lneighbours pre test inhib m disabled_transs (t :: transs) None
   | ListDisabledAux_is_disabled_false :
-      forall (transs : list trans_type)
-             (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (opt_disabled_transs : option (list trans_type)),
+      forall (transs : list Trans)
+             (t : Trans)
+             (neighbours_t : Neighbours)
+             (opt_disabled_transs : option (list Trans)),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         IsSensitized neighbours_t pre test inhib m t (Some true) ->
         ListDisabledAux lneighbours pre test inhib m disabled_transs transs
@@ -475,10 +475,10 @@ Section ListDisabled.
         ListDisabledAux lneighbours pre test inhib m disabled_transs (t :: transs)
                         opt_disabled_transs
   | ListDisabledAux_is_disabled_true :
-      forall (transs : list trans_type)
-             (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (opt_disabled_transs : option (list trans_type)),
+      forall (transs : list Trans)
+             (t : Trans)
+             (neighbours_t : Neighbours)
+             (opt_disabled_transs : option (list Trans)),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         IsSensitized neighbours_t pre test inhib m t (Some false) ->
         ListDisabledAux lneighbours pre test inhib m (t :: disabled_transs) transs
@@ -491,11 +491,11 @@ Section ListDisabled.
   (** Correctness proof : list_disabled_aux *)
   
   Theorem list_disabled_aux_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (disabled_transs transs : list trans_type)
-           (opt_disabled_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (disabled_transs transs : list Trans)
+           (opt_disabled_transs : option (list Trans)),
       list_disabled_aux lneighbours pre test inhib m
                           disabled_transs transs = opt_disabled_transs ->
       ListDisabledAux lneighbours pre test inhib m
@@ -529,11 +529,11 @@ Section ListDisabled.
   (** Completeness proof : list_disabled_aux *)
 
   Theorem list_disabled_aux_complete :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (disabled_transs transs : list trans_type)
-           (opt_disabled_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (disabled_transs transs : list Trans)
+           (opt_disabled_transs : option (list Trans)),
       ListDisabledAux lneighbours pre test inhib m
                         disabled_transs transs opt_disabled_transs ->
       list_disabled_aux lneighbours pre test inhib m
@@ -563,10 +563,10 @@ Section ListDisabled.
       are in lneighbours. *)
   
   Lemma list_disabled_aux_incl_lneighbours :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (disabled_transs transs final_disabled : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (disabled_transs transs final_disabled : list Trans),
       incl transs (fst (split lneighbours)) ->
       incl disabled_transs (fst (split lneighbours)) ->
       list_disabled_aux lneighbours pre test inhib m disabled_transs transs =
@@ -618,10 +618,10 @@ Section ListDisabled.
       all transitions in final_disabled are in disabled_transs ++ transs. *)
   
   Lemma list_disabled_aux_incl_transs :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (disabled_transs transs final_disabled : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (disabled_transs transs final_disabled : list Trans),
       list_disabled_aux lneighbours pre test inhib m disabled_transs transs =
       Some final_disabled ->
       incl final_disabled (disabled_transs ++ transs).
@@ -672,17 +672,17 @@ Section ListDisabled.
       referenced in [lneighbours] are referenced in the marking [m]. *)
   
   Lemma list_disabled_aux_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (disabled_transs transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (disabled_transs transs : list Trans),
       incl transs (fst (split lneighbours)) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split m)) /\
            incl neighbours.(inhib_pl) (fst (split m)) /\
            incl neighbours.(test_pl) (fst (split m)))) ->
-      exists v : list trans_type,
+      exists v : list Trans,
         list_disabled_aux lneighbours pre test inhib m disabled_transs transs = Some v.
   Proof.
     unfold incl.
@@ -728,23 +728,23 @@ Section ListDisabled.
   (** Wrapper around list_disabled_aux. *)
   
   Definition list_disabled 
-             (lneighbours : list (trans_type * neighbours_type))
-             (pre test inhib : weight_type) 
-             (m : marking_type)
-             (transs : list trans_type) : option (list trans_type) :=
+             (lneighbours : list (Trans * Neighbours))
+             (pre test inhib : Weight) 
+             (m : list (Place * nat))
+             (transs : list Trans) : option (list Trans) :=
     list_disabled_aux lneighbours pre test inhib m [] transs.
 
   (** Formal specification : list_disabled *)
 
   Inductive ListDisabled
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type) 
-            (m : marking_type) :
-    list trans_type ->
-    option (list trans_type) -> Prop :=
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight) 
+            (m : list (Place * nat)) :
+    list Trans ->
+    option (list Trans) -> Prop :=
   | ListDisabled_cons :
-      forall (transs : list trans_type)
-             (opt_disabled_transs : option (list trans_type)),
+      forall (transs : list Trans)
+             (opt_disabled_transs : option (list Trans)),
         ListDisabledAux lneighbours pre test inhib m [] transs opt_disabled_transs ->
         ListDisabled lneighbours pre test inhib m transs opt_disabled_transs.
 
@@ -753,11 +753,11 @@ Section ListDisabled.
   (** Correctness proof : list_disabled *)
 
   Theorem list_disabled_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs : list trans_type)
-           (opt_disabled_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs : list Trans)
+           (opt_disabled_transs : option (list Trans)),
       list_disabled lneighbours pre test inhib m transs = opt_disabled_transs ->
       ListDisabled lneighbours pre test inhib m transs opt_disabled_transs.
   Proof.
@@ -771,11 +771,11 @@ Section ListDisabled.
   (** Completeness proof : list_disabled *)
 
   Theorem list_disabled_complete :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs : list trans_type)
-           (opt_disabled_transs : option (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs : list Trans)
+           (opt_disabled_transs : option (list Trans)),
       ListDisabled lneighbours pre test inhib m transs opt_disabled_transs ->
       list_disabled lneighbours pre test inhib m transs = opt_disabled_transs.
   Proof.
@@ -788,10 +788,10 @@ Section ListDisabled.
       are ref in [lneighbours]. *)
   
   Lemma list_disabled_incl_lneighbours :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs disabled_transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs disabled_transs : list Trans),
       incl transs (fst (split lneighbours)) ->
       list_disabled lneighbours pre test inhib m transs = Some disabled_transs ->
       incl disabled_transs (fst (split lneighbours)).
@@ -816,10 +816,10 @@ Section ListDisabled.
       are in [transs]. *)
 
   Lemma list_disabled_incl_transs :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (transs disabled_transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (transs disabled_transs : list Trans),
       list_disabled lneighbours pre test inhib m transs = Some disabled_transs ->
       incl disabled_transs transs.
   Proof.
@@ -838,17 +838,17 @@ Section ListDisabled.
      [lneighbours] are referenced in the marking [m]. *)
   
   Lemma list_disabled_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (m : marking_type)
-      (transs : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (m : list (Place * nat))
+      (transs : list Trans),
       incl transs (fst (split lneighbours)) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split m)) /\
            incl neighbours.(inhib_pl) (fst (split m)) /\
            incl neighbours.(test_pl) (fst (split m)))) ->
-      exists v : list trans_type,
+      exists v : list Trans,
         list_disabled lneighbours pre test inhib m transs = Some v.
   Proof.
     intros lneighbours pre test inhib m transs; intros.
@@ -874,11 +874,11 @@ Section FireStpn.
       returns None. *)
   
   Definition stpn_is_firable
-             (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (pre test inhib: weight_type)
-             (steadym decreasingm : marking_type)
-             (chronos : list (trans_type * option chrono_type)) :
+             (t : Trans)
+             (neighbours_t : Neighbours)
+             (pre test inhib: Weight)
+             (steadym decreasingm : list (Place * nat))
+             (chronos : list (Trans * option chrono_type)) :
     option bool :=
     match spn_is_firable t neighbours_t pre test inhib steadym decreasingm with
     (* If t is firable according to "SPN standards", then checks its chrono. *)
@@ -900,11 +900,11 @@ Section FireStpn.
   (** Formal specification : stpn_is_firable *)
   
   Inductive StpnIsFirable
-            (t : trans_type)
-            (neighbours_t : neighbours_type)
-            (pre test inhib: weight_type)
-            (steadym decreasingm : marking_type)
-            (chronos : list (trans_type * option chrono_type)) :
+            (t : Trans)
+            (neighbours_t : Neighbours)
+            (pre test inhib: Weight)
+            (steadym decreasingm : list (Place * nat))
+            (chronos : list (Trans * option chrono_type)) :
     option bool -> Prop :=
   | StpnIsFirable_spn_err :
       SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None ->
@@ -932,11 +932,11 @@ Section FireStpn.
   (** Correctness proof : stpn_is_firable *)
   
   Theorem stpn_is_firable_correct :
-    forall (t : trans_type)
-      (neighbours_t : neighbours_type)
-      (pre test inhib: weight_type)
-      (steadym decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
+    forall (t : Trans)
+      (neighbours_t : Neighbours)
+      (pre test inhib: Weight)
+      (steadym decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
       (optionb : option bool),
       stpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos = optionb ->
       StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos optionb.
@@ -973,11 +973,11 @@ Section FireStpn.
   (** Completeness proof : stpn_is_firable *)
   
   Theorem stpn_is_firable_compl :
-    forall (t : trans_type)
-      (neighbours_t : neighbours_type)
-      (pre test inhib: weight_type)
-      (steadym decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
+    forall (t : Trans)
+      (neighbours_t : Neighbours)
+      (pre test inhib: Weight)
+      (steadym decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
       (optionb : option bool),
       StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos optionb ->
       stpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos = optionb.
@@ -1014,11 +1014,11 @@ Section FireStpn.
       and decreasingm, and if t is referenced in chronos. *)
   
   Lemma stpn_is_firable_no_error :
-    forall (t : trans_type)
-           (neighbours_t : neighbours_type)
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type)),
+    forall (t : Trans)
+           (neighbours_t : Neighbours)
+           (pre test inhib : Weight)
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type)),
       In t (fst (split chronos)) ->
       incl (pre_pl neighbours_t) (fst (split decreasingm)) ->
       incl (test_pl neighbours_t) (fst (split steadym)) ->
@@ -1056,13 +1056,13 @@ Section FireStpn.
       transition is fired). "decreasingm" is then the resulting marking. *)
   
   Fixpoint stpn_fire_pre_aux
-           (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)  
-           (steadym : marking_type)
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (fired_pre_group pgroup : list trans_type) {struct pgroup} :
-    option ((list trans_type) * marking_type) :=
+           (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)  
+           (steadym : list (Place * nat))
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (fired_pre_group pgroup : list Trans) {struct pgroup} :
+    option ((list Trans) * list (Place * nat)) :=
     match pgroup with
     | t :: tail =>
       match get_neighbours lneighbours t with
@@ -1097,33 +1097,33 @@ Section FireStpn.
   (** Formal specification : spn_fire_pre_aux *)
   
   Inductive StpnFirePreAux
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type) 
-            (steadym : marking_type) 
-            (decreasingm : marking_type)
-            (chronos : list (trans_type * option chrono_type))
-            (fired_pre_group : list trans_type) :
-    list trans_type -> option (list trans_type * marking_type) -> Prop :=
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight) 
+            (steadym : list (Place * nat)) 
+            (decreasingm : list (Place * nat))
+            (chronos : list (Trans * option chrono_type))
+            (fired_pre_group : list Trans) :
+    list Trans -> option (list Trans * list (Place * nat)) -> Prop :=
   | StpnFirePreAux_nil :
       StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group []
                      (Some (fired_pre_group, decreasingm))
   (* Case get_neighbours returns an error. *)
   | StpnFirePreAux_neighbours_err :
-      forall (t : trans_type) (pgroup : list trans_type),
+      forall (t : Trans) (pgroup : list Trans),
         GetNeighbours lneighbours t None ->
         StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group (t :: pgroup) None
   (* Case stpn_is_firable returns an error. *)
   | StpnFirePreAux_firable_err :
-      forall (t : trans_type) (pgroup : list trans_type) (neighbours_t : neighbours_type),
+      forall (t : Trans) (pgroup : list Trans) (neighbours_t : Neighbours),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos None ->
         StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group (t :: pgroup) None
   (* Case stpn_is_firable returns false. *)
   | StpnFirePreAux_firable_false :
-      forall (t : trans_type)
-             (pgroup : list trans_type)
-             (neighbours_t : neighbours_type)
-             (option_final_couple : option (list trans_type * marking_type)),
+      forall (t : Trans)
+             (pgroup : list Trans)
+             (neighbours_t : Neighbours)
+             (option_final_couple : option (list Trans * list (Place * nat))),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos (Some false) ->
         StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup
@@ -1132,20 +1132,20 @@ Section FireStpn.
                        option_final_couple
   (* Case update_marking_pre returns an error. *)
   | StpnFirePreAux_update_err :
-      forall (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (pgroup : list trans_type),
+      forall (t : Trans)
+             (neighbours_t : Neighbours)
+             (pgroup : list Trans),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos (Some true) ->
         UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) None ->
         StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group (t :: pgroup) None
   (* General case, all went well. *)
   | StpnFirePreAux_cons :
-      forall (t : trans_type)
-             (neighbours_t : neighbours_type)
-             (pgroup : list trans_type)
-             (modifiedm : marking_type)
-             (option_final_couple : option (list trans_type * marking_type)),
+      forall (t : Trans)
+             (neighbours_t : Neighbours)
+             (pgroup : list Trans)
+             (modifiedm : list (Place * nat))
+             (option_final_couple : option (list Trans * list (Place * nat))),
         GetNeighbours lneighbours t (Some neighbours_t) ->
         StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos (Some true) ->
         UpdateMarkingPre t pre decreasingm (pre_pl neighbours_t) (Some modifiedm) ->
@@ -1157,14 +1157,14 @@ Section FireStpn.
   (** Correctness proof : stpn_fire_pre_aux *)
   
   Theorem stpn_fire_pre_aux_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type) 
-      (steadym : marking_type) 
-      (decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (fired_pre_group : list trans_type)
-      (pgroup : list trans_type)
-      (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight) 
+      (steadym : list (Place * nat)) 
+      (decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (fired_pre_group : list Trans)
+      (pgroup : list Trans)
+      (option_final_couple : option (list Trans * list (Place * nat))),
       stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup = option_final_couple ->
       StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup option_final_couple.
   Proof.
@@ -1202,14 +1202,14 @@ Section FireStpn.
   (** Completeness proof : stpn_fire_pre_aux *)
   
   Theorem stpn_fire_pre_aux_compl :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (fired_pre_group : list trans_type)
-           (pgroup : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym : list (Place * nat)) 
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (fired_pre_group : list Trans)
+           (pgroup : list Trans)
+           (option_final_couple : option (list Trans * list (Place * nat))),
       StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup option_final_couple ->
       stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup = option_final_couple.
   Proof.
@@ -1246,15 +1246,15 @@ Section FireStpn.
       which has the same structure as decreasingm. *)
   
   Lemma stpn_fire_pre_aux_same_struct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type) 
-      (steadym : marking_type) 
-      (decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (fired_pre_group : list trans_type)
-      (pgroup : list trans_type)
-      (pre_fired_transitions : list trans_type)
-      (decreasedm : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight) 
+      (steadym : list (Place * nat)) 
+      (decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (fired_pre_group : list Trans)
+      (pgroup : list Trans)
+      (pre_fired_transitions : list Trans)
+      (decreasedm : list (Place * nat)),
       stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup =
       Some (pre_fired_transitions, decreasedm) ->
       MarkingHaveSameStruct decreasingm decreasedm.
@@ -1285,15 +1285,15 @@ Section FireStpn.
       are in [lneighbours]. *)
   
   Lemma stpn_fire_pre_aux_final_fired_in_lneighbours :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (fired_pre_group : list trans_type)
-           (pgroup : list trans_type)
-           (final_fired_pre_group : list trans_type)
-           (finalm : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym : list (Place * nat)) 
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (fired_pre_group : list Trans)
+           (pgroup : list Trans)
+           (final_fired_pre_group : list Trans)
+           (finalm : list (Place * nat)),
       incl pgroup (fst (split lneighbours)) ->
       incl fired_pre_group (fst (split lneighbours)) ->
       stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup =
@@ -1358,15 +1358,15 @@ Section FireStpn.
       are ref in [chronos]. *)
   
   Lemma stpn_fire_pre_aux_final_fired_in_chronos :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (fired_pre_group : list trans_type)
-           (pgroup : list trans_type)
-           (final_fired_pre_group : list trans_type)
-           (finalm : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym : list (Place * nat)) 
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (fired_pre_group : list Trans)
+           (pgroup : list Trans)
+           (final_fired_pre_group : list Trans)
+           (finalm : list (Place * nat)),
       incl pgroup (fst (split chronos)) ->
       incl fired_pre_group (fst (split chronos)) ->
       stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
@@ -1433,21 +1433,21 @@ Section FireStpn.
       referenced in the markings [steadym] and [decreasingm]. *)
   
   Lemma stpn_fire_pre_aux_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (fired_pre_group : list trans_type)
-           (pgroup : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym : list (Place * nat)) 
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (fired_pre_group : list Trans)
+           (pgroup : list Trans),
       incl pgroup (fst (split chronos)) ->
       incl pgroup (fst (split lneighbours)) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
            incl neighbours.(inhib_pl) (fst (split steadym)) /\
            incl neighbours.(test_pl) (fst (split steadym)))) ->
-      exists v : (list trans_type * marking_type),
+      exists v : (list Trans * list (Place * nat)),
         stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos fired_pre_group pgroup = Some v.
   Proof.
     unfold incl.
@@ -1518,27 +1518,27 @@ Section FireStpn.
   (** Wrapper function around stpn_fire_pre_aux. *)
   
   Definition stpn_fire_pre
-             (lneighbours : list (trans_type * neighbours_type))
-             (pre test inhib : weight_type) 
-             (steadym : marking_type) 
-             (decreasingm : marking_type)
-             (chronos : list (trans_type * option chrono_type))
-             (pgroup : list trans_type) :
-    option (list trans_type * marking_type) :=
+             (lneighbours : list (Trans * Neighbours))
+             (pre test inhib : Weight) 
+             (steadym : list (Place * nat)) 
+             (decreasingm : list (Place * nat))
+             (chronos : list (Trans * option chrono_type))
+             (pgroup : list Trans) :
+    option (list Trans * list (Place * nat)) :=
     stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos [] pgroup.
 
   Functional Scheme stpn_fire_pre_ind := Induction for stpn_fire_pre Sort Prop.
 
   (** Formal specification : stpn_fire_pre *)
   Inductive StpnFirePre
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type) 
-            (steadym : marking_type) 
-            (decreasingm : marking_type)
-            (chronos : list (trans_type * option chrono_type))
-            (pgroup : list trans_type) : option (list trans_type * marking_type) -> Prop :=
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight) 
+            (steadym : list (Place * nat)) 
+            (decreasingm : list (Place * nat))
+            (chronos : list (Trans * option chrono_type))
+            (pgroup : list Trans) : option (list Trans * list (Place * nat)) -> Prop :=
   | StpnFirePre_cons :
-      forall (option_final_couple : option (list trans_type * marking_type)),
+      forall (option_final_couple : option (list Trans * list (Place * nat))),
         StpnFirePreAux lneighbours pre test inhib steadym decreasingm chronos [] pgroup
                        option_final_couple ->
         StpnFirePre lneighbours pre test inhib steadym decreasingm chronos pgroup
@@ -1547,12 +1547,12 @@ Section FireStpn.
   (** Correctness proof : stpn_fire_pre *)
   
   Theorem stpn_fire_pre_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pgroup : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pgroup : list Trans)
+           (option_final_couple : option (list Trans * list (Place * nat))),
       stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup = option_final_couple ->
       StpnFirePre lneighbours pre test inhib steadym decreasingm chronos pgroup option_final_couple.
   Proof.
@@ -1562,12 +1562,12 @@ Section FireStpn.
 
   (** Completeness proof : stpn_fire_pre *)
   Theorem stpn_fire_pre_compl :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pgroup : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pgroup : list Trans)
+           (option_final_couple : option (list Trans * list (Place * nat))),
       StpnFirePre lneighbours pre test inhib steadym decreasingm chronos pgroup option_final_couple ->
       stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup = option_final_couple.
   Proof.
@@ -1583,14 +1583,14 @@ Section FireStpn.
       which has the same structure as [decreasingm]. *)
   
   Lemma stpn_fire_pre_same_struct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type) 
-      (steadym : marking_type) 
-      (decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (pgroup : list trans_type)
-      (pre_fired_transitions : list trans_type)
-      (decreasedm : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight) 
+      (steadym : list (Place * nat)) 
+      (decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (pgroup : list Trans)
+      (pre_fired_transitions : list Trans)
+      (decreasedm : list (Place * nat)),
       stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup =
       Some (pre_fired_transitions, decreasedm) ->
       MarkingHaveSameStruct decreasingm decreasedm.
@@ -1605,14 +1605,14 @@ Section FireStpn.
       are in [lneighbours]. *)
   
   Lemma stpn_fire_pre_final_fired_in_lneighbours :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pgroup : list trans_type)
-           (final_fired_pre_group : list trans_type)
-           (finalm : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym : list (Place * nat)) 
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pgroup : list Trans)
+           (final_fired_pre_group : list Trans)
+           (finalm : list (Place * nat)),
       incl pgroup (fst (split lneighbours)) ->
       stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup =
       Some (final_fired_pre_group, finalm) ->
@@ -1645,14 +1645,14 @@ Section FireStpn.
       are ref in [chronos]. *)
   
   Lemma stpn_fire_pre_final_fired_in_chronos :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type) 
-      (steadym : marking_type) 
-      (decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (pgroup : list trans_type)
-      (final_fired_pre_group : list trans_type)
-      (finalm : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight) 
+      (steadym : list (Place * nat)) 
+      (decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (pgroup : list Trans)
+      (final_fired_pre_group : list Trans)
+      (finalm : list (Place * nat)),
       incl pgroup (fst (split chronos)) ->
       stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup =
       Some (final_fired_pre_group, finalm) ->
@@ -1686,20 +1686,20 @@ Section FireStpn.
       referenced in the markings [steadym] and [decreasingm]. *)
   
   Lemma stpn_fire_pre_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type) 
-           (steadym : marking_type) 
-           (decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pgroup : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight) 
+           (steadym : list (Place * nat)) 
+           (decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pgroup : list Trans),
       incl pgroup (fst (split chronos)) ->
       incl pgroup (fst (split lneighbours)) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
            incl neighbours.(inhib_pl) (fst (split steadym)) /\
            incl neighbours.(test_pl) (fst (split steadym)))) ->
-      exists v : (list trans_type * marking_type),
+      exists v : (list Trans * list (Place * nat)),
         stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup = Some v.
   Proof.
     intros lneighbours pre test inhib steadym decreasingm chronos pgroup; intros.
@@ -1717,13 +1717,13 @@ Section FireStpn.
       [pre_fired_transitions] is meant to be empty at first. *)
   
   Fixpoint stpn_map_fire_pre_aux
-           (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pre_fired_transitions : list trans_type)
-           (priority_groups : list (list trans_type)) :
-    option (list trans_type * marking_type) :=
+           (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pre_fired_transitions : list Trans)
+           (priority_groups : list (list Trans)) :
+    option (list Trans * list (Place * nat)) :=
     match priority_groups with
     (* Loops over all priority group of transitions (prgroup) and
      * calls stpn_fire_pre. *)
@@ -1745,20 +1745,20 @@ Section FireStpn.
   (** Formal specification : stpn_map_fire_pre_aux *)
   
   Inductive StpnMapFirePreAux
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type)
-            (steadym decreasingm : marking_type)
-            (chronos : list (trans_type * option chrono_type))
-            (pre_fired_transitions : list trans_type) :
-    list (list trans_type) -> option (list trans_type * marking_type) -> Prop :=
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight)
+            (steadym decreasingm : list (Place * nat))
+            (chronos : list (Trans * option chrono_type))
+            (pre_fired_transitions : list Trans) :
+    list (list Trans) -> option (list Trans * list (Place * nat)) -> Prop :=
   | StpnMapFirePreAux_nil :
       StpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos pre_fired_transitions []
                         (Some (pre_fired_transitions, decreasingm))
   | StpnMapFirePreAux_cons :
-      forall (pgroup pre_fired_trs : list trans_type)
-             (decreasedm : marking_type)
-             (priority_groups : list (list trans_type))
-             (option_final_couple : option (list trans_type * marking_type)),
+      forall (pgroup pre_fired_trs : list Trans)
+             (decreasedm : list (Place * nat))
+             (priority_groups : list (list Trans))
+             (option_final_couple : option (list Trans * list (Place * nat))),
         StpnFirePre lneighbours pre test inhib steadym decreasingm chronos pgroup
                     (Some (pre_fired_trs, decreasedm)) ->
         StpnMapFirePreAux lneighbours pre test inhib steadym decreasedm chronos (pre_fired_transitions ++ pre_fired_trs)
@@ -1768,8 +1768,8 @@ Section FireStpn.
                           (pgroup :: priority_groups)
                           option_final_couple
   | StpnMapFirePreAux_err :
-      forall (pgroup : list trans_type)
-             (priority_groups : list (list trans_type)),
+      forall (pgroup : list Trans)
+             (priority_groups : list (list Trans)),
         StpnFirePre lneighbours pre test inhib steadym decreasingm chronos pgroup None ->
         StpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos pre_fired_transitions
                           (pgroup :: priority_groups) None.
@@ -1777,13 +1777,13 @@ Section FireStpn.
   (** Correctness proof : stpn_map_fire_pre_aux *)
   
   Theorem stpn_map_fire_pre_aux_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (priority_groups : list (list trans_type))
-           (pre_fired_transitions : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (priority_groups : list (list Trans))
+           (pre_fired_transitions : list Trans)
+           (option_final_couple : option (list Trans * list (Place * nat))),
       stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
                             pre_fired_transitions priority_groups = option_final_couple ->
       StpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos
@@ -1811,13 +1811,13 @@ Section FireStpn.
   (** Completeness proof : stpn_map_fire_pre_aux *)
   
   Theorem stpn_map_fire_pre_aux_compl :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))           
-           (priority_groups : list (list trans_type))
-           (pre_fired_transitions : list trans_type)
-           (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))           
+           (priority_groups : list (list Trans))
+           (pre_fired_transitions : list Trans)
+           (option_final_couple : option (list Trans * list (Place * nat))),
       StpnMapFirePreAux lneighbours pre test inhib steadym decreasingm chronos
                         pre_fired_transitions priority_groups option_final_couple ->
       stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
@@ -1837,14 +1837,14 @@ Section FireStpn.
       passed as argument. *)
 
   Lemma stpn_map_fire_pre_aux_same_struct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pre_fired_transitions : list trans_type)
-           (priority_groups : list (list trans_type))
-           (final_pre_fired : list trans_type)
-           (intermediatem : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pre_fired_transitions : list Trans)
+           (priority_groups : list (list Trans))
+           (final_pre_fired : list Trans)
+           (intermediatem : list (Place * nat)),
       stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
                             pre_fired_transitions priority_groups =
       Some (final_pre_fired, intermediatem) ->
@@ -1877,14 +1877,14 @@ Section FireStpn.
       are in [lneighbours]. *)
   
   Lemma stpn_map_fire_pre_aux_final_fired_in_lneighbours :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (steadym decreasingm : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (pre_fired_transitions : list trans_type)
-           (priority_groups : list (list trans_type))
-           (final_pre_fired : list trans_type)
-           (intermediatem : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (steadym decreasingm : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (pre_fired_transitions : list Trans)
+           (priority_groups : list (list Trans))
+           (final_pre_fired : list Trans)
+           (intermediatem : list (Place * nat)),
       PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
       incl pre_fired_transitions (fst (split lneighbours)) ->
       stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
@@ -1944,14 +1944,14 @@ Section FireStpn.
       are ref in [chronos]. *)
   
   Lemma stpn_map_fire_pre_aux_final_fired_in_chronos :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (steadym decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (pre_fired_transitions : list trans_type)
-      (priority_groups : list (list trans_type))
-      (final_pre_fired : list trans_type)
-      (intermediatem : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (steadym decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (pre_fired_transitions : list Trans)
+      (priority_groups : list (list Trans))
+      (final_pre_fired : list Trans)
+      (intermediatem : list (Place * nat)),
       PriorityGroupsAreRefInChronos priority_groups chronos ->
       incl pre_fired_transitions (fst (split chronos)) ->
       stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos
@@ -2014,20 +2014,20 @@ Section FireStpn.
       in markings [steadym] and [decreasingm]. *)
   
   Lemma stpn_map_fire_pre_aux_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (steadym decreasingm : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (priority_groups : list (list trans_type))
-      (pre_fired_transitions : list trans_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (steadym decreasingm : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (priority_groups : list (list Trans))
+      (pre_fired_transitions : list Trans),
       PriorityGroupsAreRefInChronos priority_groups chronos ->
       PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split decreasingm)) /\
            incl neighbours.(inhib_pl) (fst (split steadym)) /\
            incl neighbours.(test_pl) (fst (split steadym)))) ->
-      exists v : (list trans_type * marking_type),
+      exists v : (list Trans * list (Place * nat)),
         stpn_map_fire_pre_aux lneighbours pre test inhib steadym decreasingm
                               chronos pre_fired_transitions priority_groups = Some v.
   Proof.
@@ -2073,12 +2073,12 @@ Section FireStpn.
       the tokens in pre-condition places. *)
   
   Definition stpn_map_fire_pre
-             (lneighbours : list (trans_type * neighbours_type))
-             (pre test inhib : weight_type)
-             (m : marking_type)
-             (chronos : list (trans_type * option chrono_type))
-             (priority_groups : list (list trans_type)) :
-    option (list trans_type * marking_type) :=
+             (lneighbours : list (Trans * Neighbours))
+             (pre test inhib : Weight)
+             (m : list (Place * nat))
+             (chronos : list (Trans * option chrono_type))
+             (priority_groups : list (list Trans)) :
+    option (list Trans * list (Place * nat)) :=
     stpn_map_fire_pre_aux lneighbours pre test inhib m m chronos [] priority_groups.
 
   Functional Scheme stpn_map_fire_pre_ind := Induction for stpn_map_fire_pre Sort Prop.
@@ -2086,14 +2086,14 @@ Section FireStpn.
   (** Formal specification : stpn_map_fire_pre *)
   
   Inductive StpnMapFirePre
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib : weight_type)
-            (m : marking_type)
-            (chronos : list (trans_type * option chrono_type))
-            (priority_groups : list (list trans_type)) :
-    option (list trans_type * marking_type) -> Prop :=
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib : Weight)
+            (m : list (Place * nat))
+            (chronos : list (Trans * option chrono_type))
+            (priority_groups : list (list Trans)) :
+    option (list Trans * list (Place * nat)) -> Prop :=
   | StpnMapFirePre_cons :
-      forall (option_final_couple : option (list trans_type * marking_type)),
+      forall (option_final_couple : option (list Trans * list (Place * nat))),
         StpnMapFirePreAux lneighbours pre test inhib m m chronos [] priority_groups
                           option_final_couple ->
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups option_final_couple.
@@ -2101,12 +2101,12 @@ Section FireStpn.
   (** Correctness proof : stpn_map_fire_pre *)
   
   Theorem stpn_map_fire_pre_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (priority_groups : list (list trans_type))
-           (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (priority_groups : list (list Trans))
+           (option_final_couple : option (list Trans * list (Place * nat))),
       stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups = option_final_couple ->
       StpnMapFirePre lneighbours pre test inhib m chronos priority_groups option_final_couple.  
   Proof.
@@ -2119,12 +2119,12 @@ Section FireStpn.
   (** Completeness proof : stpn_map_fire_pre *)
   
   Theorem stpn_map_fire_pre_compl :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (m : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (priority_groups : list (list trans_type))
-      (option_final_couple : option (list trans_type * marking_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (m : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (priority_groups : list (list Trans))
+      (option_final_couple : option (list Trans * list (Place * nat))),
       StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                      option_final_couple ->
       stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups = option_final_couple.
@@ -2139,13 +2139,13 @@ Section FireStpn.
       are in lneighbours. *)
   
   Lemma stpn_map_fire_pre_final_fired_in_lneighbours :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (priority_groups : list (list trans_type))
-           (final_pre_fired : list trans_type)
-           (intermediatem : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (priority_groups : list (list Trans))
+           (final_pre_fired : list Trans)
+           (intermediatem : list (Place * nat)),
       PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
       stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups =
       Some (final_pre_fired, intermediatem) ->
@@ -2156,7 +2156,7 @@ Section FireStpn.
     intros lneighbours pre test inhib m chronos priority_groups.
     functional induction (stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups)
                using stpn_map_fire_pre_ind; intros.
-    cut (forall t : trans_type, In t [] -> In t (fst (split lneighbours))); intros.
+    cut (forall t : Trans, In t [] -> In t (fst (split lneighbours))); intros.
     - generalize (stpn_map_fire_pre_aux_final_fired_in_lneighbours
                     lneighbours pre test inhib m m chronos [] priority_groups
                     final_pre_fired intermediatem
@@ -2171,13 +2171,13 @@ Section FireStpn.
       are ref in [chronos]. *)
   
   Lemma stpn_map_fire_pre_final_fired_in_chronos :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (m : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (priority_groups : list (list trans_type))
-      (final_pre_fired : list trans_type)
-      (intermediatem : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (m : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (priority_groups : list (list Trans))
+      (final_pre_fired : list Trans)
+      (intermediatem : list (Place * nat)),
       PriorityGroupsAreRefInChronos priority_groups chronos ->
       stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups =
       Some (final_pre_fired, intermediatem) ->
@@ -2188,7 +2188,7 @@ Section FireStpn.
     intros lneighbours pre test inhib m chronos priority_groups.
     functional induction (stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups)
                using stpn_map_fire_pre_ind; intros.
-    cut (forall t : trans_type, In t [] -> In t (fst (split chronos))); intros.
+    cut (forall t : Trans, In t [] -> In t (fst (split chronos))); intros.
     - generalize (stpn_map_fire_pre_aux_final_fired_in_chronos
                     lneighbours pre test inhib m m chronos [] priority_groups
                     final_pre_fired intermediatem
@@ -2206,19 +2206,19 @@ Section FireStpn.
         in markings [steadym] and [decreasingm]. *)
   
   Lemma stpn_map_fire_pre_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (priority_groups : list (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (priority_groups : list (list Trans)),
       PriorityGroupsAreRefInChronos priority_groups chronos ->
       PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split m)) /\
            incl neighbours.(inhib_pl) (fst (split m)) /\
            incl neighbours.(test_pl) (fst (split m)))) ->
-      exists v : (list trans_type * marking_type),
+      exists v : (list Trans * list (Place * nat)),
         stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups = Some v.
   Proof.
     intros lneighbours pre test inhib m chronos priority_groups.
@@ -2230,13 +2230,13 @@ Section FireStpn.
       passed in parameter. *)
   
   Lemma stpn_map_fire_pre_same_struct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib : weight_type)
-      (m : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (priority_groups : list (list trans_type))
-      (final_pre_fired : list trans_type)
-      (intermediatem : marking_type),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib : Weight)
+      (m : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (priority_groups : list (list Trans))
+      (final_pre_fired : list Trans)
+      (intermediatem : list (Place * nat)),
       stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups =
       Some (final_pre_fired, intermediatem) ->
       MarkingHaveSameStruct m intermediatem.
@@ -2260,13 +2260,13 @@ Section FireStpn.
       between the pre-firing and the post-firing phases. *)
   
   Definition stpn_fire  
-             (lneighbours : list (trans_type * neighbours_type))
-             (pre test inhib post : weight_type)
-             (m : marking_type)
-             (chronos : list (trans_type * option chrono_type))
-             (transs : list trans_type)
-             (priority_groups : list (list trans_type)) :
-    option ((list trans_type) * marking_type * (list (trans_type * option chrono_type))) :=
+             (lneighbours : list (Trans * Neighbours))
+             (pre test inhib post : Weight)
+             (m : list (Place * nat))
+             (chronos : list (Trans * option chrono_type))
+             (transs : list Trans)
+             (priority_groups : list (list Trans)) :
+    option ((list Trans) * list (Place * nat) * (list (Trans * option chrono_type))) :=
     (* Pre-fires the transitions in priority_groups. *)
     match stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups with
     | Some (pre_fired_transitions, intermediatem) =>
@@ -2302,38 +2302,38 @@ Section FireStpn.
   (** Formal specification : stpn_fire *)
   
   Inductive StpnFire
-            (lneighbours : list (trans_type * neighbours_type))
-            (pre test inhib post : weight_type)
-            (m : marking_type)
-            (chronos : list (trans_type * option chrono_type))
-            (transs : list trans_type)
-            (priority_groups : list (list trans_type)) :
-    option ((list trans_type) * marking_type * (list (trans_type * option chrono_type))) ->
+            (lneighbours : list (Trans * Neighbours))
+            (pre test inhib post : Weight)
+            (m : list (Place * nat))
+            (chronos : list (Trans * option chrono_type))
+            (transs : list Trans)
+            (priority_groups : list (list Trans)) :
+    option ((list Trans) * list (Place * nat) * (list (Trans * option chrono_type))) ->
     Prop :=
   | StpnFire_fire_pre_err :
       StpnMapFirePre lneighbours pre test inhib m chronos priority_groups None ->
       StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
   | StpnFire_reset_chronos_err1 :
-      forall (pre_fired_transitions : list trans_type)
-             (intermediatem : marking_type),
+      forall (pre_fired_transitions : list Trans)
+             (intermediatem : list (Place * nat)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions None ->
         StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
   | StpnFire_list_disabled_err :
-      forall (pre_fired_transitions : list trans_type)
-             (intermediatem : marking_type)
-             (updated_chronos : list (trans_type * option chrono_type)),
+      forall (pre_fired_transitions : list Trans)
+             (intermediatem : list (Place * nat))
+             (updated_chronos : list (Trans * option chrono_type)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
         ListDisabled lneighbours pre test inhib m transs None -> 
         StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
   | StpnFire_reset_chronos_err2 :
-      forall (pre_fired_transitions : list trans_type)
-             (intermediatem : marking_type)
-             (updated_chronos : list (trans_type * option chrono_type))
-             (disabled_transs : list trans_type),
+      forall (pre_fired_transitions : list Trans)
+             (intermediatem : list (Place * nat))
+             (updated_chronos : list (Trans * option chrono_type))
+             (disabled_transs : list Trans),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
@@ -2341,11 +2341,11 @@ Section FireStpn.
         ResetAllChronos updated_chronos disabled_transs None ->
         StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
   | StpnFire_fire_post_err :
-      forall (pre_fired_transitions : list trans_type)
-             (intermediatem : marking_type)
-             (updated_chronos : list (trans_type * option chrono_type))
-             (disabled_transs : list trans_type)
-             (final_chronos : list (trans_type * option chrono_type)),
+      forall (pre_fired_transitions : list Trans)
+             (intermediatem : list (Place * nat))
+             (updated_chronos : list (Trans * option chrono_type))
+             (disabled_transs : list Trans)
+             (final_chronos : list (Trans * option chrono_type)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
@@ -2354,12 +2354,12 @@ Section FireStpn.
         FirePost lneighbours post intermediatem pre_fired_transitions None ->
         StpnFire lneighbours pre test inhib post m chronos transs priority_groups None
   | StpnFire_cons :
-      forall (pre_fired_transitions : list trans_type)
-             (intermediatem : marking_type)
-             (updated_chronos : list (trans_type * option chrono_type))
-             (disabled_transs : list trans_type)
-             (final_chronos : list (trans_type * option chrono_type))
-             (finalm : marking_type),
+      forall (pre_fired_transitions : list Trans)
+             (intermediatem : list (Place * nat))
+             (updated_chronos : list (Trans * option chrono_type))
+             (disabled_transs : list Trans)
+             (final_chronos : list (Trans * option chrono_type))
+             (finalm : list (Place * nat)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
@@ -2372,15 +2372,15 @@ Section FireStpn.
   (** Correctness proof : stpn_fire *)
   
   Theorem stpn_fire_correct :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib post : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (priority_groups : list (list trans_type))
-           (opt_final_tuplet : option ((list trans_type) *
-                                       marking_type *
-                                       (list (trans_type * option chrono_type)))),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib post : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (priority_groups : list (list Trans))
+           (opt_final_tuplet : option ((list Trans) *
+                                       list (Place * nat) *
+                                       (list (Trans * option chrono_type)))),
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       opt_final_tuplet ->
       StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet.
@@ -2442,15 +2442,15 @@ Section FireStpn.
   (** Completeness proof : stpn_fire *)
   
   Theorem stpn_fire_compl :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib post : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (priority_groups : list (list trans_type))
-           (opt_final_tuplet : option ((list trans_type) *
-                                       marking_type *
-                                       (list (trans_type * option chrono_type)))),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib post : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (priority_groups : list (list Trans))
+           (opt_final_tuplet : option ((list Trans) *
+                                       list (Place * nat) *
+                                       (list (Trans * option chrono_type)))),
       StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet ->
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = opt_final_tuplet.
   Proof.
@@ -2494,15 +2494,15 @@ Section FireStpn.
       passed as argument. *)
   
   Lemma stpn_fire_same_struct_marking :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib post : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (priority_groups : list (list trans_type))
-           (fired_transitions : list (trans_type))
-           (newm : marking_type)
-           (new_chronos : list (trans_type * option chrono_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib post : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (priority_groups : list (list Trans))
+           (fired_transitions : list (Trans))
+           (newm : list (Place * nat))
+           (new_chronos : list (Trans * option chrono_type)),
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       Some (fired_transitions, newm, new_chronos) ->
       MarkingHaveSameStruct m newm.
@@ -2532,15 +2532,15 @@ Section FireStpn.
   (** Proves that stpn_fire preserves the structure of the [chronos] list. *)
   
   Lemma stpn_fire_same_struct_chronos :
-    forall (lneighbours : list (trans_type * neighbours_type))
-           (pre test inhib post : weight_type)
-           (m : marking_type)
-           (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (priority_groups : list (list trans_type))
-           (fired_transitions : list (trans_type))
-           (newm : marking_type)
-           (new_chronos : list (trans_type * option chrono_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+           (pre test inhib post : Weight)
+           (m : list (Place * nat))
+           (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (priority_groups : list (list Trans))
+           (fired_transitions : list (Trans))
+           (newm : list (Place * nat))
+           (new_chronos : list (Trans * option chrono_type)),
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       Some (fired_transitions, newm, new_chronos) ->
       ChronosHaveSameStruct chronos new_chronos.
@@ -2568,15 +2568,15 @@ Section FireStpn.
       returns a list [new_chronos] of well-formed chronos. *)
   
   Lemma stpn_fire_well_formed_chronos :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib post : weight_type)
-      (m : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (transs : list trans_type)
-      (priority_groups : list (list trans_type))
-      (fired_transitions : list (trans_type))
-      (newm : marking_type)
-      (new_chronos : list (trans_type * option chrono_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib post : Weight)
+      (m : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (transs : list Trans)
+      (priority_groups : list (list Trans))
+      (fired_transitions : list (Trans))
+      (newm : list (Place * nat))
+      (new_chronos : list (Trans * option chrono_type)),
       (forall chrono : chrono_type,
           In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
@@ -2613,25 +2613,25 @@ Section FireStpn.
       - All places in [lneighbours] are ref in [m]. *)
   
   Lemma stpn_fire_no_error :
-    forall (lneighbours : list (trans_type * neighbours_type))
-      (pre test inhib post : weight_type)
-      (m : marking_type)
-      (chronos : list (trans_type * option chrono_type))
-      (transs : list trans_type)
-      (priority_groups : list (list trans_type)),
+    forall (lneighbours : list (Trans * Neighbours))
+      (pre test inhib post : Weight)
+      (m : list (Place * nat))
+      (chronos : list (Trans * option chrono_type))
+      (transs : list Trans)
+      (priority_groups : list (list Trans)),
       incl transs (fst (split chronos)) ->
       incl transs (fst (split lneighbours)) ->
       PriorityGroupsAreRefInChronos priority_groups chronos ->
       PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           (incl neighbours.(pre_pl) (fst (split m)) /\
            incl neighbours.(inhib_pl) (fst (split m)) /\
            incl neighbours.(test_pl) (fst (split m)))) ->
-      (forall (t : trans_type) (neighbours : neighbours_type),
+      (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           incl neighbours.(post_pl) (fst (split m))) ->
-      exists v : (list trans_type * marking_type * list (trans_type * option chrono_type)),
+      exists v : (list Trans * list (Place * nat) * list (Trans * option chrono_type)),
         stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = Some v.
   Proof.
     unfold incl.
@@ -2736,7 +2736,7 @@ Section AnimateStpn.
       
       Also returns the list of fired transitions. *)
   
-  Definition stpn_cycle (stpn : STPN) : option ((list trans_type) * STPN)  :=
+  Definition stpn_cycle (stpn : STPN) : option ((list Trans) * STPN)  :=
     match stpn with
     | mk_STPN
         chronos
@@ -2768,29 +2768,29 @@ Section AnimateStpn.
   
   (** Formal specification : stpn_cycle *)
   
-  Inductive StpnCycle (stpn : STPN) : option ((list trans_type) * STPN) -> Prop :=
+  Inductive StpnCycle (stpn : STPN) : option ((list Trans) * STPN) -> Prop :=
   | StpnCycle_list_sensitized_err :
-      forall (chronos : list (trans_type * option chrono_type))
-             (places : list place_type)
-             (transs : list trans_type)
-             (pre post test inhib : weight_type)
-             (marking : marking_type)
-             (priority_groups : list (list trans_type))
-             (lneighbours : list (trans_type * neighbours_type)),
+      forall (chronos : list (Trans * option chrono_type))
+             (places : list Place)
+             (transs : list Trans)
+             (pre post test inhib : Weight)
+             (marking : list (Place * nat))
+             (priority_groups : list (list Trans))
+             (lneighbours : list (Trans * Neighbours)),
         stpn = (mk_STPN
                   chronos
                   (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
         ListSensitized lneighbours pre test inhib marking transs None ->
         StpnCycle stpn None
   | StpnCycle_increment_chronos_err :
-      forall (chronos : list (trans_type * option chrono_type))
-             (places : list place_type)
-             (transs : list trans_type)
-             (pre post test inhib : weight_type)
-             (marking : marking_type)
-             (priority_groups : list (list trans_type))
-             (lneighbours : list (trans_type * neighbours_type))
-             (sensitized_transs : list trans_type),
+      forall (chronos : list (Trans * option chrono_type))
+             (places : list Place)
+             (transs : list Trans)
+             (pre post test inhib : Weight)
+             (marking : list (Place * nat))
+             (priority_groups : list (list Trans))
+             (lneighbours : list (Trans * Neighbours))
+             (sensitized_transs : list Trans),
         stpn = (mk_STPN
                   chronos
                   (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
@@ -2798,15 +2798,15 @@ Section AnimateStpn.
         IncrementAllChronos chronos sensitized_transs None ->
         StpnCycle stpn None
   | StpnCycle_fire_err :
-      forall (chronos : list (trans_type * option chrono_type))
-             (places : list place_type)
-             (transs : list trans_type)
-             (pre post test inhib : weight_type)
-             (marking : marking_type)
-             (priority_groups : list (list trans_type))
-             (lneighbours : list (trans_type * neighbours_type))
-             (sensitized_transs : list trans_type)
-             (updated_chronos : list (trans_type * option chrono_type)),
+      forall (chronos : list (Trans * option chrono_type))
+             (places : list Place)
+             (transs : list Trans)
+             (pre post test inhib : Weight)
+             (marking : list (Place * nat))
+             (priority_groups : list (list Trans))
+             (lneighbours : list (Trans * Neighbours))
+             (sensitized_transs : list Trans)
+             (updated_chronos : list (Trans * option chrono_type)),
         stpn = (mk_STPN
                   chronos
                   (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
@@ -2815,18 +2815,18 @@ Section AnimateStpn.
         StpnFire lneighbours pre test inhib post marking updated_chronos transs priority_groups None -> 
         StpnCycle stpn None
   | StpnCycle_cons :
-      forall (chronos : list (trans_type * option chrono_type))
-        (places : list place_type)
-        (transs : list trans_type)
-        (pre post test inhib : weight_type)
-        (marking : marking_type)
-        (priority_groups : list (list trans_type))
-        (lneighbours : list (trans_type * neighbours_type))
-        (sensitized_transs : list trans_type)
-        (updated_chronos : list (trans_type * option chrono_type))
-        (fired_transitions : list trans_type)
-        (nextm : marking_type)
-        (next_chronos : list (trans_type * option chrono_type)),
+      forall (chronos : list (Trans * option chrono_type))
+        (places : list Place)
+        (transs : list Trans)
+        (pre post test inhib : Weight)
+        (marking : list (Place * nat))
+        (priority_groups : list (list Trans))
+        (lneighbours : list (Trans * Neighbours))
+        (sensitized_transs : list Trans)
+        (updated_chronos : list (Trans * option chrono_type))
+        (fired_transitions : list Trans)
+        (nextm : list (Place * nat))
+        (next_chronos : list (Trans * option chrono_type)),
         stpn = (mk_STPN
                   chronos
                   (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
@@ -2843,7 +2843,7 @@ Section AnimateStpn.
   
   Theorem stpn_cycle_correct :
     forall (stpn : STPN)
-      (opt_final_couple : option ((list trans_type) * STPN)),
+      (opt_final_couple : option ((list Trans) * STPN)),
       stpn_cycle stpn = opt_final_couple ->
       StpnCycle stpn opt_final_couple.
   Proof.
@@ -2909,7 +2909,7 @@ Section AnimateStpn.
   
   Theorem stpn_cycle_compl :
     forall (stpn : STPN)
-           (opt_final_couple : option ((list trans_type) * STPN)),
+           (opt_final_couple : option ((list Trans) * STPN)),
       StpnCycle stpn opt_final_couple ->
       stpn_cycle stpn = opt_final_couple.
   Proof.
@@ -2957,7 +2957,7 @@ Section AnimateStpn.
   Theorem stpn_cycle_no_error :
     forall (stpn : STPN),
       IsWellStructuredStpn stpn ->
-      exists v : ((list trans_type) * STPN),
+      exists v : ((list Trans) * STPN),
         stpn_cycle stpn = Some v.
   Proof.
     unfold IsWellStructuredStpn; intro.
@@ -3057,7 +3057,7 @@ Section AnimateStpn.
   
   Theorem stpn_cycle_well_structured :
     forall (stpn : STPN)
-      (fired_transitions : list trans_type)
+      (fired_transitions : list Trans)
       (next_stpn : STPN),
       IsWellStructuredStpn stpn ->
       stpn_cycle stpn = Some (fired_transitions, next_stpn) ->
@@ -3139,8 +3139,8 @@ Section AnimateStpn.
   Fixpoint stpn_animate_aux 
            (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * STPN)) :
-    option (list (list trans_type * STPN)) :=
+           (stpn_evolution : list (list Trans * STPN)) :
+    option (list (list Trans * STPN)) :=
     match n with
     (* Base case, returns the list storing the evolution. *)
     | O => Some stpn_evolution
@@ -3160,18 +3160,18 @@ Section AnimateStpn.
 
   Inductive StpnAnimateAux (stpn : STPN) :
     nat ->
-    list (list trans_type * STPN) ->
-    option (list (list trans_type * STPN) )->
+    list (list Trans * STPN) ->
+    option (list (list Trans * STPN) )->
     Prop :=
   | StpnAnimateAux_0 :
-      forall (stpn_evolution : list (list trans_type * STPN)),
+      forall (stpn_evolution : list (list Trans * STPN)),
         StpnAnimateAux stpn 0 stpn_evolution (Some stpn_evolution) 
   | StpnAnimateAux_cons :
       forall (n : nat)
-             (fired_trans_at_n : list trans_type)
+             (fired_trans_at_n : list Trans)
              (stpn_at_n : STPN)
-             (stpn_evolution : list (list trans_type * STPN))
-             (opt_evolution : option (list (list trans_type * STPN))),
+             (stpn_evolution : list (list Trans * STPN))
+             (opt_evolution : option (list (list Trans * STPN))),
         StpnCycle stpn (Some (fired_trans_at_n, stpn_at_n)) ->
         StpnAnimateAux stpn_at_n
                        n
@@ -3183,7 +3183,7 @@ Section AnimateStpn.
                        opt_evolution
   | StpnAnimateAux_err :
       forall (n : nat)
-             (stpn_evolution : list (list trans_type * STPN)),
+             (stpn_evolution : list (list Trans * STPN)),
         StpnCycle stpn None ->
         StpnAnimateAux stpn (S n) stpn_evolution None.
   
@@ -3192,8 +3192,8 @@ Section AnimateStpn.
   Theorem stpn_animate_aux_correct :
     forall (stpn :STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * STPN))
-           (opt_evolution : option (list (list trans_type * STPN))),
+           (stpn_evolution : list (list Trans * STPN))
+           (opt_evolution : option (list (list Trans * STPN))),
       stpn_animate_aux stpn n stpn_evolution = opt_evolution ->
       StpnAnimateAux stpn n stpn_evolution opt_evolution.
   Proof.                                                                                
@@ -3217,8 +3217,8 @@ Section AnimateStpn.
   Theorem stpn_animate_aux_compl :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * STPN))
-           (opt_evolution : option (list (list trans_type * STPN))),
+           (stpn_evolution : list (list Trans * STPN))
+           (opt_evolution : option (list (list Trans * STPN))),
       StpnAnimateAux stpn n stpn_evolution opt_evolution ->
       stpn_animate_aux stpn n stpn_evolution = opt_evolution.
   Proof.
@@ -3239,9 +3239,9 @@ Section AnimateStpn.
   Theorem stpn_animate_aux_no_error :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * STPN)),
+           (stpn_evolution : list (list Trans * STPN)),
       IsWellStructuredStpn stpn ->
-      exists (v : list (list trans_type * STPN)),
+      exists (v : list (list Trans * STPN)),
         stpn_animate_aux stpn n stpn_evolution = Some v.
   Proof.
     do 3 intro.
@@ -3265,7 +3265,7 @@ Section AnimateStpn.
   Theorem stpn_animate_aux_well_structured :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution final_stpn_evolution : list (list trans_type * STPN)),
+           (stpn_evolution final_stpn_evolution : list (list Trans * STPN)),
       IsWellStructuredStpn stpn ->
       (forall stpn' : STPN, In stpn' (snd (split stpn_evolution)) -> IsWellStructuredStpn stpn') ->
       stpn_animate_aux stpn n stpn_evolution = Some final_stpn_evolution ->
@@ -3300,7 +3300,7 @@ Section AnimateStpn.
   Theorem stpn_animate_aux_preserves_cycles :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution final_stpn_evolution : list (list trans_type * STPN)),
+           (stpn_evolution final_stpn_evolution : list (list Trans * STPN)),
       IsWellStructuredStpn stpn ->
       stpn_animate_aux stpn n stpn_evolution = Some final_stpn_evolution ->
       n + length stpn_evolution = length final_stpn_evolution.
@@ -3324,20 +3324,20 @@ Section AnimateStpn.
   (** Wrapper function around stpn_animate_aux. Here, stpn_evolution is initialized to nil. *)
   
   Definition stpn_animate (stpn : STPN) (n : nat) :
-    option (list (list trans_type * STPN)) := stpn_animate_aux stpn n [].
+    option (list (list Trans * STPN)) := stpn_animate_aux stpn n [].
 
   (** Formal specification : stpn_animate *)
   
-  Inductive StpnAnimate (stpn : STPN) (n : nat) : option (list (list trans_type * STPN)) -> Prop :=
+  Inductive StpnAnimate (stpn : STPN) (n : nat) : option (list (list Trans * STPN)) -> Prop :=
   | StpnAnimate_cons :
-      forall (opt_stpn_evolution : option (list (list trans_type * STPN))),
+      forall (opt_stpn_evolution : option (list (list Trans * STPN))),
         StpnAnimateAux stpn n [] opt_stpn_evolution ->
         StpnAnimate stpn n opt_stpn_evolution.
 
   (** Correctness proof : stpn_animate *)
   
   Theorem stpn_animate_correct :
-    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list trans_type * STPN))),
+    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list Trans * STPN))),
       stpn_animate stpn n = opt_stpn_evolution ->
       StpnAnimate stpn n opt_stpn_evolution.
   Proof.
@@ -3349,7 +3349,7 @@ Section AnimateStpn.
   (** Completeness proof : stpn_animate *)
   
   Theorem stpn_animate_compl :
-    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list trans_type * STPN))),
+    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list Trans * STPN))),
       StpnAnimate stpn n opt_stpn_evolution ->
       stpn_animate stpn n = opt_stpn_evolution.
   Proof.
@@ -3365,7 +3365,7 @@ Section AnimateStpn.
     forall (stpn : STPN)
            (n : nat),
       IsWellStructuredStpn stpn ->
-      exists (v : list ((list trans_type) * STPN)),
+      exists (v : list ((list Trans) * STPN)),
         stpn_animate stpn n = Some v.
   Proof.
     unfold stpn_animate.
@@ -3382,7 +3382,7 @@ Section AnimateStpn.
   Theorem stpn_animate_well_structured :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * STPN)),
+           (stpn_evolution : list (list Trans * STPN)),
       IsWellStructuredStpn stpn ->
       stpn_animate stpn n = Some stpn_evolution ->
       forall (stpn' : STPN), In stpn' (snd (split stpn_evolution)) -> IsWellStructuredStpn stpn'.
@@ -3404,7 +3404,7 @@ Section AnimateStpn.
   Theorem stpn_animate_preserves_cycles :
     forall (stpn : STPN)
            (n : nat)
-           (stpn_evolution : list (list trans_type * STPN)),
+           (stpn_evolution : list (list Trans * STPN)),
       IsWellStructuredStpn stpn ->
       stpn_animate stpn n = Some stpn_evolution ->
       n = length stpn_evolution.

@@ -52,7 +52,7 @@ Definition IsWellFormedChrono (chrono : chrono_type) : Prop :=
 
 Structure STPN : Set :=
   mk_STPN {
-      chronos : list (trans_type * option chrono_type);
+      chronos : list (Trans * option chrono_type);
       spn :> SPN
     }.
 
@@ -60,15 +60,15 @@ Structure STPN : Set :=
 
 (** *** Properties on [STPN.(chronos)] *)
 
-Definition ChronosHaveSameStruct (chronos chronos' : list (trans_type * option chrono_type)) :=
+Definition ChronosHaveSameStruct (chronos chronos' : list (Trans * option chrono_type)) :=
   fst (split chronos) = fst (split chronos').
 
 Definition PriorityGroupsAreRefInChronos
-           (priority_groups : list (list trans_type))
-           (chronos : list (trans_type * option chrono_type)) :=
-  (forall pgroup : list trans_type,
+           (priority_groups : list (list Trans))
+           (chronos : list (Trans * option chrono_type)) :=
+  (forall pgroup : list Trans,
       In pgroup priority_groups ->
-      (forall t : trans_type, In t pgroup -> In t (fst (split chronos)))).
+      (forall t : Trans, In t pgroup -> In t (fst (split chronos)))).
 
 (** All chronos in [STPN.(chronos)] are well-formed. *)
 
@@ -184,8 +184,8 @@ Section Chrono.
       Raises an error (None value) otherwise. *)
   
   Fixpoint get_chrono
-           (chronos : list (trans_type * option chrono_type))
-           (t : trans_type) {struct chronos} :
+           (chronos : list (Trans * option chrono_type))
+           (t : Trans) {struct chronos} :
     option (option chrono_type) :=
     match chronos with
     | (t', opt_chrono) :: tail => if t =? t' then
@@ -200,21 +200,21 @@ Section Chrono.
   (** Formal specification : get_chrono *)
 
   Inductive GetChrono :
-    list (trans_type * option chrono_type) ->
-    trans_type ->
+    list (Trans * option chrono_type) ->
+    Trans ->
     option (option chrono_type) -> Prop :=
   | GetChrono_err :
-      forall t : trans_type,
+      forall t : Trans,
         GetChrono [] t None
   | GetChrono_hd_true :
-      forall (chronos : list (trans_type * option chrono_type))
-             (t t' : trans_type)
+      forall (chronos : list (Trans * option chrono_type))
+             (t t' : Trans)
              (opt_chrono : option chrono_type),
         t = t' ->
         GetChrono ((t', opt_chrono) :: chronos) t (Some opt_chrono)
   | GetChrono_hd_false :
-      forall (chronos : list (trans_type * option chrono_type))
-             (t t' : trans_type)
+      forall (chronos : list (Trans * option chrono_type))
+             (t t' : Trans)
              (opt_chrono : option chrono_type)
              (opt_opt_chrono : option (option chrono_type)),
         t <> t' ->
@@ -224,8 +224,8 @@ Section Chrono.
   (** Correctness proof : get_chrono *)
 
   Theorem get_chrono_correct :
-    forall (chronos : list (trans_type * option chrono_type))
-           (t : trans_type)
+    forall (chronos : list (Trans * option chrono_type))
+           (t : Trans)
            (opt_opt_chrono : option (option chrono_type)),
       get_chrono chronos t = opt_opt_chrono ->
       GetChrono chronos t opt_opt_chrono.
@@ -245,8 +245,8 @@ Section Chrono.
   (** Completeness proof : get_chrono *)
   
   Theorem get_chrono_compl :
-    forall (chronos : list (trans_type * option chrono_type))
-      (t : trans_type)
+    forall (chronos : list (Trans * option chrono_type))
+      (t : Trans)
       (opt_opt_chrono : option (option chrono_type)),
       GetChrono chronos t opt_opt_chrono ->
       get_chrono chronos t = opt_opt_chrono.
@@ -265,8 +265,8 @@ Section Chrono.
       is in [chronos] *)
   
   Lemma get_chrono_in :
-    forall (chronos : list (trans_type * option chrono_type))
-      (t : trans_type)
+    forall (chronos : list (Trans * option chrono_type))
+      (t : Trans)
       (opt_chrono : option chrono_type),
       get_chrono chronos t = Some opt_chrono ->
       In opt_chrono (snd (split chronos)).
@@ -283,8 +283,8 @@ Section Chrono.
       if t is referenced in chronos. *)
   
   Lemma get_chrono_no_error :
-    forall (chronos : list (trans_type * option chrono_type))
-           (t : trans_type),
+    forall (chronos : list (Trans * option chrono_type))
+           (t : Trans),
       In t (fst (split chronos)) ->
       exists v : option chrono_type, get_chrono chronos t = Some v.
   Proof.
@@ -396,9 +396,9 @@ Section Chrono.
   
   Fixpoint replace_chrono
            (old_chrono new_chrono : chrono_type)
-           (chronos : list (trans_type * option chrono_type))
+           (chronos : list (Trans * option chrono_type))
            {struct chronos} :
-    list (trans_type * option chrono_type) :=
+    list (Trans * option chrono_type) :=
     match chronos with
     | (t, opt_chrono) :: tail =>
       match opt_chrono with
@@ -419,13 +419,13 @@ Section Chrono.
   (** Formal specification : replace_chrono *)
   
   Inductive ReplaceChrono (old_chrono new_chrono : chrono_type) :
-    list (trans_type * option chrono_type) ->
-    list (trans_type * option chrono_type) -> Prop :=
+    list (Trans * option chrono_type) ->
+    list (Trans * option chrono_type) -> Prop :=
   | ReplaceChrono_nil :
       ReplaceChrono old_chrono new_chrono [] []
   | ReplaceChrono_hd_true :
-      forall (chronos : list (trans_type * option chrono_type))
-             (t : trans_type)
+      forall (chronos : list (Trans * option chrono_type))
+             (t : Trans)
              (opt_chrono : option chrono_type)
              (chrono : chrono_type),
         opt_chrono = Some chrono ->
@@ -434,11 +434,11 @@ Section Chrono.
                       ((t, opt_chrono) :: chronos)
                       ((t, Some new_chrono) :: chronos)
   | ReplaceChrono_hd_false :
-      forall (chronos : list (trans_type * option chrono_type))
-             (t : trans_type)
+      forall (chronos : list (Trans * option chrono_type))
+             (t : Trans)
              (opt_chrono : option chrono_type)
              (chrono : chrono_type)
-             (final_chronos : list (trans_type * option chrono_type)),
+             (final_chronos : list (Trans * option chrono_type)),
         opt_chrono = Some chrono ->
         ~BEqChrono old_chrono chrono ->
         ReplaceChrono old_chrono new_chrono chronos final_chronos ->
@@ -446,10 +446,10 @@ Section Chrono.
                       ((t, opt_chrono) :: chronos)
                       ((t, opt_chrono) :: final_chronos)
   | ReplaceChrono_hd_none :
-      forall (chronos : list (trans_type * option chrono_type))
-             (t : trans_type)
+      forall (chronos : list (Trans * option chrono_type))
+             (t : Trans)
              (opt_chrono : option chrono_type)
-             (final_chronos : list (trans_type * option chrono_type)),
+             (final_chronos : list (Trans * option chrono_type)),
         opt_chrono = None ->
         ReplaceChrono old_chrono new_chrono chronos final_chronos ->
         ReplaceChrono old_chrono new_chrono
@@ -460,8 +460,8 @@ Section Chrono.
   
   Theorem replace_chrono_correct :
     forall (old_chrono new_chrono : chrono_type)
-           (chronos : list (trans_type * option chrono_type))
-           (final_chronos : list (trans_type * option chrono_type)),
+           (chronos : list (Trans * option chrono_type))
+           (final_chronos : list (Trans * option chrono_type)),
       replace_chrono old_chrono new_chrono chronos = final_chronos ->
       ReplaceChrono old_chrono new_chrono chronos final_chronos.
   Proof.
@@ -491,8 +491,8 @@ Section Chrono.
   
   Theorem replace_chrono_compl :
     forall (old_chrono new_chrono : chrono_type)
-           (chronos : list (trans_type * option chrono_type))
-           (final_chronos : list (trans_type * option chrono_type)),
+           (chronos : list (Trans * option chrono_type))
+           (final_chronos : list (Trans * option chrono_type)),
       ReplaceChrono old_chrono new_chrono chronos final_chronos ->
       replace_chrono old_chrono new_chrono chronos = final_chronos.
   Proof.
@@ -514,7 +514,7 @@ Section Chrono.
   
   Lemma replace_chrono_same_struct :
     forall (old_chrono new_chrono : chrono_type)
-      (chronos : list (trans_type * option chrono_type)),
+      (chronos : list (Trans * option chrono_type)),
       ChronosHaveSameStruct (replace_chrono old_chrono new_chrono chronos) chronos.
   Proof.
     intros old_chrono new_chrono chronos.
@@ -537,7 +537,7 @@ Section Chrono.
   
   Lemma replace_chrono_well_formed_chronos :
     forall (old_chrono new_chrono : chrono_type)
-      (chronos : list (trans_type * option chrono_type)),
+      (chronos : list (Trans * option chrono_type)),
       IsWellFormedChrono new_chrono ->
       (forall chrono : chrono_type, In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
       (forall chrono' : chrono_type,
@@ -580,9 +580,9 @@ Section Chrono.
       an error. *)
   
   Definition increment_chrono
-             (t : trans_type) 
-             (chronos : list (trans_type * option chrono_type)) :
-    option (list (trans_type * option chrono_type)) :=
+             (t : Trans) 
+             (chronos : list (Trans * option chrono_type)) :
+    option (list (Trans * option chrono_type)) :=
     match get_chrono chronos t with
     | Some opt_chrono =>
       match opt_chrono with
@@ -604,21 +604,21 @@ Section Chrono.
   
   (** Formal specification : increment_chrono *)
   
-  Inductive IncrementChrono (t : trans_type) :
-    list (trans_type * option chrono_type) ->
-    option (list (trans_type * option chrono_type)) ->
+  Inductive IncrementChrono (t : Trans) :
+    list (Trans * option chrono_type) ->
+    option (list (Trans * option chrono_type)) ->
     Prop :=
   | IncrementChrono_err :
-      forall (chronos : list (trans_type * option chrono_type)),
+      forall (chronos : list (Trans * option chrono_type)),
         GetChrono chronos t None ->
         IncrementChrono t chronos None
   | IncrementChrono_some :
-      forall (chronos : list (trans_type * option chrono_type))
+      forall (chronos : list (Trans * option chrono_type))
              (opt_chrono : option chrono_type)
              (cnt : nat)
              (min_t : nat_star)
              (max_t : positive_interval_bound)
-             (final_chronos : list (trans_type * option chrono_type)),
+             (final_chronos : list (Trans * option chrono_type)),
         GetChrono chronos t (Some opt_chrono) ->
         opt_chrono = Some (mk_chrono cnt min_t max_t) ->
         ReplaceChrono (mk_chrono cnt min_t max_t)
@@ -627,7 +627,7 @@ Section Chrono.
                       final_chronos ->
         IncrementChrono t chronos (Some final_chronos)
   | IncrementChrono_none :
-      forall (chronos : list (trans_type * option chrono_type))
+      forall (chronos : list (Trans * option chrono_type))
              (opt_chrono : option chrono_type),
         GetChrono chronos t (Some opt_chrono) ->
         opt_chrono = None ->
@@ -636,9 +636,9 @@ Section Chrono.
   (** Correctness proof : increment_chrono *)
   
   Theorem increment_chrono_correct :
-    forall (t : trans_type)
-           (chronos : list (trans_type * option chrono_type))
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (t : Trans)
+           (chronos : list (Trans * option chrono_type))
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       increment_chrono t chronos = opt_final_chronos ->
       IncrementChrono t chronos opt_final_chronos.
   Proof.
@@ -667,9 +667,9 @@ Section Chrono.
   (** Completeness proof increment_chrono *)
   
   Theorem increment_chrono_complete :
-    forall (t : trans_type)
-           (chronos : list (trans_type * option chrono_type))
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (t : Trans)
+           (chronos : list (Trans * option chrono_type))
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       IncrementChrono t chronos opt_final_chronos ->
       increment_chrono t chronos = opt_final_chronos.
   Proof.
@@ -687,8 +687,8 @@ Section Chrono.
       the structure of the chronos passed as argument. *)
   
   Lemma increment_chrono_same_struct :
-    forall (t : trans_type)
-           (chronos chronos': list (trans_type * option chrono_type)),
+    forall (t : Trans)
+           (chronos chronos': list (Trans * option chrono_type)),
       increment_chrono t chronos = Some chronos' ->
       ChronosHaveSameStruct chronos chronos'.
   Proof.
@@ -708,8 +708,8 @@ Section Chrono.
       a list [chronos'] of well-formed chronos. *)
   
   Lemma increment_chrono_well_formed_chronos :
-    forall (t : trans_type)
-      (chronos chronos': list (trans_type * option chrono_type)),
+    forall (t : Trans)
+      (chronos chronos': list (Trans * option chrono_type)),
       (forall chrono : chrono_type,
           In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) -> 
       increment_chrono t chronos = Some chronos' ->
@@ -737,10 +737,10 @@ Section Chrono.
       if t is referenced in chronos. *)
   
   Lemma increment_chrono_no_error :
-    forall (t : trans_type)
-           (chronos : list (trans_type * option chrono_type)),
+    forall (t : Trans)
+           (chronos : list (Trans * option chrono_type)),
       In t (fst (split chronos)) ->
-      exists v : list (trans_type * option chrono_type),
+      exists v : list (Trans * option chrono_type),
         increment_chrono t chronos = Some v.
   Proof.
     intros t chronos H.
@@ -771,9 +771,9 @@ Section Chrono.
       went wrong for one of the transition in the list. *)
   
   Fixpoint increment_all_chronos
-           (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type) :
-    option (list (trans_type * option chrono_type)) :=
+           (chronos : list (Trans * option chrono_type))
+           (transs : list Trans) :
+    option (list (Trans * option chrono_type)) :=
     match transs with
     | t :: tail => match increment_chrono t chronos with
                    (* If increment_chrono returns Some new_chronos, 
@@ -792,32 +792,32 @@ Section Chrono.
   (** Formal specification : increment_all_chronos *)
   
   Inductive IncrementAllChronos
-            (chronos : list (trans_type * option chrono_type)) :       
-    list trans_type ->
-    option (list (trans_type * option chrono_type)) ->
+            (chronos : list (Trans * option chrono_type)) :       
+    list Trans ->
+    option (list (Trans * option chrono_type)) ->
     Prop :=      
   | IncrementAllChronos_nil :
       IncrementAllChronos chronos [] (Some chronos)
   | IncrementAllChronos_cons :
-      forall (t : trans_type)
-             (transs : list trans_type)
-             (new_chronos : list (trans_type * option chrono_type))
-             (opt_final_chronos : option (list (trans_type * option chrono_type))),
+      forall (t : Trans)
+             (transs : list Trans)
+             (new_chronos : list (Trans * option chrono_type))
+             (opt_final_chronos : option (list (Trans * option chrono_type))),
         IncrementChrono t chronos (Some new_chronos) ->
         IncrementAllChronos new_chronos transs opt_final_chronos ->  
         IncrementAllChronos chronos (t :: transs) opt_final_chronos
   | IncrementAllChronos_err :
-      forall (t : trans_type)
-             (transs : list trans_type),
+      forall (t : Trans)
+             (transs : list Trans),
         IncrementChrono t chronos None ->
         IncrementAllChronos chronos (t :: transs) None.
   
   (** Correctness proof : increment_all_chronos *)
   
   Theorem increment_all_chronos_correct :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       increment_all_chronos chronos transs = opt_final_chronos ->
       IncrementAllChronos chronos transs opt_final_chronos.
   Proof.
@@ -837,9 +837,9 @@ Section Chrono.
   (** Completeness proof : increment_all_chronos *)
   
   Theorem increment_all_chronos_complete :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       IncrementAllChronos chronos transs opt_final_chronos ->
       increment_all_chronos chronos transs = opt_final_chronos.
   Proof.
@@ -858,9 +858,9 @@ Section Chrono.
       the structure of the chronos passed as argument. *)
   
   Lemma increment_all_chronos_same_struct :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (incremented_chronos : list (trans_type * option chrono_type)),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (incremented_chronos : list (Trans * option chrono_type)),
       increment_all_chronos chronos transs = Some incremented_chronos ->
       ChronosHaveSameStruct chronos incremented_chronos.
   Proof.
@@ -881,9 +881,9 @@ Section Chrono.
       returns a list [increment_chronos] of well-formed chronos. *)
 
   Lemma increment_all_chronos_well_formed_chronos :
-    forall (chronos : list (trans_type * option chrono_type))
-      (transs : list trans_type)
-      (incremented_chronos : list (trans_type * option chrono_type)),
+    forall (chronos : list (Trans * option chrono_type))
+      (transs : list Trans)
+      (incremented_chronos : list (Trans * option chrono_type)),
       (forall chrono : chrono_type,
           In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
       increment_all_chronos chronos transs = Some incremented_chronos ->
@@ -913,10 +913,10 @@ Section Chrono.
       are referenced in chronos. *)
   
   Lemma increment_all_chronos_no_error :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans),
       incl transs (fst (split chronos)) ->
-      exists v : list (trans_type * option chrono_type),
+      exists v : list (Trans * option chrono_type),
         increment_all_chronos chronos transs = Some v.
   Proof.
     unfold incl.
@@ -953,9 +953,9 @@ Section Chrono.
       an error. *)
   
   Definition reset_chrono
-             (t : trans_type) 
-             (chronos : list (trans_type * option chrono_type)) :
-    option (list (trans_type * option chrono_type)) :=
+             (t : Trans) 
+             (chronos : list (Trans * option chrono_type)) :
+    option (list (Trans * option chrono_type)) :=
     match get_chrono chronos t with
     | Some opt_chrono =>
       match opt_chrono with
@@ -975,21 +975,21 @@ Section Chrono.
   
   (** Formal specification : reset_chrono *)
 
-  Inductive ResetChrono (t : trans_type) :
-    list (trans_type * option chrono_type) ->
-    option (list (trans_type * option chrono_type)) ->
+  Inductive ResetChrono (t : Trans) :
+    list (Trans * option chrono_type) ->
+    option (list (Trans * option chrono_type)) ->
     Prop :=
   | ResetChrono_err :
-      forall (chronos : list (trans_type * option chrono_type)),
+      forall (chronos : list (Trans * option chrono_type)),
         GetChrono chronos t None ->
         ResetChrono t chronos None
   | ResetChrono_some :
-      forall (chronos : list (trans_type * option chrono_type))
+      forall (chronos : list (Trans * option chrono_type))
              (opt_chrono : option chrono_type)
              (cnt : nat)
              (min_t : nat_star)
              (max_t : positive_interval_bound)
-             (final_chronos : list (trans_type * option chrono_type)),
+             (final_chronos : list (Trans * option chrono_type)),
         GetChrono chronos t (Some opt_chrono) ->
         opt_chrono = Some (mk_chrono cnt min_t max_t) ->
         ReplaceChrono (mk_chrono cnt min_t max_t)
@@ -998,7 +998,7 @@ Section Chrono.
                       final_chronos ->
         ResetChrono t chronos (Some final_chronos)
   | ResetChrono_none :
-      forall (chronos : list (trans_type * option chrono_type))
+      forall (chronos : list (Trans * option chrono_type))
              (opt_chrono : option chrono_type),
         GetChrono chronos t (Some opt_chrono) ->
         opt_chrono = None ->
@@ -1007,9 +1007,9 @@ Section Chrono.
   (** Correctness proof : reset_chrono *)
   
   Theorem reset_chrono_correct :
-    forall (t : trans_type)
-           (chronos : list (trans_type * option chrono_type))
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (t : Trans)
+           (chronos : list (Trans * option chrono_type))
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       reset_chrono t chronos = opt_final_chronos ->
       ResetChrono t chronos opt_final_chronos.
   Proof.
@@ -1038,9 +1038,9 @@ Section Chrono.
   (** Completeness proof : reset_chrono *)
   
   Theorem reset_chrono_complete :
-    forall (t : trans_type)
-           (chronos : list (trans_type * option chrono_type))
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (t : Trans)
+           (chronos : list (Trans * option chrono_type))
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       ResetChrono t chronos opt_final_chronos ->
       reset_chrono t chronos = opt_final_chronos.
   Proof.
@@ -1058,8 +1058,8 @@ Section Chrono.
       the structure of the chronos passed as argument. *)
   
   Lemma reset_chrono_same_struct :
-    forall (t : trans_type)
-           (chronos chronos': list (trans_type * option chrono_type)),
+    forall (t : Trans)
+           (chronos chronos': list (Trans * option chrono_type)),
       reset_chrono t chronos = Some chronos' ->
       ChronosHaveSameStruct chronos chronos'.
   Proof.
@@ -1079,8 +1079,8 @@ Section Chrono.
       a list [chronos'] of well-formed chronos. *)
   
   Lemma reset_chrono_well_formed_chronos :
-    forall (t : trans_type)
-      (chronos chronos': list (trans_type * option chrono_type)),
+    forall (t : Trans)
+      (chronos chronos': list (Trans * option chrono_type)),
       (forall chrono : chrono_type,
           In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) -> 
       reset_chrono t chronos = Some chronos' ->
@@ -1108,10 +1108,10 @@ Section Chrono.
       if t is referenced in chronos. *)
   
   Lemma reset_chrono_no_error :
-    forall (t : trans_type)
-           (chronos : list (trans_type * option chrono_type)),
+    forall (t : Trans)
+           (chronos : list (Trans * option chrono_type)),
       In t (fst (split chronos)) ->
-      exists v : list (trans_type * option chrono_type),
+      exists v : list (Trans * option chrono_type),
         reset_chrono t chronos = Some v.
   Proof.
     intros t chronos H.
@@ -1142,9 +1142,9 @@ Section Chrono.
       went wrong for one of the transition of the list. *)
   
   Fixpoint reset_all_chronos
-           (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type) :
-    option (list (trans_type * option chrono_type)) :=
+           (chronos : list (Trans * option chrono_type))
+           (transs : list Trans) :
+    option (list (Trans * option chrono_type)) :=
     match transs with
     | t :: tail =>
       match reset_chrono t chronos with
@@ -1164,32 +1164,32 @@ Section Chrono.
   
   (** Formal specification : reset_all_chronos *)
 
-  Inductive ResetAllChronos (chronos : list (trans_type * option chrono_type)) :       
-    list trans_type ->
-    option (list (trans_type * option chrono_type)) ->
+  Inductive ResetAllChronos (chronos : list (Trans * option chrono_type)) :       
+    list Trans ->
+    option (list (Trans * option chrono_type)) ->
     Prop :=      
   | ResetAllChronos_nil :
       ResetAllChronos chronos [] (Some chronos)
   | ResetAllChronos_cons :
-      forall (t : trans_type)
-             (transs : list trans_type)
-             (new_chronos : list (trans_type * option chrono_type))
-             (opt_final_chronos : option (list (trans_type * option chrono_type))),
+      forall (t : Trans)
+             (transs : list Trans)
+             (new_chronos : list (Trans * option chrono_type))
+             (opt_final_chronos : option (list (Trans * option chrono_type))),
         ResetChrono t chronos (Some new_chronos) ->
         ResetAllChronos new_chronos transs opt_final_chronos ->  
         ResetAllChronos chronos (t :: transs) opt_final_chronos
   | ResetAllChronos_err :
-      forall (t : trans_type)
-             (transs : list trans_type),
+      forall (t : Trans)
+             (transs : list Trans),
         ResetChrono t chronos None ->
         ResetAllChronos chronos (t :: transs) None.
   
   (** Correctness proof : reset_all_chronos *)
 
   Theorem reset_all_chronos_correct :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       reset_all_chronos chronos transs = opt_final_chronos ->
       ResetAllChronos chronos transs opt_final_chronos.
   Proof.
@@ -1209,9 +1209,9 @@ Section Chrono.
   (** Completeness proof : reset_all_chronos *)
   
   Theorem reset_all_chronos_complete :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type)
-           (opt_final_chronos : option (list (trans_type * option chrono_type))),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans)
+           (opt_final_chronos : option (list (Trans * option chrono_type))),
       ResetAllChronos chronos transs opt_final_chronos ->
       reset_all_chronos chronos transs = opt_final_chronos.
   Proof.
@@ -1230,9 +1230,9 @@ Section Chrono.
       the structure of the chronos passed as argument. *)
   
   Lemma reset_all_chronos_same_struct :
-    forall (chronos : list (trans_type * option chrono_type))
-      (transs : list trans_type)
-      (reset_chronos : list (trans_type * option chrono_type)),
+    forall (chronos : list (Trans * option chrono_type))
+      (transs : list Trans)
+      (reset_chronos : list (Trans * option chrono_type)),
       reset_all_chronos chronos transs = Some reset_chronos ->
       ChronosHaveSameStruct chronos reset_chronos.
   Proof.
@@ -1253,9 +1253,9 @@ Section Chrono.
       returns a list [reset_chronos] of well-formed chronos. *)
 
   Lemma reset_all_chronos_well_formed_chronos :
-    forall (chronos : list (trans_type * option chrono_type))
-      (transs : list trans_type)
-      (reset_chronos : list (trans_type * option chrono_type)),
+    forall (chronos : list (Trans * option chrono_type))
+      (transs : list Trans)
+      (reset_chronos : list (Trans * option chrono_type)),
       (forall chrono : chrono_type,
           In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
       reset_all_chronos chronos transs = Some reset_chronos ->
@@ -1285,10 +1285,10 @@ Section Chrono.
       are referenced in chronos. *)
   
   Lemma reset_all_chronos_no_error :
-    forall (chronos : list (trans_type * option chrono_type))
-           (transs : list trans_type),
+    forall (chronos : list (Trans * option chrono_type))
+           (transs : list Trans),
       incl transs (fst (split chronos)) ->
-      exists v : list (trans_type * option chrono_type),
+      exists v : list (Trans * option chrono_type),
         reset_all_chronos chronos transs = Some v.
   Proof.
     unfold incl.

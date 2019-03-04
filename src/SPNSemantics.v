@@ -15,19 +15,76 @@ Inductive IsPredInList {A : Type} (a b : A) : list A -> Prop :=
       NoDup (l ++ a :: l' ++ b :: l'') -> 
       IsPredInList a b (l ++ a :: l' ++ b :: l'').
 
-Definition l := [0; 2; 3].
-
-(** HasHigherPriority: ∀ t, t' ∈ T, t ≻ t' *)
+(** HasHigherPriority: ∀ t ∈ T, t' ∈ T/{t}, t ≻ t' *)
 
 Definition HasHigherPriority
            (spn : Spn)
-           (t t' : trans_type) :=
+           (t t' : Trans)
+           (pgroup : list Trans) :=
   IsWellDefinedSpn spn ->
-  forall pgroup : list trans_type,
+  In pgroup spn.(priority_groups) ->
+  In t pgroup ->
+  In t' pgroup ->
+  t <> t' ->
+  IsPredInList t t' pgroup.
+
+(** Pr: Returns the list of fired transitions with a higher priority than t. *)
+
+Inductive Pr (spn : Spn) (pgroup : list Trans) (t : Trans) : list Trans -> list Trans -> Prop :=
+| Pr_nil :
+    IsWellDefinedSpn spn ->
     In pgroup spn.(priority_groups) ->
     In t pgroup ->
+    Pr spn pgroup t [] []
+| Pr_cons :
+    forall (fired : list Trans)
+           (pr : list Trans)
+           (t' : Trans),
+    IsWellDefinedSpn spn ->
+    In pgroup spn.(priority_groups) ->
+    incl fired spn.(transs) ->
+    In t pgroup ->
     In t' pgroup ->
-    IsPredInList t t' pgroup.
+    t' <> t ->
+    HasHigherPriority spn t' t pgroup ->
+    Pr spn pgroup t fired pr ->
+    Pr spn pgroup t (t' :: fired) (t' :: pr).
+
+(** PreSum: Sums all weight of edges coming from place p to transitions of the l list. *)
+
+Inductive PreSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
+| PreSum_nil :
+    IsWellDefinedSpn spn ->
+    In p spn.(places) ->
+    PreSum spn p [] 0
+| PreSum_cons :
+    forall (l : list Trans)
+           (t : Trans)
+           (sum : nat),
+      IsWellDefinedSpn spn ->
+      In p spn.(places) ->
+      In t spn.(transs) ->
+      incl l spn.(transs) ->
+      PreSum spn p l sum ->
+      PreSum spn p (t :: l) ((pre spn t p) + sum).
+
+(** PostSum: Sums all weight of edges coming from transitions of the l list to place p. *)
+
+Inductive PostSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
+| PostSum_nil :
+    IsWellDefinedSpn spn ->
+    In p spn.(places) ->
+    PostSum spn p [] 0
+| PostSum_cons :
+    forall (l : list Trans)
+      (t : Trans)
+      (sum : nat),
+      IsWellDefinedSpn spn ->
+      In p spn.(places) ->
+      In t spn.(transs) ->
+      incl l spn.(transs) ->
+      PostSum spn p l sum ->
+      PostSum spn p (t :: l) ((post spn t p) + sum).
 
 (** IsSensitized:
     ∀ t ∈ T, marking m, t ∈ sens(m) if
@@ -37,12 +94,13 @@ Definition HasHigherPriority
 
 Definition IsSensitized
            (spn : Spn)
-           (marking : marking_type)
-           (t : trans_type) : Prop :=
+           (marking : list (Place * nat))
+           (t : Trans) : Prop :=
   IsWellDefinedSpn spn ->
-  HaveSameStructMarking spn.(marking) marking ->
-  forall (p : place_type)
-    (n : nat),
+  MarkingHaveSameStruct spn.(initial_marking) marking ->
+  In t spn.(transs) ->
+  forall (p : Place)
+         (n : nat),
     In (p, n) marking ->
     n >= (pre spn t p) /\
     n >= (test spn t p) /\
@@ -55,21 +113,111 @@ Definition IsSensitized
 Definition SpnIsFirable
            (spn : Spn)
            (state : SpnState)
-           (t : trans_type) :=
+           (t : Trans) :=
+  IsWellDefinedSpn spn ->
+  MarkingHaveSameStruct spn.(initial_marking) state.(marking) ->
+  In t spn.(transs) ->
   IsSensitized spn state.(marking) t.
-
-
 
 (** * Semantics definition *)
 
 (** Represents the two clock events regulating the Spn evolution. *)
 
-Inductive clock : Set :=
-| falling_edge : clock
-| raising_edge : clock.
+Inductive Clock : Set :=
+| falling_edge : Clock
+| raising_edge : Clock.
 
 (** Represents the Spn Semantics  *)
 
-Inductive SpnSemantics (spn : Spn) (fired : list trans_type) (spn' : Spn) : Prop :=
+Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
+  
+(* ↓clock : s = (Fired, M) ⇝ s' = (Fired', M) *)
 | SpnSemantics_falling_edge :
-| SpnSemantics_raising_edge : .
+    
+    IsWellDefinedSpn spn ->
+    incl s.(fired) spn.(transs) ->
+    incl s'.(fired) spn.(transs) ->
+    MarkingHaveSameStruct spn.(initial_marking) s.(marking) ->
+    MarkingHaveSameStruct spn.(initial_marking) s'.(marking) ->
+    (* Marking stays the same between state s and s'. *)
+    s.(marking) = s'.(marking) ->
+    (* ∀ t ∉ firable(s') ⇒ t ∉ Fired'  
+       All un-firable transitions are not fired. *)
+    (forall (pgroup : list Trans) (t : Trans),
+        In pgroup spn.(priority_groups) ->
+        In t pgroup ->
+        ~SpnIsFirable spn s' t ->
+        ~In t s'.(fired)) ->
+    (* ∀ t ∈ firable(s'), (∀ t', t' ≻ t ⇒ t' ∉ firable(s')) ⇒ t ∈ Fired' 
+       If all transitions with a higher firing priority than t are not firable,
+       then t is fired. *)
+    (forall (pgroup : list Trans) (t : Trans),
+        In pgroup spn.(priority_groups) ->
+        In t pgroup ->
+        SpnIsFirable spn s' t ->
+        (forall (t' : Trans),
+            In t' pgroup ->
+            t' <> t ->
+            HasHigherPriority spn t' t pgroup ->
+            ~SpnIsFirable spn s' t') ->
+        In t s'.(fired)) ->
+    (* ∀ t ∈ firable(s'), t ∈ sens(M - ∑ pre(t_i), ∀ t_i ∈ Pr(t)) ⇒ t ∈ Fired' 
+       If t is sensitized by the residual marking, result of the firing of
+       all higher priority transitions, then t is fired. *)
+    (forall (pgroup : list Trans)
+       (t : Trans)
+       (residual_marking : list (Place * nat))
+       (pr : list Trans),
+        In pgroup spn.(priority_groups) ->
+        In t pgroup ->
+        MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
+        SpnIsFirable spn s' t ->
+        Pr spn pgroup t s'.(fired) pr ->
+        (forall (p : Place)
+           (n n' preSum : nat),
+            In (p, n) s'.(marking) ->
+            PreSum spn p pr preSum ->
+            In (p, n - preSum) residual_marking) ->
+        IsSensitized spn residual_marking t ->
+        In t s'.(fired)) ->
+    (* ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t_i), ∀ t_i ∈ Pr(t)) ⇒ t ∉ Fired' 
+       If t is not sensitized by the residual marking, result of the firing of
+       all higher priority transitions, then t is not fired. *)
+    (forall (pgroup : list Trans)
+       (t : Trans)
+       (residual_marking : list (Place * nat))
+       (pr : list Trans),
+        In pgroup spn.(priority_groups) ->
+        In t pgroup ->
+        MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
+        SpnIsFirable spn s' t ->
+        Pr spn pgroup t s'.(fired) pr ->
+        (forall (p : Place)
+                (n preSum : nat),
+            In (p, n) s'.(marking) ->
+            PreSum spn p pr preSum ->
+            In (p, n - preSum) residual_marking) ->
+        ~IsSensitized spn residual_marking t ->
+        ~In t s'.(fired)) ->
+    
+    SpnSemantics spn s s' falling_edge
+    
+(* ↓clock : s = (Fired, M) ⇝ s' = (Fired, M') *)    
+| SpnSemantics_raising_edge :
+    
+    IsWellDefinedSpn spn ->
+    incl s.(fired) spn.(transs) ->
+    incl s'.(fired) spn.(transs) ->
+    MarkingHaveSameStruct spn.(initial_marking) s.(marking) ->
+    MarkingHaveSameStruct spn.(initial_marking) s'.(marking) ->
+    (* Fired stays the same between state s and s'. *)
+    s.(fired) = s'.(fired) ->
+    (* M' = M - ∑ (pre(t_i) - post(t_i)), ∀ t_i ∈ Fired *)
+    (forall (p : Place)
+            (n preSum postSum : nat),
+        In (p, n) s.(marking) ->
+        PreSum spn p s.(fired) preSum ->
+        PostSum spn p s.(fired) postSum ->
+        In (p, n - preSum + postSum) s'.(marking)) ->
+    
+    SpnSemantics spn s s' raising_edge.

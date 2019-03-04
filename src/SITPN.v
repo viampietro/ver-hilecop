@@ -21,7 +21,7 @@ Definition condition_type := nat -> bool.
     The [lconditions] field represents the association between transitions and conditions. *)
 
 Structure SITPN : Set := mk_SITPN { 
-                             lconditions : list (trans_type * option condition_type);
+                             lconditions : list (Trans * option condition_type);
                              stpn :> STPN
                            }.
 
@@ -41,11 +41,11 @@ Definition IsWellStructuredSitpn (sitpn : SITPN) : Prop :=
 (** *** Helper properties for SITPN *)
 
 Definition PriorityGroupsAreRefInLconditions 
-           (priority_groups : list (list trans_type))
-           (lconditions : list (trans_type * option condition_type)) :=
-  (forall pgroup : list trans_type,
+           (priority_groups : list (list Trans))
+           (lconditions : list (Trans * option condition_type)) :=
+  (forall pgroup : list Trans,
       In pgroup priority_groups ->
-      (forall t : trans_type, In t pgroup -> In t (fst (split lconditions)))).
+      (forall t : Trans, In t pgroup -> In t (fst (split lconditions)))).
 
 (** ** Conditions on transitions for interpreted Petri nets. *)
 
@@ -60,8 +60,8 @@ Section Condition.
       Returns None if [t] doesn't belong to the list [lconditions]. *)
   
   Fixpoint get_condition
-           (lconditions : list (trans_type * option condition_type))
-           (t : trans_type) {struct lconditions} : option (option condition_type) :=
+           (lconditions : list (Trans * option condition_type))
+           (t : Trans) {struct lconditions} : option (option condition_type) :=
     match lconditions with
     | (tr, opt_cond) :: tail => if t =? tr then
                               Some opt_cond
@@ -75,17 +75,17 @@ Section Condition.
   (** Formal specification for get_condition *)
 
   Inductive GetCondition :
-    list (trans_type * option condition_type) -> nat -> option (option condition_type) -> Prop :=
+    list (Trans * option condition_type) -> nat -> option (option condition_type) -> Prop :=
   | GetCondition_err :
-      forall (t : trans_type), GetCondition [] t None
+      forall (t : Trans), GetCondition [] t None
   | GetCondition_if :
-      forall (lconditions : list (trans_type * option condition_type))
+      forall (lconditions : list (Trans * option condition_type))
         (opt_cond : option condition_type)
-        (t tr : trans_type),
+        (t tr : Trans),
         t = tr -> GetCondition ((tr, opt_cond) :: lconditions) t (Some opt_cond)
   | GetCondition_else :
-      forall (lconditions : list (trans_type * option condition_type))
-             (t tr : trans_type)
+      forall (lconditions : list (Trans * option condition_type))
+             (t tr : Trans)
              (opt_cond : option condition_type)
              (opt_opt_cond : option (option condition_type)),
         t <> tr ->
@@ -95,8 +95,8 @@ Section Condition.
   (** Correctness proof : get_condition *)
   
   Theorem get_condition_correct :
-    forall (lconditions : list (trans_type * option condition_type))
-           (t : trans_type)
+    forall (lconditions : list (Trans * option condition_type))
+           (t : Trans)
            (opt_opt_cond : option (option condition_type)),
       get_condition lconditions t = opt_opt_cond ->
       GetCondition lconditions t opt_opt_cond.
@@ -118,8 +118,8 @@ Section Condition.
   (** Completeness proof : get_condition *)
   
   Theorem get_condition_compl :
-    forall (lconditions : list (trans_type * option condition_type))
-           (t : trans_type)
+    forall (lconditions : list (Trans * option condition_type))
+           (t : Trans)
            (opt_opt_cond : option (option condition_type)),
       GetCondition lconditions t opt_opt_cond ->
       get_condition lconditions t = opt_opt_cond.
@@ -142,8 +142,8 @@ Section Condition.
       returns no error if [t] is referenced in [lconditions]. *)
   
   Lemma get_condition_no_error :
-    forall (lconditions : list (trans_type * option condition_type))
-           (t : trans_type),
+    forall (lconditions : list (Trans * option condition_type))
+           (t : Trans),
       In t (fst (split lconditions)) ->
       exists v : option (condition_type), get_condition lconditions t = Some v.
   Proof.

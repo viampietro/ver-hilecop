@@ -18,11 +18,6 @@ Definition ex_marking :=
 Definition ex_transs : (list trans_type) :=
   [ 0; 1; 2; 3; 4; 5; 6; 8; 9; 12; 13; 14; 16 ].
 
-(* One lemma for each arc weight ... *)
-
-Lemma one_positive : 1 > 0. Proof. omega. Qed.
-Lemma two_positive : 2 > 0. Proof. omega. Qed.
-
 (* List of neighbour places for all transitions of the example. *)
 
 Definition ex_lneighbours : list (trans_type * neighbours_type) :=
@@ -44,76 +39,76 @@ Definition ex_lneighbours : list (trans_type * neighbours_type) :=
 
 (* Incoming arcs, from place to transition. *)
 
-Definition ex_pre (t : trans_type) (p : place_type) : option nat_star :=
+Definition ex_pre (t : trans_type) (p : place_type) : nat :=
   match (t, p) with
   (* trans 0 *)
-  | (0, 0) => Some (mk_nat_star 1 one_positive)               
-  | (0, 7) => Some (mk_nat_star 1 one_positive)               
-  | (0, 12) => Some (mk_nat_star 1 one_positive)
+  | (0, 0) => 1                
+  | (0, 7) => 1               
+  | (0, 12) => 1
   (* trans 1 *)
-  | (1, 1) => Some (mk_nat_star 1 one_positive)
+  | (1, 1) => 1
   (* trans 2 *)
-  | (2, 2) => Some (mk_nat_star 1 one_positive)
+  | (2, 2) => 1
   (* trans 3 *)
-  | (3, 3) => Some (mk_nat_star 1 one_positive)
+  | (3, 3) => 1
   (* trans 4 *)
-  | (4, 4) => Some (mk_nat_star 1 one_positive)
+  | (4, 4) => 1
   (* trans 5 *)
-  | (5, 5) => Some (mk_nat_star 1 one_positive)
+  | (5, 5) => 1
   (* trans 6 *)
-  | (6, 8) => Some (mk_nat_star 1 one_positive)
-  | (6, 9) => Some (mk_nat_star 1 one_positive)
+  | (6, 8) => 1
+  | (6, 9) => 1
   (* trans 8 *)
-  | (8, 10) => Some (mk_nat_star 2 two_positive)
+  | (8, 10) => 2
   (* trans 9 *)
-  | (9, 11) => Some (mk_nat_star 1 one_positive)
+  | (9, 11) => 1
   (* trans 12 *)
-  | (12, 1) => Some (mk_nat_star 1 one_positive)
+  | (12, 1) => 1
   (* trans 13 *)
-  | (13, 11) => Some (mk_nat_star 1 one_positive)
+  | (13, 11) => 1
   (* trans 14 *)
-  | (14, 11) => Some (mk_nat_star 1 one_positive)
+  | (14, 11) => 1
   (* trans 16 *)
-  | (16, 3) => Some (mk_nat_star 1 one_positive)
-  | (16, 10) => Some (mk_nat_star 1 one_positive)
-  | _ => None
+  | (16, 3) => 1
+  | (16, 10) => 1
+  | _ => 0
   end.
 
 (* Outcoming arcs, from transition to place. *)
 
-Definition ex_post (t : trans_type) (p : place_type) : option nat_star :=
+Definition ex_post (t : trans_type) (p : place_type) : nat :=
   match (t, p) with
   (* trans 0 *)
-  | (0, 4) => Some (mk_nat_star 1 one_positive)               
-  | (0, 5) => Some (mk_nat_star 1 one_positive)               
-  | (0, 12) => Some (mk_nat_star 1 one_positive)
+  | (0, 4) => 1               
+  | (0, 5) => 1               
+  | (0, 12) => 1
   (* trans 1 *)
-  | (1, 2) => Some (mk_nat_star 1 one_positive)
+  | (1, 2) => 1
   (* trans 2 *)
-  | (2, 3) => Some (mk_nat_star 1 one_positive)
+  | (2, 3) => 1
   (* trans 3 *)
-  | (3, 1) => Some (mk_nat_star 1 one_positive)
+  | (3, 1) => 1
   (* trans 4 *)
-  | (4, 8) => Some (mk_nat_star 1 one_positive)
+  | (4, 8) => 1
   (* trans 5 *)
-  | (5, 9) => Some (mk_nat_star 1 one_positive)
+  | (5, 9) => 1
   (* trans 6 *)
-  | (6, 7) => Some (mk_nat_star 1 one_positive)
-  | (6, 10) => Some (mk_nat_star 1 one_positive)
+  | (6, 7) => 1
+  | (6, 10) => 1
   (* trans 8 *)
-  | (8, 11) => Some (mk_nat_star 1 one_positive)
+  | (8, 11) => 1
   (* trans 9 *)
-  | (9, 0) => Some (mk_nat_star 2 two_positive)
+  | (9, 0) => 2
   (* trans 12 *)
-  | (12, 2) => Some (mk_nat_star 1 one_positive)
+  | (12, 2) => 1
   (* trans 13 *)
-  | (13, 0) => Some (mk_nat_star 2 two_positive)
+  | (13, 0) => 2
   (* trans 14 *)
-  | (14, 0) => Some (mk_nat_star 2 two_positive)
+  | (14, 0) => 2
   (* trans 16 *)
-  | (16, 3) => Some (mk_nat_star 1 one_positive)
-  | (16, 10) => Some (mk_nat_star 1 one_positive)
-  | _ => None
+  | (16, 3) => 1
+  | (16, 10) => 1
+  | _ => 0
   end.
 
 (* Test arcs, from place to transition. *)
@@ -121,9 +116,9 @@ Definition ex_post (t : trans_type) (p : place_type) : option nat_star :=
 Definition ex_test (t : trans_type) (p : place_type) :=
   match (t, p) with
   (* trans 5 *)
-  | (5, 2) => Some (mk_nat_star 1 one_positive)               
-  | (5, 12) => Some (mk_nat_star 1 one_positive)
-  | _ => None
+  | (5, 2) => 1               
+  | (5, 12) => 1
+  | _ => 0
   end.
 
 (* Inhibitor arcs, from place to transition. *)
@@ -131,10 +126,10 @@ Definition ex_test (t : trans_type) (p : place_type) :=
 Definition ex_inhib (t : trans_type) (p : place_type) :=
   match (t, p) with
   (* trans 2 *)
-  | (2, 5) => Some (mk_nat_star 1 one_positive)               
+  | (2, 5) => 1               
   (* trans 4 *)
-  | (4, 11) => Some (mk_nat_star 1 one_positive)               
-  | _ => None
+  | (4, 11) => 1               
+  | _ => 0
   end.
 
 Definition ex_priority_groups := [ [1 ; 12];
@@ -143,7 +138,7 @@ Definition ex_priority_groups := [ [1 ; 12];
                                      [4 ; 9 ; 13 ; 14];
                                      [6] ].
                            
-Definition spn1 := mk_SPN
+Definition spn1 := mk_Spn
                      ex_places
                      ex_transs
                      ex_pre
@@ -255,9 +250,9 @@ Proof.
 Qed.
 
 Lemma is_well_structured_spn1 :
-  IsWellStructuredSpn spn1.
+  IsWellDefinedSpn spn1.
 Proof.
-  unfold IsWellStructuredSpn.
+  unfold IsWellDefinedSpn.
   assert (H := (conj nodup_places_spn1
                (conj nodup_transs_spn1
                (conj no_unknown_in_priority_groups_spn1
@@ -274,21 +269,7 @@ Qed.
 (*! === PERFORMANCE TESTS. === !*)
 (*! ========================== !*)
 
-Fixpoint spn_display_states_aux (states : list ((list trans_type) * SPN)) {struct states} :
-  list ((list trans_type) * marking_type) :=
-  match states with
-  | (fired, spn) :: tail => (fired, spn.(marking)) :: spn_display_states_aux tail
-  | [] => []
-  end.
-
-Definition spn_display_states (opt_states : option (list (list trans_type * SPN))) :
-  list (list trans_type * marking_type) :=
-  match opt_states with
-  | None => []
-  | Some states => spn_display_states_aux states
-  end.
-
-Time Compute spn_display_states (spn_animate spn1 1000).
+(* Time Compute (spn_animate spn1 10000). *)
 (* Time Compute (spn_animate spn1 1000). *)
 (* Time Compute (spn_animate spn1 2000). *)
 (* Time Compute (spn_animate spn1 4000). *)
@@ -324,55 +305,55 @@ Definition ex2_lneighbours :=
 
 (* 7 arcs PT (place transition)  "incoming" *)
 
-Definition ex2_pre (t : trans_type) (p : place_type) : option nat_star :=
+Definition ex2_pre (t : trans_type) (p : place_type) : nat :=
   match (t,p) with
-  | (1, 1) => Some (mk_nat_star 1 one_positive)
-  | (2, 1) => Some (mk_nat_star 1 one_positive)
-  | (3, 3) => Some (mk_nat_star 2 two_positive)
-  | (3, 4) => Some (mk_nat_star 1 one_positive)
-  | (4, 5) => Some (mk_nat_star 1 one_positive)
-  | (5, 2) => Some (mk_nat_star 1 one_positive)  
-  | (5, 6) => Some (mk_nat_star 1 one_positive)
-  | (6, 7) => Some (mk_nat_star 1 one_positive)
-  | _ => None
+  | (1, 1) => 1
+  | (2, 1) => 1
+  | (3, 3) => 2
+  | (3, 4) => 1
+  | (4, 5) => 1
+  | (5, 2) => 1  
+  | (5, 6) => 1
+  | (6, 7) => 1
+  | _ => 0
   end.
 
 Definition ex2_test (t : trans_type) (p : place_type) :=
   match (t, p) with
-  | (2, 2) => Some (mk_nat_star 1 one_positive)               
-  | _ => None
+  | (2, 2) => 1               
+  | _ => 0
   end.
 
 Definition ex2_inhib (t : trans_type) (p : place_type) :=
   match (t, p) with
-  | (1, 2) => Some (mk_nat_star 1 one_positive)               
-  | _ => None
+  | (1, 2) => 1               
+  | _ => 0
   end.
 
 (* 7 arcs TP "outcoming" *)
 
-Definition ex2_post (t : trans_type) (p : place_type) : option nat_star :=
+Definition ex2_post (t : trans_type) (p : place_type) : nat :=
   match (t, p) with
   (* trans 1 *)
-  | (1, 2) => Some (mk_nat_star 1 one_positive)               
-  | (1, 3) => Some (mk_nat_star 2 two_positive)               
-  | (1, 4) => Some (mk_nat_star 1 one_positive)
+  | (1, 2) => 1               
+  | (1, 3) => 2               
+  | (1, 4) => 1
   (* trans 2 *)
-  | (2, 5) => Some (mk_nat_star 1 one_positive)
+  | (2, 5) => 1
   (* trans 3 *)
-  | (3, 7) => Some (mk_nat_star 1 one_positive)
+  | (3, 7) => 1
   (* trans 4 *)
-  | (4, 6) => Some (mk_nat_star 1 one_positive)
+  | (4, 6) => 1
   (* trans 5 *)
-  | (5, 7) => Some (mk_nat_star 1 one_positive)
+  | (5, 7) => 1
   (* trans 6 *)
-  | (6, 1) => Some (mk_nat_star 1 one_positive)
-  | _ => None
+  | (6, 1) => 1
+  | _ => 0
   end.
 
 Definition ex2_priority_groups := [ [1 ; 2 ; 5]; [3]; [4]; [6] ].
  
-Definition spn2 := mk_SPN
+Definition spn2 := mk_Spn
                      ex2_places
                      ex2_transs
                      ex2_pre
