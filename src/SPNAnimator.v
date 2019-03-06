@@ -34,6 +34,8 @@ Section FireSpn.
     | None => None
     end.
 
+  Functional Scheme is_sensitized_ind := Induction for is_sensitized Sort Prop.
+  
   (** Returns true if t ∈ sensitized(residual_marking). 
       [state] is not used in [spn_is_firable], but it is here
       to recall that a transitions is firable at a certain state.
@@ -94,7 +96,7 @@ Section FireSpn.
         (* If t is firable, updates the residual_marking, and add t to the fired transitions. *)
         | Some true =>
           match update_residual_marking spn residual_marking neighbours_of_t t with
-          (* Recursive call with new marking *)
+          (* Recursive call with updated residual marking *)
           | Some residual_marking' =>
             spn_fire_aux spn state residual_marking' (fired ++ [t]) tail
           (* Something went wrong, error! *)
@@ -163,6 +165,23 @@ Section FireSpn.
     | Some fired => Some (mk_SpnState fired state.(marking))
     | None => None
     end.
+
+  Functional Scheme spn_map_fire_ind := Induction for spn_map_fire Sort Prop.
+  
+  (** ∀ spn, s, [spn_map_fire spn s] returns a state [s'] 
+      with [s'.(marking)] = [s.(marking)] *)
+  
+  Lemma spn_map_fire_same_marking :
+    forall (spn : Spn) (s s': SpnState),
+      spn_map_fire spn s = Some s' ->
+      s.(marking) = s'.(marking).
+  Proof.
+    do 2 intro;
+      functional induction (spn_map_fire spn s) using spn_map_fire_ind;
+      intros.
+    - injection H; intros; rewrite <- H0; simpl; reflexivity.
+    - inversion H.
+  Qed.
   
   (***********************************************************************)
   (***********************************************************************)
@@ -293,7 +312,7 @@ End UpdateMarkingSpn.
 Section AnimateSpn.
   
   (** Executes one evolution cycle for [spn], 
-      returns a tuplet (intermediate state, fired transitions, final state). *)
+      returns a couple (intermediate state, final state). *)
   
   Definition spn_cycle (spn : Spn) (starting_state : SpnState) :
     option (SpnState * SpnState) :=
@@ -302,12 +321,14 @@ Section AnimateSpn.
     | Some inter_state =>
       (* Updates the marking in spn. *)
       match spn_update_marking spn inter_state with
-      (* Returns the last spn state. *)
+      (* Returns the couple (inter_state, final_state). *)
       | Some final_state => Some (inter_state, final_state)
       | None => None
       end
     | None => None
     end.
+
+  Functional Scheme spn_cycle_ind := Induction for spn_cycle Sort Prop.
   
   (*******************************************)
   (******** ANIMATING DURING N CYCLES ********)

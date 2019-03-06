@@ -202,3 +202,46 @@ Proof.
   injection; intros.
   contradiction.
 Qed.
+
+(** 
+    ∀ l : A ⨱ B, NoDup (fst (split l)) ⇒     
+    ∀ p, p' ∈ l, fst p = fst p' ⇒ p = p'    
+
+    If there are no duplicates in the first elements
+    of l, then all pairs with the same first element
+    are equal.
+ *)
+
+Lemma nodup_same_pair {A B : Type} :
+  forall (l : list (A * B)),
+    NoDup (fst (split l)) ->
+    forall (p p' : A * B),
+      In p l -> In p' l -> fst p = fst p' -> p = p'.
+Proof.
+  intro.
+  induction l; intros.
+  - inversion H0.
+  - dependent induction a.
+    rewrite fst_split_cons_app in H; simpl in H.
+    apply NoDup_cons_iff in H; elim H; intros.
+    apply in_inv in H0; elim H0; intros.
+    + apply in_inv in H1.
+      elim H1; intros.
+      -- rewrite <- H5; rewrite <- H6; reflexivity.
+      -- rewrite <- H5 in H2.
+         dependent destruction p'.
+         simpl in H2.
+         apply in_fst_split in H6.
+         rewrite <- H2 in H6.
+         contradiction.
+    + apply in_inv in H1.
+      elim H1; intros.
+      -- rewrite <- H6 in H2.
+         dependent destruction p.
+         simpl in H2.
+         apply in_fst_split in H5.
+         rewrite H2 in H5.
+         contradiction.
+      -- generalize (IHl H4); intro.
+         apply (H7 p p' H5 H6 H2).
+Qed.

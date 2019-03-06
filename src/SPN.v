@@ -68,53 +68,6 @@ Fixpoint flatten_lneighbours (lneighbours : list (Trans * Neighbours)) :
 
 Functional Scheme flatten_lneighbours_ind := Induction for flatten_lneighbours Sort Prop.
 
-(** Formal specification : flatten_lneighbours. *)
-
-Inductive FlattenLneighbours :
-  list (Trans * Neighbours) -> list Place -> Prop :=
-| FlattenLneighbours_nil :
-    FlattenLneighbours [] []
-| FlattenLneighbours_cons :
-    forall (lneighbours : list (Trans * Neighbours))
-      (places : list Place)
-      (t : Trans)
-      (neighbours : Neighbours),
-      FlattenLneighbours lneighbours places ->
-      FlattenLneighbours ((t, neighbours) :: lneighbours)
-                         ((flatten_neighbours neighbours) ++ places).
-
-(** Correctness proof : flatten_lneighbours *)
-
-Theorem flatten_lneighbours_correct :
-  forall (lneighbours : list (Trans * Neighbours))
-    (places : list Place),
-    flatten_lneighbours lneighbours = places -> FlattenLneighbours lneighbours places.
-Proof.
-  intros lneighbours.
-  functional induction (flatten_lneighbours lneighbours)
-             using flatten_lneighbours_ind;
-    intros.
-  (* Base case : lneighbours = []. *)
-  - rewrite <- H; apply FlattenLneighbours_nil.
-  (* General case. *)
-  - rewrite <- H; apply FlattenLneighbours_cons; apply IHl; auto.
-Qed.
-
-(** Completeness proof : flatten_lneighbours *)
-
-Theorem flatten_lneighbours_compl :
-  forall (lneighbours : list (Trans * Neighbours))
-         (places : list Place),
-    FlattenLneighbours lneighbours places -> flatten_lneighbours lneighbours = places.
-Proof.
-  intros.
-  induction H.
-  (* Case FlattenLneighbours_nil. *)
-  - simpl; auto.
-  (* Case FlattenLneighbours_cons. *)
-  - simpl; rewrite IHFlattenLneighbours; auto.
-Qed.
-
 (** ** Structure of Synchronous Petri Nets. *)
 
 (*==================================================================*)
@@ -135,7 +88,7 @@ Structure Spn : Set :=
       (* Each list of transitions contained in priority_groups is 
        * a priority-ordered list of transitions.
        * Defines priority relation between transitions,
-       * necessary to obtain a deterministic Petri net.*)
+       * necessary to obtain a deterministic Petri net. *)
       priority_groups : list (list Trans);
 
       (* Contains the list of pre, test, inhib and post places 
@@ -144,11 +97,6 @@ Structure Spn : Set :=
       
     }.
 
-(** ** Spn state. *)
-
-(** Defines the state of an Spn. *)
-
-Structure SpnState := mk_SpnState { fired : list Trans; marking : list (Place * nat) }.
 
 (** ------------------------------------------------------- *)
 (** ------------------------------------------------------- *)
@@ -161,16 +109,37 @@ Structure SpnState := mk_SpnState { fired : list Trans; marking : list (Place * 
 
 (** *** Spn helpers predicates *)
 
+(* The same places are referenced in m and m'. *)
+
 Definition MarkingHaveSameStruct
-           (m1 : list (Place * nat))
-           (m2 : list (Place * nat)) := fst (split m1) = fst (split m2).
+           (m : list (Place * nat))
+           (m' : list (Place * nat)) := fst (split m) = fst (split m').
+
+(** [m] is a weaker marking compared to [m'], if all places 
+    in [m] are marked with the same amount or less tokens than
+    places in [m'].
+
+    Condition: [m] and [m'] are comparable, verify MarkingHaveSameStruct. 
+ *)
+
+Inductive IsWeakerMarking (m : list (Place * nat)) : list (Place * nat) -> Prop :=
+| IsWeakerMarking_eq :
+    IsWeakerMarking m m
+| IsWeakerMarking_cons :
+    forall (m' : list (Place * nat)),
+      MarkingHaveSameStruct m m' ->
+      (forall (p : Place) (n n' : nat), In (p, n) m -> In (p, n') m' -> n <= n') ->
+      IsWeakerMarking m m'.
+
+(** All transitions in [priority_groups] are referenced 
+    in the list of neighbours [lneighbours]. *)
 
 Definition PriorityGroupsAreRefInLneighbours
            (priority_groups : list (list Trans))
            (lneighbours : list (Trans * Neighbours)) :=
-  (forall pgroup : list Trans,
-      In pgroup priority_groups ->
-      (forall t : Trans, In t pgroup -> In t (fst (split lneighbours)))).
+  forall pgroup : list Trans,
+    In pgroup priority_groups ->
+    forall t : Trans, In t pgroup -> In t (fst (split lneighbours)).
 
 (** *** Properties on places and transitions *)
 
@@ -219,13 +188,52 @@ Definition NoIsolatedTrans (spn : Spn) :=
     In (t, neighbours_of_t) spn.(lneighbours) ->
     (flatten_neighbours neighbours_of_t) <> [].
 
+(** ∀ p ∈ P, ∀ (t, neighb) ∈ spn.(lneighbours), 
+    if p ∈ (pre_pl neighb) then pre(p, t) >= 1 and
+    if p ∉ (pre_pl neighb) then pre(p, t) = 0.
+ *)
+
+Definition AreWellDefinedPreEdges (spn : Spn) :=
+  forall (t : Trans)
+    (neighbours_of_t : Neighbours)
+    (p : Place),
+    In (t, neighbours_of_t) spn.(lneighbours) ->
+    (In p (pre_pl neighbours_of_t) -> (pre spn t p) >= 1) /\
+    (~In p (pre_pl neighbours_of_t) -> (pre spn t p) = 0).
+
+(** ∀ p ∈ P, ∀ (t, neighb) ∈ spn.(lneighbours), 
+    if p ∈ (test_pl neighb) then test(p, t) >= 1 and
+    if p ∉ (test_pl neighb) then test(p, t) = 0.
+ *)
+
+Definition AreWellDefinedTestEdges (spn : Spn) :=
+  forall (t : Trans)
+    (neighbours_of_t : Neighbours)
+    (p : Place),
+    In (t, neighbours_of_t) spn.(lneighbours) ->
+    (In p (test_pl neighbours_of_t) -> (test spn t p) >= 1) /\
+    (~In p (test_pl neighbours_of_t) -> (test spn t p) = 0).
+
+(** ∀ p ∈ P, ∀ (t, neighb) ∈ spn.(lneighbours), 
+    if p ∈ (inhib_pl neighb) then inhib(p, t) >= 1 and
+    if p ∉ (inhib_pl neighb) then inhib(p, t) = 0.
+ *)
+
+Definition AreWellDefinedInhibEdges (spn : Spn) :=
+  forall (t : Trans)
+    (neighbours_of_t : Neighbours)
+    (p : Place),
+    In (t, neighbours_of_t) spn.(lneighbours) ->
+    (In p (inhib_pl neighbours_of_t) -> (inhib spn t p) >= 1) /\
+    (~In p (inhib_pl neighbours_of_t) -> (inhib spn t p) = 0).
+
 (** *** Properties on marking *)
 
 (** For all place p, p is in spn.(places) iff p is referenced in marking. *)
 Definition NoUnmarkedPlace (spn : Spn)  :=
   spn.(places) = (fst (split spn.(initial_marking))).
 
-(** *** Predicate defining if a Spn is well-structured. *)
+(** *** Checks if a Spn is well-defined. *)
 
 Definition IsWellDefinedSpn (spn : Spn) :=
   NoDupPlaces spn /\
@@ -237,7 +245,22 @@ Definition IsWellDefinedSpn (spn : Spn) :=
   NoUnknownPlaceInNeighbours spn /\
   NoUnknownTransInLNeighbours spn /\
   NoIsolatedTrans spn /\
+  AreWellDefinedPreEdges spn /\
+  AreWellDefinedTestEdges spn /\
+  AreWellDefinedInhibEdges spn /\
   NoUnmarkedPlace spn.
+
+(** ** Spn state. *)
+
+(** Defines the state of an Spn. *)
+
+Structure SpnState := mk_SpnState { fired : list Trans; marking : list (Place * nat) }.
+
+(** Checks that state s is well-defined compared to spn's structure. *)
+
+Definition IsWellDefinedSpnState (spn : Spn) (s : SpnState) :=
+  MarkingHaveSameStruct spn.(initial_marking) s.(marking) /\
+  incl s.(fired) spn.(transs).
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR Spn TYPES =====*)
@@ -271,6 +294,22 @@ Section Marking.
     | [] => None
     end.
 
+  Functional Scheme get_m_ind := Induction for get_m Sort Prop.
+
+  (** Correctness proof for get_m. *)
+  
+  Lemma get_m_correct :
+    forall (marking : list (Place * nat)) (p : Place) (n : nat),
+      get_m marking p = Some n -> In (p, n) marking.
+  Proof.
+    intros marking p; functional induction (get_m marking p) using get_m_ind; intros.
+    - inversion H.
+    - apply beq_nat_true in e1; rewrite e1.
+      injection H; intro; rewrite H0.
+      apply in_eq.
+    - apply in_cons; apply IHo; assumption.
+  Qed.
+  
   (** Equality decidability between two pairs of nat. 
       Necessary to use the replace_occ function. *)
   
@@ -367,6 +406,8 @@ Section Edges.
     | Some nboftokens => Some ((pre spn t p) <=? nboftokens)
     | None => None
     end.
+
+  Functional Scheme check_pre_ind := Induction for check_pre Sort Prop.
   
   (** Function : Returns [Some true] if ∀ p ∈ [pre_places], M(p) >= pre(p, t).
                  
@@ -387,6 +428,8 @@ Section Edges.
       end 
     | [] => Some check_result
     end.  
+
+  Functional Scheme map_check_pre_aux_ind := Induction for map_check_pre_aux Sort Prop.
   
   (** Wrapper around [map_check_pre_aux]. *)
   
