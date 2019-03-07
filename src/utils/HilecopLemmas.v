@@ -142,6 +142,24 @@ Proof.
     + apply IHl in H0; right; auto.
 Qed.
 
+(** If a ∈ (fst (split l)) then
+    ∃ b | (a,b) ∈ l. 
+ *)
+Lemma in_fst_split_in_pair {A B : Type} :
+  forall  (a : A) (l : list (A * B)),
+    In a (fst (split l)) -> exists b : B, In (a, b) l.
+Proof.
+  intros.
+  induction l.
+  - elim H.
+  - dependent induction a0.
+    rewrite fst_split_cons_app in H; simpl in H.
+    elim H; intro.
+    + exists b; rewrite H0; apply in_eq.
+    + apply IHl in H0; elim H0; intros.
+      exists x; apply in_cons; assumption.
+Qed.
+
 (** Modus ponens for [in_eq] implies P. *)
 
 Lemma in_eq_impl {A : Type} :

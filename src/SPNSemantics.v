@@ -108,117 +108,6 @@ Section IsSensitized.
       (test spn t p) <= n  /\
       (n < (inhib spn t p) \/ (inhib spn t p) = 0).
 
-  (** Correctness proof for check_pre. *)
-
-  Lemma check_pre_correct :
-    forall (spn : Spn)
-      (marking : list (Place * nat))
-      (p : Place)
-      (t : Trans)
-      (n : nat),
-      IsWellDefinedSpn spn ->
-      MarkingHaveSameStruct spn.(initial_marking) marking ->
-      In (p, n) marking ->
-      check_pre spn marking p t = Some true ->
-      (pre spn t p) <= n.
-  Proof.
-    do 4 intro;
-      functional induction (check_pre spn marking p t) using check_pre_ind;
-      intros.
-    (* General case, all went well. *)
-    - apply get_m_correct in e.
-      (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold MarkingHaveSameStruct in H0.
-      unfold NoUnmarkedPlace in H16.
-      unfold NoDupPlaces in H3.
-      rewrite H0 in H16; rewrite H16 in H3.
-      assert (fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
-      generalize (nodup_same_pair marking H3 (p, n) (p, nboftokens) H1 e H); intro.
-      injection H15; intro.
-      rewrite <- H17 in H2; injection H2; intro.
-      apply (leb_complete (pre spn t p) n H18).
-    - inversion H2.
-  Qed.
-
-  (** ∀ spn, marking, pre_places, t, b,
-      map_check_pre_aux spn marking pre_places t b = Some true ⇒
-      b = true.
-   *)
-  Lemma map_check_pre_aux_true_if_true :
-    forall (spn : Spn)
-      (marking : list (Place * nat))
-      (pre_places : list Place)
-      (t : Trans)
-      (b : bool),
-      map_check_pre_aux spn marking pre_places t b = Some true ->
-      b = true.
-  Proof.
-    do 5 intro;
-      functional induction (map_check_pre_aux spn marking pre_places t b)
-                 using map_check_pre_aux_ind;
-      intros.
-    - injection H; auto.
-    - apply IHo in H; apply andb_prop in H; elim H; auto.
-    - inversion H.
-  Qed.
-  
-  (** Correctness proof for map_check_pre_aux. *)
-      
-  Lemma map_check_pre_aux_correct :
-    forall (spn : Spn)
-      (marking : list (Place * nat))
-      (pre_places : list Place)
-      (t : Trans)
-      (b : bool)
-      (neighbours_of_t : Neighbours),
-      IsWellDefinedSpn spn ->
-      MarkingHaveSameStruct spn.(initial_marking) marking ->
-      In (t, neighbours_of_t) spn.(lneighbours) ->
-      incl pre_places (pre_pl neighbours_of_t) ->
-      map_check_pre_aux spn marking pre_places t b = Some true ->
-      forall (p : Place) (n : nat),
-        In p pre_places -> In (p, n) marking -> (pre spn t p) <= n.
-  Proof.
-    do 5 intro;
-      functional induction (map_check_pre_aux spn marking pre_places t b)
-                 using map_check_pre_aux_ind;
-      intros.
-    - inversion H4.
-    - apply in_inv in H4; elim H4; intro.
-      + apply map_check_pre_aux_true_if_true in H3.
-        apply andb_prop in H3; elim H3; intros.
-        rewrite H7 in e0.
-        rewrite H6 in e0.
-        generalize (check_pre_correct spn marking p0 t n H H0 H5 e0); intro.
-        assumption.
-      + apply IHo with (neighbours_of_t := neighbours_of_t);
-          (assumption ||
-           unfold incl in H2;
-           unfold incl; intros;
-           apply in_cons with (a := p) in H7;
-           apply (H2 a H7)).
-    - inversion H3.
-  Qed.
-
-  (** *)
-
-  Lemma map_check_pre_correct :
-    forall (spn : Spn)
-      (marking : list (Place * nat))
-      (pre_places : list Place)
-      (t : Trans)
-      (neighbours_of_t : Neighbours),
-      IsWellDefined spn ->
-      MarkingHaveSameStruct spn.(initial_marking) marking ->
-      In (t, neighbours_of_t) spn.(lneighbours) ->
-      pre_places = (pre_pl neighbours_of_t) ->
-      map_check_pre spn marking pre_places t = Some true ->
-      (forall (p : Place) (n : nat), In (p, n) marking -> (pre spn t p) <= n).
-  Proof.
-    
-  Admitted.
-
   (** Correctness proof for is_sensitized and IsSensitized *)
 
   Theorem is_sensitized_correct :
@@ -226,6 +115,7 @@ Section IsSensitized.
       (marking : list (Place * nat))
       (t : Trans)
       (neighbours_of_t : Neighbours),
+      IsWellDefinedSpn spn ->
       MarkingHaveSameStruct spn.(initial_marking) marking ->
       In (t, neighbours_of_t) spn.(lneighbours) ->
       is_sensitized spn marking neighbours_of_t t = Some true ->
@@ -235,11 +125,66 @@ Section IsSensitized.
       functional induction (is_sensitized spn marking neighbours_of_t t)
                  using is_sensitized_ind;
       intros.
-    unfold IsSensitized.
-    
+    - injection H2; intros.
+      do 2 (apply andb_prop in H3; elim H3; clear H3; intros).
+      (* Determines ∀ (p, n) ∈ marking, (pre spn t p) <= n *)
+      rewrite H3 in e.
+      generalize (map_check_pre_correct spn marking t neighbours_of_t
+                                        H H0 H1 e); intro.
+      (* Determines ∀ (p, n) ∈ marking, (test spn t p) <= n *)
+      rewrite H5 in e0.
+      generalize (map_check_test_correct spn marking t neighbours_of_t
+                                         H H0 H1 e0); intro.
+      (* Determines ∀ (p, n) ∈ marking, n < (inhib spn t p) ∨ (inhib spn t p) = 0 *)
+      rewrite H4 in e1.
+      generalize (map_check_inhib_correct spn marking t neighbours_of_t
+                                          H H0 H1 e1); intro.
+      (* Unfolds IsSensitized and applies all previous lemmas. *)
+      unfold IsSensitized; intros.
+      generalize (H6 p n H12); generalize (H7 p n H12); generalize (H8 p n H12); intros.
+      apply (conj H15 (conj H14 H13)).
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
   Qed.
 
+  (** Completeness proof for is_sensitized and IsSensitized *)
+
+  Theorem is_sensitized_complete :
+    forall (spn : Spn)
+      (marking : list (Place * nat))
+      (t : Trans)
+      (neighbours_of_t : Neighbours),
+      IsWellDefinedSpn spn ->
+      MarkingHaveSameStruct spn.(initial_marking) marking ->
+      In (t, neighbours_of_t) spn.(lneighbours) ->
+      IsSensitized spn marking t ->
+      is_sensitized spn marking neighbours_of_t t = Some true.
+  Proof.
+    intros spn marking t neighbours_of_t;
+      functional induction (is_sensitized spn marking neighbours_of_t t)
+                 using is_sensitized_ind;
+      intros.
+    unfold IsSensitized in H2.
+    
+  (** ∀ t, t ∈ sens(M) ∧ IsWeakermarking M M' ⇒ t ∈ sens(M') *)
   
+  Lemma is_sensitized_if_weaker_marking :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (neighbours_of_t : Neighbours)
+           (marking' : list (Place * nat)),
+      IsWellDefinedSpn spn ->
+      MarkingHaveSameStruct marking marking' ->
+      In (t, neighbours_of_t) spn.(lneighbours) ->
+      is_sensitized spn marking neighbours_of_t t = Some true ->
+      IsWeakerMarking marking marking' ->
+      is_sensitized spn marking' neighbours_of_t t = Some true.
+  Proof.
+    intros.
+    
+      
 End IsSensitized.
 
 (** SpnIsFirable: 
