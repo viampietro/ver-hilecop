@@ -1,4 +1,4 @@
-Require Export Hilecop.SPN.
+Require Import Hilecop.SPN.
 
 (*! ============================================================ !*)
 (*! ================ FIRING ALGORITHM for Spn ================== !*)
@@ -34,7 +34,7 @@ Section FireSpn.
     | None => None
     end.
 
-  Functional Scheme is_sensitized_ind := Induction for is_sensitized Sort Prop.
+  Functional Scheme is_sensitized_ind := Induction for is_sensitized Sort Prop.    
   
   (** Returns true if t ∈ sensitized(residual_marking). 
       [state] is not used in [spn_is_firable], but it is here
@@ -44,10 +44,9 @@ Section FireSpn.
   Definition spn_is_firable
              (spn : Spn)
              (state : SpnState)
-             (residual_marking : list (Place * nat))
              (neighbours_of_t : Neighbours)
              (t : Trans) : option bool :=
-    is_sensitized spn residual_marking neighbours_of_t t.
+    is_sensitized spn state.(marking) neighbours_of_t t.
   
   (** Returns a marking M' where 
       M' = [residual_marking] - ∀ p ∈ [pre_places], ∑ pre(p, t)  *)
@@ -92,13 +91,23 @@ Section FireSpn.
     | t :: tail =>
       match get_neighbours spn.(lneighbours) t with
       | Some neighbours_of_t =>
-        match spn_is_firable spn state residual_marking neighbours_of_t t with
-        (* If t is firable, updates the residual_marking, and add t to the fired transitions. *)
+        match spn_is_firable spn state neighbours_of_t t with
+        (* If t is firable, then checks if t is sensitized by residual_marking.  *)
         | Some true =>
-          match update_residual_marking spn residual_marking neighbours_of_t t with
-          (* Recursive call with updated residual marking *)
-          | Some residual_marking' =>
-            spn_fire_aux spn state residual_marking' (fired ++ [t]) tail
+          (* If t is sensitized by residual_marling, then, 
+             updates the residual_marking, and add t to the fired transitions. *)
+          match is_sensitized spn residual_marking neighbours_of_t t with
+          | Some true =>
+            match update_residual_marking spn residual_marking neighbours_of_t t with
+            (* Recursive call with updated residual marking *)
+            | Some residual_marking' =>
+              spn_fire_aux spn state residual_marking' (fired ++ [t]) tail
+            (* Something went wrong, error! *)
+            | None => None
+            end
+          (* Else no changes but inductive progress. *)
+          | Some false =>
+            spn_fire_aux spn state residual_marking fired tail
           (* Something went wrong, error! *)
           | None => None
           end

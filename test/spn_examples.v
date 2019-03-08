@@ -1,12 +1,13 @@
 Require Export Hilecop.SPN Hilecop.SPNAnimator.
-                               
+Require Export Hilecop.Utils.HilecopTactics.
+  
 (*! ================================================== !*) 
 (*!                  FIRST SPN EXAMPLE                 !*)
 (*! ================================================== !*)
 
 (* List of places *)
 
-Definition ex_places : (list place_type) := [ 0; 1; 2; 3; 4; 5; 7; 8; 9; 10; 11; 12 ].
+Definition ex_places : (list Place) := [ 0; 1; 2; 3; 4; 5; 7; 8; 9; 10; 11; 12 ].
 
 (* Initial marking *)
 
@@ -15,12 +16,12 @@ Definition ex_marking :=
       (7, 1); (8, 0); (9, 0); (10, 0); (11, 0); (12, 1) ].
 
 (* List of transitions *)
-Definition ex_transs : (list trans_type) :=
+Definition ex_transs : (list Trans) :=
   [ 0; 1; 2; 3; 4; 5; 6; 8; 9; 12; 13; 14; 16 ].
 
 (* List of neighbour places for all transitions of the example. *)
 
-Definition ex_lneighbours : list (trans_type * neighbours_type) :=
+Definition ex_lneighbours : list (Trans * Neighbours) :=
   [
     (0, (mk_neighbours [0; 7; 12] [] [] [4; 5; 12]));
     (1, (mk_neighbours [1] [] [] [2]));
@@ -39,7 +40,7 @@ Definition ex_lneighbours : list (trans_type * neighbours_type) :=
 
 (* Incoming arcs, from place to transition. *)
 
-Definition ex_pre (t : trans_type) (p : place_type) : nat :=
+Definition ex_pre (t : Trans) (p : Place) : nat :=
   match (t, p) with
   (* trans 0 *)
   | (0, 0) => 1                
@@ -76,7 +77,7 @@ Definition ex_pre (t : trans_type) (p : place_type) : nat :=
 
 (* Outcoming arcs, from transition to place. *)
 
-Definition ex_post (t : trans_type) (p : place_type) : nat :=
+Definition ex_post (t : Trans) (p : Place) : nat :=
   match (t, p) with
   (* trans 0 *)
   | (0, 4) => 1               
@@ -113,7 +114,7 @@ Definition ex_post (t : trans_type) (p : place_type) : nat :=
 
 (* Test arcs, from place to transition. *)
 
-Definition ex_test (t : trans_type) (p : place_type) :=
+Definition ex_test (t : Trans) (p : Place) :=
   match (t, p) with
   (* trans 5 *)
   | (5, 2) => 1               
@@ -123,7 +124,7 @@ Definition ex_test (t : trans_type) (p : place_type) :=
 
 (* Inhibitor arcs, from place to transition. *)
 
-Definition ex_inhib (t : trans_type) (p : place_type) :=
+Definition ex_inhib (t : Trans) (p : Place) :=
   match (t, p) with
   (* trans 2 *)
   | (2, 5) => 1               
@@ -192,13 +193,6 @@ Proof.
   decide_nodup.
 Qed.
 
-Lemma nodup_lneighbours_spn1 :
-  NoDupLneighbours spn1.
-Proof.
-  unfold NoDupLneighbours.
-  decide_nodup.
-Qed.
-
 Lemma no_isolated_place_spn1 :
   NoIsolatedPlace spn1.
 Proof.
@@ -242,7 +236,7 @@ Proof.
    end
    || auto).
 Qed.
-
+  
 Lemma no_unmarked_place_spn1 :
   NoUnmarkedPlace spn1.
 Proof.
@@ -257,23 +251,21 @@ Proof.
                (conj nodup_transs_spn1
                (conj no_unknown_in_priority_groups_spn1
                (conj no_intersect_in_priority_groups_spn1
-               (conj nodup_lneighbours_spn1
                (conj no_isolated_place_spn1
                (conj no_unknown_place_in_neighbours_spn1
                (conj no_unknown_trans_in_lneighbours_spn1
-               (conj no_isolated_trans_spn1 no_unmarked_place_spn1)))))))))).
+               (conj no_isolated_trans_spn1 no_unmarked_place_spn1))))))))).
   auto.
-Qed.
+Admitted.
 
 (*! ========================== !*)
 (*! === PERFORMANCE TESTS. === !*)
 (*! ========================== !*)
 
-(* Time Compute (spn_animate spn1 10000). *)
+(* Time Compute (spn_animate spn1 5000). *)
 (* Time Compute (spn_animate spn1 1000). *)
 (* Time Compute (spn_animate spn1 2000). *)
 (* Time Compute (spn_animate spn1 4000). *)
-
 
 (*! ================================================ !*)  
 (*!                SECOND SPN EXAMPLE                !*)
@@ -281,7 +273,7 @@ Qed.
 
 (* List of places. *)
 
-Definition ex2_places : (list place_type) := [ 1; 2; 3; 4; 5; 6; 7 ].
+Definition ex2_places : (list Place) := [ 1; 2; 3; 4; 5; 6; 7 ].
 
 (* Initial marking. *)
 
@@ -289,7 +281,7 @@ Definition ex2_marking := [ (1, 1); (2, 0); (3, 0); (4, 0); (5, 0); (6, 0); (7, 
 
 (* List of transitions. *)
 
-Definition ex2_transs : (list trans_type) := [ 1; 2; 3; 4; 5; 6 ].
+Definition ex2_transs : (list Trans) := [ 1; 2; 3; 4; 5; 6 ].
 
 (* List of pairs (transition, neighbours) *)
 
@@ -305,7 +297,7 @@ Definition ex2_lneighbours :=
 
 (* 7 arcs PT (place transition)  "incoming" *)
 
-Definition ex2_pre (t : trans_type) (p : place_type) : nat :=
+Definition ex2_pre (t : Trans) (p : Place) : nat :=
   match (t,p) with
   | (1, 1) => 1
   | (2, 1) => 1
@@ -318,13 +310,13 @@ Definition ex2_pre (t : trans_type) (p : place_type) : nat :=
   | _ => 0
   end.
 
-Definition ex2_test (t : trans_type) (p : place_type) :=
+Definition ex2_test (t : Trans) (p : Place) :=
   match (t, p) with
   | (2, 2) => 1               
   | _ => 0
   end.
 
-Definition ex2_inhib (t : trans_type) (p : place_type) :=
+Definition ex2_inhib (t : Trans) (p : Place) :=
   match (t, p) with
   | (1, 2) => 1               
   | _ => 0
@@ -332,7 +324,7 @@ Definition ex2_inhib (t : trans_type) (p : place_type) :=
 
 (* 7 arcs TP "outcoming" *)
 
-Definition ex2_post (t : trans_type) (p : place_type) : nat :=
+Definition ex2_post (t : Trans) (p : Place) : nat :=
   match (t, p) with
   (* trans 1 *)
   | (1, 2) => 1               

@@ -1,4 +1,7 @@
 Require Import Hilecop.Utils.HilecopLemmas.
+Require Import Arith List Bool.
+
+Import ListNotations.
 
 (*! ====================================================== !*)  
 (*!                                                        !*)
@@ -48,4 +51,5 @@ Ltac decide_incl :=
                       decompose [or] H;
                       repeat (auto || right)
   end.
+
 

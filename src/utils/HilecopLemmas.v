@@ -1,10 +1,11 @@
-Require Export Arith Omega List Bool Bool.Sumbool Bool.Bool Coq.Lists.ListDec FunInd
-        Coq.Logic.Classical_Prop.
-Require Export Coq.Sorting.Sorting.
+(** To use [dependent induction] *)
+
 Require Export Coq.Program.Equality.
 
+(** To use [list] and its notations. *)
+
+Require Export List.
 Export ListNotations.
-Export Permutation.
 
 (** * Helper lemmas for the Hilecop program *)
 
