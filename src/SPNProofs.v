@@ -1389,7 +1389,8 @@ Section SpnFire.
     (* Builds (incl pgroup pgroup). *)
     assert (Hincl_pgroup : incl pgroup pgroup) by (apply incl_refl).
     (* Builds NoDup pgroup. *)
-    unfold IsWellDefinedSpn in Hwell_def_spn; decompose [and] Hwell_def_spn; intros; rename_well_defined_spn.
+    unfold IsWellDefinedSpn in Hwell_def_spn;
+      decompose [and] Hwell_def_spn; intros; rename_well_defined_spn.
     unfold NoDupTranss in *.
     unfold NoUnknownInPriorityGroups in *.
     rewrite Hno_unk_pgroups in Hnodup_transs.
@@ -1402,7 +1403,107 @@ Section SpnFire.
     assert (Hnot_in : ~In t []) by (apply in_nil).
     apply (Hspec t Hin_pgroup Hnot_in Hnot_firable). 
   Qed.
+
+  (** spn_map_fire_aux spn state fired pgroups = Some final_fired ⇒ 
+      ∀ t ∉ fired ∧ t ∉ (concat pgroups) ⇒ t ∉ final_fired *)
   
+  Theorem spn_map_fire_aux_not_in_not_fired :
+    forall (spn : Spn)
+      (state : SpnState)
+      (fired : list Trans)
+      (pgroups : list (list Trans))
+      (final_fired : list Trans),
+      spn_map_fire_aux spn state fired pgroups = Some final_fired ->
+      forall t : Trans, ~In t fired -> ~In t (concat pgroups) -> ~In t final_fired.
+  Proof.
+    intros spn state fired pgroups;
+      functional induction (spn_map_fire_aux spn state fired pgroups)
+                 using spn_map_fire_aux_ind;
+      intros final_fired Hfun t Hnot_in_fired Hnot_in_concat.
+    (* Base case, pgroups = [] *)
+    - injection Hfun; intro Heq; rewrite Heq in *; assumption.
+    (* General case *)
+    - unfold spn_fire in e0.
+      (* Builds (~In t []) to apply spn_fire_aux_not_in_not_fired. *)
+      assert (Hnot_in_nil : ~In t []) by apply in_nil.
+      (* Builds (~In t pgroup) to apply spn_fire_aux_not_in_not_fired. *)
+      simpl in Hnot_in_concat.
+      generalize (not_app_in t pgroup (concat pgroups_tail) Hnot_in_concat)
+        as Hnot_in_wedge; intro.
+      elim Hnot_in_wedge; intros Hnot_in_pg Hnot_in_concat'.
+      (* Applies spn_fire_aux_not_in_not_fired *)
+      generalize (spn_fire_aux_not_in_not_fired
+                    spn state (marking state) [] pgroup fired_trs t
+                    Hnot_in_nil Hnot_in_pg e0) as Hnot_in_ff; intro.
+      (* Builds ~In t (fired_transitions ++ fired_trs) to apply IHo. *)
+      generalize (not_in_app t fired_transitions fired_trs (conj Hnot_in_fired Hnot_in_ff))
+                 as Hnot_in_all_ff; intro.
+      (* Applies induction hypothesis. *)
+      apply (IHo final_fired Hfun t Hnot_in_all_ff Hnot_in_concat').
+    (* Case spn_fire returns None. *)
+    - inversion Hfun.
+  Qed.
+  
+  (** spn_map_fire_aux spn s fired pgroups = Some final_fired ⇒ 
+      ∀ pgroup ∈ pgroups, ∀ t ∈ pgroup, 
+      t ∉ fired ⇒ t ∉ firable(s) ⇒ t ∉ final_fired 
+      
+      N.B. firable(s) ≡ firable(s'), because s.(marking) = s'.(marking). *)
+  
+  Theorem spn_map_fire_aux_not_firable_not_fired :
+    forall (spn : Spn)
+      (state : SpnState)
+      (fired : list Trans)
+      (pgroups : list (list Trans))
+      (final_fired : list Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn state ->
+      NoDup (concat pgroups) ->
+      incl pgroups spn.(priority_groups) ->
+      spn_map_fire_aux spn state fired pgroups = Some final_fired ->
+      (forall (pgroup : list Trans) (t : Trans),
+          In pgroup pgroups ->
+          In t pgroup ->
+          ~In t fired ->
+          ~SpnIsFirable spn state t ->
+          ~In t final_fired).
+  Proof.
+    intros spn state fired pgroups;
+      functional induction (spn_map_fire_aux spn state fired pgroups)
+                 using spn_map_fire_aux_ind;
+      intros final_fired Hwell_def_spn Hwell_def_state Hnodup_concat Hincl_pgs Hfun pgroup' t
+             Hin_pgs Hin_pg Hnot_in_fired Hnot_firable.
+    (* Base case, pgroups = []. *)
+    - inversion Hin_pgs.
+    (* General case *)
+    - apply in_inv in Hin_pgs; elim Hin_pgs.
+      (* pgroup = pgroup' *)
+      + intro Heq_pg.
+        (* Builds ~In t (concat pgroups_tail) to apply 
+           spn_map_fire_aux_not_in_not_fired *)
+        rewrite concat_cons in Hnodup_concat.
+        rewrite Heq_pg in Hnodup_concat.
+        generalize (nodup_concat_not_in
+                      pgroup' (concat pgroups_tail) Hnodup_concat
+                      t Hin_pg) as Hnot_in_concat; intro.
+        (* Builds In pgroup spn.(priority_groups) to apply 
+           spn_fire_not_firable_not_fired *)
+        assert (Hin_pgs' : In pgroup (pgroup :: pgroups_tail)) by apply in_eq.
+        generalize (Hincl_pgs pgroup Hin_pgs') as Hin_spn_pgs; intro.
+        (* Builds ~In t fired_trs to apply spn_map_fire_aux_not_in_not_fired *)
+        rewrite <- Heq_pg in Hin_pg.
+        generalize (spn_fire_not_firable_not_fired
+                      spn state pgroup fired_trs Hwell_def_spn Hwell_def_state
+                      Hin_spn_pgs e0 t Hin_pg Hnot_firable) as Hnot_in_fired'; intro.
+        (* Builds ~In t (fired_transitions ++ fired_trs *)
+        generalize (not_in_app t fired_transitions fired_trs
+                               (conj Hnot_in_fired Hnot_in_fired')) as Hnot_in_fired_app; intro.
+        (* Applies spn_map_fire_aux_not_in_not_fired *)
+        apply (spn_map_fire_aux_not_in_not_fired
+                 spn state (fired_transitions ++ fired_trs) pgroups_tail final_fired Hfun
+                 t Hnot_in_fired_app Hnot_in_concat).
+      (* In pgroup' pgroups_tail, then apply IHo. *)
+      + intro Hin_pgs_tail.
 End SpnFire.
 
 (** Correctness proof between spn_cycle and SpnSemantics_falling_edge. *)

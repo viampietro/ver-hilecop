@@ -200,7 +200,8 @@ Qed.
 (** ∀ l, l', NoDup (l ++ l') ⇒ NoDup l ∧ NoDup l'. *)
 
 Lemma nodup_concat {A : Type} :
-  forall l l' : list A, NoDup (l ++ l') -> NoDup l /\ NoDup l'.
+  forall l l' : list A,
+    NoDup (l ++ l') -> NoDup l /\ NoDup l'.
 Proof.
   intros l l' Hnodup_concat. split.
   - induction l.
@@ -217,8 +218,8 @@ Proof.
   - induction l'.
     + apply NoDup_nil.
     + apply NoDup_cons;
-      apply NoDup_remove in Hnodup_concat;
-      elim Hnodup_concat; intros Hnodup_concat' Hnot_in_concat.
+        apply NoDup_remove in Hnodup_concat;
+        elim Hnodup_concat; intros Hnodup_concat' Hnot_in_concat.
       -- intro.
          apply or_intror with (A := In a l) in H.
          apply in_app_iff in H.
@@ -226,6 +227,25 @@ Proof.
       -- apply (IHl' Hnodup_concat').
 Qed.
 
+(** ∀ l, ll, NoDup (l ++ concat ll) ⇒ l ∉ ll. *)
+
+Lemma nodup_concat_not_in {A : Type} :
+  forall l l': list A,
+    NoDup (l ++ l') ->
+    forall a : A, In a l -> ~In a l'.
+Proof.
+  intros l l' Hnodup a Hin.
+  induction l'.
+  - simpl; auto.
+  - apply not_in_cons.
+    apply NoDup_remove in Hnodup.
+    elim Hnodup; intros Hnodup_concat Hnot_in.
+    split.
+    + intro; elim Hnot_in; apply in_or_app; left.
+      rewrite <- H; assumption.
+    + apply IHl'; assumption.
+Qed.
+      
 (** ∀ ll : list (list), NoDup (concat ll) ⇒ ∀ l ∈ ll, NoDup l. *)
 
 Lemma nodup_concat_gen {A : Type} :
@@ -272,6 +292,34 @@ Proof.
   elim Hin_app.
   - intro Hin_l; elim Hnot_in_l; assumption.
   - intro Hin_l'; elim Hnot_in_l'; assumption.
+Qed.
+
+(** ∀ a, a ∉ (l ++ l') ⇒ a ∉ l ∧ a ∉ l' *)
+
+Lemma not_app_in {A : Type} :
+  forall (a : A) (l l' : list A),
+    ~In a (l ++ l') -> ~In a l /\ ~In a l'.
+Proof.
+  intros a l l' Hnot_in_app.
+  split.
+  - induction l.
+    + apply in_nil.
+    + apply not_in_cons. split.
+      -- intro Heq.
+         elim Hnot_in_app.
+         apply in_or_app.
+         left.
+         rewrite Heq; apply in_eq.
+      -- simpl in Hnot_in_app.
+         apply Decidable.not_or in Hnot_in_app.
+         elim Hnot_in_app; intros Hdiff Hnot_in_app'.
+         apply (IHl Hnot_in_app').
+  - induction l.
+    + simpl in Hnot_in_app; assumption.
+    + simpl in Hnot_in_app.
+      apply Decidable.not_or in Hnot_in_app.
+      elim Hnot_in_app; intros Hdiff Hnot_in_app'.
+      apply (IHl Hnot_in_app').
 Qed.
 
 (** ∀ a, b, a ≠ b ⇒ a ∉ [b] *)

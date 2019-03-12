@@ -164,6 +164,8 @@ Section FireSpn.
       end
     | [] => Some (fired_transitions)
     end.
+
+  Functional Scheme spn_map_fire_aux_ind := Induction for spn_map_fire_aux Sort Prop.
   
   (***********************************************************************)
   (***********************************************************************)
