@@ -55,7 +55,7 @@ Section GetM.
     - apply in_cons; apply IHo; assumption.
   Qed.
 
-  (** Correctness proof for get_m. *)
+  (** Completeness proof for get_m. *)
 
   Lemma get_m_complete :
     forall (marking : list (Place * nat)) (p : Place) (n : nat),
@@ -1102,7 +1102,308 @@ Section SpnIsFirable.
       apply (Hspec Hwell_def_spn' Hwell_def_state Hin_transs).
   Qed.
 
+  (** Correctness and completeness conjunction for spn_is_firable. *)
+  
+  Theorem spn_is_firable_iff :
+    forall (spn : Spn)
+           (state : SpnState)
+           (neigh_of_t : Neighbours)
+           (t : Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn state ->
+      In (t, neigh_of_t) spn.(lneighbours) ->
+      spn_is_firable spn state neigh_of_t t = Some true <-> SpnIsFirable spn state t.
+  Proof.
+    intros; split.
+    - apply (spn_is_firable_correct spn state neigh_of_t t H H0 H1).
+    - apply (spn_is_firable_complete spn state neigh_of_t t H H0 H1).
+  Qed.
+
 End SpnIsFirable.
+
+(*!================================!*)
+(*!=== LEMMAS ON get_neighbours ===!*)
+(*!================================!*)
+
+(** ** Lemmas on get_neighbours. *)
+
+Section GetNeighbours.
+
+  (** Correctness proof for get_neighbours. *)
+  
+  Lemma get_neighbours_correct :
+    forall (lneighbours : list (Trans * Neighbours)) (t : Trans) (neigh_of_t : Neighbours),
+      get_neighbours lneighbours t = Some neigh_of_t -> In (t, neigh_of_t) lneighbours.
+  Proof.
+    intros lneighbours t;
+      functional induction (get_neighbours lneighbours t)
+                 using get_neighbours_ind;
+      intros neigh_of_t Hfun.
+    - inversion Hfun.
+    - apply beq_nat_true in e1; rewrite e1.
+      injection Hfun; intros Heq; rewrite Heq; apply in_eq.
+    - apply in_cons; apply IHo; assumption.
+  Qed.
+
+  (** Completeness proof for get_neighbours. *)
+
+  Lemma get_neighbours_complete :
+    forall (lneighbours : list (Trans * Neighbours)) (t : Place) (neigh_of_t : Neighbours),
+      NoDup (fst (split lneighbours)) ->
+      In (t, neigh_of_t) lneighbours ->
+      get_neighbours lneighbours t = Some neigh_of_t.
+  Proof.
+    intros lneighbours t neigh_of_t;
+      functional induction (get_neighbours lneighbours t) using get_neighbours_ind;
+      intros Hnodup Hspec;
+      (rewrite fst_split_cons_app in Hnodup;
+       simpl in Hnodup;
+       apply NoDup_cons_iff in Hnodup)
+      || auto.
+    - elim Hspec.
+    - apply in_inv in Hspec; elim Hspec; intro Heq.
+      + injection Heq; intros Heq_neigh Heq_t; rewrite Heq_neigh; reflexivity.
+      + elim Hnodup; intros Hnot_in Hnodup_tail.
+        apply beq_nat_true in e1; rewrite e1 in Hnot_in.
+        apply in_fst_split in Heq; contradiction.
+    - apply IHo.
+      + elim Hnodup; auto.
+      + apply in_inv in Hspec; elim Hspec; intro Heq.
+        -- injection Heq; intros Heq_neigh Heq_t.
+           apply beq_nat_false in e1; contradiction.
+        -- assumption.
+  Qed.
+  
+End GetNeighbours.
+
+(*!===========================================!*)
+(*!=== LEMMAS ON spn_fire and spn_map_fire ===!*)
+(*!===========================================!*)
+
+(** ** Lemmas on spn_fire and spn_map_fire. *)
+
+Section SpnFire.
+
+  (** *** First part of correctness proof *)
+  
+  (** The goal in this part is to prove: 
+
+      spn_map_fire = Some s' ⇒ ∀ t ∉ firable(s') ⇒ t ∉ Fired'  
+
+      All un-firable transitions are not fired. *)
+
+  (** ∀ t ∉ pgroup, t ∉ fired, 
+      spn_fire_aux spn state residual_marking fired group = Some final_fired ⇒ 
+      t ∉ final_fired *)
+  
+  Lemma spn_fire_aux_not_in_not_fired :
+    forall (spn : Spn)
+      (state : SpnState)
+      (residual_marking : list (Place * nat))
+      (fired : list Trans)
+      (pgroup : list Trans)
+      (final_fired : list Trans)
+      (t : Trans),
+      ~In t fired ->
+      ~In t pgroup ->
+      spn_fire_aux spn state residual_marking fired pgroup = Some final_fired ->
+      ~In t final_fired.
+  Proof.
+    intros spn state residual_marking fired pgroup;
+      functional induction (spn_fire_aux spn state residual_marking fired pgroup)
+                 using spn_fire_aux_ind;
+      intros final_fired t' Hnot_in_fired Hnot_in_pg Hfun.
+    (* Base case, pgroup = []. *)
+    - injection Hfun; intro Heq; rewrite <- Heq; assumption.
+    (* General case, all went well. *)
+    - apply not_in_cons in Hnot_in_pg.
+      elim Hnot_in_pg; intros Hneq_t Hnot_in_tail.
+      assert (Hnot_in_tt: ~In t' [t])
+        by (apply (diff_not_in t' t Hneq_t)).
+      assert (Hnot_in_app : ~In t' (fired ++ [t]))
+        by (apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tt))).
+      apply (IHo final_fired t' Hnot_in_app Hnot_in_tail Hfun).
+    - inversion Hfun.
+    (* Case is_sensitized = Some false, apply induction hypothesis. *)
+    - apply not_in_cons in Hnot_in_pg; elim Hnot_in_pg; intros Hdiff_tt Hnot_in_tail.
+      apply (IHo final_fired t' Hnot_in_fired Hnot_in_tail Hfun).
+    - inversion Hfun.
+    (* Case spn_is_firable = Some false, apply induction hypothesis. *)
+    - apply not_in_cons in Hnot_in_pg; elim Hnot_in_pg; intros Hdiff_tt Hnot_in_tail.
+      apply (IHo final_fired t' Hnot_in_fired Hnot_in_tail Hfun).
+    - inversion Hfun.
+    - inversion Hfun.
+  Qed.
+
+  (** ∀ t ∈ pgroup, t ∉ fired, t ∉ firable(state),
+      spn_fire_aux spn state residual_marking fired group = Some final_fired ⇒ 
+      t ∉ final_fired *)
+  
+  Theorem spn_fire_aux_not_firable_not_fired :
+    forall (spn : Spn)
+      (state : SpnState)
+      (residual_marking : list (Place * nat))
+      (fired : list Trans)
+      (pg : list Trans)
+      (pgroup : list Trans)
+      (final_fired : list Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn state ->
+      In pgroup spn.(priority_groups) ->
+      NoDup pg ->
+      incl pg pgroup ->
+      spn_fire_aux spn state residual_marking fired pg = Some final_fired ->
+      (forall t : Trans,
+          In t pg ->
+          ~In t fired ->
+          ~SpnIsFirable spn state t ->
+          ~In t final_fired).
+  Proof.
+    intros spn state residual_marking fired pg;
+      functional induction (spn_fire_aux spn state residual_marking fired pg)
+                 using spn_fire_aux_ind;
+      intros pgroup final_fired Hwell_def_spn Hwell_def_state Hin_pgroups
+             Hnodup_pg Hincl_pg Hfun t' Hin_pg Hnot_in_fired Hnot_firable.
+    (* Base case, pg = []. *)
+    - inversion Hin_pg.
+    (* Case spn_is_firable = Some true, impossible regarding
+       the hypotheses. *)
+    - apply in_inv in Hin_pg; elim Hin_pg.
+      (* Case t' = t. We have to show ~SpnIsFirable -> spn_is_firable = Some false,
+         then show a contradiction. *)
+      + intro Heq_t.
+        unfold SpnIsFirable in Hnot_firable; elimtype False; apply Hnot_firable.
+        intros Hwell_def_spn' Hwell_def_state' Hin_transs.
+        (* Builds In (t, neighbours_of_t) spn.(lneighbours), 
+           necessary to apply spn_is_firable_correct. *)
+        generalize (get_neighbours_correct spn.(lneighbours) t neighbours_of_t e0)
+          as Hin_lneigh; intro.
+        (* Generalizes spn_is_firable_correct. *)
+        generalize (spn_is_firable_correct
+                      spn state neighbours_of_t t Hwell_def_spn Hwell_def_state
+                      Hin_lneigh e1) as Hfirable; intro.
+        (* Unfols SpnIsFirable and shows the assumption. *)
+        unfold SpnIsFirable in Hfirable; rewrite Heq_t in *.
+        apply (Hfirable Hwell_def_spn Hwell_def_state Hin_transs).
+      (* Induction case. *)
+      + intro Hin_tail.
+        apply IHo with (pgroup := pgroup).
+        -- assumption.
+        -- assumption.
+        -- assumption.
+        -- apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; auto.
+        -- unfold incl; intros t'' Hin_tail'; apply in_cons with (a := t) in Hin_tail'.
+           apply (Hincl_pg t'' Hin_tail').
+        -- assumption.
+        -- assumption.
+        -- intro Hin_fired_app; apply in_app_or in Hin_fired_app; elim Hin_fired_app.
+           { intro Hin_fired; apply (Hnot_in_fired Hin_fired). }
+           { intro Hin_tt; apply in_inv in Hin_tt; elim Hin_tt.
+             ++ intro Heq_tt.
+                apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg.
+                intros Hnot_in_tail Hnodup_tail.
+                rewrite Heq_tt in Hnot_in_tail; apply (Hnot_in_tail Hin_tail).
+             ++ auto.
+           }
+        -- assumption.
+    (* Case update_residual_marking returns None. *)
+    - inversion Hfun.
+    (* Case is_sensitized returns Some false. *)
+    - apply IHo with (pgroup := pgroup).
+      + assumption.
+      + assumption.
+      + assumption.
+      + apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; auto.
+      + unfold incl; intros t'' Hin_tail'; apply in_cons with (a := t) in Hin_tail'.
+           apply (Hincl_pg t'' Hin_tail').
+      + assumption.
+      + apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg.
+        intros Hnot_in_tail Hnodup_tail.
+        apply in_inv in Hin_pg; elim Hin_pg.
+        -- intro Heq_t.
+           unfold SpnIsFirable in Hnot_firable; elimtype False; apply Hnot_firable.
+           intros Hwell_def_spn' Hwell_def_state' Hin_transs.
+           (* Builds In (t, neighbours_of_t) spn.(lneighbours), 
+                necessary to apply spn_is_firable_correct. *)
+           generalize (get_neighbours_correct spn.(lneighbours) t neighbours_of_t e0)
+             as Hin_lneigh; intro.
+           (* Generalizes spn_is_firable_correct. *)
+           generalize (spn_is_firable_correct
+                         spn state neighbours_of_t t Hwell_def_spn Hwell_def_state
+                         Hin_lneigh e1) as Hfirable; intro.
+           (* Unfols SpnIsFirable and shows the assumption. *)
+           unfold SpnIsFirable in Hfirable; rewrite Heq_t in *.
+           apply (Hfirable Hwell_def_spn Hwell_def_state Hin_transs).            
+        -- auto.
+      + assumption.
+      + assumption.
+    (* Case is_sensitized returns None. *)
+    - inversion Hfun.
+    (* Case spn_is_firable returns Some false. *)
+    - apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; intros Hnot_in_tail Hnodup_tail.
+      apply in_inv in Hin_pg; elim Hin_pg.
+      (* When t = t', then t ∉ fired and t ∉ tail ⇒ t ∉ final_fired 
+         thanks to lemma spn_fire_aux_not_in_not_fired. *)
+      + intro Heq_tt. rewrite Heq_tt in Hnot_in_tail.
+        apply (spn_fire_aux_not_in_not_fired
+                 spn state residual_marking fired tail final_fired t'
+                 Hnot_in_fired Hnot_in_tail Hfun).
+      + intro Hin_tail; apply IHo with (pgroup := pgroup).
+        -- assumption.
+        -- assumption.
+        -- assumption.
+        -- apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; auto.
+        -- unfold incl; intros t'' Hin_tail'; apply in_cons with (a := t) in Hin_tail'.
+           apply (Hincl_pg t'' Hin_tail').
+        -- assumption.
+        -- assumption.
+        -- assumption.
+        -- assumption.
+    (* Case spn_is_firable = None *)
+    - inversion Hfun.
+    (* Case get_neighbours = None *)
+    - inversion Hfun.
+  Qed.
+
+  (** ∀ pgroup ∈ spn.(priority_groups),
+      spn_fire spn state pgroup = Some fired ⇒ 
+      ∀ t ∈ pgroup, t ∉ firable(state) ⇒ t ∉ fired. *)
+  
+  Theorem spn_fire_not_firable_not_fired :
+    forall (spn : Spn)
+           (state : SpnState)
+           (pgroup : list Trans)
+           (fired : list Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn state ->
+      In pgroup spn.(priority_groups) ->
+      spn_fire spn state pgroup = Some fired ->
+      (forall t : Trans,
+          In t pgroup ->
+          ~SpnIsFirable spn state t ->
+          ~In t fired).
+  Proof.
+    unfold spn_fire.
+    intros spn state pgroup fired Hwell_def_spn Hwell_def_state
+           Hin_pgroups Hfun t Hin_pgroup Hnot_firable.
+    (* Builds (incl pgroup pgroup). *)
+    assert (Hincl_pgroup : incl pgroup pgroup) by (apply incl_refl).
+    (* Builds NoDup pgroup. *)
+    unfold IsWellDefinedSpn in Hwell_def_spn; decompose [and] Hwell_def_spn; intros; rename_well_defined_spn.
+    unfold NoDupTranss in *.
+    unfold NoUnknownInPriorityGroups in *.
+    rewrite Hno_unk_pgroups in Hnodup_transs.
+    generalize (nodup_concat_gen spn.(priority_groups) Hnodup_transs pgroup Hin_pgroups)
+      as Hnodup_pgroup; intro.              
+    (* Applies spn_fire_aux_not_firable_not_fired. *)
+    generalize (spn_fire_aux_not_firable_not_fired
+                  spn state state.(marking) [] pgroup pgroup fired Hwell_def_spn
+                  Hwell_def_state Hin_pgroups Hnodup_pgroup Hincl_pgroup Hfun) as Hspec; intro.
+    assert (Hnot_in : ~In t []) by (apply in_nil).
+    apply (Hspec t Hin_pgroup Hnot_in Hnot_firable). 
+  Qed.
+  
+End SpnFire.
 
 (** Correctness proof between spn_cycle and SpnSemantics_falling_edge. *)
 

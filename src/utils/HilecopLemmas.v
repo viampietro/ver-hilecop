@@ -197,6 +197,55 @@ Proof.
       auto.
 Qed.
 
+(** ∀ l, l', NoDup (l ++ l') ⇒ NoDup l ∧ NoDup l'. *)
+
+Lemma nodup_concat {A : Type} :
+  forall l l' : list A, NoDup (l ++ l') -> NoDup l /\ NoDup l'.
+Proof.
+  intros l l' Hnodup_concat. split.
+  - induction l.
+    + apply NoDup_nil.
+    + apply NoDup_cons;
+        simpl in Hnodup_concat;
+        apply NoDup_cons_iff in Hnodup_concat;
+        elim Hnodup_concat; intros Hnot_in_concat Hnodup_concat'.
+      -- intro.
+         apply or_introl with (B := In a l') in H.
+         apply in_app_iff in H.
+         elim Hnot_in_concat; assumption.
+      -- apply (IHl Hnodup_concat').
+  - induction l'.
+    + apply NoDup_nil.
+    + apply NoDup_cons;
+      apply NoDup_remove in Hnodup_concat;
+      elim Hnodup_concat; intros Hnodup_concat' Hnot_in_concat.
+      -- intro.
+         apply or_intror with (A := In a l) in H.
+         apply in_app_iff in H.
+         elim Hnot_in_concat; assumption.
+      -- apply (IHl' Hnodup_concat').
+Qed.
+
+(** ∀ ll : list (list), NoDup (concat ll) ⇒ ∀ l ∈ ll, NoDup l. *)
+
+Lemma nodup_concat_gen {A : Type} :
+  forall ll : list (list A),
+    NoDup (concat ll) ->
+    forall l : list A, In l ll -> NoDup l.
+Proof.
+  intros ll Hnodup_concat l Hin.
+  induction ll.
+  - inversion Hin.
+  - apply in_inv in Hin;
+      elim Hin;
+      rewrite concat_cons in Hnodup_concat;
+      apply nodup_concat in Hnodup_concat;
+      elim Hnodup_concat;
+      intros Hnodup_a Hnodup_concat'.
+    + intro Heq; rewrite Heq in Hnodup_a; assumption.
+    + intro Hin_ll; apply (IHll Hnodup_concat' Hin_ll).
+Qed.
+
 (** If one element a is not in the list l and another element b 
     is in the list l then a and b are different. *)
 
@@ -208,6 +257,32 @@ Proof.
   intro.
   rewrite H2 in H0.
   contradiction.
+Qed.
+
+(** ∀ a, a ∉ l ∧ a ∉ l' ⇒ a ∉ (l ++ l') *)
+
+Lemma not_in_app {A : Type} :
+  forall (a : A) (l l' : list A),
+    ~In a l /\ ~In a l' -> ~In a (l ++ l').
+Proof.
+  intros a l l' Hnot_in.
+  elim Hnot_in; intros Hnot_in_l Hnot_in_l'.
+  intro Hin_app.
+  apply in_app_or in Hin_app.
+  elim Hin_app.
+  - intro Hin_l; elim Hnot_in_l; assumption.
+  - intro Hin_l'; elim Hnot_in_l'; assumption.
+Qed.
+
+(** ∀ a, b, a ≠ b ⇒ a ∉ [b] *)
+
+Lemma diff_not_in {A : Type} :
+  forall a b : A, a <> b -> ~In a [b].
+Proof.
+  intros a b Hdiff.
+  intro Hin.
+  simpl in Hin.
+  elim Hin; [ intro Heq; symmetry in Heq; contradiction | auto].
 Qed.
 
 (** If the two elements are different then

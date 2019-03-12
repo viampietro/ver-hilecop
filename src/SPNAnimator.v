@@ -122,6 +122,8 @@ Section FireSpn.
       end
     | []  => Some fired
     end.
+
+  Functional Scheme spn_fire_aux_ind := Induction for spn_fire_aux Sort Prop.
   
   (*****************************************************)
   (*****************************************************)

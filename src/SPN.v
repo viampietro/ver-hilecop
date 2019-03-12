@@ -352,6 +352,8 @@ Section Neighbours.
                                   else get_neighbours tail t
     | [] => None 
     end.
+
+  Functional Scheme get_neighbours_ind := Induction for get_neighbours Sort Prop.
   
 End Neighbours.
 
