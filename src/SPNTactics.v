@@ -53,4 +53,40 @@ Ltac rename_well_defined_spn :=
     rename H into Hunm_place
   end.
 
-  
+Ltac explode_well_defined_spn :=
+  match goal with
+  | [ H: IsWellDefinedSpn _ |- _ ] =>
+    assert (H' := H); 
+    unfold IsWellDefinedSpn in H;
+    decompose [and] H;
+    intros;
+    rename_well_defined_spn;
+    clear H;
+    rename H' into Hwell_def_spn
+  end.
+
+Ltac rename_well_defined_spn_state :=
+  match goal with
+  | [ H: MarkingHaveSameStruct (initial_marking ?spn) ?s |- _ ] =>
+    rename H into Hsame_marking_spn
+  end;
+  match goal with
+  | [ H: incl (SPN.fired ?s) (transs ?spn) |- _ ] =>
+    rename H into Hincl_fired_transs
+  end;
+  match goal with
+  | [ H: NoDup (SPN.fired ?s) |- _ ] =>
+    rename H into Hnodup_fired
+  end.
+
+Ltac explode_well_defined_spn_state :=
+  match goal with
+  | [ H: IsWellDefinedSpnState _ _ |- _ ] =>
+    assert (H' := H); 
+    unfold IsWellDefinedSpnState in H;
+    decompose [and] H;
+    intros;
+    rename_well_defined_spn_state;
+    clear H;
+    rename H' into Hwell_def_state
+  end.

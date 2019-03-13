@@ -243,7 +243,8 @@ Structure SpnState := mk_SpnState { fired : list Trans; marking : list (Place * 
 
 Definition IsWellDefinedSpnState (spn : Spn) (s : SpnState) :=
   MarkingHaveSameStruct spn.(initial_marking) s.(marking) /\
-  incl s.(fired) spn.(transs).
+  incl s.(fired) spn.(transs) /\
+  NoDup s.(fired).
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR Spn TYPES =====*)
