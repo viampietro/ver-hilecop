@@ -199,42 +199,40 @@ Qed.
 
 (** ∀ l, l', NoDup (l ++ l') ⇒ NoDup l ∧ NoDup l'. *)
 
-Lemma nodup_concat {A : Type} :
+Lemma nodup_app {A : Type} :
   forall l l' : list A,
     NoDup (l ++ l') -> NoDup l /\ NoDup l'.
 Proof.
-  intros l l'; intro Hnodup_concat; split.
-  {
-    induction l.
+  intros l l'; intro Hnodup_app; split.
+  - induction l.
     + apply NoDup_nil.
     + apply NoDup_cons;
-        simpl in Hnodup_concat;
-        apply NoDup_cons_iff in Hnodup_concat;
-        elim Hnodup_concat; intros Hnot_in_concat Hnodup_concat'.
+        simpl in Hnodup_app;
+        apply NoDup_cons_iff in Hnodup_app;
+        elim Hnodup_app; intros Hnot_in_concat Hnodup_app'.
       -- intro.
          apply or_introl with (B := In a l') in H.
          apply in_app_iff in H.
          elim Hnot_in_concat; assumption.
-      -- apply (IHl Hnodup_concat').
-  }
-  {
-    induction l'.
+      -- apply (IHl Hnodup_app').
+         
+  - induction l'.
     + apply NoDup_nil.
     + apply NoDup_cons;
-        apply NoDup_remove in Hnodup_concat;
-        elim Hnodup_concat; intros Hnodup_concat' Hnot_in_concat.
+        apply NoDup_remove in Hnodup_app;
+        elim Hnodup_app; intros Hnodup_app' Hnot_in_concat.
       -- intro.
          apply or_intror with (A := In a l) in H.
          apply in_app_iff in H.
          elim Hnot_in_concat; assumption.
-      -- apply (IHl' Hnodup_concat').
-  }         
+      -- apply (IHl' Hnodup_app').
+         
 Qed.
 
 (** ∀ l, ll, NoDup (l ++ l') ⇒ 
     ∀ a ∈ l ⇒ a ∉ l'. *)
 
-Lemma nodup_concat_not_in {A : Type} :
+Lemma nodup_app_not_in {A : Type} :
   forall l l': list A,
     NoDup (l ++ l') ->
     forall a : A, In a l -> ~In a l'.
@@ -244,7 +242,7 @@ Proof.
   - simpl; auto.
   - apply not_in_cons.
     apply NoDup_remove in Hnodup.
-    elim Hnodup; intros Hnodup_concat Hnot_in.
+    elim Hnodup; intros Hnodup_app Hnot_in.
     split.
     + intro; elim Hnot_in; apply in_or_app; left.
       rewrite <- H; assumption.
@@ -264,7 +262,7 @@ Proof.
   - apply in_inv in Hin;
       elim Hin;
       rewrite concat_cons in Hnodup_concat;
-      apply nodup_concat in Hnodup_concat;
+      apply nodup_app in Hnodup_concat;
       elim Hnodup_concat;
       intros Hnodup_a Hnodup_concat'.
     + intro Heq; rewrite Heq in Hnodup_a; assumption.
@@ -434,3 +432,71 @@ Proof.
     + apply NoDup_remove in Hnodup; elim Hnodup; intros Hnodup' Hnot_in.
       apply (IHl' Hnodup').
 Qed.
+
+(** (l ++ l') ⊆ m ⇒ (l ⊆ m ∧ l' ⊆ m) *)
+
+Lemma incl_app_inv {A : Type} :
+  forall (l l' m : list A), incl (l ++ l') m -> incl l m /\ incl l' m.
+Proof.
+  intros l l' m Hincl_app. split.
+  + unfold incl. induction l.
+    -- intros a Hin_nil; inversion Hin_nil.
+    -- intros a' Hin_cons.
+       unfold incl in Hincl_app.
+       apply or_introl with (B := In a' l') in Hin_cons.
+       apply in_or_app in Hin_cons.
+       apply (Hincl_app a' Hin_cons).
+  + induction l'.
+    -- intros a Hin_nil; inversion Hin_nil.
+    -- apply incl_cons.
+       ++ unfold incl in Hincl_app.
+          assert (In a (l ++ a :: l')) by (apply in_or_app; right; apply in_eq).
+          apply (Hincl_app a H).
+       
+       ++ unfold incl. intros a' Hin.
+          apply in_cons with (a := a) in Hin.
+          apply or_intror with (A := In a' l) in Hin.
+          apply in_or_app in Hin.
+          apply (Hincl_app a' Hin).
+       
+Qed.
+
+(** NoDup (l ++ m ++ n) ∧ NoDup o ∧ o ⊆ m ⇒ NoDup (l ++ o ++ n) *)
+
+Theorem nodup_app_incl {A : Type} :
+  forall (l m n o : list A),
+    NoDup (l ++ m ++ n) ->
+    NoDup o ->
+    incl o m ->
+    NoDup (l ++ o ++ n).
+Proof.
+  intros l m n o Hnodup_lmn Hnodup_o Hincl_om.
+  induction o.
+  - simpl.
+    apply NoDup_app_comm with (l' := (m ++ n)) in Hnodup_lmn.
+    rewrite <- app_assoc in Hnodup_lmn.
+    apply NoDup_app_comm with (l' := (n ++ l)) in Hnodup_lmn.
+    apply nodup_app in Hnodup_lmn.
+    elim Hnodup_lmn; intros Hnodup_ln Hnodup_m.
+    apply NoDup_app_comm in Hnodup_ln.
+    assumption.
+  - apply NoDup_app_comm.
+    rewrite <- app_assoc.
+    rewrite <- app_comm_cons.
+    apply NoDup_cons.
+    + apply NoDup_cons_iff in Hnodup_o; elim Hnodup_o; intros Hnot_in_o Hnodup_o'.
+      apply NoDup_app_comm with (l' := (m ++ n)) in Hnodup_lmn.
+      rewrite <- app_assoc in Hnodup_lmn.
+      specialize (nodup_app_not_in m (n ++ l) Hnodup_lmn) as Hin_m_not_in_nl.
+      assert (Hin_ao : In a (a :: o)) by apply in_eq.
+      specialize (Hincl_om a Hin_ao) as Hin_am.
+      specialize (Hin_m_not_in_nl a Hin_am) as Hnot_in_nl.
+      apply (not_in_app a o (n ++ l) (conj Hnot_in_o Hnot_in_nl)).
+    + apply incl_cons_inv in Hincl_om.
+      apply NoDup_cons_iff in Hnodup_o; elim Hnodup_o; intros Hnot_in Hnodup_o'.
+      specialize (IHo Hnodup_o' Hincl_om) as Hnodup_lon.
+      apply NoDup_app_comm in Hnodup_lon.
+      rewrite app_assoc.
+      assumption.      
+Qed.
+

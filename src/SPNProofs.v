@@ -12,7 +12,7 @@ Section SpnLemmas.
   
   (** For all well-defined Spn, If a Place p ∈ neighbourhood of Trans t,
       such that (t, neigh_of_t) ∈ spn.(lneighbours), then 
-      p ∈ (flatten_lneighbours spn.(lneighbours)) *)
+      p ∈ (flatten_lneighbours spn.(lneighbours))  ∀ *)
 
   Lemma in_neigh_in_flatten :
     forall (spn : Spn) (t : Trans) (neigh_of_t : Neighbours) (p : Place),
@@ -1216,31 +1216,45 @@ Section SpnMapFireWellDefinedState.
       (final_fired : list Trans),
       IsWellDefinedSpn spn ->
       IsWellDefinedSpnState spn s ->
-      incl fired spn.(transs) ->
-      incl pg spn.(transs) -> 
-      NoDup fired ->
+      incl (fired ++ pg) spn.(transs) ->
       spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
       incl final_fired spn.(transs).
   Proof.
     intros spn s residual_marking fired pg;
       functional induction (spn_fire_aux spn s residual_marking fired pg)
                  using spn_fire_aux_ind;
-      intros final_fired Hwell_def_spn Hwell_def_state Hincl_fired
-             Hincl_pg Hnodup_fired Hfun.
+      intros final_fired Hwell_def_spn Hwell_def_state Hincl_f_pg Hfun.
     (* BASE CASE *)
-    - injection Hfun; intro Heq_fired; rewrite <- Heq_fired; assumption.
+    - injection Hfun;
+        intro Heq_fired;
+        rewrite <- Heq_fired;
+        rewrite <- app_nil_end in Hincl_f_pg; assumption.
     (* GENERAL CASE, the strategy is to apply the induction hypothesis. *)
-    (* First, builds (incl (fired ++ [t]) (transs spn)) *)
-    - assert (Hin_ttail : In t (t :: tail)) by apply in_eq.
-      assert (Hin_ttranss : In t (transs spn)) by apply (Hincl_pg t Hin_ttail). 
-      assert (Hincl_ttranss : incl [t] (transs spn))
-        by (unfold incl; simpl; intros a Hvee; elim Hvee;
-            [ intro Heq; rewrite <- Heq; assumption | intro Hfalse; inversion Hfalse ]).
-      specialize (incl_app Hincl_fired Hincl_ttranss) as Hincl_app.
-      (* Second, builds (incl tail (transs spn)) *)
-      specialize (incl_cons_inv t tail (transs spn) Hincl_pg) as Hincl_tail_pg.
-      
-  Admitted.  
+    - rewrite <- app_assoc in IHo.
+      apply (IHo final_fired Hwell_def_spn Hwell_def_state Hincl_f_pg Hfun).
+    (* CASE update_residual_marking = None. *)
+    - inversion Hfun.
+    (* CASE is_sensitized = Some false, the strategy is to apply IH. *)
+    (* First, builds incl (fired ++ tail) (transs spn) *)
+    - apply incl_app_inv in Hincl_f_pg; elim Hincl_f_pg; intros Hincl_f Hincl_pg.
+      apply incl_cons_inv in Hincl_pg.
+      specialize (incl_app Hincl_f Hincl_pg) as Hincl_f_tail.
+      (* Applies IHo *)
+      apply (IHo final_fired Hwell_def_spn Hwell_def_state Hincl_f_tail Hfun).
+    (* CASE is_sensitized returns None. *)
+    - inversion Hfun.
+    (* CASE spn_is_firable returns Some false. *)
+    (* First, builds incl (fired ++ tail) (transs spn) *)
+    - apply incl_app_inv in Hincl_f_pg; elim Hincl_f_pg; intros Hincl_f Hincl_pg.
+      apply incl_cons_inv in Hincl_pg.
+      specialize (incl_app Hincl_f Hincl_pg) as Hincl_f_tail.
+      (* Applies IHo *)
+      apply (IHo final_fired Hwell_def_spn Hwell_def_state Hincl_f_tail Hfun).
+    (* CASE spn_is_firable returns None. *)
+    - inversion Hfun.
+    (* CASE get_neighbours returns None. *)
+    - inversion Hfun.
+  Qed.  
   
   (** Under some hypotheses, all fired transitions returned by spn_fire
       are included in [spn.(transs)]. *)
@@ -1258,9 +1272,7 @@ Section SpnMapFireWellDefinedState.
   Proof.
     intros spn s pgroup fired Hwell_def_spn Hwell_def_state Hin_spn_pgs Hfun.
     unfold spn_fire in Hfun.
-    (* Builds incl [] pgroup *)
-    assert (Hincl_nil_transs : incl [] (transs spn)) by (intros t Hin_nil; inversion Hin_nil).
-    (* Builds incl pgroup (transs spn)) *)
+    (* Builds incl ([] ++ pgroup) (transs spn)) *)
     explode_well_defined_spn.
     unfold NoUnknownInPriorityGroups in *.
     assert (Hincl_pg_transs : incl pgroup (transs spn))
@@ -1268,13 +1280,11 @@ Section SpnMapFireWellDefinedState.
           specialize (in_concat t pgroup (priority_groups spn) Hin_pgroup Hin_spn_pgs)
             as Hin_concat_pgs;
           rewrite Hno_unk_pgroups; assumption).
-    (* Buids NoDup [] *)
-    specialize (NoDup_nil Trans) as Hnodup_nil.
+    rewrite <- app_nil_l with (l := pgroup) in Hincl_pg_transs.
     (* Apply spn_fire_aux_incl_fired_transs *)
     apply (spn_fire_aux_incl_fired_transs
              spn s (marking s) [] pgroup fired
-             Hwell_def_spn Hwell_def_state Hincl_nil_transs Hincl_pg_transs 
-             Hnodup_nil Hfun).
+             Hwell_def_spn Hwell_def_state Hincl_pg_transs Hfun).
   Qed.
   
   (** Under some hypotheses, all fired transitions returned by 
@@ -1315,6 +1325,88 @@ Section SpnMapFireWellDefinedState.
     - inversion Hfun.
   Qed.
 
+  (* Under some hypotheses, the list of fired transitions returned by 
+     [spn_fire_aux spn s pgroup] contains no duplicate and is included in [pgroup]. *)
+
+  Lemma spn_fire_aux_nodup_fired :
+    forall (spn : Spn)
+           (s : SpnState)
+           (residual_marking : list (Place * nat))
+           (fired : list Trans)
+           (pg : list Trans)
+           (final_fired : list Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn s ->
+      NoDup (fired ++ pg) ->
+      spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
+      NoDup final_fired /\ incl final_fired (fired ++ pg). 
+  Proof.
+    intros spn s residual_marking fired pg final_fired;
+      functional induction (spn_fire_aux spn s residual_marking fired pg)
+                 using spn_fire_aux_ind;
+      intros Hwell_def_spn Hwell_def_state Hnodup_app Hfun.
+    (* BASE CASE, pg = [] *)
+    - rewrite <- app_nil_end in Hnodup_app.
+      assert (Hincl_refl : incl final_fired final_fired) by apply incl_refl.
+      rewrite <- app_nil_end.
+      injection Hfun; intros Heq; rewrite Heq in *.
+      apply (conj Hnodup_app Hincl_refl).
+    (* GENERAL CASE *)
+    - rewrite <- app_assoc in IHo.
+      apply (IHo Hwell_def_spn Hwell_def_state Hnodup_app Hfun).
+    (* ERROR CASE, update_residual_marking returns None *)
+    - inversion Hfun.
+    (* CASE is_sensitized = Some false *)
+    - apply NoDup_remove in Hnodup_app; apply proj1 in Hnodup_app.
+      specialize (IHo Hwell_def_spn Hwell_def_state Hnodup_app Hfun) as Hw.
+      elim Hw; intros Hnodup_ff Hincl_ftail.
+      split.
+      + assumption.
+      + intros a Hin_ff. specialize (Hincl_ftail a Hin_ff) as Hin_ftail.
+        apply in_or_app.
+        apply in_app_or in Hin_ftail; elim Hin_ftail; intro Hin.
+        -- auto.
+        -- apply in_cons with (a := t) in Hin; auto.
+    (* ERROR CASE, is_sensitized = None *)
+    - inversion Hfun.
+    (* CASE spn_is_firable = Some false *)
+    - apply NoDup_remove in Hnodup_app; apply proj1 in Hnodup_app.
+      specialize (IHo Hwell_def_spn Hwell_def_state Hnodup_app Hfun) as Hw.
+      elim Hw; intros Hnodup_ff Hincl_ftail.
+      split.
+      + assumption.
+      + intros a Hin_ff. specialize (Hincl_ftail a Hin_ff) as Hin_ftail.
+        apply in_or_app.
+        apply in_app_or in Hin_ftail; elim Hin_ftail; intro Hin.
+        -- auto.
+        -- apply in_cons with (a := t) in Hin; auto.
+    (* ERROR CASE *)
+    - inversion Hfun.
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+      
+  (* Under some hypotheses, the list of fired transitions returned by 
+     [spn_fire spn s pgroup] contains no duplicate and is included in [pgroup]. *)
+  
+  Lemma spn_fire_nodup_fired :
+    forall (spn : Spn)
+           (s : SpnState)
+           (pgroup : list Trans)
+           (fired : list Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn s ->
+      NoDup pgroup ->
+      spn_fire spn s pgroup = Some fired ->
+      NoDup fired /\ incl fired pgroup.
+  Proof.
+    intros spn s pgroup fired Hwell_def_spn Hwell_def_state Hnodup_pg Hfun.
+    unfold spn_fire in Hfun.
+    rewrite <- app_nil_l in Hnodup_pg.
+    apply (spn_fire_aux_nodup_fired spn s (marking s) [] pgroup fired
+                                    Hwell_def_spn Hwell_def_state Hnodup_pg Hfun).
+  Qed.
+  
   (** Under some hypotheses, the list of fired transitions returned by 
       [spn_map_fire_aux spn s fired pgroups] contains no duplicate. *)
   
@@ -1326,13 +1418,39 @@ Section SpnMapFireWellDefinedState.
            (final_fired : list Trans),
       IsWellDefinedSpn spn ->
       IsWellDefinedSpnState spn s ->
-      incl pgroups spn.(priority_groups) ->
-      incl fired spn.(transs) ->
-      NoDup fired ->
+      NoDup (fired ++ (concat pgroups)) ->
       spn_map_fire_aux spn s fired pgroups = Some final_fired ->
       NoDup final_fired.
   Proof.
-  Admitted.
+    intros spn s fired pgroups;
+      functional induction (spn_map_fire_aux spn s fired pgroups)
+                 using spn_map_fire_aux_ind;
+      intros final_fired Hwell_def_spn Hwell_def_state Hnodup_fired_pgs Hfun.
+    (* BASE CASE, pgroups = []. *)
+    - simpl in Hnodup_fired_pgs;
+        rewrite <- app_nil_end with (l := fired_transitions) in Hnodup_fired_pgs.
+      injection Hfun; intros Heq_fired; rewrite <- Heq_fired; assumption.
+    (* GENERAL CASE *)
+    (* Builds (NoDup pgroup) to apply spn_fire_nodup_fired. *)
+    - rewrite concat_cons in Hnodup_fired_pgs.
+      specialize (nodup_app fired_transitions (pgroup ++ concat pgroups_tail) Hnodup_fired_pgs)
+        as Hnodup_fpgs_wedge.
+      elim Hnodup_fpgs_wedge; intros Hnodup_fired Hnodup_pg.
+      apply nodup_app in Hnodup_pg; apply proj1 in Hnodup_pg. 
+      specialize (spn_fire_nodup_fired spn s pgroup fired_trs Hwell_def_spn Hwell_def_state
+                                       Hnodup_pg e0) as Hnodup_f_w_incl.
+      (* Applies nodup_app_incl to get 
+         NoDup ((fired_transitions ++ fired_trs) ++ concat pgroups_tail) *)
+      elim Hnodup_f_w_incl; intros Hnodup_ftrs Hincl_fpg.
+      specialize (nodup_app_incl fired_transitions pgroup (concat pgroups_tail) fired_trs
+                                 Hnodup_fired_pgs Hnodup_ftrs Hincl_fpg)
+        as Hnodup_ff_concat.
+      rewrite app_assoc in Hnodup_ff_concat.
+      (* Applies IHo *)
+      apply (IHo final_fired Hwell_def_spn Hwell_def_state Hnodup_ff_concat Hfun).
+    (* CASE spn_fire returns None. *)
+    - inversion Hfun.
+  Qed.
 
   (** ∀ spn, s, such that IsWelldefinedspn spn ∧ IsWelldefinedspnstate spn s,
       spn_map_fire spn s = Some s' ⇒ IsWelldefinedspnstate spn s' *)
@@ -1363,10 +1481,12 @@ Section SpnMapFireWellDefinedState.
                     spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s
                     Hincl_pgs Hincl_nil e).
         (* Proves (NoDup s'.(fired)) *)
-        -- specialize (NoDup_nil (Trans)) as Hnodup_nil.
-          apply (spn_map_fire_aux_nodup_fired
+        -- explode_well_defined_spn.
+           unfold NoIntersectInPriorityGroups in *.
+           rewrite <- app_nil_l in Hno_inter. 
+           apply (spn_map_fire_aux_nodup_fired
                    spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s
-                   Hincl_pgs Hincl_nil Hnodup_nil e).
+                   Hno_inter e).
     (* CASE OF ERROR *)
     - inversion Hfun.
   Qed.
@@ -1674,7 +1794,7 @@ Section SpnNotFirableNotFired.
            spn_map_fire_aux_not_in_not_fired *)
         rewrite concat_cons in Hnodup_concat.
         rewrite Heq_pg in Hnodup_concat.
-        generalize (nodup_concat_not_in
+        generalize (nodup_app_not_in
                       pgroup' (concat pgroups_tail) Hnodup_concat
                       t Hin_pg) as Hnot_in_concat; intro.
         (* Builds In pgroup spn.(priority_groups) to apply 
@@ -1697,7 +1817,7 @@ Section SpnNotFirableNotFired.
       + intro Hin_pgs_tail.
         (* Builds NoDup (concat pgroups_tail). *)
         rewrite concat_cons in Hnodup_concat.
-        generalize (nodup_concat pgroup (concat pgroups_tail) Hnodup_concat)
+        generalize (nodup_app pgroup (concat pgroups_tail) Hnodup_concat)
           as Hnodup_concat_wedge; intro.
         elim Hnodup_concat_wedge; intros Hnodup_pg Hnodup_concat_tail.
         (* Builds (incl pgroups_tail (priority_groups spn)). *)
@@ -1709,7 +1829,7 @@ Section SpnNotFirableNotFired.
            First, we need (~In t pgroup) to apply spn_fire_aux_not_in_not_fired. *)
         specialize (NoDup_app_comm pgroup (concat pgroups_tail) Hnodup_concat)
           as Hnodup_concat_inv.
-        specialize (nodup_concat_not_in (concat pgroups_tail) pgroup Hnodup_concat_inv)
+        specialize (nodup_app_not_in (concat pgroups_tail) pgroup Hnodup_concat_inv)
           as Hfall_not_in_pg.
         specialize (in_concat t pgroup' pgroups_tail Hin_pg Hin_pgs_tail) as Hin_concat.
         specialize (Hfall_not_in_pg t Hin_concat) as Hnot_in_pg.
