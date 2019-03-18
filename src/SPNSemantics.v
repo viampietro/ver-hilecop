@@ -11,9 +11,16 @@ Require Import Hilecop.SPN.
 
 Inductive IsPredInList {A : Type} (a b : A) : list A -> Prop :=
 | IsPredInList_cons:
-    forall l l' l'' : list A,
-      NoDup (l ++ a :: l' ++ b :: l'') -> 
-      IsPredInList a b (l ++ a :: l' ++ b :: l'').
+    forall l l' : list A,
+      In b l' ->
+      NoDup (l ++ a :: l') -> 
+      IsPredInList a b (l ++ a :: l')
+| IsPredInList_cons_2:
+    forall (l : list A)
+           (c : A),
+      ~In c l ->
+      IsPredInList a b l ->
+      IsPredInList a b (c :: l).
 
 (** HasHigherPriority: ∀ t ∈ T, t' ∈ T/{t}, t ≻ t' *)
 
@@ -21,12 +28,13 @@ Definition HasHigherPriority
            (spn : Spn)
            (t t' : Trans)
            (pgroup : list Trans) :=
-  IsWellDefinedSpn spn ->
-  In pgroup spn.(priority_groups) ->
-  In t pgroup ->
-  In t' pgroup ->
-  t <> t' ->
-  IsPredInList t t' pgroup.
+  forall (pgroup' : list Trans),
+    IsWellDefinedSpn spn ->
+    In pgroup' spn.(priority_groups) ->
+    incl pgroup pgroup' ->
+    In t pgroup ->
+    In t' pgroup ->
+    IsPredInList t t' pgroup.
 
 (** Pr: Returns the list of fired transitions with a higher priority than t. *)
 
@@ -45,7 +53,6 @@ Inductive Pr (spn : Spn) (pgroup : list Trans) (t : Trans) : list Trans -> list 
     incl fired spn.(transs) ->
     In t pgroup ->
     In t' pgroup ->
-    t' <> t ->
     HasHigherPriority spn t' t pgroup ->
     Pr spn pgroup t fired pr ->
     Pr spn pgroup t (t' :: fired) (t' :: pr).
@@ -171,8 +178,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
         Pr spn pgroup t s'.(fired) pr ->
-        (forall (p : Place)
-           (n n' preSum : nat),
+        (forall (p : Place) (n preSum : nat),
             In (p, n) s'.(marking) ->
             PreSum spn p pr preSum ->
             In (p, n - preSum) residual_marking) ->
