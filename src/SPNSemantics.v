@@ -156,7 +156,6 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         SpnIsFirable spn s' t ->
         (forall (t' : Trans),
             In t' pgroup ->
-            t' <> t ->
             HasHigherPriority spn t' t pgroup ->
             ~SpnIsFirable spn s' t') ->
         In t s'.(fired)) ->

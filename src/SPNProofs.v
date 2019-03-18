@@ -31,21 +31,24 @@ Section SpnLemmas.
       + apply IHl0 in H2; right; assumption.
   Qed.
 
-  (** ∀ s, s', s.(marking) = s'.(marking) ⇒ SpnIsFirable spn s t ⇒ SpnIsfirable spn s' t *)
+  (** ∀ s, s', s.(marking) = s'.(marking) ⇒ SpnIsFirable spn s t ⇔ SpnIsfirable spn s' t *)
 
-  Lemma firable_if_same_marking :
+  Lemma state_same_marking_firable_iff :
     forall (spn : Spn) (s s' : SpnState) (t : Trans),
       IsWellDefinedSpn spn ->
       IsWellDefinedSpnState spn s ->
       IsWellDefinedSpnState spn s' -> 
       s.(marking) = s'.(marking) ->
-      SpnIsFirable spn s t ->
-      SpnIsFirable spn s' t.
+      (SpnIsFirable spn s t <-> SpnIsFirable spn s' t).
   Proof.
-    intros spn s s' t Hwell_def_spn Hwell_def_s Hwell_def_s' Heq_marking His_firable.
-    unfold SpnIsFirable in *. intros Hwell_def_spn' Hwell_def_s'0 Hin_transs.
-    rewrite <- Heq_marking.
-    apply (His_firable Hwell_def_spn Hwell_def_s Hin_transs).
+    intros spn s s' t Hwell_def_spn Hwell_def_s Hwell_def_s' Heq_marking.
+    split.
+    - intros His_firable Hwell_def_spn' Hwell_def_s'0 Hin_transs.
+      rewrite <- Heq_marking.
+      apply (His_firable Hwell_def_spn Hwell_def_s Hin_transs).
+    - intros His_firable Hwell_def_spn' Hwell_def_s'0 Hin_transs.
+      rewrite Heq_marking.
+      apply (His_firable Hwell_def_spn Hwell_def_s' Hin_transs).
   Qed.
   
 End SpnLemmas.
@@ -1866,10 +1869,12 @@ Section SpnNotFirableNotFired.
         ~SpnIsFirable spn s' t ->
         ~In t s'.(fired).
   Proof.
-    intros spn s;
-      functional induction (spn_map_fire spn s) using spn_map_fire_ind;
-      intros s' Hwell_def_spn Hwell_def_s Hfun pgroup' t
-             Hin_spn_pgs Hin_pg Hnot_firable.
+    intros spn s s' Hwell_def_spn Hwell_def_s Hfun.
+    (* Builds IsWellDefined spn s', needed to apply spn_map_fire_aux_not_firable_not_fired *)
+    specialize (spn_map_fire_well_defined_state spn s s' Hwell_def_spn Hwell_def_s Hfun)
+      as Hwell_def_s'.
+    functional induction (spn_map_fire spn s) using spn_map_fire_ind;
+      intros pgroup' t Hin_spn_pgs Hin_pg Hnot_firable.
     (* GENERAL CASE: the strategy is to apply spn_map_fire_aux_not_firable_not_fired. 
                      First, we need to build a few hypotheses. *)
     - explode_well_defined_spn.
@@ -1880,18 +1885,85 @@ Section SpnNotFirableNotFired.
         by apply incl_refl.
       (* Builds ~In t [] *)
       assert (Hnot_in_nil : ~In t []) by apply in_nil.
-      (* Builds ~SpnIsFirable spn s t *)
-      unfold SpnIsFirable in *.
+      (* Builds (~SpnIsFirable spn s t) *)
+      assert (Heq_marking : s.(marking) = s'.(marking))
+        by (injection Hfun; intro Heq; rewrite <- Heq; reflexivity). 
+      specialize (state_same_marking_firable_iff
+                    spn s s' t Hwell_def_spn Hwell_def_s Hwell_def_s' Heq_marking)
+        as Hnot_firable_iff.
+      rewrite <- Hnot_firable_iff in Hnot_firable.
+      (* Rewrites the goal. *)
+      injection Hfun; intro Heq_s'; rewrite <- Heq_s'; simpl.
       (* Applies spn_map_fire_aux_not_firable_not_fired. *)
       apply (spn_map_fire_aux_not_firable_not_fired
-               spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_state
-               Hno_inter Hincl_spn_pgs e pgroup' t Hin_spn_pgs Hin_pg Hnot_in_nil
-                                              
-                                              
-      
-  Admitted.
+               spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s
+               Hno_inter Hincl_spn_pgs e pgroup' t Hin_spn_pgs Hin_pg Hnot_in_nil Hnot_firable).
+    (* ERROR CASE, spn_map_fire_aux returns None. *)
+    - inversion Hfun.
+  Qed.
   
 End SpnNotFirableNotFired.
+
+(** *** Second part of correctness proof *)
+  
+(** The goal in this part is to prove: 
+
+    spn_map_fire = Some s' ⇒ 
+    ∀ t ∈ firable(s'), (∀ t'|t' ≻ t, t' ∉ firable(s')) ⇒ t ∉ Fired' *)
+
+Section SpnHigherPriorityNotFirable.
+
+  (** spn_map_fire_aux spn s fired pgroups = Some fired ⇒ 
+      ∀ t ∈ firable(s), (∀ t'|t' ≻ t, t' ∉ firable(s)) ⇒ t ∈ fired *)
+  
+  Theorem spn_map_fire_aux_higher_priority_not_firable :
+    forall (spn : Spn)
+      (s : SpnState)
+      (fired_transitions : list Trans)
+      (pgroups : list (list Trans))
+      (final_fired : list Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn s ->
+      spn_map_fire_aux spn s fired_transitions pgroups = Some final_fired ->
+      forall (pgroup : list Trans) (t : Trans),
+          In pgroup pgroups ->
+          In t pgroup ->
+          SpnIsFirable spn s t ->
+          (forall (t' : Trans),
+              In t' pgroup ->
+              HasHigherPriority spn t' t pgroup ->
+              ~SpnIsFirable spn s t') ->
+          In t final_fired.
+  Proof.
+    
+  Admitted.
+  
+  (** spn_map_fire spn s = Some s' ⇒ 
+      ∀ t ∈ firable(s'), (∀ t'|t' ≻ t, t' ∉ firable(s')) ⇒ t ∈ s'.(fired) *)
+
+  Theorem spn_map_fire_higher_priority_not_firable :
+    forall (spn : Spn)
+      (s s' : SpnState),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn s ->
+      spn_map_fire spn s = Some s' ->
+      (forall (pgroup : list Trans) (t : Trans),
+          In pgroup spn.(priority_groups) ->
+          In t pgroup ->
+          SpnIsFirable spn s' t ->
+          (forall (t' : Trans),
+              In t' pgroup ->
+              HasHigherPriority spn t' t pgroup ->
+              ~SpnIsFirable spn s' t') ->
+          In t s'.(fired)).
+  Proof.
+    intros spn s;
+      functional induction (spn_map_fire spn s) using spn_map_fire_ind;
+      intros s' Hwell_def_spn Hwell_def_s Hfun pgroup t Hin_pgs Hin_t_pg
+             Hfirable_t Hnot_firable_high.
+  Qed.
+  
+End SpnHigherPriorityNotFirable.
 
 (** Correctness proof between spn_cycle and SpnSemantics_falling_edge. *)
 
@@ -1911,8 +1983,10 @@ Proof.
     + assumption.
     (* Trivial proof, IsWellDefinedSpnState. *)
     + assumption.
-    (* Trivial proof, IsWellDefinedSpnState. *)
-    + assumption.
+    (* Proves IsWellDefinedSpnState spn s'. *)
+    + injection Hfun; intros Heq_fstate Heq_istate; rewrite <- Heq_istate.
+      apply (spn_map_fire_well_defined_state
+               spn s inter_state Hwell_def_spn Hwell_def_state e).           
     (* Proves s.(marking) = s'.(marking) *)
     + apply spn_map_fire_same_marking in e.
       injection Hfun; intros Heq_fstate Heq_istate; rewrite <- Heq_istate; assumption.
@@ -1921,7 +1995,7 @@ Proof.
       apply (spn_map_fire_not_firable_not_fired
                spn s inter_state Hwell_def_spn Hwell_def_state e).
     (* Proves ∀ t ∈ firable(s'), ∀ t' ∈ T|t' ≻ t, t' ∉ firable(s') ⇒ t ∈ Fired' *)
-    + 
+    + injection Hfun; intros Heq_fstate Heq_istate; rewrite <- Heq_istate.
   - inversion H3.
   - inversion H3.
 Qed.
