@@ -1,26 +1,84 @@
 Require Import Hilecop.SPN.
-
+Require Import Omega.
+        
 (*! ============================= !*)
 (*! ======= Spn Semantics ======= !*)
 (*! ============================= !*)
 
-
 (** * Preliminary definitions *)
 
-(** In all the following definitions, (IsWellDefinedSpn spn) is a necessary condition. *)
+Section DecreasedList.
 
-Inductive IsPredInList {A : Type} (a b : A) : list A -> Prop :=
-| IsPredInList_cons:
-    forall l l' : list A,
-      In b l' ->
-      NoDup (l ++ a :: l') -> 
-      IsPredInList a b (l ++ a :: l')
-| IsPredInList_cons_2:
-    forall (l : list A)
-           (c : A),
-      ~In c l ->
-      IsPredInList a b l ->
-      IsPredInList a b (c :: l).
+  (** List l is a decreased version of list l'. Useful for proof involving recursion on lists.  *)
+
+  Inductive IsDecreasedList {A : Type} (l l' : list A) : Prop :=
+  | IsDecreasedList_cons :
+      length l <= length l' ->
+      firstn (length l) (rev l') = (rev l) ->
+      IsDecreasedList l l'.
+  
+  Lemma is_decreased_list_nil {A : Type} :
+    forall (l : list A), IsDecreasedList [] l.
+  Proof.
+    intro l; apply IsDecreasedList_cons.
+    - simpl; auto; generalize (length l); apply Nat.le_0_l.
+    - simpl; auto.
+  Qed.
+
+  Lemma is_decreased_list_cons {A : Type} :
+    forall (a : A) (l l' : list A), IsDecreasedList l l' -> IsDecreasedList l (a :: l').
+  Proof.
+    intros a l l' His_dec; inversion His_dec; apply IsDecreasedList_cons.
+    - simpl; auto.
+    - simpl.
+      rewrite (firstn_app (length l)).
+      assert (Hleq_sub_0 : forall n m : nat, n <= m -> n - m = 0).
+      { intros n m; omega. }
+      rewrite rev_length.
+      specialize (Hleq_sub_0 (length l) (length l') H) as Hlength_sub_0.
+      rewrite Hlength_sub_0.
+      simpl.
+      rewrite <- app_nil_end.
+      assumption.
+  Qed.
+
+End DecreasedList.
+
+Section PredInList.
+
+  Inductive IsPredInList {A : Type} (a b : A) : list A -> Prop :=
+  | IsPredInList_app:
+      forall l l' : list A,
+        In a l ->
+        In b l' ->
+        NoDup (l ++ l') -> 
+        IsPredInList a b (l ++ l')
+  | IsPredInList_cons:
+      forall l: list A,
+        In b l ->
+        NoDup (a :: l) ->
+        IsPredInList a b (a :: l).
+
+  Lemma is_pred_in_list_not_head_cons {A : Type} :
+    forall (x y a : A) (l : list A),
+      IsPredInList x y (a :: l) -> 
+  
+  Theorem is_pred_in_dec_list {A : Type} :
+    forall (l l' : list A) (x y : A),
+      IsPredInList x y l -> IsDecreasedList l l' -> IsPredInList x y l'.
+  Proof.
+    induction l; intros l' x y His_pred His_dec.
+    - inversion His_pred.
+      apply app_eq_nil in H.
+      elim H; intros Heq_nil_l Heq_nil_cons.
+      rewrite Heq_nil_l in H0; inversion H0.
+    - inversion His_pred.
+      apply is_decreased_list_cons with (a := a0) in His_dec.
+  Qed.
+
+End PredInList.
+
+(** In all the following definitions, (IsWellDefinedSpn spn) is a necessary condition. *)
 
 (** HasHigherPriority: ∀ t ∈ T, t' ∈ T/{t}, t ≻ t' *)
 
@@ -28,34 +86,28 @@ Definition HasHigherPriority
            (spn : Spn)
            (t t' : Trans)
            (pgroup : list Trans) :=
-  forall (pgroup' : list Trans),
     IsWellDefinedSpn spn ->
-    In pgroup' spn.(priority_groups) ->
-    incl pgroup pgroup' ->
+    In pgroup spn.(priority_groups) ->
     In t pgroup ->
     In t' pgroup ->
     IsPredInList t t' pgroup.
 
-(** Pr: Returns the list of fired transitions with a higher priority than t. *)
+(** Pr: pr contains the list of fired transitions with a higher priority than t. *)
 
-Inductive Pr (spn : Spn) (pgroup : list Trans) (t : Trans) : list Trans -> list Trans -> Prop :=
-| Pr_nil :
+Definition Pr
+           (spn : Spn)
+           (s : SpnState)
+           (pgroup : list Trans)
+           (t : Trans)
+           (pr : list Trans) : Prop :=
+  forall (t' : Trans),
     IsWellDefinedSpn spn ->
+    IsWellDefinedSpnState spn s ->
     In pgroup spn.(priority_groups) ->
-    In t pgroup ->
-    Pr spn pgroup t [] []
-| Pr_cons :
-    forall (fired : list Trans)
-           (pr : list Trans)
-           (t' : Trans),
-    IsWellDefinedSpn spn ->
-    In pgroup spn.(priority_groups) ->
-    incl fired spn.(transs) ->
     In t pgroup ->
     In t' pgroup ->
-    HasHigherPriority spn t' t pgroup ->
-    Pr spn pgroup t fired pr ->
-    Pr spn pgroup t (t' :: fired) (t' :: pr).
+    In t' pr ->
+    HasHigherPriority spn t' t pgroup /\ In t' s.(fired).
 
 (** PreSum: Sums all weight of edges coming from place p to transitions of the l list. *)
 
@@ -177,8 +229,9 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        Pr spn pgroup t s'.(fired) pr ->
-        (forall (p : Place) (n preSum : nat),
+        Pr spn s' pgroup t pr ->
+        (forall (p : Place)
+                (n preSum : nat),
             In (p, n) s'.(marking) ->
             PreSum spn p pr preSum ->
             In (p, n - preSum) residual_marking) ->
@@ -195,7 +248,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        Pr spn pgroup t s'.(fired) pr ->
+        Pr spn s' pgroup t pr ->
         (forall (p : Place)
                 (n preSum : nat),
             In (p, n) s'.(marking) ->

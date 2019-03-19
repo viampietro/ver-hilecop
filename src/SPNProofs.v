@@ -1994,22 +1994,22 @@ Section SpnHigherPriorityNotFirable.
       IsWellDefinedSpnState spn s ->
       residual_marking = (marking s) ->
       In pgroup spn.(priority_groups) ->
-      incl pg pgroup ->
+      IsDecreasedList pg pgroup ->
       NoDup pg ->
       spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
       forall (t : Trans),
         In t pg ->
         SpnIsFirable spn s t ->
         (forall (t' : Trans), In t' pg ->
-                         HasHigherPriority spn t' t pg ->
-                         ~SpnIsFirable spn s t') ->
+                              HasHigherPriority spn t' t pgroup ->
+                              ~SpnIsFirable spn s t') ->
         In t final_fired. 
   Proof.
     intros spn s residual_marking fired pg;
       functional induction (spn_fire_aux spn s residual_marking fired pg)
                  using spn_fire_aux_ind;
       intros pgroup final_fired Hwell_def_spn Hwell_def_s Heq_marking
-             Hin_spn_pgs Hincl_pg Hnodup_pg Hfun t' Hin_t_pg Hfirable_t Hhas_high.
+             Hin_spn_pgs Hdec_list Hnodup_pg Hfun t' Hin_t_pg Hfirable_t Hhas_high.
     (* BASE CASE *)
     - inversion Hin_t_pg.
     (* GENERAL CASE *)
@@ -2027,7 +2027,8 @@ Section SpnHigherPriorityNotFirable.
       + intro Hin_t'_tail.
         (* Builds ~SpnIsFirable t in the context, and shows a contradiction with e1. *)
         (* Obviously, if t' is in tail, and there are no dups in (t :: tail), 
-           then t has a higher priority than t'. *)
+           then t is pred of t' in (t :: tail) ⇒ t is pred of t' in pgroup      
+                                               ⇒ t ≻ t' *)
         assert (Hhas_high_t : HasHigherPriority spn t t' (t :: tail)).
         {
           unfold HasHigherPriority.
