@@ -127,21 +127,11 @@ Definition HasHigherPriority
            (spn : Spn)
            (t t' : Trans)
            (pgroup : list Trans) :=
-    IsWellDefinedSpn spn ->
-    In pgroup spn.(priority_groups) ->
-    In t pgroup ->
-    In t' pgroup ->
+    IsWellDefinedSpn spn /\
+    In pgroup spn.(priority_groups) /\
+    In t pgroup /\
+    In t' pgroup /\
     IsPredInList t t' pgroup.
-
-(** IsPr: t' ∈ Pr(t) ⇒ t' ∈ s.(fired) ∧ t' ≻ t. *)
-
-Definition IsPr (spn : Spn) (s : SpnState) (pgroup : list Trans) (t t' : Trans) : Prop :=
-    IsWellDefinedSpn spn ->
-    IsWellDefinedSpnState spn s ->
-    In pgroup spn.(priority_groups) ->
-    In t pgroup ->
-    In t' pgroup ->
-    HasHigherPriority spn t' t pgroup /\ In t' s.(fired).
 
 (** PreSum: Sums all weight of edges coming from place p to transitions of the l list. *)
 
@@ -189,11 +179,11 @@ Definition IsSensitized
            (spn : Spn)
            (marking : list (Place * nat))
            (t : Trans) : Prop :=
-  IsWellDefinedSpn spn ->
-  MarkingHaveSameStruct spn.(initial_marking) marking ->
-  In t spn.(transs) ->
+  IsWellDefinedSpn spn /\
+  MarkingHaveSameStruct spn.(initial_marking) marking /\
+  In t spn.(transs) /\
   forall (p : Place)
-    (n : nat),
+         (n : nat),
     In (p, n) marking ->
     (pre spn t p) <= n  /\
     (test spn t p) <= n  /\
@@ -208,9 +198,9 @@ Definition SpnIsFirable
            (spn : Spn)
            (state : SpnState)
            (t : Trans) :=
-  IsWellDefinedSpn spn ->
-  IsWellDefinedSpnState spn state ->
-  In t spn.(transs) ->
+  IsWellDefinedSpn spn /\
+  IsWellDefinedSpnState spn state /\
+  In t spn.(transs) /\
   IsSensitized spn state.(marking) t.
 
 (** * Semantics definition *)
@@ -265,7 +255,8 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         (forall (p : Place)
                 (n preSum : nat)
                 (pr : list Trans),
-            (forall t' : Trans, IsPr spn s' pgroup t t' <-> In t' pr) ->
+            (forall t' : Trans,
+                HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             In (p, n) s'.(marking) ->
             PreSum spn p pr preSum ->
             In (p, n - preSum) residual_marking) ->
@@ -284,7 +275,8 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         (forall (p : Place)
                 (n preSum : nat)
                 (pr : list Trans),
-            (forall t' : Trans, IsPr spn s' pgroup t t' <-> In t' pr) ->
+            (forall t' : Trans,
+                HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             In (p, n) s'.(marking) ->
             PreSum spn p pr preSum ->
             In (p, n - preSum) residual_marking) ->
