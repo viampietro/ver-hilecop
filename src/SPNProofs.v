@@ -928,28 +928,44 @@ Section IsSensitized.
     do 4 intro;
       functional induction (is_sensitized spn marking neighbours_of_t t)
                  using is_sensitized_ind;
-      intros.
-    - injection H2; intros.
-      do 2 (apply andb_prop in H3; elim H3; clear H3; intros).
+      intros Hwell_def_spn Hsame_struct Hin_lneigh Hfun.
+    (* GENERAL CASE *)
+    - injection Hfun; intro Heq_check.
+      apply andb_prop in Heq_check; elim Heq_check; intros Heq_check' Heq_inhib.
+      apply andb_prop in Heq_check'; elim Heq_check'; intros Heq_pre Heq_test.
       (* Determines ∀ (p, n) ∈ marking, (pre spn t p) <= n *)
-      rewrite H3 in e.
-      generalize (map_check_pre_correct spn marking t neighbours_of_t
-                                        H H0 H1 e); intro.
+      rewrite Heq_pre in e.
+      specialize (map_check_pre_correct
+                    spn marking t neighbours_of_t
+                    Hwell_def_spn Hsame_struct Hin_lneigh e)
+        as Hmap_pre.
       (* Determines ∀ (p, n) ∈ marking, (test spn t p) <= n *)
-      rewrite H5 in e0.
-      generalize (map_check_test_correct spn marking t neighbours_of_t
-                                         H H0 H1 e0); intro.
+      rewrite Heq_test in e0.
+      specialize (map_check_test_correct
+                    spn marking t neighbours_of_t
+                    Hwell_def_spn Hsame_struct Hin_lneigh e0)
+        as Hmap_test.
       (* Determines ∀ (p, n) ∈ marking, n < (inhib spn t p) ∨ (inhib spn t p) = 0 *)
-      rewrite H4 in e1.
-      generalize (map_check_inhib_correct spn marking t neighbours_of_t
-                                          H H0 H1 e1); intro.
+      rewrite Heq_inhib in e1.
+      specialize (map_check_inhib_correct
+                    spn marking t neighbours_of_t
+                    Hwell_def_spn Hsame_struct Hin_lneigh e1)
+        as Hmap_inhib.
       (* Unfolds IsSensitized and applies all previous lemmas. *)
       unfold IsSensitized; intros.
-      generalize (H6 p n H12); generalize (H7 p n H12); generalize (H8 p n H12); intros.
-      apply (conj H15 (conj H14 H13)).
-    - inversion H2.
-    - inversion H2.
-    - inversion H2.
+      repeat (assumption || split).
+      + explode_well_defined_spn.
+        apply in_fst_split in Hin_lneigh.
+        unfold NoUnknownTransInLNeighbours in *.
+        rewrite <- Hunk_tr_neigh in *.
+        assumption.
+      + apply (Hmap_pre p n H).
+      + apply (Hmap_test p n H).
+      + apply (Hmap_inhib p n H).
+    (* ERROR CASES *)
+    - inversion Hfun.
+    - inversion Hfun.
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for is_sensitized and IsSensitized *)
@@ -974,28 +990,21 @@ Section IsSensitized.
       assert (Hin_lneigh' := Hin_lneigh);
       apply in_fst_split in Hin_lneigh;
       assert (Hwell_defined_spn' := Hwell_defined_spn);
-      unfold IsWellDefinedSpn in Hwell_defined_spn;
-      decompose [and] Hwell_defined_spn;
-      clear Hwell_defined_spn;
-      intros;
-      rename_well_defined_spn;
+      explode_well_defined_spn;
       unfold NoUnknownTransInLNeighbours in Hunk_tr_neigh;
       rewrite <- Hunk_tr_neigh in Hin_lneigh;
       rename Hin_lneigh into Hin_transs;
       (* Applies Hspec, then clears it. *)
-      generalize (Hspec Hwell_defined_spn'
-                        Hmarking_same_struct
-                        Hin_transs) as Hspec';
-      intro;
-      clear Hspec;
+      decompose [and] Hspec; clear Hspec;
+        clear H H1 H0; rename H3 into Hspec;
       (* Builds ∀ (p,n) ∈ marking, (pre spn t p) ≤ n, 
          then applies map_check_pre_complete.
        *)
       assert (Hmap_check_pre :
                 forall (p : Place) (n : nat), In (p, n) marking -> pre spn t p <= n) by
-          (intros p n Hin_m; generalize (Hspec' p n Hin_m) as Hend; intro; elim Hend; auto);
+          (intros p n Hin_m; generalize (Hspec p n Hin_m) as Hend; intro; elim Hend; auto);
       generalize (map_check_pre_complete spn marking t neighbours_of_t
-                                         Hwell_defined_spn'
+                                         Hwell_defined_spn
                                          Hmarking_same_struct
                                          Hin_lneigh'
                                          Hmap_check_pre) as Hmap_check_pre';
@@ -1006,10 +1015,10 @@ Section IsSensitized.
       assert (Hmap_check_test :
                 forall (p : Place) (n : nat), In (p, n) marking -> test spn t p <= n)
         by (intros p n Hin_m;
-            generalize (Hspec' p n Hin_m) as Hend;
+            generalize (Hspec p n Hin_m) as Hend;
             intro; decompose [and] Hend; auto);
       generalize (map_check_test_complete spn marking t neighbours_of_t
-                                          Hwell_defined_spn'
+                                          Hwell_defined_spn
                                           Hmarking_same_struct
                                           Hin_lneigh'
                                           Hmap_check_test) as Hmap_check_test';
@@ -1021,10 +1030,10 @@ Section IsSensitized.
                 forall (p : Place) (n : nat),
                   In (p, n) marking -> (n < (inhib spn t p) \/ (inhib spn t p) = 0))
         by (intros p n Hin_m;
-            generalize (Hspec' p n Hin_m) as Hend;
+            generalize (Hspec p n Hin_m) as Hend;
             intro; decompose [and] Hend; auto);
       generalize (map_check_inhib_complete spn marking t neighbours_of_t
-                                           Hwell_defined_spn'
+                                           Hwell_defined_spn
                                            Hmarking_same_struct
                                            Hin_lneigh'
                                            Hmap_check_inhib) as Hmap_check_inhib';
@@ -1081,11 +1090,18 @@ Section SpnIsFirable.
            Hfun.
     unfold spn_is_firable in Hfun.
     unfold SpnIsFirable; intros.
-    apply is_sensitized_correct with (neighbours_of_t := neigh_of_t).
-    - assumption.
-    - unfold IsWellDefinedSpnState in Hwell_def_state; elim Hwell_def_state; auto.
-    - assumption.
-    - assumption.
+    explode_well_defined_spn_state.
+    explode_well_defined_spn.
+    (* Builds In t (transs spn) *)
+    unfold NoUnknownTransInLNeighbours in *.
+    assert (Hin_lneigh' := Hin_lneigh).
+    apply in_fst_split in Hin_lneigh'.
+    rewrite <- Hunk_tr_neigh in *.
+    rename Hin_lneigh' into Hin_transs.
+    (* Builds IsSensitized *)
+    generalize (is_sensitized_correct spn (marking state) t neigh_of_t Hwell_def_spn
+                                      Hsame_marking_spn Hin_lneigh Hfun) as His_sens; intro.
+    apply (conj Hwell_def_spn (conj Hwell_def_state (conj Hin_transs His_sens))).
   Qed.
 
   (** Completeness proof between spn_is_firable and SpnIsfirable. *)
@@ -1111,17 +1127,7 @@ Section SpnIsFirable.
     - assumption.
     - unfold IsWellDefinedSpnState in Hwell_def_state; elim Hwell_def_state; auto.
     - assumption.
-    - apply in_fst_split in Hin_lneigh;
-        assert (Hwell_def_spn' := Hwell_def_spn);
-        unfold IsWellDefinedSpn in Hwell_def_spn;
-        decompose [and] Hwell_def_spn;
-        clear Hwell_def_spn;
-        intros;
-        rename_well_defined_spn;
-        unfold NoUnknownTransInLNeighbours in Hunk_tr_neigh;
-        rewrite <- Hunk_tr_neigh in Hin_lneigh;
-        rename Hin_lneigh into Hin_transs.
-      apply (Hspec Hwell_def_spn' Hwell_def_state Hin_transs).
+    - decompose [and] Hspec; auto.
   Qed.
 
   (** Correctness and completeness conjunction for spn_is_firable. *)
@@ -1627,8 +1633,7 @@ Section SpnNotFirableNotFired.
       (* Case t' = t. We have to show ~SpnIsFirable -> spn_is_firable = Some false,
          then show a contradiction. *)
       + intro Heq_t.
-        unfold SpnIsFirable in Hnot_firable; elimtype False; apply Hnot_firable.
-        intros Hwell_def_spn' Hwell_def_state' Hin_transs.
+        elimtype False; apply Hnot_firable.
         (* Builds In (t, neighbours_of_t) spn.(lneighbours), 
            necessary to apply spn_is_firable_correct. *)
         generalize (get_neighbours_correct spn.(lneighbours) t neighbours_of_t e0)
@@ -1637,9 +1642,7 @@ Section SpnNotFirableNotFired.
         generalize (spn_is_firable_correct
                       spn state neighbours_of_t t Hwell_def_spn Hwell_def_state
                       Hin_lneigh e1) as Hfirable; intro.
-        (* Unfolds SpnIsFirable and shows the assumption. *)
-        unfold SpnIsFirable in Hfirable; rewrite Heq_t in *.
-        apply (Hfirable Hwell_def_spn Hwell_def_state Hin_transs).
+        rewrite <- Heq_t; assumption.
       (* Induction case. *)
       + intro Hin_tail.
         apply IHo with (pgroup := pgroup).
@@ -1676,19 +1679,16 @@ Section SpnNotFirableNotFired.
         intros Hnot_in_tail Hnodup_tail.
         apply in_inv in Hin_pg; elim Hin_pg.
         -- intro Heq_t.
-           unfold SpnIsFirable in Hnot_firable; elimtype False; apply Hnot_firable.
-           intros Hwell_def_spn' Hwell_def_state' Hin_transs.
+           elimtype False; apply Hnot_firable.
            (* Builds In (t, neighbours_of_t) spn.(lneighbours), 
-                necessary to apply spn_is_firable_correct. *)
+              necessary to apply spn_is_firable_correct. *)
            generalize (get_neighbours_correct spn.(lneighbours) t neighbours_of_t e0)
              as Hin_lneigh; intro.
            (* Generalizes spn_is_firable_correct. *)
            generalize (spn_is_firable_correct
                          spn state neighbours_of_t t Hwell_def_spn Hwell_def_state
                          Hin_lneigh e1) as Hfirable; intro.
-           (* Unfols SpnIsFirable and shows the assumption. *)
-           unfold SpnIsFirable in Hfirable; rewrite Heq_t in *.
-           apply (Hfirable Hwell_def_spn Hwell_def_state Hin_transs).            
+           rewrite <- Heq_t; assumption.
         -- auto.
       + assumption.
       + assumption.
@@ -2044,8 +2044,9 @@ Section SpnHigherPriorityNotFirable.
         specialize (is_pred_in_dec_list His_pred Hdec_list Hnodup_pg') as His_pred_in_pg.
         assert (Hhas_high_t : HasHigherPriority spn t t' pgroup).
         {
-          apply HasHigherPriority_cons; (assumption || auto);
+          unfold HasHigherPriority.
           apply is_decreased_list_incl in Hdec_list.
+          repeat (assumption || split).
           - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
             apply (Hdec_list t Hin_eq).
           - apply (Hdec_list t' Hin_t_pg).
@@ -2065,17 +2066,14 @@ Section SpnHigherPriorityNotFirable.
       + intro Heq_tt'.
         rewrite <- Heq_tt' in Hfirable_t.
         (* Builds is_sensitized = Some true in Hfirable_t. *)
-        unfold SpnIsFirable in Hfirable_t.
-        specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0) as Hin_lneigh.
-        explode_well_defined_spn.
-        unfold NoUnknownTransInLNeighbours in Hunk_tr_neigh.
-        specialize (in_fst_split t neighbours_of_t (lneighbours spn) Hin_lneigh) as Hin_fs_lneigh;
-          rewrite <- Hunk_tr_neigh in Hin_fs_lneigh.
-        specialize (Hfirable_t Hwell_def_spn Hwell_def_s Hin_fs_lneigh).
+        unfold SpnIsFirable in Hfirable_t; decompose [and] Hfirable_t.
+        clear H H1 H0; rename H3 into His_sens.
         explode_well_defined_spn_state.
+        specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0)
+                   as Hin_lneigh.
         specialize (is_sensitized_complete
                       spn (marking s) t neighbours_of_t Hwell_def_spn Hsame_marking_spn
-                      Hin_lneigh Hfirable_t) as His_sens_true.
+                      Hin_lneigh His_sens) as His_sens_true.
         rewrite Heq_marking in e3.
         rewrite e3 in His_sens_true.
         inversion His_sens_true.
@@ -2092,8 +2090,9 @@ Section SpnHigherPriorityNotFirable.
         specialize (is_pred_in_dec_list His_pred Hdec_list Hnodup_pg') as His_pred_in_pg.
         assert (Hhas_high_t : HasHigherPriority spn t t' pgroup).
         {
-          apply HasHigherPriority_cons; (assumption || auto);
-            apply is_decreased_list_incl in Hdec_list.
+          unfold HasHigherPriority;
+          repeat (assumption || split);
+          apply is_decreased_list_incl in Hdec_list.
           - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
             apply (Hdec_list t Hin_eq).
           - apply (Hdec_list t' Hin_t_pg).
@@ -2330,7 +2329,7 @@ Section SpnSensitizedByResidual.
       IsWellDefinedSpnState spn s ->
       incl pgroups (priority_groups spn) ->
       In pgroup (priority_groups spn) ->
-      NoDup (fired ++ pgroup ++ concat pgroups) ->
+      NoDup (fired' ++ pgroup ++ concat pgroups) ->
       spn_fire_aux spn s residual_marking [] pgroup = Some fired ->
       spn_map_fire_aux spn s (fired' ++ fired) pgroups = Some final_fired ->
       In t pgroup ->
@@ -2351,11 +2350,31 @@ Section SpnSensitizedByResidual.
         specialize (conj Hhas_high Hin_t'_fired) as Hpr_wedge'.
         rewrite Hin_pr in Hpr_wedge'.
         assumption.
-      (* Second subcase, t' ∉ fired, then t' ∉ final_fired, contradicts Hpr_wedge. *)
-      + elim Hpr_wedge; intros Hhash_high Hin_ff.
-        inversion Hhash_high.
-        
-  Admitted.
+      (* Second subcase, 
+            t' ∈ pgroup ⇒ 
+            t' ∉ fired' ∧ t' ∉ concat pgroups ∧ t' ∉ fired ⇒
+            t' ∉ final_fired, contradicts Hpr_wedge. *)
+      (* Builds In t' pgroup *)
+      + elim Hpr_wedge; intros Hhas_high Hin_ff.
+        unfold HasHigherPriority in Hhas_high; decompose [and] Hhas_high.
+        clear H H1 H2 H4; rename H0 into Hin_t'_pg.
+        (* Builds ~In t' fired /\ ~In t' concat pgroups *)
+        apply NoDup_app_comm in Hnodup_app.
+        rewrite <- app_assoc in Hnodup_app.
+        specialize (nodup_app_not_in pgroup ((concat pgroups) ++ fired') Hnodup_app t' Hin_t'_pg)
+          as Hnot_in_t'_app.
+        apply not_app_in  in Hnot_in_t'_app.
+        elim Hnot_in_t'_app; intros Hnot_in_concat Hnot_t'_in_fired.
+        (* Builds ~In t' (fired' ++ fired) *)
+        specialize (not_in_app t' fired' fired (conj Hnot_t'_in_fired Hnot_in_t'_fired))
+          as Hnot_in_app.
+        specialize (spn_map_fire_aux_not_in_not_fired
+                      spn s (fired' ++ fired) pgroups final_fired Hfun_map_fire
+                      t' Hnot_in_app Hnot_in_concat) as Hnot_in_ff.
+        contradiction.
+    (*  *)
+    -        
+Admitted.
         
   Theorem spn_map_fire_aux_sens_by_residual :
     forall (spn : Spn)
