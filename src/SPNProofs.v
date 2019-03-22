@@ -2267,6 +2267,59 @@ End SpnHigherPriorityNotFirable.
 
 Section SpnSensitizedByResidual.
 
+  Theorem spn_fire_aux_final_fired_vee :
+    forall (spn : Spn)
+           (s : SpnState)
+           (residual_marking : list (Place * nat))
+           (fired : list Trans)
+           (pg : list Trans)
+           (final_fired : list Trans)
+           (t : Trans),
+      NoDup (fired ++ pg) ->
+      In t final_fired ->
+      spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
+      In t fired \/ In t pg.
+  Proof.
+    intros spn s residual_marking fired pg;
+      functional induction (spn_fire_aux spn s residual_marking fired pg)
+                 using spn_fire_aux_ind;
+      intros final_fired t' Hnodup_app Hin_t_ff Hfun.
+    (* BASE CASE, pg = []. *)
+    - injection Hfun as Heq_fired; left; rewrite Heq_fired; assumption.
+    (* GENERAL CASE *)
+    - rewrite <- app_assoc in IHo.
+      specialize (IHo final_fired t' Hnodup_app Hin_t_ff Hfun) as H_ff_vee'.
+      elim H_ff_vee'.
+      + intro Hin_t_fired_app.
+        apply in_app_or in Hin_t_fired_app.
+        elim Hin_t_fired_app.
+        -- auto.
+        -- intro Hin_tt; simpl in Hin_tt.
+           elim Hin_tt; [ intro Heq_tt; rewrite <- Heq_tt; right; apply in_eq |
+                          intro Hfalse; inversion Hfalse].
+      + intro Hin_t_tail; apply in_cons with (a := t) in Hin_t_tail; right; assumption.
+    (* ERROR CASE *)
+    - inversion Hfun.
+    (* CASE is_sensitized = Some false *)
+    - apply NoDup_remove in Hnodup_app; apply proj1 in Hnodup_app.
+      specialize (IHo final_fired t' Hnodup_app Hin_t_ff Hfun) as Hin_vee.
+      elim Hin_vee.
+      + intro Hin_t_fired; left; assumption.
+      + intro Hin_t_tail; right; apply in_cons with (a := t) in Hin_t_tail; assumption.
+    (* ERROR CASE *)
+    - inversion Hfun.
+    (* CASE spn_is_firable = Some false *)
+    - apply NoDup_remove in Hnodup_app; apply proj1 in Hnodup_app.
+      specialize (IHo final_fired t' Hnodup_app Hin_t_ff Hfun) as Hin_vee.
+      elim Hin_vee.
+      + intro Hin_t_fired; left; assumption.
+      + intro Hin_t_tail; right; apply in_cons with (a := t) in Hin_t_tail; assumption.
+    (* ERROR CASE *)
+    - inversion Hfun.
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+  
   Theorem spn_fire_aux_sens_by_residual :
     forall (spn : Spn)
            (s : SpnState)
@@ -2274,33 +2327,50 @@ Section SpnSensitizedByResidual.
            (fired : list Trans)
            (pg pgroup : list Trans)
            (final_fired : list Trans),
+      (* Misc. hypotheses. *)
       IsWellDefinedSpn spn ->
       IsWellDefinedSpnState spn s ->
+      (* Hypotheses on pgroup. *)
+      incl fired pgroup ->
+      (forall t t' : Trans, In t fired -> In t' pg -> IsPredInList t t' pgroup) ->
       In pgroup spn.(priority_groups) ->
+      (* Hypotheses on pg. *)
       IsDecreasedList pg pgroup ->
-      NoDup pg ->
+      NoDup (fired ++ pg) ->
+      (* Hypotheses on residual_marking. *)
+      (forall (p : Place) (n : nat) (preSum : nat),
+          In (p, n) s.(marking) ->
+          PreSum spn p fired preSum ->
+          In (p, n - preSum) residual_marking) ->
+      MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
+      (* Function ⇒ Specification *)
       spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
       forall (t : Trans)
              (res_marking : list (Place * nat)),
+        (* Hypotheses on t. *)
         In t pg ->
-        MarkingHaveSameStruct spn.(initial_marking) res_marking ->
         SpnIsFirable spn s t ->
         IsSensitized spn res_marking t ->
-        (forall (p : Place)
-                (n preSum : nat)
-                (pr : list Trans),
+        (* Hypotheses on fired *)
+        (forall t'' : Trans, In t'' fired -> HasHigherPriority spn t'' t pgroup /\ In t'' final_fired) ->
+        (* Hypotheses on res_marking. *)
+        MarkingHaveSameStruct spn.(initial_marking) res_marking ->
+        (forall (pr : list Trans),
             (forall t' : Trans,
-                HasHigherPriority spn t' t pgroup /\ In t' final_fired <-> In t' pr) ->
-            In (p, n) s.(marking) ->
-            PreSum spn p pr preSum ->
-            In (p, n - preSum) res_marking) ->
+                HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
+                In t' pr) ->
+            (forall (p : Place) (n : nat) (preSum : nat),
+                In (p, n) s.(marking) ->
+                PreSum spn p pr preSum ->
+                In (p, n - preSum) res_marking)) ->
         In t final_fired.
   Proof.
     intros spn s residual_marking fired pg;
       functional induction (spn_fire_aux spn s residual_marking fired pg)
                  using spn_fire_aux_ind;
-      intros pgroup final_fired Hwell_def_spn Hwell_def_s Hin_spn_pgs Hdec_list Hnodup_pg
-             Hfun t' res_marking Hin_t_pg Hsame_struct Hfirable_t Hsens_t Hres_m.
+      intros pgroup final_fired Hwell_def_spn Hwell_def_s Hincl_fired_pg His_pred_in_pg
+             Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct Hfun
+             t' res_marking Hin_t_pg Hfirable_t Hsens_t Hhigh_in_fired Hsame_struct' Hres_m.
     (* BASE CASE, pg = []. *)
     - inversion Hin_t_pg.
     (* GENERAL CASE, with two subcases. *)
@@ -2310,8 +2380,36 @@ Section SpnSensitizedByResidual.
         rewrite <- Heq_tt'.
         apply (spn_fire_aux_in_fired spn s residual_marking' (fired ++ [t]) tail final_fired t
                                      Hin_t_fired Hfun).
-      (* Second subcase, *)
-      +
+      (* Second subcase, In t' tail then apply the induction hypothesis. *)
+      + admit.        
+    (* ERROR CASE, update_residual_marking = None. *)
+    - inversion Hfun.
+    (* CASE, is_sensitized = Some false. *)
+    - inversion_clear Hin_t_pg as [ Heq_tt' | Hin_t'_tail ].
+      (* First subcase, t = t'. *)
+      (* What we want to show is a contradiction between is_sensitized = Some false 
+         and IsSensitized spn t' res_marking. *)
+      (* Then, we need to show residual_marking = res_marking. *)
+      + assert (forall t'' : Trans, 
+                   HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired -> In t'' fired). 
+        {
+          intros t'' Hw; elim Hw; intros Hhas_high Hin_ts_ff; clear Hw.
+          specialize (NoDup_remove fired tail t Hnodup_pg) as Hnodup_app; apply proj1 in Hnodup_app.
+          specialize (spn_fire_aux_final_fired_vee spn s residual_marking fired tail final_fired t''
+                                                   Hnodup_app Hin_ts_ff Hfun) as Hin_ts_vee.
+          elim Hin_ts_vee.
+          - auto.
+          - intro Hin_ts_tail.
+            
+        }
+      (* Second subcase, In t' tail then apply the induction hypothesis. *)
+      + apply is_decreased_list_cons in Hdec_list. 
+        apply NoDup_cons_iff in Hnodup_pg.
+        apply proj2 in Hnodup_pg.
+        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s
+                   Hin_spn_pgs Hdec_list Hnodup_pg Hfun t' res_marking
+                   Hin_t'_tail Hsame_struct Hfirable_t Hsens_t Hres_m).
+        
   Admitted.
 
   Lemma pr_is_unique :
@@ -2325,20 +2423,14 @@ Section SpnSensitizedByResidual.
            (final_fired : list Trans)
            (t : Trans)
            (pr : list Trans),
-      IsWellDefinedSpn spn ->
-      IsWellDefinedSpnState spn s ->
-      incl pgroups (priority_groups spn) ->
-      In pgroup (priority_groups spn) ->
       NoDup (fired' ++ pgroup ++ concat pgroups) ->
       spn_fire_aux spn s residual_marking [] pgroup = Some fired ->
       spn_map_fire_aux spn s (fired' ++ fired) pgroups = Some final_fired ->
-      In t pgroup ->
       (forall t' : Trans, HasHigherPriority spn t' t pgroup /\ In t' fired <-> In t' pr) ->
       (forall t' : Trans, HasHigherPriority spn t' t pgroup /\ In t' final_fired <-> In t' pr).
   Proof.
-    intros spn s residual_marking pgroup fired fired' pgroups final_fired t pr Hwell_def_spn
-           Hwell_def_s Hincl_spn_pgs Hin_spn_pgs Hnodup_app
-           Hfun_fire Hfun_map_fire Hin_t_pg Hin_pr t'.
+    intros spn s residual_marking pgroup fired fired' pgroups final_fired t pr
+           Hnodup_app Hfun_fire Hfun_map_fire Hin_pr t'.
     split.
     (* CASE, in context t' ≻ t ∧ t' ∈ final_fired *)
     - intro Hpr_wedge.
@@ -2372,9 +2464,22 @@ Section SpnSensitizedByResidual.
                       spn s (fired' ++ fired) pgroups final_fired Hfun_map_fire
                       t' Hnot_in_app Hnot_in_concat) as Hnot_in_ff.
         contradiction.
-    (*  *)
-    -        
-Admitted.
+    (* CASE, in context t' ∈ pr *)
+    - intro Hin_t'_pr.
+      split.
+      + rewrite <- Hin_pr in Hin_t'_pr.
+        elim Hin_t'_pr; auto.
+      (* t' ∈ fired ⇒ t' ∈ final_fired. *)
+      + rewrite <- Hin_pr in Hin_t'_pr.
+        elim Hin_t'_pr; intros Hhash_high Hin_t'_fired.
+        (* Builds In t' (fired' ++ fired) to apply spn_map_fire_aux_in_fired. *)
+        specialize (or_intror (In t' fired') Hin_t'_fired) as Hin_t'_vee.
+        specialize (in_or_app fired' fired t' Hin_t'_vee) as Hin_t'_app.
+        (* Applies spn_map_fire_aux_in_fired. *)
+        apply (spn_map_fire_aux_in_fired
+                 spn s (fired' ++ fired) pgroups final_fired
+                 Hfun_map_fire t' Hin_t'_app).
+  Qed.
         
   Theorem spn_map_fire_aux_sens_by_residual :
     forall (spn : Spn)
@@ -2409,8 +2514,9 @@ Admitted.
     intros spn s fired pgroups;
       functional induction (spn_map_fire_aux spn s fired pgroups)
                  using spn_map_fire_aux_ind;
-      intros final_fired Hwell_def_spn Hwell_def_s Hincl_pgs Hnodup_concat_pgs Hfun pgroup' t residual_marking
-             Hin_pgs Hin_t_pg Hnot_in_fired Hmark_struct Hfirable_t Hres_mark Hsens_t.
+      intros final_fired Hwell_def_spn Hwell_def_s Hincl_pgs Hnodup_concat_pgs
+             Hfun pgroup' t residual_marking Hin_pgs Hin_t_pg Hnot_in_fired
+             Hmark_struct Hfirable_t Hres_mark Hsens_t.
     (* BASE CASE *)
     - inversion Hin_pgs.
     (* GENERAL CASE, two subcases. *)
@@ -2429,20 +2535,19 @@ Admitted.
            Necessary to apply spn_fire_aux_sens_by_residual. *)
         assert (Hres_mark' :
                   forall (p : Place) (n preSum : nat) (pr : list Trans),
-                    (forall t' : Trans, HasHigherPriority spn t' t pgroup' /\ In t' fired_trs <-> In t' pr) ->
-                    In (p, n) (marking s) -> PreSum spn p pr preSum -> In (p, n - preSum) residual_marking).
+                    (forall t' : Trans,
+                        HasHigherPriority spn t' t pgroup' /\ In t' fired_trs <-> In t' pr) ->
+                    In (p, n) (marking s) ->
+                    PreSum spn p pr preSum ->
+                    In (p, n - preSum) residual_marking).
         {
           intros p n preSum pr Hin_pr Hin_m_s Hpre_sum.
           (* Builds hypotheses necessary to apply pr_is_unique. *)
-          apply incl_cons_inv in Hincl_pgs.
           rewrite concat_cons in Hnodup_concat_pgs.
-          specialize (nodup_app_not_in pgroup' (concat pgroups_tail) Hnodup_concat_pgs t Hin_t_pg) as Hnot_in_concat.
           (* Applies pr_is_unique. *)
           specialize (pr_is_unique
-                        spn s (marking s) pgroup' fired_trs fired_transitions pgroups_tail final_fired t pr
-                        Hwell_def_spn Hwell_def_s Hincl_pgs Hin_spn_pgs e0 Hfun Hin_t_pg Hnot_in_fired
-                        Hnot_in_concat Hin_pr)
-            as Hin_pr'.
+                        spn s (marking s) pgroup' fired_trs fired_transitions
+                        pgroups_tail final_fired t pr Hnodup_concat_pgs e0 Hfun Hin_pr) as Hin_pr'.
           apply (Hres_mark p n preSum pr Hin_pr' Hin_m_s Hpre_sum).
         }
         (* Builds In t fired_trs. *)
@@ -2452,7 +2557,8 @@ Admitted.
                       Hnodup_pg e0 t residual_marking Hin_t_pg Hmark_struct Hfirable_t Hsens_t
                       Hres_mark') as Hin_t_fired.
         (* Then if t ∈ fired_trs ⇒ t ∈ (fired_transitions ++ fired_trs) ⇒ t ∈ final_fired *)
-        assert (Hin_fired_app : In t (fired_transitions ++ fired_trs)) by (apply in_or_app; right; assumption).
+        assert (Hin_fired_app : In t (fired_transitions ++ fired_trs))
+          by (apply in_or_app; right; assumption).
         apply (spn_map_fire_aux_in_fired
                  spn s (fired_transitions ++ fired_trs) pgroups_tail
                  final_fired Hfun t Hin_fired_app).
@@ -2460,9 +2566,15 @@ Admitted.
       (* Builds incl pgroups_tail (priority_groups spn) *)
       + apply incl_cons_inv in Hincl_pgs. 
         (* Builds ~In t fired_trs to build ~In t (fired_transitions ++ fired_trs). *)
+        (* But first, builds ~In t pgroup, because ~In t pgroup ⇒ ~In t fired_trs *)
+        assert (Hnodup_concat_pgs_copy := Hnodup_concat_pgs).
         rewrite concat_cons in Hnodup_concat_pgs.
         apply NoDup_app_comm in Hnodup_concat_pgs.
-        specialize (nodup_app_not_in (concat pgroups_tail) pgroup Hnodup_concat_pgs) as Hnot_in_pgroup.
+        apply nodup_app in Hnodup_concat_pgs.
+        elim Hnodup_concat_pgs; intros Hnodup_app Hnodup_fired.
+        apply NoDup_app_comm in Hnodup_app.
+        specialize (nodup_app_not_in (concat pgroups_tail) pgroup Hnodup_app)
+          as Hnot_in_pgroup.
         specialize (in_concat t pgroup' pgroups_tail Hin_t_pg Hin_pgtail) as Hin_t_concat.
         specialize (Hnot_in_pgroup t Hin_t_concat) as Hnot_in_pgroup.
         unfold spn_fire in e0.
@@ -2470,12 +2582,26 @@ Admitted.
         specialize (spn_fire_aux_not_in_not_fired
                       spn s (marking s) [] pgroup fired_trs t
                       Hnot_in_nil Hnot_in_pgroup e0) as Hnot_in_fired'.
-        specialize (not_in_app t fired_transitions fired_trs (conj Hnot_in_fired Hnot_in_fired')) as Hnot_in_app.
-        (* Builds NoDup (concat pgroups_tail). *)
-        apply nodup_app in Hnodup_concat_pgs.
-        elim Hnodup_concat_pgs; intros Hnodup_concat Hnodup_pg.
-        (*  *)
-        apply (IHo final_fired Hwell_def_spn Hwell_def_s Hincl_pgs Hnodup_concat Hfun pgroup' t residual_marking
+        specialize (not_in_app t fired_transitions fired_trs (conj Hnot_in_fired Hnot_in_fired'))
+          as Hnot_in_app.
+        (* Builds NoDup ((fired_transitions ++ fired_trs) ++ concat pgroups_tail). *)
+        rewrite concat_cons in Hnodup_concat_pgs_copy.
+        
+        (* First, we need NoDup fired_trs /\ incl fired_trs ([] ++ pgroup) *)
+        apply nodup_app in Hnodup_app; elim Hnodup_app; intros Hnodup_concat_pgs' Hnodup_pg.
+        rewrite <- app_nil_l in Hnodup_pg.
+        specialize (spn_fire_aux_nodup_fired spn s (marking s) [] pgroup fired_trs
+                                             Hwell_def_spn Hwell_def_s Hnodup_pg e0)
+          as Hnodup_incl.
+        elim Hnodup_incl; intros Hnodup_fired_trs Hincl_fired.
+        rewrite app_nil_l in Hincl_fired.
+        specialize (nodup_app_incl
+                      fired_transitions pgroup (concat pgroups_tail) fired_trs
+                      Hnodup_concat_pgs_copy Hnodup_fired_trs Hincl_fired) as Hnodup_app'.
+        rewrite app_assoc in Hnodup_app'.
+        (* Finally applies the induction hypothesis. *)
+        apply (IHo final_fired Hwell_def_spn Hwell_def_s
+                   Hincl_pgs Hnodup_app' Hfun pgroup' t residual_marking
                    Hin_pgtail Hin_t_pg Hnot_in_app Hmark_struct Hfirable_t Hres_mark Hsens_t).
     (* ERROR CASE. *)
     - inversion Hfun.
@@ -2519,9 +2645,16 @@ Admitted.
         as Heq_firable.
       rewrite <- Heq_s'; simpl.
       rewrite <- Heq_firable in Hfirable_t.
-      apply (spn_map_fire_aux_sens_by_residual
-               spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s e
-               pgroup t residual_marking Hin_spn_pgs Hin_t_pg Hmark_struct Hfirable_t). 
+      (* Need of few hypotheses. *)
+      explode_well_defined_spn.
+      unfold NoIntersectInPriorityGroups in *.
+      assert (Hnot_in_nil : ~In t []) by apply in_nil.
+      revert H10 H12.
+      (* Applies spn_map_fire_aux_sens_by_residual *)
+      apply (spn_map_fire_aux_sens_by_residual 
+               spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s
+               (incl_refl (priority_groups spn)) Hno_inter e pgroup t
+               residual_marking Hin_spn_pgs Hin_t_pg Hnot_in_nil Hmark_struct Hfirable_t). 
     - inversion Hfun.    
   Qed.
   

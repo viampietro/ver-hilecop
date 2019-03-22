@@ -79,7 +79,9 @@ Section PredInList.
   | IsPredInList_rm_snd :
       forall (a : A) (l : list A), IsPredInList x y (x :: l) -> IsPredInList x y (x :: a :: l)
   | IsPredInList_rm_fst : 
-      forall (a : A) (l : list A), IsPredInList x y l -> IsPredInList x y (a :: l).
+      forall (a : A) (l : list A), IsPredInList x y l ->
+                                   NoDup (a :: l) ->
+                                   IsPredInList x y (a :: l).
 
   Lemma not_is_pred_in_list_nil :
     forall (x y : A), ~IsPredInList x y [].
@@ -110,13 +112,32 @@ Section PredInList.
     - intros x y His_pred His_dec Hnodup.
       inversion His_dec.
       + rewrite <- H0; assumption.
-      + rewrite <- H2; apply IsPredInList_rm_fst; assumption. 
-      + apply NoDup_cons_iff in Hnodup.
-        elim Hnodup; intros Hnot_in Hnodup_l'.
-        apply IsPredInList_rm_fst.
-        apply (IHl' x y His_pred H1 Hnodup_l').
+      + rewrite <- H2; apply IsPredInList_rm_fst; [assumption| rewrite H2; assumption]. 
+      + apply IsPredInList_rm_fst.
+        -- apply NoDup_cons_iff in Hnodup; apply proj2 in Hnodup.
+           apply (IHl' x y His_pred H1 Hnodup).
+        -- assumption.
   Qed.
 
+  Theorem not_is_pred_in_list :
+    forall (x : A) (l : list A), NoDup l -> ~IsPredInList x x l.
+  Proof.
+    intros x l Hnodup His_pred.
+    inversion His_pred.
+    - rewrite <- H in Hnodup. inversion Hnodup. elim H2. apply in_eq.
+    - 
+  Admitted.
+  
+  Theorem not_is_pred_in_list_if_hd :
+    forall (x y : A) (l : list A), NoDup (y :: l) -> ~IsPredInList x y (y :: l).
+  Proof.
+    intros x y l Hnodup His_pred.
+    inversion His_pred.
+    - rewrite <- H1 in Hnodup.
+      inversion Hnodup.
+      elim H3; apply in_eq.
+  Admitted.
+  
 End PredInList.
 
 (** In all the following definitions, (IsWellDefinedSpn spn) is a necessary condition. *)
