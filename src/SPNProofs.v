@@ -2032,8 +2032,8 @@ Section SpnHigherPriorityNotFirable.
       + intro Hin_t'_tail.
         (* Builds ~SpnIsFirable t in the context, and shows a contradiction with e1. *)
         (* Obviously, if t' ∈ tail ∧ NoDup (t :: tail), 
-           then IsPredInList t t' (t :: tail) ⇒ IsPredInList t t' pgroup      
-                                              ⇒ t ≻ t' *)
+           then IsPredInNoDupList t t' (t :: tail) ⇒ IsPredInNoDupList t t' pgroup      
+                                                   ⇒ t ≻ t' *)
         specialize (is_pred_in_list_in_tail t t' tail Hin_t'_tail) as His_pred.
         (* Builds NoDup pgroup. *)
         explode_well_defined_spn.
@@ -2050,6 +2050,10 @@ Section SpnHigherPriorityNotFirable.
           - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
             apply (Hdec_list t Hin_eq).
           - apply (Hdec_list t' Hin_t_pg).
+          - intro.
+            rewrite <- H in Hin_t'_tail.
+            apply NoDup_cons_iff in Hnodup_pg.
+            apply proj1 in Hnodup_pg; contradiction.
         }
         specialize (Hhas_high t (in_eq t tail) Hhas_high_t) as Hnot_firable_t.
         apply (get_neighbours_correct (lneighbours spn) t neighbours_of_t) in e0.
@@ -2096,6 +2100,10 @@ Section SpnHigherPriorityNotFirable.
           - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
             apply (Hdec_list t Hin_eq).
           - apply (Hdec_list t' Hin_t_pg).
+          - intro.
+            rewrite <- H in Hin_t'_tail.
+            apply NoDup_cons_iff in Hnodup_pg.
+            apply proj1 in Hnodup_pg; contradiction.
         }
         specialize (Hhas_high t (in_eq t tail) Hhas_high_t) as Hnot_firable_t.
         apply (get_neighbours_correct (lneighbours spn) t neighbours_of_t) in e0.
@@ -2352,7 +2360,8 @@ Section SpnSensitizedByResidual.
         SpnIsFirable spn s t ->
         IsSensitized spn res_marking t ->
         (* Hypotheses on fired *)
-        (forall t'' : Trans, In t'' fired -> HasHigherPriority spn t'' t pgroup /\ In t'' final_fired) ->
+        (forall t'' : Trans, In t'' fired -> HasHigherPriority spn t'' t pgroup /\
+                                             In t'' final_fired) ->
         (* Hypotheses on res_marking. *)
         MarkingHaveSameStruct spn.(initial_marking) res_marking ->
         (forall (pr : list Trans),
@@ -2390,18 +2399,35 @@ Section SpnSensitizedByResidual.
       (* What we want to show is a contradiction between is_sensitized = Some false 
          and IsSensitized spn t' res_marking. *)
       (* Then, we need to show residual_marking = res_marking. *)
-      + assert (forall t'' : Trans, 
+      + assert (Hpr_is_fired :
+                  forall t'' : Trans, 
                    HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired -> In t'' fired). 
         {
           intros t'' Hw; elim Hw; intros Hhas_high Hin_ts_ff; clear Hw.
-          specialize (NoDup_remove fired tail t Hnodup_pg) as Hnodup_app; apply proj1 in Hnodup_app.
-          specialize (spn_fire_aux_final_fired_vee spn s residual_marking fired tail final_fired t''
-                                                   Hnodup_app Hin_ts_ff Hfun) as Hin_ts_vee.
+          specialize (NoDup_remove fired tail t Hnodup_pg) as Hnodup_app;
+            apply proj1 in Hnodup_app.
+          specialize (spn_fire_aux_final_fired_vee
+                        spn s residual_marking fired tail final_fired t''
+                        Hnodup_app Hin_ts_ff Hfun) as Hin_ts_vee.
           elim Hin_ts_vee.
           - auto.
+          (* If t'' ∈ tail, then ~IsPredInNoDupList t'' t' (t' :: tail) ⇒ 
+             ~IsPredInNoDupList t'' t' pgroup, then contradiction. *)
           - intro Hin_ts_tail.
-            
+            unfold HasHigherPriority in Hhas_high.
+            (* Builds ~IsPredInNoDuplist t'' t' (t' :: tail) *)
+            assert (Hnot_is_pred : ~IsPredInNoDupList t'' t' (t' :: tail)) by
+                apply not_is_pred_in_list_if_hd.
+            rewrite Heq_tt' in Hdec_list.
+            specialize (not_is_pred_in_dec_list Hdec_list Hin_ts_tail) as Hnot_is_pred_in_pg.
+            decompose [and] Hhas_high; contradiction.
         }
+      (* Now we have Hpr_is_fired, we can specialize Hres_m. *)
+        assert (Hpr_iff :
+                  forall t'' : Trans,
+                    HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired <-> In t'' fired)
+          by (intros t'0; split; [apply (Hpr_is_fired t'0) | apply (Hhigh_in_fired t'0)]).
+        specialize (Hres_m fired Hpr_iff).
       (* Second subcase, In t' tail then apply the induction hypothesis. *)
       + apply is_decreased_list_cons in Hdec_list. 
         apply NoDup_cons_iff in Hnodup_pg.

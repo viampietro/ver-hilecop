@@ -1,5 +1,6 @@
 Require Import Hilecop.SPN.
 Require Import Omega.
+Require Import Classical_Prop.
 
 Set Implicit Arguments.
 
@@ -80,9 +81,11 @@ Section PredInList.
       forall (a : A) (l : list A), IsPredInList x y (x :: l) -> IsPredInList x y (x :: a :: l)
   | IsPredInList_rm_fst : 
       forall (a : A) (l : list A), IsPredInList x y l ->
-                                   NoDup (a :: l) ->
                                    IsPredInList x y (a :: l).
 
+  Definition IsPredInNoDupList (x y : A) (l : list A) :=
+    x <> y /\ NoDup l /\ IsPredInList x y l.
+  
   Lemma not_is_pred_in_list_nil :
     forall (x y : A), ~IsPredInList x y [].
   Proof.
@@ -112,31 +115,139 @@ Section PredInList.
     - intros x y His_pred His_dec Hnodup.
       inversion His_dec.
       + rewrite <- H0; assumption.
-      + rewrite <- H2; apply IsPredInList_rm_fst; [assumption| rewrite H2; assumption]. 
+      + rewrite <- H2; apply IsPredInList_rm_fst; assumption. 
       + apply IsPredInList_rm_fst.
         -- apply NoDup_cons_iff in Hnodup; apply proj2 in Hnodup.
            apply (IHl' x y His_pred H1 Hnodup).
-        -- assumption.
   Qed.
 
-  Theorem not_is_pred_in_list :
-    forall (x : A) (l : list A), NoDup l -> ~IsPredInList x x l.
+  Lemma is_pred_cons_diff :
+    forall (l : list A) (x y a : A) , IsPredInList x y (a :: l) ->
+                                      x <> a ->
+                                      IsPredInList x y l.
   Proof.
-    intros x l Hnodup His_pred.
-    inversion His_pred.
-    - rewrite <- H in Hnodup. inversion Hnodup. elim H2. apply in_eq.
-    - 
-  Admitted.
-  
+    induction l; intros x y a' His_pred Hdiff.
+    - inversion His_pred; inversion H0.
+    - inversion His_pred.
+      + contradiction.
+      + contradiction.
+      + assumption.
+  Qed.
+
+  Lemma is_pred_in_tail :
+    forall (l : list A) (x y : A) , IsPredInNoDupList x y (x :: l) -> In y l.
+  Proof.
+    induction l; intros x y His_pred;
+      unfold IsPredInNoDupList in His_pred; decompose [and] His_pred.
+    - inversion H2; inversion H3.
+    - inversion H2.
+      + apply in_eq.
+      + apply NoDup_remove with (l := [x]) in H1.
+        apply proj1 in H1.
+        unfold IsPredInNoDupList in IHl.
+        specialize (IHl x y (conj H (conj H1 H3))) as Hin_y_l.
+        apply in_cons.
+        assumption.
+      + inversion H1.
+        apply not_in_cons in H7.
+        apply proj1 in H7.
+        specialize (is_pred_cons_diff H3 H7) as His_pred_in_l.
+        apply IsPredInList_rm_fst with (a := x) in His_pred_in_l.
+        apply in_cons.
+        apply NoDup_remove with (l := [x]) in H1.
+        apply proj1 in H1.
+        unfold IsPredInNoDupList in IHl.
+        specialize (IHl x y (conj H (conj H1 His_pred_in_l))) as Hin_y_l.
+        assumption.
+  Qed.
+
   Theorem not_is_pred_in_list_if_hd :
-    forall (x y : A) (l : list A), NoDup (y :: l) -> ~IsPredInList x y (y :: l).
+    forall (l : list A) (x y : A) , ~IsPredInNoDupList x y (y :: l).
   Proof.
-    intros x y l Hnodup His_pred.
-    inversion His_pred.
-    - rewrite <- H1 in Hnodup.
-      inversion Hnodup.
-      elim H3; apply in_eq.
-  Admitted.
+    induction l; intros x y His_pred.
+    - unfold IsPredInNoDupList in His_pred.
+      decompose [and] His_pred.
+      inversion H2; inversion H3.
+    - unfold IsPredInNoDupList in His_pred.
+      decompose [and] His_pred.
+      inversion H2.
+      + contradiction.
+      + contradiction.
+      + assert (Hvee := classic (x = a)).
+        elim Hvee.
+        -- intro Heq_xa.
+           rewrite Heq_xa in H3.
+           rewrite Heq_xa in H.
+           apply NoDup_cons_iff in H1.
+           elim H1; intros Hnot_in_y Hnodup.
+           specialize (is_pred_in_tail (conj H (conj Hnodup H3))) as Hin_y_l.
+           apply in_cons with (a := a) in Hin_y_l.
+           contradiction.
+        -- intro Hneq_xa.
+           specialize (is_pred_cons_diff H3 Hneq_xa) as His_pred_in_l.
+           apply IsPredInList_rm_fst with (a := y) in His_pred_in_l.
+           apply NoDup_remove with (l := [y]) in H1.
+           apply proj1 in H1.
+           unfold IsPredInNoDupList in IHl.
+           apply (IHl x y (conj H (conj H1 His_pred_in_l))).
+  Qed.
+
+  Theorem not_is_pred_in_dec_list :
+    forall (l' l : list A) (x y : A),
+      IsDecreasedList (y :: l) l' ->
+      In x l ->
+      ~IsPredInNoDupList x y l'.
+  Proof.
+    induction l'; intros l x y His_dec Hin_x_l.
+    - inversion His_dec.
+    - intro His_pred.
+      unfold IsPredInNoDupList in His_pred; decompose [and] His_pred.
+      rename H into Hneq_xy; rename H1 into Hnodup; clear His_pred; rename H2 into His_pred.
+      inversion His_pred.
+      + inversion His_dec.
+        -- rewrite <- H3 in H0; contradiction.
+        -- rewrite <- H4 in Hnodup.
+           rewrite <- H0 in Hnodup.
+           apply in_cons with (a := y) in Hin_x_l.
+           apply NoDup_cons_iff in Hnodup.
+           apply proj1 in Hnodup; contradiction.
+        -- apply is_decreased_list_cons in H3.
+           apply is_decreased_list_incl in H3.
+           apply H3 in Hin_x_l.
+           rewrite <- H0 in Hnodup.
+           apply NoDup_cons_iff in Hnodup.
+           apply proj1 in Hnodup; contradiction.
+      + inversion His_dec.
+        -- rewrite <- H4 in H; contradiction.
+        -- rewrite <- H5 in Hnodup.
+           rewrite <- H in Hnodup.
+           apply in_cons with (a := y) in Hin_x_l.
+           apply NoDup_cons_iff in Hnodup.
+           apply proj1 in Hnodup; contradiction.
+        -- apply is_decreased_list_cons in H4.
+           apply is_decreased_list_incl in H4.
+           apply H4 in Hin_x_l.
+           rewrite <- H in Hnodup.
+           apply NoDup_cons_iff in Hnodup.
+           apply proj1 in Hnodup; contradiction.
+      + inversion His_dec.
+        -- assert (Hnot_is_pred : ~IsPredInNoDupList x y (y :: l))
+            by apply not_is_pred_in_list_if_hd.
+           rewrite <- H4 in His_pred; rewrite <- H4 in Hnodup.
+           rewrite <- H5 in His_pred; rewrite <- H5 in Hnodup.
+           specialize (conj Hneq_xy (conj Hnodup His_pred)) as His_pred'.
+           contradiction.
+        -- assert (Hnot_is_pred : ~IsPredInNoDupList x y (y :: l))
+            by apply not_is_pred_in_list_if_hd.
+           rewrite <- H5 in Hnodup; rewrite <- H5 in H0.
+           apply NoDup_cons_iff in Hnodup.
+           apply proj2 in Hnodup.
+           specialize (conj Hneq_xy (conj Hnodup H0)) as His_pred'.
+           contradiction.
+        -- apply NoDup_cons_iff in Hnodup.
+           apply proj2 in Hnodup.
+           apply (IHl' l x y H4 Hin_x_l (conj Hneq_xy (conj Hnodup H0))).
+  Qed.
   
 End PredInList.
 
@@ -152,7 +263,7 @@ Definition HasHigherPriority
     In pgroup spn.(priority_groups) /\
     In t pgroup /\
     In t' pgroup /\
-    IsPredInList t t' pgroup.
+    IsPredInNoDupList t t' pgroup.
 
 (** PreSum: Sums all weight of edges coming from place p to transitions of the l list. *)
 
