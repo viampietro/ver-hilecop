@@ -2339,17 +2339,15 @@ Section SpnSensitizedByResidual.
       IsWellDefinedSpn spn ->
       IsWellDefinedSpnState spn s ->
       (* Hypotheses on pgroup. *)
-      incl fired pgroup ->
-      (forall t t' : Trans, In t fired -> In t' pg -> IsPredInList t t' pgroup) ->
       In pgroup spn.(priority_groups) ->
       (* Hypotheses on pg. *)
       IsDecreasedList pg pgroup ->
       NoDup (fired ++ pg) ->
       (* Hypotheses on residual_marking. *)
-      (forall (p : Place) (n : nat) (preSum : nat),
-          In (p, n) s.(marking) ->
-          PreSum spn p fired preSum ->
-          In (p, n - preSum) residual_marking) ->
+      (forall (p : Place) (n : nat) ,
+                (exists preSum : nat, PreSum spn p fired preSum /\
+                                      In (p, n + preSum) s.(marking)) <->
+                In (p, n) residual_marking) ->
       MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
       (* Function ⇒ Specification *)
       spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
@@ -2368,16 +2366,16 @@ Section SpnSensitizedByResidual.
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
                 In t' pr) ->
-            (forall (p : Place) (n : nat) (preSum : nat),
-                In (p, n) s.(marking) ->
-                PreSum spn p pr preSum ->
-                In (p, n - preSum) res_marking)) ->
+            (forall (p : Place) (n : nat) ,
+                (exists preSum : nat, PreSum spn p pr preSum /\
+                                      In (p, n + preSum) s.(marking)) <->
+                In (p, n) res_marking)) ->
         In t final_fired.
   Proof.
     intros spn s residual_marking fired pg;
       functional induction (spn_fire_aux spn s residual_marking fired pg)
                  using spn_fire_aux_ind;
-      intros pgroup final_fired Hwell_def_spn Hwell_def_s Hincl_fired_pg His_pred_in_pg
+      intros pgroup final_fired Hwell_def_spn Hwell_def_s
              Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct Hfun
              t' res_marking Hin_t_pg Hfirable_t Hsens_t Hhigh_in_fired Hsame_struct' Hres_m.
     (* BASE CASE, pg = []. *)
@@ -2398,7 +2396,8 @@ Section SpnSensitizedByResidual.
       (* First subcase, t = t'. *)
       (* What we want to show is a contradiction between is_sensitized = Some false 
          and IsSensitized spn t' res_marking. *)
-      (* Then, we need to show residual_marking = res_marking. *)
+      (* Then, we need to show that we have IsSensitized spn t' residual_marking.
+         We can deduce it from Hsens_t. *)
       + assert (Hpr_is_fired :
                   forall t'' : Trans, 
                    HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired -> In t'' fired). 
@@ -2422,20 +2421,81 @@ Section SpnSensitizedByResidual.
             specialize (not_is_pred_in_dec_list Hdec_list Hin_ts_tail) as Hnot_is_pred_in_pg.
             decompose [and] Hhas_high; contradiction.
         }
-      (* Now we have Hpr_is_fired, we can specialize Hres_m. *)
+        (* Now we have Hpr_is_fired, we can specialize Hres_m. *)
         assert (Hpr_iff :
                   forall t'' : Trans,
                     HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired <-> In t'' fired)
           by (intros t'0; split; [apply (Hpr_is_fired t'0) | apply (Hhigh_in_fired t'0)]).
         specialize (Hres_m fired Hpr_iff).
+        (* Now we can show the equivalence between residual_marking and res_marking. *)
+        assert (Hequiv_m : forall (x : Place * nat), In x res_marking <-> In x residual_marking).
+        {
+          intros x.
+          split.
+          - intro Hin_res_m.
+            induction x. 
+            rewrite <- (Hres_m a b) in Hin_res_m.
+            rewrite (Hresid_m a b) in Hin_res_m.
+            assumption.
+          - intro Hin_resid_m.
+            induction x. 
+            rewrite <- (Hresid_m a b) in Hin_resid_m.
+            rewrite (Hres_m a b) in Hin_resid_m.
+            assumption.
+        }
+        (* Then, we deduce IsSensitized spn residual_marking t' from Hequiv_m. *)
+        assert (Hsens_t_in_residual_m : IsSensitized spn residual_marking t').
+        {
+          unfold IsSensitized.
+          split. assumption.
+          split. assumption.
+          split. apply get_neighbours_correct in e0.
+          apply in_fst_split in e0.
+          explode_well_defined_spn.
+          unfold NoUnknownTransInLNeighbours in *.
+          rewrite <- Hunk_tr_neigh in e0.
+          rewrite <- Heq_tt'; assumption.
+          intros p n Hin_resid_m.
+          rewrite <- Hequiv_m in Hin_resid_m.
+          unfold IsSensitized in Hsens_t.
+          decompose [and] Hsens_t.
+          apply (H3 p n Hin_resid_m).
+        }
+        (* Then we apply is_sensitized_complete to show the contradiction with e3. *)
+        apply get_neighbours_correct in e0.
+        rewrite Heq_tt' in e0.
+        specialize (is_sensitized_complete
+                      spn residual_marking t' neighbours_of_t
+                      Hwell_def_spn Hsame_struct e0 Hsens_t_in_residual_m) as Hsens_t_false.
+        rewrite Heq_tt' in e3.
+        rewrite Hsens_t_false in e3; inversion e3.
       (* Second subcase, In t' tail then apply the induction hypothesis. *)
       + apply is_decreased_list_cons in Hdec_list. 
-        apply NoDup_cons_iff in Hnodup_pg.
-        apply proj2 in Hnodup_pg.
-        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s
-                   Hin_spn_pgs Hdec_list Hnodup_pg Hfun t' res_marking
-                   Hin_t'_tail Hsame_struct Hfirable_t Hsens_t Hres_m).
-        
+        apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
+        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
+                   Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
+                   Hfun t' res_marking
+                   Hin_t'_tail Hfirable_t Hsens_t Hhigh_in_fired Hsame_struct' Hres_m).
+    (* ERROR CASE, is_sensitized = None. *)
+    - inversion Hfun.
+    (* CASE, spn_is_firable = Some false. *)
+    - inversion_clear Hin_t_pg as [ Heq_tt' | Hin_t'_tail ].
+      (* First subcase t = t', show a contradiction between e1 and Hfirable_t. *)
+      + rewrite <- Heq_tt' in Hfirable_t.
+        apply get_neighbours_correct in e0.
+        apply (spn_is_firable_complete
+                 spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0) in Hfirable_t.
+        rewrite Hfirable_t in e1; inversion e1.
+      (* Second subcase, In t' tail, then apply induction hypothesis. *)
+      + apply is_decreased_list_cons in Hdec_list. 
+        apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
+        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
+                   Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
+                   Hfun t' res_marking
+                   Hin_t'_tail Hfirable_t Hsens_t Hhigh_in_fired Hsame_struct' Hres_m).
+    (* ERROR CASE, spn_is_firable = None. *)
+    - inversion Hfun.
+      (* ERROR CASE, get_neighbours = None. *)
   Admitted.
 
   Lemma pr_is_unique :
