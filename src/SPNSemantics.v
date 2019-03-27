@@ -267,39 +267,45 @@ Definition HasHigherPriority
 
 (** PreSum: Sums all weight of edges coming from place p to transitions of the l list. *)
 
+Fixpoint pre_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
+  match l with
+  | t :: tail => (pre spn t p) + pre_sum spn p tail
+  | [] => 0
+  end.
+
 Inductive PreSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
 | PreSum_nil :
-    IsWellDefinedSpn spn ->
-    In p spn.(places) ->
     PreSum spn p [] 0
 | PreSum_cons :
     forall (l : list Trans)
            (t : Trans)
            (sum : nat),
-      IsWellDefinedSpn spn ->
-      In p spn.(places) ->
-      In t spn.(transs) ->
-      incl l spn.(transs) ->
       PreSum spn p l sum ->
       PreSum spn p (t :: l) ((pre spn t p) + sum).
+
+(** PreSum with some conditions about well-definedness. *)
+
+Definition PreSumWD (spn : Spn) (p : Place) (l : list Trans) (sum : nat) :=
+  IsWellDefinedSpn spn /\ In p spn.(places) /\ incl l spn.(transs) /\
+  PreSum spn p l sum. 
 
 (** PostSum: Sums all weight of edges coming from transitions of the l list to place p. *)
 
 Inductive PostSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
 | PostSum_nil :
-    IsWellDefinedSpn spn ->
-    In p spn.(places) ->
     PostSum spn p [] 0
 | PostSum_cons :
     forall (l : list Trans)
       (t : Trans)
       (sum : nat),
-      IsWellDefinedSpn spn ->
-      In p spn.(places) ->
-      In t spn.(transs) ->
-      incl l spn.(transs) ->
       PostSum spn p l sum ->
       PostSum spn p (t :: l) ((post spn t p) + sum).
+
+(** PostSum with some conditions about well-definedness. *)
+
+Definition PostSumWD (spn : Spn) (p : Place) (l : list Trans) (sum : nat) :=
+  IsWellDefinedSpn spn /\ In p spn.(places) /\ incl l spn.(transs) /\
+  PostSum spn p l sum. 
 
 (** IsSensitized:
     ∀ t ∈ T, marking m, t ∈ sens(m) if
@@ -390,7 +396,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             In (p, n) s'.(marking) ->
-            PreSum spn p pr preSum ->
+            PreSumWD spn p pr preSum ->
             In (p, n - preSum) residual_marking) ->
         IsSensitized spn residual_marking t ->
         In t s'.(fired)) ->
@@ -410,7 +416,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             In (p, n) s'.(marking) ->
-            PreSum spn p pr preSum ->
+            PreSumWD spn p pr preSum ->
             In (p, n - preSum) residual_marking) ->
         ~IsSensitized spn residual_marking t ->
         ~In t s'.(fired)) ->
@@ -429,8 +435,31 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
     (forall (p : Place)
             (n preSum postSum : nat),
         In (p, n) s.(marking) ->
-        PreSum spn p s.(fired) preSum ->
-        PostSum spn p s.(fired) postSum ->
+        PreSumWD spn p s.(fired) preSum ->
+        PostSumWD spn p s.(fired) postSum ->
         In (p, n - preSum + postSum) s'.(marking)) ->
     
     SpnSemantics spn s s' raising_edge.
+
+Lemma exists_unique_pre_sum :
+    forall (spn : Spn) (p : Place) (l : list Trans),
+    exists! (sum : nat), PreSum spn p l sum.
+    induction l.
+    - exists 0.
+      split.
+      + apply PreSum_nil.
+      + intros. inversion H. reflexivity.
+    - elim IHl.
+      intros.
+      elim H.
+      intros.
+      exists ((pre spn a p) + x).
+      split.
+      + apply PreSum_cons.
+        assumption.
+      + intros.
+        inversion H2.
+        apply H1 in H6.
+        rewrite H6.
+        reflexivity.
+  Qed.

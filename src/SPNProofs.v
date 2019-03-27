@@ -1,5 +1,6 @@
 Require Import Hilecop.SPN Hilecop.SPNAnimator Hilecop.SPNSemantics Hilecop.SPNTactics.
 Require Import Hilecop.Utils.HilecopLemmas.
+Require Import Omega.
 Require Import Classical_Prop.
 
 (** ** Lemmas on the Spn structure. *)
@@ -2327,7 +2328,7 @@ Section SpnSensitizedByResidual.
     (* ERROR CASE *)
     - inversion Hfun.
   Qed.
-  
+
   Theorem spn_fire_aux_sens_by_residual :
     forall (spn : Spn)
            (s : SpnState)
@@ -2345,9 +2346,7 @@ Section SpnSensitizedByResidual.
       NoDup (fired ++ pg) ->
       (* Hypotheses on residual_marking. *)
       (forall (p : Place) (n : nat) ,
-                (exists preSum : nat, PreSum spn p fired preSum /\
-                                      In (p, n + preSum) s.(marking)) <->
-                In (p, n) residual_marking) ->
+          In (p, n) (marking s) <-> In (p, n - (pre_sum spn p fired)) residual_marking) ->
       MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
       (* Function ⇒ Specification *)
       spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
@@ -2367,9 +2366,7 @@ Section SpnSensitizedByResidual.
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
                 In t' pr) ->
             (forall (p : Place) (n : nat) ,
-                (exists preSum : nat, PreSum spn p pr preSum /\
-                                      In (p, n + preSum) s.(marking)) <->
-                In (p, n) res_marking)) ->
+                In (p, n) (marking s) <-> In (p, n - (pre_sum spn p fired)) res_marking)) ->
         In t final_fired.
   Proof.
     intros spn s residual_marking fired pg;
@@ -2400,7 +2397,7 @@ Section SpnSensitizedByResidual.
          We can deduce it from Hsens_t. *)
       + assert (Hpr_is_fired :
                   forall t'' : Trans, 
-                   HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired -> In t'' fired). 
+                    HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired -> In t'' fired). 
         {
           intros t'' Hw; elim Hw; intros Hhas_high Hin_ts_ff; clear Hw.
           specialize (NoDup_remove fired tail t Hnodup_pg) as Hnodup_app;
@@ -2428,19 +2425,24 @@ Section SpnSensitizedByResidual.
           by (intros t'0; split; [apply (Hpr_is_fired t'0) | apply (Hhigh_in_fired t'0)]).
         specialize (Hres_m fired Hpr_iff).
         (* Now we can show the equivalence between residual_marking and res_marking. *)
-        assert (Hequiv_m : forall (x : Place * nat), In x res_marking <-> In x residual_marking).
+        assert (Hequiv_m : forall (p : Place) (n : nat), In (p, n) res_marking <->
+                                                         In (p, n) residual_marking).
         {
-          intros x.
+          intros p n.
           split.
           - intro Hin_res_m.
-            induction x. 
-            rewrite <- (Hres_m a b) in Hin_res_m.
-            rewrite (Hresid_m a b) in Hin_res_m.
-            assumption.
+            specialize (sub_exists n (pre_sum spn p fired)) as Hsub_ex.
+            elim Hsub_ex; intros x Hsub_eq.
+            rewrite Hsub_eq in *.
+            rewrite <- (Hres_m p x) in Hin_res_m.
+            rewrite (Hresid_m p x) in Hin_res_m.
+            assumption.            
           - intro Hin_resid_m.
-            induction x. 
-            rewrite <- (Hresid_m a b) in Hin_resid_m.
-            rewrite (Hres_m a b) in Hin_resid_m.
+            specialize (sub_exists n (pre_sum spn p fired)) as Hsub_ex.
+            elim Hsub_ex; intros x Hsub_eq.
+            rewrite Hsub_eq in *.
+            rewrite <- (Hresid_m p x) in Hin_resid_m.
+            rewrite (Hres_m p x) in Hin_resid_m.
             assumption.
         }
         (* Then, we deduce IsSensitized spn residual_marking t' from Hequiv_m. *)

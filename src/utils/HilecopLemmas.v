@@ -1,6 +1,7 @@
 (** To use [dependent induction] *)
 
 Require Export Coq.Program.Equality.
+Require Import Omega.
 
 (** To use [list] and its notations. *)
 
@@ -500,3 +501,10 @@ Proof.
       assumption.      
 Qed.
 
+Theorem sub_exists :
+  forall n m : nat, exists o : nat, n = o - m.
+Proof.
+  intros n m.
+  exists (n + m).
+  omega.
+Qed.
