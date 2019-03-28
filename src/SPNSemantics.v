@@ -273,6 +273,8 @@ Fixpoint pre_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
   | [] => 0
   end.
 
+Functional Scheme pre_sum_ind := Induction for pre_sum Sort Prop.
+
 Inductive PreSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
 | PreSum_nil :
     PreSum spn p [] 0

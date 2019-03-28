@@ -66,7 +66,10 @@ Section FireSpn.
       | None => None
       end
     | [] => Some (residual_marking)
-    end.  
+    end.
+
+  Functional Scheme update_residual_marking_aux_ind :=
+    Induction for update_residual_marking_aux Sort Prop.
 
   (** Wrapper around update_residual_marking. *)
   

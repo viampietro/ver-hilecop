@@ -310,6 +310,8 @@ Section Marking.
                  else x :: (replace_occ eq_dec occ repl tl)
     | [] => l
     end.
+
+  Functional Scheme replace_occ_ind := Induction for replace_occ Sort Prop.
   
   (** Function : Given a marking m, add/remove nboftokens tokens (if not None)
                  inside place p and returns the new marking.
@@ -329,6 +331,8 @@ Section Marking.
       Some (replace_occ prodnat_eq_dec (p, n) (p, (op n nboftokens)) marking)
     | None => None 
     end.
+
+  Functional Scheme modify_m_ind := Induction for modify_m Sort Prop.
   
 End Marking.
 

@@ -1855,9 +1855,9 @@ Section SpnNotFirableNotFired.
                  using spn_map_fire_aux_ind;
       intros final_fired Hwell_def_spn Hwell_def_state Hnodup_concat Hincl_pgs Hfun pgroup' t
              Hin_pgs Hin_pg Hnot_in_fired Hnot_firable.
-    (* Base case, pgroups = []. *)
+    (* BASE CASE, pgroups = []. *)
     - inversion Hin_pgs.
-    (* General case *)
+    (* GENERAL CASE *)
     - apply in_inv in Hin_pgs; elim Hin_pgs.
       (* CASE pgroup = pgroup' *)
       + intro Heq_pg.
@@ -1918,7 +1918,7 @@ Section SpnNotFirableNotFired.
         apply (IHo final_fired Hwell_def_spn Hwell_def_state
                    Hnodup_concat_tail Hincl_pgs' Hfun pgroup' t Hin_pgs_tail
                    Hin_pg  Hnot_in_fired_app Hnot_firable).
-    (* Case spn_fire returns None. *)
+    (* CASE spn_fire returns None. *)
     - inversion Hfun.
   Qed.
 
@@ -2276,6 +2276,267 @@ End SpnHigherPriorityNotFirable.
 
 Section SpnSensitizedByResidual.
 
+  (** pre_sum spn p l + pre_sum spn p [t] = pres_um spn p (l ++ [t]) 
+
+      Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
+  
+  Lemma pre_sum_app_add :
+    forall (spn : Spn) (p : Place) (l : list Trans) (t : Trans),
+      pre_sum spn p l + pre_sum spn p [t] = pre_sum spn p (l ++ [t]).
+  Proof.
+    intros spn p l; functional induction (pre_sum spn p l) using pre_sum_ind; intro t'.
+    - simpl; reflexivity.
+    - simpl.
+      rewrite <- (IHn t').
+      simpl.
+      rewrite plus_assoc_reverse.
+      reflexivity.
+  Qed.
+
+  (** If occ ∈ l, then repl ∈ l' *)
+
+  Lemma replace_occ_if_in {A : Type} :
+    forall (eq_dec : forall (x y : A), {x = y} + {x <> y})
+           (occ : A)
+           (repl : A)
+           (l : list A)
+           (l' : list A),
+      replace_occ eq_dec occ repl l = l' ->
+      In occ l ->
+      In repl l'.
+  Proof.
+    intros eq_dec occ repl l;
+      functional induction (replace_occ eq_dec occ repl l) using replace_occ_ind;
+      intros l' Hfun Hin_l.
+    (* BASE CASE *)
+    - inversion Hin_l.
+    (* CASE occ = hd l *)
+    - rewrite <- Hfun; apply in_eq.
+    (* CASE occ <> hd l *)
+    - inversion Hin_l.
+      + contradiction.
+      + induction l'.
+        -- inversion Hfun.
+        -- injection Hfun as Heq_xa Heq_fun.
+           apply in_cons.
+           apply (IHl0 l' Heq_fun H).
+  Qed.
+
+  Lemma replace_occ_if_not_in {A : Type} :
+    forall (eq_dec : forall (x y : A), {x = y} + {x <> y})
+           (occ : A)
+           (repl : A)
+           (l : list A)
+           (l' : list A),
+      replace_occ eq_dec occ repl l = l' ->
+      In repl l' ->
+      ~In repl l ->
+      In occ l.
+  Proof.
+    intros eq_dec occ repl l;
+      functional induction (replace_occ eq_dec occ repl l) using replace_occ_ind;
+      intros l' Hfun Hin_l' Hnot_in_l.
+    (* BASE CASE *)
+    - rewrite <- Hfun in Hin_l'; inversion  Hin_l'.
+    (* CASE occ = hd l *)
+    - apply in_eq.
+    (* CASE occ <> hd l *)
+    - induction l'.
+      + inversion Hin_l'.
+      + inversion Hin_l' as [Heq_repla | Hin_repl_l'].
+        -- injection Hfun as Heq_xa Heq_fun.
+           apply not_in_cons in Hnot_in_l; apply proj1 in Hnot_in_l.
+           rewrite Heq_xa in Hnot_in_l; symmetry in Heq_repla; contradiction.
+        -- injection Hfun as Heq_xa Heq_fun.
+           apply not_in_cons in Hnot_in_l; apply proj2 in Hnot_in_l.
+           apply in_cons.
+           apply (IHl0 l' Heq_fun Hin_repl_l' Hnot_in_l).
+  Qed.
+
+  (* Lemma : Proves that replace_occ preserves structure
+   *         of a marking m passed as argument when 
+   *         (fst occ) = (fst repl).
+   *)
+  Lemma replace_occ_same_struct :
+    forall (m : list (Place * nat))
+           (p : Place)
+           (n n' : nat),
+      MarkingHaveSameStruct (replace_occ prodnat_eq_dec (p, n) (p, n') m) m.
+  Proof.
+    do 4 intro.
+    unfold MarkingHaveSameStruct.
+    functional induction (replace_occ prodnat_eq_dec (p, n) (p, n') m)
+               using replace_occ_ind;
+      intros.
+    (* Base case. *)
+    - auto.
+    (* Case (p,n) is hd of list. *)
+    - intros.
+      rewrite fst_split_cons_app.
+      symmetry.
+      rewrite fst_split_cons_app.
+      rewrite IHl.
+      simpl.
+      auto.
+    (* Case (p, n) not hd of list. *)
+    - rewrite fst_split_cons_app.
+      symmetry.
+      rewrite fst_split_cons_app.
+      rewrite IHl.
+      auto.
+  Qed.
+  
+  (** Correctness proof for [modify_m]. 
+      
+      Needed in update_residual_marking_aux_correct. *)
+  
+  Lemma modify_m_correct_with_sub :
+    forall (marking : list (Place * nat))
+           (p : Place)
+           (nboftokens : nat)
+           (final_marking : list (Place * nat)),
+      NoDup (fst (split marking)) ->
+      modify_m marking p Nat.sub nboftokens = Some final_marking ->
+      (forall n : nat, In (p, n) marking -> n >= nboftokens) ->
+      forall n : nat, In (p, n) marking <-> In (p, n - nboftokens) final_marking.
+  Proof.
+    intros marking p nboftokens;
+      functional induction (modify_m marking p Nat.sub nboftokens) using modify_m_ind;
+      intros final_marking Hnodup Hfun Hge_n n'.
+    (* GENERAL CASE *)
+    - split.
+      + intro Hin_m.
+        injection Hfun as Hfun.
+        apply get_m_correct in e.
+        specialize (replace_occ_if_in
+                      prodnat_eq_dec (p, n0) (p, n0 - nboftokens) marking
+                      final_marking Hfun e) as Hin_final.
+        assert (Heq_p : fst (p, n0) = fst (p, n')) by (simpl; reflexivity).
+        specialize (nodup_same_pair marking Hnodup (p, n0) (p, n') e Hin_m Heq_p) as Heq_pp.
+        injection Heq_pp as Heq_nn'.
+        rewrite <- Heq_nn'; assumption.
+      + intro Hin_fm.
+        injection Hfun as Hfun.
+        assert (Hvee := classic (In (p, n' - nboftokens) marking)).
+        (* Two cases, either (p, n' - nboftokens) ∈ marking or not. *)
+        inversion Hvee as [Hin_m | Hnot_in_m]; clear Hvee.
+        (* First, (p, n' - nboftokens) ∈ marking *)
+        -- apply get_m_correct in e.
+           specialize (replace_occ_if_in
+                         prodnat_eq_dec (p, n0) (p, n0 - nboftokens) marking
+                         final_marking Hfun e) as Hin_final.
+           (* Two cases, either (p, n0 - nboftokens) ∈ marking or not. *)
+           assert (Hvee' := classic (In (p, n0 - nboftokens) marking)).
+           inversion Hvee' as [Hin_m' | Hnot_in_m'].
+           (* First, (p, n0 - nboftokens) ∈ marking *)
+           ++ assert (Heq_p : fst (p, n0) = fst (p, n0 - nboftokens))
+               by (simpl; reflexivity).
+              (* Specializes nodup_same_pair to show n0 = n0 - nboftokens. 
+                 Then we can deduce that nboftokens = 0. *)
+              specialize (nodup_same_pair
+                            marking Hnodup (p, n0) (p, n0 - nboftokens)
+                            e Hin_m' Heq_p)
+                as Heq_pp.
+              injection Heq_pp as Heq_n.
+              assert (Hnm : forall n m : nat, n = n - m /\ n >= m -> m = 0)
+                by (intros; omega).
+              specialize (Hge_n n0 e) as Hge_n0.
+              specialize (Hnm n0 nboftokens (conj Heq_n Hge_n0)) as Hnb_0.
+              rewrite Hnb_0 in Hin_m.
+              rewrite Nat.sub_0_r in Hin_m.
+              assumption.
+           (* Second, (p, n0 - nboftokens) ∉ marking. *)
+           (* To begin, we need (n0 - nboftokens = n' - nboftokens). *)
+           ++ assert (Heq_p : fst (p, n0 - nboftokens) = fst (p, n' - nboftokens))
+               by (simpl; reflexivity).
+             (* Builds NoDup final_marking to apply nodup_same_pair. *)
+             specialize (replace_occ_same_struct marking p n0 (n0 - nboftokens)) as Hsame_struct.
+             unfold MarkingHaveSameStruct in Hsame_struct.
+             rewrite Hfun in Hsame_struct.
+             rewrite <- Hsame_struct in Hnodup.
+             (* Specializes nodup_same_pair to show n0 - nboftokens = n' - nboftokens. *)
+             specialize (nodup_same_pair
+                           final_marking Hnodup (p, n0 - nboftokens) (p, n' - nboftokens)
+                           Hin_final Hin_fm Heq_p)
+               as Heq_pp.
+             injection Heq_pp as Heq_n.
+             rewrite Heq_n in Hnot_in_m'.
+             contradiction.
+        (* Second (p, n' - nboftokens) ∉ marking *)
+        -- apply get_m_correct in e.
+           specialize (replace_occ_if_in
+                         prodnat_eq_dec (p, n0) (p, n0 - nboftokens) marking
+                         final_marking Hfun e) as Hin_final.
+           (* Two cases, either (p, n0 - nboftokens) ∈ marking or not. *)
+           assert (Hvee' := classic (In (p, n0 - nboftokens) marking)).
+           inversion Hvee' as [Hin_m' | Hnot_in_m']; clear Hvee'.
+           (* First, (p, n0 - nboftokens) ∈ marking *)
+           ++ assert (Heq_p : fst (p, n0 - nboftokens) = fst (p, n' - nboftokens))
+               by (simpl; reflexivity).
+              (* Builds NoDup final_marking to apply nodup_same_pair. *)
+              specialize (replace_occ_same_struct marking p n0 (n0 - nboftokens)) as Hsame_struct.
+              unfold MarkingHaveSameStruct in Hsame_struct.
+              rewrite Hfun in Hsame_struct.
+              rewrite <- Hsame_struct in Hnodup.
+              (* Specializes nodup_same_pair to show n0 - nboftokens = n' - nboftokens. *)
+              specialize (nodup_same_pair
+                            final_marking Hnodup (p, n0 - nboftokens) (p, n' - nboftokens)
+                            Hin_final Hin_fm Heq_p)
+                as Heq_pp.
+              injection Heq_pp as Heq_n.
+              rewrite <- Heq_n in Hnot_in_m.
+              contradiction.
+           ++ admit.
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+  
+  (** Correctness proof for [update_residual_marking_aux].
+      Express the structure of the returned [residual_marking'] regarding the structure
+      of [residual_marking].
+
+      Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
+  
+  Lemma update_residual_marking_aux_correct :
+    forall (spn : Spn)
+           (residual_marking : list (Place * nat))
+           (t : Trans)
+           (pre_places : list Place)
+           (neigh_of_t : Neighbours)
+           (final_marking : list (Place * nat)),
+      IsWellDefinedSpn spn ->
+      NoDup (fst (split residual_marking)) ->
+      In (t , neigh_of_t) (lneighbours spn) ->
+      NoDup pre_places ->
+      incl pre_places (pre_pl neigh_of_t) ->
+      update_residual_marking_aux spn residual_marking t pre_places = Some final_marking ->
+      forall (p : Place) (n : nat),
+        In p pre_places -> (In (p, n) residual_marking <-> In (p, n - (pre spn t p)) final_marking).
+  Proof.
+    intros spn residual_marking t pre_places;
+      functional induction (update_residual_marking_aux spn residual_marking t pre_places)
+                 using update_residual_marking_aux_ind;
+      intros neigh_of_t final_marking Hwell_def_spn Hnodup_m
+             Hin_lneigh Hnodup_pre_pl Hincl_pre_pl Hfun p' n Hin_pre_pl.
+    (* BASE CASE, pre_places = []. *)
+    - inversion Hin_pre_pl.
+    (* GENERAL CASE *)
+    - inversion Hin_pre_pl as [Heq_pp' | Hin_p'_tail].
+      (* First subcase, p = p'. *)
+      + 
+        specialize (modify_m_correct
+                      residual_marking p Nat.sub (pre spn t p) residual_marking'
+                      Hnodup_m e0) as Hin_impl.
+        rewrite <- Heq_pp'.
+  (** If :
+      - spn_fire_aux spn s residual fired pg = Some final_fired
+      - There are no duplicate in [(fired ++ pg)]
+      - [t] ∈ [final_fired]
+      Then : [t] ∈ [fired] ∨ [pg]. 
+      
+      Needed to prove CASE is_sensitized = Some false in 
+      spn_fire_aux_sens_by_residual. *)
+    
   Theorem spn_fire_aux_final_fired_vee :
     forall (spn : Spn)
            (s : SpnState)
@@ -2385,7 +2646,33 @@ Section SpnSensitizedByResidual.
         apply (spn_fire_aux_in_fired spn s residual_marking' (fired ++ [t]) tail final_fired t
                                      Hin_t_fired Hfun).
       (* Second subcase, In t' tail then apply the induction hypothesis. *)
-      + admit.        
+      + assert (
+            Hresid'_m :
+              (forall (p : Place) (n : nat),
+                  In (p, n) residual_marking <->
+                  In (p, n - pre_sum spn p [t]) residual_marking') ->
+              (forall p : Place, pre_sum spn p fired + pre_sum spn p [t] =
+                                 pre_sum spn p (fired ++ [t])) ->
+              (forall (p : Place) (n : nat),
+                  In (p, n) (marking s) <->
+                  In (p, n - pre_sum spn p (fired ++ [t])) residual_marking')
+          ).
+        {
+          intros Hequiv_res_res' Heq_presum p n; split.
+          - intro Hin_ms.
+            apply Hresid_m in Hin_ms.
+            rewrite Hequiv_res_res' with (n := n - pre_sum spn p fired) in Hin_ms.
+            rewrite <- Nat.sub_add_distr in Hin_ms.
+            rewrite Heq_presum in Hin_ms.
+            assumption.
+          - intro Hin_res'.
+            rewrite <- Heq_presum in Hin_res'.
+            rewrite Nat.sub_add_distr in Hin_res'.
+            rewrite <- Hequiv_res_res' in Hin_res'.
+            rewrite <- Hresid_m in Hin_res'.
+            assumption.
+        }
+        
     (* ERROR CASE, update_residual_marking = None. *)
     - inversion Hfun.
     (* CASE, is_sensitized = Some false. *)
