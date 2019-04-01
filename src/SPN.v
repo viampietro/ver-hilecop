@@ -117,16 +117,6 @@ Definition MarkingHaveSameStruct
            (m : list (Place * nat))
            (m' : list (Place * nat)) := fst (split m) = fst (split m').
 
-(** All transitions in [priority_groups] are referenced 
-    in the list of neighbours [lneighbours]. *)
-
-Definition PriorityGroupsAreRefInLneighbours
-           (priority_groups : list (list Trans))
-           (lneighbours : list (Trans * Neighbours)) :=
-  forall pgroup : list Trans,
-    In pgroup priority_groups ->
-    forall t : Trans, In t pgroup -> In t (fst (split lneighbours)).
-
 (** *** Properties on places and transitions *)
 
 Definition NoDupPlaces (spn : Spn) := NoDup spn.(places).  
@@ -147,6 +137,14 @@ Definition NoIntersectInPriorityGroups (spn : Spn) :=
   NoDup (concat spn.(priority_groups)).
 
 (** *** Properties on lneighbours *)
+
+(** No duplicates in all transitions t's neighbours. 
+    Forbid the fact that a place p is linked to a transition t
+    by multiple edges. *)
+
+Definition NoDupInNeighbours (spn : Spn) :=
+  forall (t : Trans) (neigh_of_t : Neighbours),
+    In (t, neigh_of_t) (lneighbours spn) -> NoDup (flatten_neighbours neigh_of_t).
 
 (** For all place p, p is in places iff p is in the neighbourhood 
     of at least one transition. *)
@@ -224,6 +222,7 @@ Definition IsWellDefinedSpn (spn : Spn) :=
   NoDupTranss spn /\
   NoUnknownInPriorityGroups spn /\
   NoIntersectInPriorityGroups spn /\
+  NoDupInNeighbours spn /\
   NoIsolatedPlace spn /\
   NoUnknownPlaceInNeighbours spn /\
   NoUnknownTransInLNeighbours spn /\

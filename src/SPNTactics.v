@@ -21,6 +21,10 @@ Ltac rename_well_defined_spn :=
     rename H into Hno_inter
   end;
   match goal with
+  | [ H: NoDupInNeighbours ?spn |- _ ] =>
+    rename H into Hnodup_neigh
+  end;
+  match goal with
   | [ H: NoIsolatedPlace ?spn |- _ ] =>
     rename H into Hiso_place
   end;

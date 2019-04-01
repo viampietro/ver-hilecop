@@ -508,10 +508,4 @@ Proof.
   exists (n + m).
   omega.
 Qed.
-
-Theorem exists_if_fs_eq {A B : Type} :
-  forall (l l' : list (A * B)) (a : A) (b : B),
-    In (a, b) l ->
-    (fst (split l)) = (fst (split l')) ->
-    exists b' : B, In (a, b') l'.
     

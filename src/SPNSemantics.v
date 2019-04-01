@@ -392,14 +392,13 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        (forall (p : Place)
-                (n preSum : nat)
-                (pr : list Trans),
+        (forall (pr : list Trans),
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
-            In (p, n) s'.(marking) ->
-            PreSumWD spn p pr preSum ->
-            In (p, n - preSum) residual_marking) ->
+            forall (p : Place)
+                   (n : nat),
+              In (p, n) s'.(marking) ->
+              In (p, n - pre_sum spn p pr) residual_marking) ->
         IsSensitized spn residual_marking t ->
         In t s'.(fired)) ->
     (* ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t'), ∀ t' ∈ Pr(t)) ⇒ t ∉ Fired' 
@@ -412,14 +411,13 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        (forall (p : Place)
-                (n preSum : nat)
-                (pr : list Trans),
+        (forall (pr : list Trans),
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
-            In (p, n) s'.(marking) ->
-            PreSumWD spn p pr preSum ->
-            In (p, n - preSum) residual_marking) ->
+            forall (p : Place)
+                   (n : nat),
+              In (p, n) s'.(marking) ->
+              In (p, n - pre_sum spn p pr) residual_marking) ->
         ~IsSensitized spn residual_marking t ->
         ~In t s'.(fired)) ->
     
@@ -442,26 +440,3 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In (p, n - preSum + postSum) s'.(marking)) ->
     
     SpnSemantics spn s s' raising_edge.
-
-Lemma exists_unique_pre_sum :
-    forall (spn : Spn) (p : Place) (l : list Trans),
-    exists! (sum : nat), PreSum spn p l sum.
-    induction l.
-    - exists 0.
-      split.
-      + apply PreSum_nil.
-      + intros. inversion H. reflexivity.
-    - elim IHl.
-      intros.
-      elim H.
-      intros.
-      exists ((pre spn a p) + x).
-      split.
-      + apply PreSum_cons.
-        assumption.
-      + intros.
-        inversion H2.
-        apply H1 in H6.
-        rewrite H6.
-        reflexivity.
-  Qed.

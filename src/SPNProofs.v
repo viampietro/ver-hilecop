@@ -132,21 +132,23 @@ Section MapCheckFunctions.
   Proof.
     intros spn marking p t;
       functional induction (check_pre spn marking p t) using check_pre_ind;
-      intros.
+      intros n Hwell_def_spn Hsame_struct Hin_m Hfun.
     (* General case, all went well. *)
     - apply get_m_correct in e.
       (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold MarkingHaveSameStruct in H0.
-      unfold NoUnmarkedPlace in H15.
-      unfold NoDupPlaces in H3.
-      rewrite H0 in H15; rewrite H15 in H3.
-      assert (fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
-      generalize (nodup_same_pair marking H3 (p, n) (p, nboftokens) H1 e H); intro.
-      injection H14; intro.
-      rewrite <- H16 in H2; injection H2; intro.
-      apply (leb_complete (pre spn t p) n H17).
-    - inversion H2.
+      explode_well_defined_spn.
+      unfold MarkingHaveSameStruct in Hsame_struct.
+      unfold NoUnmarkedPlace in Hunm_place.
+      unfold NoDupPlaces in Hnodup_places.
+      rewrite Hsame_struct in Hunm_place; rewrite Hunm_place in Hnodup_places.
+      assert (Heq_pp : fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
+      generalize (nodup_same_pair
+                    marking Hnodup_places (p, n) (p, nboftokens)
+                    Hin_m e Heq_pp) as Heq_nnb; intro.
+      injection Heq_nnb as Heq_nnb.
+      rewrite <- Heq_nnb in Hfun; injection Hfun as Hfun.
+      apply (leb_complete (pre spn t p) n Hfun).
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for check_pre. *)
@@ -163,18 +165,18 @@ Section MapCheckFunctions.
       (pre spn t p) <= n ->
       check_pre spn marking p t = Some true.
   Proof.
-    intros spn marking p t n; intros.
+    intros spn marking p t n Hwell_def_spn Hsame_struct Hin_m Hspec.
     unfold check_pre.
     (* Builds the condition NoDup (fst (split marking)). 
        Necessary to apply get_m_complete. *)
-    unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-    unfold NoDupPlaces in H3.
-    unfold MarkingHaveSameStruct in H0.
-    unfold NoUnmarkedPlace in H15.
-    rewrite H15 in H3; rewrite H0 in H3.
-    generalize (get_m_complete marking p n H3 H1); intro.
-    rewrite H.
-    apply leb_correct in H2; rewrite H2; reflexivity.
+    explode_well_defined_spn.
+    unfold NoDupPlaces in Hnodup_places.
+    unfold MarkingHaveSameStruct in Hsame_struct.
+    unfold NoUnmarkedPlace in Hunm_place.
+    rewrite Hunm_place in Hnodup_places; rewrite Hsame_struct in Hnodup_places.
+    specialize (get_m_complete marking p n Hnodup_places Hin_m) as Hget_m.
+    rewrite Hget_m.
+    apply leb_correct in Hspec; rewrite Hspec; reflexivity.
   Qed.
 
   (** ∀ spn, marking, pre_places, t, b,
@@ -219,22 +221,21 @@ Section MapCheckFunctions.
     intros spn marking pre_places t b;
       functional induction (map_check_pre_aux spn marking pre_places t b)
                  using map_check_pre_aux_ind;
-      intros.
-    - inversion H4.
-    - apply in_inv in H4; elim H4; intro.
-      + apply map_check_pre_aux_true_if_true in H3.
-        apply andb_prop in H3; elim H3; intros.
-        rewrite H7 in e0.
-        rewrite H6 in e0.
-        generalize (check_pre_correct spn marking p0 t n H H0 H5 e0); intro.
-        assumption.
-      + apply IHo with (neighbours_of_t := neighbours_of_t);
-          (assumption ||
-           unfold incl in H2;
-           unfold incl; intros;
-           apply in_cons with (a := p) in H7;
-           apply (H2 a H7)).
-    - inversion H3.
+      intros neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hincl_pre_pl
+             Hfun p' n Hin_pre_pl Hin_m.
+    - inversion Hin_pre_pl.
+    - inversion Hin_pre_pl as [Heq_pp' | Hin_p'_tail].
+      + apply map_check_pre_aux_true_if_true in Hfun.
+        apply andb_prop in Hfun; apply proj1 in Hfun.
+        rewrite Heq_pp' in e0; rewrite Hfun in e0.
+        apply (check_pre_correct
+                 spn marking p' t n
+                 Hwell_def_spn Hsame_struct Hin_m e0).
+      + apply incl_cons_inv in Hincl_pre_pl.
+        apply (IHo neigh_of_t
+                   Hwell_def_spn Hsame_struct Hin_lneigh Hincl_pre_pl
+                   Hfun p' n Hin_p'_tail Hin_m).
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for map_check_pre_aux. *)
@@ -256,55 +257,64 @@ Section MapCheckFunctions.
     intros spn marking pre_places t.
     functional induction (map_check_pre_aux spn marking pre_places t true)
                using map_check_pre_aux_ind;
-      intros.
-    - simpl; reflexivity.
-    - simpl.
-      (* Deduces hypotheses necessary to apply check_pre_complete. *)
-      assert (In p (p :: tail)) by apply in_eq.
-      generalize (H2 p H4); intro.
-      assert (In p (flatten_neighbours neighbours_of_t))
+      intros neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh
+             Hincl_pre_pl Hspec.
+    - reflexivity.
+    - (* Builds ∃ x, (p, x) ∈ marking to apply check_pre_complete. *)
+      assert (Hin_pre_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_pre_pl p Hin_pre_pl) as Hin_pre_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
         by (unfold flatten_neighbours; apply in_or_app; left; assumption).
-      generalize (in_neigh_in_flatten spn t neighbours_of_t p H H1 H6); intro.
-      assert (H' := H).
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold NoUnknownPlaceInNeighbours in H13.
-      unfold incl in H13.
-      apply (H13 p) in H7.
-      unfold NoUnmarkedPlace in H20; rewrite H20 in H7.
-      unfold MarkingHaveSameStruct in H0; rewrite H0 in H7.
-      generalize (in_fst_split_in_pair p marking H7); intro.
-      elim H; intros; generalize (H3 p x H4 H19); intro.
+      specialize (in_neigh_in_flatten
+                    spn t neigh_of_t p
+                    Hwell_def_spn Hin_lneigh Hin_flat) as Hin_flat_lneigh.
+      explode_well_defined_spn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      unfold NoUnmarkedPlace in Hunm_place; rewrite Hunm_place in Hin_flat_lneigh.
+      unfold MarkingHaveSameStruct in Hsame_struct; rewrite Hsame_struct in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m'); specialize (Hspec p x Hin_pre_pl Hin_m') as Hpre_le.
       (* Applies check_pre_complete, then the induction hypothesis. *)
-      generalize (check_pre_complete spn marking p t x H' H0 H19 H21); intro.
+      specialize (check_pre_complete
+                    spn marking p t x
+                    Hwell_def_spn Hsame_struct Hin_m' Hpre_le) as Hcheck_pre.
       (* Use b = true to rewrite the goal and apply the induction hypothesis. *)
-      rewrite H22 in e0; injection e0; intro.
-      rewrite <- H23 in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
-      rewrite <- H23; rewrite andb_comm; rewrite andb_true_r.
-      apply IHo with (neighbours_of_t := neighbours_of_t).
-      + assumption.
-      + assumption.
-      + assumption.
-      + unfold incl; intros.
-        unfold incl in H2.
-        apply in_cons with (a := p) in H24.
-        apply (H2 a H24).
-      + intros; apply in_cons with (a := p) in H24.
-        apply (H3 p0 n H24 H25).
+      rewrite Hcheck_pre in e0; injection e0 as Heq_btrue.
+      rewrite <- Heq_btrue in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
+      rewrite <- Heq_btrue; rewrite andb_comm; rewrite andb_true_r.
+      (* Builds hypotheses and then applies IHo. *)
+      apply incl_cons_inv in Hincl_pre_pl.
+      assert (Hspec' : forall (p : Place) (n : nat),
+                 In p tail -> In (p, n) marking -> pre spn t p <= n)
+        by (intros p0 n Hin_tail;
+            apply in_cons with (a := p) in Hin_tail;
+            apply (Hspec p0 n Hin_tail)).
+      apply (IHo neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hincl_pre_pl Hspec').
     (* Deduces hypotheses necessary to apply check_pre_complete. *)
-    - assert (In p (p :: tail)) by apply in_eq.
-      generalize (H2 p H4); intro.
-      assert (In p (flatten_neighbours neighbours_of_t))
+    - (* Builds ∃ x, (p, x) ∈ marking to apply check_pre_complete. *)
+      assert (Hin_pre_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_pre_pl p Hin_pre_pl) as Hin_pre_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
         by (unfold flatten_neighbours; apply in_or_app; left; assumption).
-      generalize (in_neigh_in_flatten spn t neighbours_of_t p H H1 H6); intro.
-      assert (H' := H); unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold NoUnknownPlaceInNeighbours in H13; unfold incl in H13; apply (H13 p) in H7.
-      unfold NoUnmarkedPlace in H20; rewrite H20 in H7.
-      unfold MarkingHaveSameStruct in H0; rewrite H0 in H7.
-      generalize (in_fst_split_in_pair p marking H7); intro; elim H; intros.
-      generalize (H3 p x H4 H19); intro.
-      generalize (check_pre_complete spn marking p t x H' H0 H19 H21); intro.
+      specialize (in_neigh_in_flatten
+                    spn t neigh_of_t p
+                    Hwell_def_spn Hin_lneigh Hin_flat) as Hin_flat_lneigh.
+      explode_well_defined_spn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      unfold NoUnmarkedPlace in Hunm_place; rewrite Hunm_place in Hin_flat_lneigh.
+      unfold MarkingHaveSameStruct in Hsame_struct; rewrite Hsame_struct in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m'); specialize (Hspec p x Hin_pre_pl Hin_m') as Hpre_le.
+      (* Applies check_pre_complete, then the induction hypothesis. *)
+      specialize (check_pre_complete
+                    spn marking p t x
+                    Hwell_def_spn Hsame_struct Hin_m' Hpre_le) as Hcheck_pre.
       (* Then, shows a contradiction. *)
-      rewrite e0 in H22; inversion H22.
+      rewrite e0 in Hcheck_pre; inversion Hcheck_pre.
   Qed.
 
   (** Correctness proof for map_check_pre. *)
@@ -323,22 +333,24 @@ Section MapCheckFunctions.
     intros spn marking t neighbours_of_t.
     functional induction (map_check_pre spn marking (pre_pl neighbours_of_t) t)
                using map_check_pre_ind;
-      intros.
-    assert (incl (pre_pl neighbours_of_t) (pre_pl neighbours_of_t)) by apply incl_refl.
+      intros Hwell_def_spn Hsame_struct Hin_lneigh Hfun p n Hin_m.
+    assert (Hincl_refl : incl (pre_pl neighbours_of_t) (pre_pl neighbours_of_t))
+      by apply incl_refl.
     (* Proof in two stages. *)
-    assert (H' := classic (In p (pre_pl neighbours_of_t))).
-    elim H'; intro.
+    assert (Hvee_in_pre_pl := classic (In p (pre_pl neighbours_of_t))).
+    inversion Hvee_in_pre_pl as [Hin_pre_pl | Hnotin_pre_pl]; clear Hvee_in_pre_pl.
     (* First stage, p ∈ pre_places, then we apply map_check_pre_aux_correct. *)
-    - generalize (map_check_pre_aux_correct
+    - apply (map_check_pre_aux_correct
                     spn marking (pre_pl neighbours_of_t) t true neighbours_of_t
-                    H H0 H1 H4 H2); intro. 
-      apply (H6 p n H5 H3).
+                    Hwell_def_spn Hsame_struct Hin_lneigh Hincl_refl Hfun p n
+                    Hin_pre_pl Hin_m). 
     (* Second stage, p ∉ pre_places, then (pre spn t p) = 0 *)
-    - unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold AreWellDefinedPreEdges in H14.
-      generalize (H14 t neighbours_of_t p H1); intro.
-      elim H; clear H; intros.
-      generalize (H17 H5); intro; rewrite H19; apply Peano.le_0_n.
+    - explode_well_defined_spn.
+      unfold AreWellDefinedPreEdges in Hwell_def_pre.
+      specialize (Hwell_def_pre t neighbours_of_t p Hin_lneigh)
+        as Hw_pre.
+      apply proj2 in Hw_pre.
+      specialize (Hw_pre Hnotin_pre_pl) as Hw_pre; rewrite Hw_pre; apply Peano.le_0_n.
   Qed.
 
   (** Correctness proof for map_check_pre. *)
@@ -357,7 +369,7 @@ Section MapCheckFunctions.
     intros spn marking t neighbours_of_t.
     functional induction (map_check_pre spn marking (pre_pl neighbours_of_t) t)
                using map_check_pre_ind;
-      intros.
+      intros Hwell_def_spn Hsame_struct Hin_lneigh Hspec.
     (* Hypothesis : incl (pre_pl neighbours_of_t) (pre_pl neighbours_of_t) 
        for map_check_pre_aux_complete. *)
     assert (incl (pre_pl neighbours_of_t) (pre_pl neighbours_of_t)) by apply incl_refl.
@@ -367,10 +379,10 @@ Section MapCheckFunctions.
     - assumption.
     - assumption.
     - assumption.
-    - intros; apply (H2 p n H5).
+    - intros p n Hin_pre_pl Hin_m; apply (Hspec p n Hin_m).
   Qed.
 
-  (** Correctness proof for check_test. *)
+ (** Correctness proof for check_test. *)
 
   Lemma check_test_correct :
     forall (spn : Spn)
@@ -386,21 +398,23 @@ Section MapCheckFunctions.
   Proof.
     intros spn marking p t;
       functional induction (check_test spn marking p t) using check_test_ind;
-      intros.
+      intros n Hwell_def_spn Hsame_struct Hin_m Hfun.
     (* General case, all went well. *)
     - apply get_m_correct in e.
       (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold MarkingHaveSameStruct in H0.
-      unfold NoUnmarkedPlace in H15.
-      unfold NoDupPlaces in H3.
-      rewrite H0 in H15; rewrite H15 in H3.
-      assert (fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
-      generalize (nodup_same_pair marking H3 (p, n) (p, nboftokens) H1 e H); intro.
-      injection H14; intro.
-      rewrite <- H16 in H2; injection H2; intro.
-      apply (leb_complete (test spn t p) n H17).
-    - inversion H2.
+      explode_well_defined_spn.
+      unfold MarkingHaveSameStruct in Hsame_struct.
+      unfold NoUnmarkedPlace in Hunm_place.
+      unfold NoDupPlaces in Hnodup_places.
+      rewrite Hsame_struct in Hunm_place; rewrite Hunm_place in Hnodup_places.
+      assert (Heq_pp : fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
+      generalize (nodup_same_pair
+                    marking Hnodup_places (p, n) (p, nboftokens)
+                    Hin_m e Heq_pp) as Heq_nnb; intro.
+      injection Heq_nnb as Heq_nnb.
+      rewrite <- Heq_nnb in Hfun; injection Hfun as Hfun.
+      apply (leb_complete (test spn t p) n Hfun).
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for check_test. *)
@@ -417,18 +431,18 @@ Section MapCheckFunctions.
       (test spn t p) <= n ->
       check_test spn marking p t = Some true.
   Proof.
-    intros spn marking p t n; intros.
+    intros spn marking p t n Hwell_def_spn Hsame_struct Hin_m Hspec.
     unfold check_test.
     (* Builds the condition NoDup (fst (split marking)). 
        Necessary to apply get_m_complete. *)
-    unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-    unfold NoDupPlaces in H3.
-    unfold MarkingHaveSameStruct in H0.
-    unfold NoUnmarkedPlace in H15.
-    rewrite H15 in H3; rewrite H0 in H3.
-    generalize (get_m_complete marking p n H3 H1); intro.
-    rewrite H.
-    apply leb_correct in H2; rewrite H2; reflexivity.
+    explode_well_defined_spn.
+    unfold NoDupPlaces in Hnodup_places.
+    unfold MarkingHaveSameStruct in Hsame_struct.
+    unfold NoUnmarkedPlace in Hunm_place.
+    rewrite Hunm_place in Hnodup_places; rewrite Hsame_struct in Hnodup_places.
+    specialize (get_m_complete marking p n Hnodup_places Hin_m) as Hget_m.
+    rewrite Hget_m.
+    apply leb_correct in Hspec; rewrite Hspec; reflexivity.
   Qed.
 
   (** ∀ spn, marking, test_places, t, b,
@@ -473,22 +487,21 @@ Section MapCheckFunctions.
     intros spn marking test_places t b;
       functional induction (map_check_test_aux spn marking test_places t b)
                  using map_check_test_aux_ind;
-      intros.
-    - inversion H4.
-    - apply in_inv in H4; elim H4; intro.
-      + apply map_check_test_aux_true_if_true in H3.
-        apply andb_prop in H3; elim H3; intros.
-        rewrite H7 in e0.
-        rewrite H6 in e0.
-        generalize (check_test_correct spn marking p0 t n H H0 H5 e0); intro.
-        assumption.
-      + apply IHo with (neighbours_of_t := neighbours_of_t);
-          (assumption ||
-           unfold incl in H2;
-           unfold incl; intros;
-           apply in_cons with (a := p) in H7;
-           apply (H2 a H7)).
-    - inversion H3.
+      intros neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hincl_test_pl
+             Hfun p' n Hin_test_pl Hin_m.
+    - inversion Hin_test_pl.
+    - inversion Hin_test_pl as [Heq_pp' | Hin_p'_tail].
+      + apply map_check_test_aux_true_if_true in Hfun.
+        apply andb_prop in Hfun; apply proj1 in Hfun.
+        rewrite Heq_pp' in e0; rewrite Hfun in e0.
+        apply (check_test_correct
+                 spn marking p' t n
+                 Hwell_def_spn Hsame_struct Hin_m e0).
+      + apply incl_cons_inv in Hincl_test_pl.
+        apply (IHo neigh_of_t
+                   Hwell_def_spn Hsame_struct Hin_lneigh Hincl_test_pl
+                   Hfun p' n Hin_p'_tail Hin_m).
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for map_check_test_aux. *)
@@ -510,60 +523,68 @@ Section MapCheckFunctions.
     intros spn marking test_places t.
     functional induction (map_check_test_aux spn marking test_places t true)
                using map_check_test_aux_ind;
-      intros.
-    - simpl; reflexivity.
-    - simpl.
-      (* Deduces hypotheses necessary to apply check_test_complete. *)
-      assert (In p (p :: tail)) by apply in_eq.
-      generalize (H2 p H4); intro.
-      assert (In p (flatten_neighbours neighbours_of_t))
-        by (unfold flatten_neighbours; apply in_or_app; right; apply in_or_app; left; assumption).
-      generalize (in_neigh_in_flatten spn t neighbours_of_t p H H1 H6); intro.
-      assert (H' := H).
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold NoUnknownPlaceInNeighbours in H13.
-      unfold incl in H13.
-      apply (H13 p) in H7.
-      unfold NoUnmarkedPlace in H20; rewrite H20 in H7.
-      unfold MarkingHaveSameStruct in H0; rewrite H0 in H7.
-      generalize (in_fst_split_in_pair p marking H7); intro.
-      elim H; intros; generalize (H3 p x H4 H19); intro.
+      intros neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh
+             Hincl_test_pl Hspec.
+    - reflexivity.
+    - (* Builds ∃ x, (p, x) ∈ marking to apply check_test_complete. *)
+      assert (Hin_test_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_test_pl p Hin_test_pl) as Hin_test_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
+        by (unfold flatten_neighbours;
+            apply in_or_app; right;
+            apply in_or_app; left; assumption).
+      specialize (in_neigh_in_flatten
+                    spn t neigh_of_t p
+                    Hwell_def_spn Hin_lneigh Hin_flat) as Hin_flat_lneigh.
+      explode_well_defined_spn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      unfold NoUnmarkedPlace in Hunm_place; rewrite Hunm_place in Hin_flat_lneigh.
+      unfold MarkingHaveSameStruct in Hsame_struct; rewrite Hsame_struct in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m'); specialize (Hspec p x Hin_test_pl Hin_m') as Htest_le.
       (* Applies check_test_complete, then the induction hypothesis. *)
-      generalize (check_test_complete spn marking p t x H' H0 H19 H21); intro.
+      specialize (check_test_complete
+                    spn marking p t x
+                    Hwell_def_spn Hsame_struct Hin_m' Htest_le) as Hcheck_test.
       (* Use b = true to rewrite the goal and apply the induction hypothesis. *)
-      rewrite H22 in e0; injection e0; intro.
-      rewrite <- H23 in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
-      rewrite <- H23; rewrite andb_comm; rewrite andb_true_r.
-      apply IHo with (neighbours_of_t := neighbours_of_t).
-      + assumption.
-      + assumption.
-      + assumption.
-      + unfold incl; intros.
-        unfold incl in H2.
-        apply in_cons with (a := p) in H24.
-        apply (H2 a H24).
-      + intros; apply in_cons with (a := p) in H24.
-        apply (H3 p0 n H24 H25).
+      rewrite Hcheck_test in e0; injection e0 as Heq_btrue.
+      rewrite <- Heq_btrue in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
+      rewrite <- Heq_btrue; rewrite andb_comm; rewrite andb_true_r.
+      (* Builds hypotheses and then applies IHo. *)
+      apply incl_cons_inv in Hincl_test_pl.
+      assert (Hspec' : forall (p : Place) (n : nat),
+                 In p tail -> In (p, n) marking -> test spn t p <= n)
+        by (intros p0 n Hin_tail;
+            apply in_cons with (a := p) in Hin_tail;
+            apply (Hspec p0 n Hin_tail)).
+      apply (IHo neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hincl_test_pl Hspec').
     (* Deduces hypotheses necessary to apply check_test_complete. *)
-    - assert (In p (p :: tail)) by apply in_eq.
-      generalize (H2 p H4); intro.
-      (* p ∈ (flatten_neighbours neighbours_of_t) *)
-      assert (In p (flatten_neighbours neighbours_of_t))
-        by (unfold flatten_neighbours; apply in_or_app; right; apply in_or_app; left; assumption).
-      (* p ∈ (flatten_neighbours neighbours_of_t) ⇒ p ∈ (flatten spn.(lneighbours)) *)
-      generalize (in_neigh_in_flatten spn t neighbours_of_t p H H1 H6); intro.
-      assert (H' := H); unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold NoUnknownPlaceInNeighbours in H13; unfold incl in H13; apply (H13 p) in H7.
-      unfold NoUnmarkedPlace in H20; rewrite H20 in H7.
-      unfold MarkingHaveSameStruct in H0; rewrite H0 in H7.
-      (* ∃ n, (p, n) ∈ marking *)
-      generalize (in_fst_split_in_pair p marking H7); intro; elim H; intros.
-      (* Applies the completeness hypothesis. *)
-      generalize (H3 p x H4 H19); intro.
-      (* Applies check_test_complete *)
-      generalize (check_test_complete spn marking p t x H' H0 H19 H21); intro.
+    - (* Builds ∃ x, (p, x) ∈ marking to apply check_test_complete. *)
+      assert (Hin_test_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_test_pl p Hin_test_pl) as Hin_test_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
+        by (unfold flatten_neighbours;
+            apply in_or_app; right;
+            apply in_or_app; left; assumption).
+      specialize (in_neigh_in_flatten
+                    spn t neigh_of_t p
+                    Hwell_def_spn Hin_lneigh Hin_flat) as Hin_flat_lneigh.
+      explode_well_defined_spn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      unfold NoUnmarkedPlace in Hunm_place; rewrite Hunm_place in Hin_flat_lneigh.
+      unfold MarkingHaveSameStruct in Hsame_struct; rewrite Hsame_struct in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m'); specialize (Hspec p x Hin_test_pl Hin_m') as Htest_le.
+      (* Applies check_test_complete, then the induction hypothesis. *)
+      specialize (check_test_complete
+                    spn marking p t x
+                    Hwell_def_spn Hsame_struct Hin_m' Htest_le) as Hcheck_test.
       (* Then, shows a contradiction. *)
-      rewrite e0 in H22; inversion H22.
+      rewrite e0 in Hcheck_test; inversion Hcheck_test.
   Qed.
 
   (** Correctness proof for map_check_test. *)
@@ -582,22 +603,24 @@ Section MapCheckFunctions.
     intros spn marking t neighbours_of_t.
     functional induction (map_check_test spn marking (test_pl neighbours_of_t) t)
                using map_check_test_ind;
-      intros.
-    assert (incl (test_pl neighbours_of_t) (test_pl neighbours_of_t)) by apply incl_refl.
+      intros Hwell_def_spn Hsame_struct Hin_lneigh Hfun p n Hin_m.
+    assert (Hincl_refl : incl (test_pl neighbours_of_t) (test_pl neighbours_of_t))
+      by apply incl_refl.
     (* Proof in two stages. *)
-    assert (H' := classic (In p (test_pl neighbours_of_t))).
-    elim H'; intro.
+    assert (Hvee_in_test_pl := classic (In p (test_pl neighbours_of_t))).
+    inversion Hvee_in_test_pl as [Hin_test_pl | Hnotin_test_pl]; clear Hvee_in_test_pl.
     (* First stage, p ∈ test_places, then we apply map_check_test_aux_correct. *)
-    - generalize (map_check_test_aux_correct
+    - apply (map_check_test_aux_correct
                     spn marking (test_pl neighbours_of_t) t true neighbours_of_t
-                    H H0 H1 H4 H2); intro. 
-      apply (H6 p n H5 H3).
+                    Hwell_def_spn Hsame_struct Hin_lneigh Hincl_refl Hfun p n
+                    Hin_test_pl Hin_m). 
     (* Second stage, p ∉ test_places, then (test spn t p) = 0 *)
-    - unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold AreWellDefinedTestEdges in H15.
-      generalize (H15 t neighbours_of_t p H1); intro.
-      elim H; clear H; intros.
-      generalize (H17 H5); intro; rewrite H19; apply Peano.le_0_n.
+    - explode_well_defined_spn.
+      unfold AreWellDefinedTestEdges in Hwell_def_test.
+      specialize (Hwell_def_test t neighbours_of_t p Hin_lneigh)
+        as Hw_test.
+      apply proj2 in Hw_test.
+      specialize (Hw_test Hnotin_test_pl) as Hw_test; rewrite Hw_test; apply Peano.le_0_n.
   Qed.
 
   (** Correctness proof for map_check_test. *)
@@ -614,7 +637,11 @@ Section MapCheckFunctions.
       map_check_test spn marking (test_pl neighbours_of_t) t = Some true.
   Proof.
     intros spn marking t neighbours_of_t.
-    unfold map_check_test; intros.
+    functional induction (map_check_test spn marking (test_pl neighbours_of_t) t)
+               using map_check_test_ind;
+      intros Hwell_def_spn Hsame_struct Hin_lneigh Hspec.
+    (* Hypothesis : incl (test_pl neighbours_of_t) (test_pl neighbours_of_t) 
+       for map_check_test_aux_complete. *)
     assert (incl (test_pl neighbours_of_t) (test_pl neighbours_of_t)) by apply incl_refl.
     (* Apply map_check_test_aux_complete. *)
     apply map_check_test_aux_complete with (neighbours_of_t := neighbours_of_t).
@@ -622,10 +649,9 @@ Section MapCheckFunctions.
     - assumption.
     - assumption.
     - assumption.
-    - intros; apply (H2 p n H5).
+    - intros p n Hin_test_pl Hin_m; apply (Hspec p n Hin_m).
   Qed.
-  
-
+    
   (** Correctness proof for check_inhib. *)
 
   Lemma check_inhib_correct :
@@ -642,26 +668,29 @@ Section MapCheckFunctions.
   Proof.
     intros spn marking p t;
       functional induction (check_inhib spn marking p t) using check_inhib_ind;
-      intros.
-    (* General case, all went well. *)
+      intros n Hwell_def_spn Hsame_struct Hin_m Hfun.
+    (* GENERAL CASE, all went well. *)
     - apply get_m_correct in e.
       (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold MarkingHaveSameStruct in H0.
-      unfold NoUnmarkedPlace in H15.
-      unfold NoDupPlaces in H3.
-      rewrite H0 in H15; rewrite H15 in H3.
-      assert (fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
+      explode_well_defined_spn.
+      unfold MarkingHaveSameStruct in Hsame_struct.
+      unfold NoUnmarkedPlace in Hunm_place.
+      unfold NoDupPlaces in Hnodup_places.
+      rewrite Hsame_struct in Hunm_place; rewrite Hunm_place in Hnodup_places.
+      assert (Heq_pair : fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
       (* Determines n = nboftokens *)
-      generalize (nodup_same_pair marking H3 (p, n) (p, nboftokens) H1 e H); intro.
-      injection H14; intro.
-      rewrite <- H16 in H2; injection H2; intro.
-      apply orb_prop in H17.
+      specialize (nodup_same_pair
+                    marking Hnodup_places (p, n) (p, nboftokens)
+                    Hin_m e Heq_pair) as Heq_pair'.
+      injection Heq_pair' as Heq_pair'.
+      rewrite <- Heq_pair' in Hfun; injection Hfun as Hfun.
+      apply orb_prop in Hfun.
       (* First case: n < (inhib spn t p), second case: (inhib spn t p) = 0 *)
-      elim H17; intro.
+      inversion Hfun as [Hinhib_lt | Hinhib_eq_0].
       + left; apply Nat.ltb_lt; assumption.
       + right; apply Nat.eqb_eq; assumption.
-    - inversion H2.
+    (* ERROR CASE *)
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for check_inhib. *)
@@ -678,21 +707,21 @@ Section MapCheckFunctions.
       (n < (inhib spn t p) \/ (inhib spn t p) = 0) ->
       check_inhib spn marking p t = Some true.
   Proof.
-    intros spn marking p t n; intros.
+    intros spn marking p t n Hwell_def_spn  Hsame_struct Hin_m Hspec.
     unfold check_inhib.
     (* Builds the condition NoDup (fst (split marking)). 
        Necessary to apply get_m_complete. *)
-    unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-    unfold NoDupPlaces in H3.
-    unfold MarkingHaveSameStruct in H0.
-    unfold NoUnmarkedPlace in H15.
-    rewrite H15 in H3; rewrite H0 in H3.
+    explode_well_defined_spn.
+    unfold NoDupPlaces in Hnodup_places.
+    unfold MarkingHaveSameStruct in Hsame_struct.
+    unfold NoUnmarkedPlace in Hunm_place.
+    rewrite Hunm_place in Hnodup_places; rewrite Hsame_struct in Hnodup_places.
     (* Applies get_m_complte *)
-    generalize (get_m_complete marking p n H3 H1); intro.
-    rewrite H; elim H2; intros.
-    - apply Nat.ltb_lt in H14; rewrite H14.
+    specialize (get_m_complete marking p n Hnodup_places Hin_m) as Hget_m.
+    rewrite Hget_m; inversion Hspec as [Hinhib_lt | Hinhib_eq_0].
+    - apply Nat.ltb_lt in Hinhib_lt; rewrite Hinhib_lt.
       rewrite orb_true_l; reflexivity.
-    - apply Nat.eqb_eq in H14; rewrite H14.
+    - apply Nat.eqb_eq in Hinhib_eq_0; rewrite Hinhib_eq_0.
       rewrite orb_comm; rewrite orb_true_l; reflexivity.
   Qed.
 
@@ -740,22 +769,23 @@ Section MapCheckFunctions.
     intros spn marking inhib_places t b;
       functional induction (map_check_inhib_aux spn marking inhib_places t b)
                  using map_check_inhib_aux_ind;
-      intros.
-    - inversion H4.
-    - apply in_inv in H4; elim H4; intro.
-      + apply map_check_inhib_aux_true_if_true in H3.
-        apply andb_prop in H3; elim H3; intros.
-        rewrite H7 in e0.
-        rewrite H6 in e0.
-        generalize (check_inhib_correct spn marking p0 t n H H0 H5 e0); intro.
-        assumption.
-      + apply IHo with (neighbours_of_t := neighbours_of_t);
+      intros neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hincl_inhib_pl Hfun
+             p' n Hin_inhib_pl Hin_m.
+    (* BASE CASE *)
+    - inversion Hin_inhib_pl.
+    (* GENERAL CASE *)
+    - inversion Hin_inhib_pl as [Heq_pp' | Hin_inhib_tl]; clear Hin_inhib_pl.
+      + apply map_check_inhib_aux_true_if_true in Hfun.
+        apply andb_prop in Hfun; apply proj1 in Hfun.
+        rewrite Heq_pp' in e0; rewrite Hfun in e0.
+        apply (check_inhib_correct
+                 spn marking p' t n
+                 Hwell_def_spn Hsame_struct Hin_m e0).
+      + apply IHo with (neighbours_of_t := neigh_of_t);
           (assumption ||
-           unfold incl in H2;
-           unfold incl; intros;
-           apply in_cons with (a := p) in H7;
-           apply (H2 a H7)).
-    - inversion H3.
+           apply incl_cons_inv in Hincl_inhib_pl; assumption).
+    (* ERROR CASE *)
+    - inversion Hfun.
   Qed.
 
   (** Completeness proof for map_check_inhib_aux. *)
@@ -775,71 +805,82 @@ Section MapCheckFunctions.
           (n < (inhib spn t p) \/ (inhib spn t p) = 0)) ->
       map_check_inhib_aux spn marking inhib_places t true = Some true.
   Proof.
-    intros spn marking inhib_places t.
-    functional induction (map_check_inhib_aux spn marking inhib_places t true)
-               using map_check_inhib_aux_ind;
-      intros.
-    - simpl; reflexivity.
-    - simpl.
-      (* Deduces hypotheses necessary to apply check_inhib_complete. *)
-      assert (In p (p :: tail)) by apply in_eq.
-      generalize (H2 p H4); intro.
+    intros spn marking inhib_places t;
+      functional induction (map_check_inhib_aux spn marking inhib_places t true)
+                 using map_check_inhib_aux_ind;
+      intros neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hincl_inhib_pl Hspec.
+    (* BASE CASE *)
+    - reflexivity.
+    (* GENERAL CASE *)
+    - (* Deduces hypotheses necessary to apply check_inhib_complete. *)
+      assert (Hin_inhib_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_inhib_pl p Hin_inhib_pl) as Hin_inhib_pl_t.
       (* p ∈ (flatten_neighbours neighbours_of_t) *)
-      assert (In p (flatten_neighbours neighbours_of_t))
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
         by (unfold flatten_neighbours;
             do 2 (apply in_or_app; right);
             apply in_or_app; left; assumption).
       (* p ∈ (flatten_neighbours neighbours_of_t) ⇒ p ∈ (flatten spn.(lneighbours)) *)
-      generalize (in_neigh_in_flatten spn t neighbours_of_t p H H1 H6); intro.
-      assert (H' := H).
-      unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold NoUnknownPlaceInNeighbours in H13.
-      unfold incl in H13.
-      apply (H13 p) in H7.
-      unfold NoUnmarkedPlace in H20; rewrite H20 in H7.
-      unfold MarkingHaveSameStruct in H0; rewrite H0 in H7.
+      specialize (in_neigh_in_flatten spn t neigh_of_t p Hwell_def_spn Hin_lneigh Hin_flat)
+        as Hin_flat_spn.
+      explode_well_defined_spn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_spn.
+      unfold NoUnmarkedPlace in Hunm_place; rewrite Hunm_place in Hin_flat_spn.
+      unfold MarkingHaveSameStruct in Hsame_struct; rewrite Hsame_struct in Hin_flat_spn.
       (* ∃ n, (p, n) ∈ marking *)
-      generalize (in_fst_split_in_pair p marking H7); intro; elim H; intros.
+      specialize (in_fst_split_in_pair p marking Hin_flat_spn) as Hex_in_m;
+        inversion Hex_in_m as (x & Hin_m).
       (* Applies the completeness hypothesis. *)
-      generalize (H3 p x H4 H19); intro.
+      specialize (Hspec p x Hin_inhib_pl Hin_m) as Hinhib_spec.
       (* Applies check_inhib_complete, then the induction hypothesis. *)
-      generalize (check_inhib_complete spn marking p t x H' H0 H19 H21); intro.
+      specialize (check_inhib_complete
+                    spn marking p t x
+                    Hwell_def_spn Hsame_struct Hin_m Hinhib_spec) as Hcheck_inhib.
       (* Use b = true to rewrite the goal and apply the induction hypothesis. *)
-      rewrite H22 in e0; injection e0; intro.
-      rewrite <- H23 in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
-      rewrite <- H23; rewrite andb_comm; rewrite andb_true_r.
-      apply IHo with (neighbours_of_t := neighbours_of_t).
+      rewrite Hcheck_inhib in e0; injection e0 as Heq_btrue.
+      rewrite <- Heq_btrue in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
+      rewrite <- Heq_btrue; rewrite andb_comm; rewrite andb_true_r.
+      apply IHo with (neighbours_of_t := neigh_of_t).
       + assumption.
       + assumption.
       + assumption.
-      + unfold incl; intros.
-        unfold incl in H2.
-        apply in_cons with (a := p) in H24.
-        apply (H2 a H24).
-      + intros; apply in_cons with (a := p) in H24.
-        apply (H3 p0 n H24 H25).
+      + unfold incl; intros a Hin_tl.
+        unfold incl in Hincl_inhib_pl.
+        apply in_cons with (a := p) in Hin_tl.
+        apply (Hincl_inhib_pl a Hin_tl).
+      + intros p0 n Hin_tl Hin_m'; apply in_cons with (a := p) in Hin_tl.
+        apply (Hspec p0 n Hin_tl Hin_m').
     (* Deduces hypotheses necessary to apply check_inhib_complete. *)
-    - assert (In p (p :: tail)) by apply in_eq.
-      generalize (H2 p H4); intro.
+    - (* Deduces hypotheses necessary to apply check_inhib_complete. *)
+      assert (Hin_inhib_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_inhib_pl p Hin_inhib_pl) as Hin_inhib_pl_t.
       (* p ∈ (flatten_neighbours neighbours_of_t) *)
-      assert (In p (flatten_neighbours neighbours_of_t))
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
         by (unfold flatten_neighbours;
             do 2 (apply in_or_app; right);
             apply in_or_app; left; assumption).
       (* p ∈ (flatten_neighbours neighbours_of_t) ⇒ p ∈ (flatten spn.(lneighbours)) *)
-      generalize (in_neigh_in_flatten spn t neighbours_of_t p H H1 H6); intro.
-      assert (H' := H); unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold NoUnknownPlaceInNeighbours in H13; unfold incl in H13; apply (H13 p) in H7.
-      unfold NoUnmarkedPlace in H20; rewrite H20 in H7.
-      unfold MarkingHaveSameStruct in H0; rewrite H0 in H7.
+      specialize (in_neigh_in_flatten spn t neigh_of_t p Hwell_def_spn Hin_lneigh Hin_flat)
+        as Hin_flat_spn.
+      explode_well_defined_spn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_spn.
+      unfold NoUnmarkedPlace in Hunm_place; rewrite Hunm_place in Hin_flat_spn.
+      unfold MarkingHaveSameStruct in Hsame_struct; rewrite Hsame_struct in Hin_flat_spn.
       (* ∃ n, (p, n) ∈ marking *)
-      generalize (in_fst_split_in_pair p marking H7); intro; elim H; intros.
+      specialize (in_fst_split_in_pair p marking Hin_flat_spn) as Hex_in_m;
+        inversion Hex_in_m as (x & Hin_m).
       (* Applies the completeness hypothesis. *)
-      generalize (H3 p x H4 H19); intro.
-      (* Applies check_inhib_complete *)
-      generalize (check_inhib_complete spn marking p t x H' H0 H19 H21); intro.
+      specialize (Hspec p x Hin_inhib_pl Hin_m) as Hinhib_spec.
+      (* Applies check_inhib_complete, then the induction hypothesis. *)
+      specialize (check_inhib_complete
+                    spn marking p t x
+                    Hwell_def_spn Hsame_struct Hin_m Hinhib_spec) as Hcheck_inhib.
       (* Then, shows a contradiction. *)
-      rewrite e0 in H22; inversion H22.
+      rewrite e0 in Hcheck_inhib; inversion Hcheck_inhib.
   Qed.
   
   (** Correctness proof for map_check_inhib. *)
@@ -856,25 +897,25 @@ Section MapCheckFunctions.
       forall (p : Place) (n : nat),
         In (p, n) marking -> (n < (inhib spn t p) \/ (inhib spn t p) = 0).
   Proof.
-    intros spn marking t neighbours_of_t.
-    functional induction (map_check_inhib spn marking (inhib_pl neighbours_of_t) t)
+    intros spn marking t neigh_of_t.
+    functional induction (map_check_inhib spn marking (inhib_pl neigh_of_t) t)
                using map_check_inhib_ind;
-      intros.
-    assert (incl (inhib_pl neighbours_of_t) (inhib_pl neighbours_of_t)) by (apply incl_refl).
+      intros Hwell_def_spn Hsame_struct Hin_lneigh Hfun p n Hin_m.
+    assert (Hincl_refl : incl (inhib_pl neigh_of_t) (inhib_pl neigh_of_t)) by (apply incl_refl).
     (* Proof in two stages. *)
-    assert (H' := classic (In p (inhib_pl neighbours_of_t))).
-    elim H'; intro.
+    assert (Hvee_in_inhib_pl := classic (In p (inhib_pl neigh_of_t))).
+    inversion Hvee_in_inhib_pl as [Hin_inhib | Hnotin_inhib]; clear Hvee_in_inhib_pl.
     (* First stage, p ∈ inhib_places, then we apply map_check_inhib_aux_correct. *)
-    - generalize (map_check_inhib_aux_correct
-                    spn marking (inhib_pl neighbours_of_t) t true neighbours_of_t
-                    H H0 H1 H4 H2); intro. 
-      apply (H6 p n H5 H3).
+    - apply (map_check_inhib_aux_correct
+                    spn marking (inhib_pl neigh_of_t) t true neigh_of_t
+                    Hwell_def_spn Hsame_struct Hin_lneigh Hincl_refl Hfun
+            p n Hin_inhib Hin_m).
     (* Second stage, p ∉ inhib_places, then (inhib spn t p) = 0 *)
-    - unfold IsWellDefinedSpn in H; decompose [and] H; clear H; intros.
-      unfold AreWellDefinedInhibEdges in H16.
-      generalize (H16 t neighbours_of_t p H1); intro.
-      elim H; clear H; intros.
-      generalize (H17 H5); intro; right; assumption.
+    - explode_well_defined_spn.
+      unfold AreWellDefinedInhibEdges in Hwell_def_inhib.
+      generalize (Hwell_def_inhib t neigh_of_t p Hin_lneigh) as Hw_inhib; intro.
+      apply proj2 in Hw_inhib.
+      generalize (Hw_inhib Hnotin_inhib); intro; right; assumption.
   Qed.
 
   (** Correctness proof for map_check_inhib. *)
@@ -891,16 +932,16 @@ Section MapCheckFunctions.
           In (p, n) marking -> (n < (inhib spn t p) \/ (inhib spn t p) = 0)) ->
       map_check_inhib spn marking (inhib_pl neighbours_of_t) t = Some true.
   Proof.
-    intros spn marking t neighbours_of_t.
-    unfold map_check_inhib; intros.
-    assert (incl (inhib_pl neighbours_of_t) (inhib_pl neighbours_of_t)) by apply incl_refl.
+    intros spn marking t neigh_of_t Hwell_def_spn Hsame_struct Hin_lneigh Hspec.
+    unfold map_check_inhib.
+    assert (Hincl_refl : incl (inhib_pl neigh_of_t) (inhib_pl neigh_of_t)) by apply incl_refl.
     (* Apply map_check_inhib_aux_complete. *)
-    apply map_check_inhib_aux_complete with (neighbours_of_t := neighbours_of_t).
+    apply map_check_inhib_aux_complete with (neighbours_of_t := neigh_of_t).
     - assumption.
     - assumption.
     - assumption.
     - assumption.
-    - intros; apply (H2 p n H5).
+    - intros p n Hin_inhib_pl Hin_m; apply (Hspec p n Hin_m).
   Qed.
 
 End MapCheckFunctions.
@@ -2514,7 +2555,32 @@ Section SpnSensitizedByResidual.
     - inversion H.
   Qed.
 
-  (** Needed in to prove update_marking_aux_correct. *)
+  (** Proves that update_residual_marking_aux preserves marking structure. *)
+  Lemma update_residual_marking_aux_same_struct :
+    forall (spn : Spn)
+           (residual_marking : list (Place * nat))
+           (t : Trans)
+           (pre_places : list Place)
+           (final_marking : list (Place * nat)),
+      update_residual_marking_aux spn residual_marking t pre_places = Some final_marking ->
+      MarkingHaveSameStruct residual_marking final_marking.
+    intros spn residual_marking t pre_places;
+      functional induction (update_residual_marking_aux spn residual_marking t pre_places)
+                 using update_residual_marking_aux_ind;
+      intros final_marking Hfun.
+    (* BASE CASE *)
+    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+    (* GENERAL CASE *)
+    - apply modify_m_same_struct in e0.
+      apply IHo in Hfun.
+      unfold MarkingHaveSameStruct in e0;
+        unfold MarkingHaveSameStruct in Hfun;
+        rewrite <- e0 in Hfun; assumption.
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
+  (** Needed to prove update_marking_aux_correct. *)
   
   Lemma update_residual_marking_aux_not_in_pre_places :
     forall (spn : Spn)
@@ -2638,8 +2704,39 @@ Section SpnSensitizedByResidual.
       forall (p : Place) (n : nat),
         In (p, n) residual_marking -> In (p, n - (pre spn t p)) final_marking.
   Proof.
-    admit.
-  Admitted.
+    intros spn residual_marking t neigh_of_t final_marking
+           Hwell_def_spn Hnodup_resm Hin_lneigh Hfun p n Hin_resm.
+    unfold update_residual_marking in Hfun.
+    (* Two cases, either p ∈ (pre_pl neigh_of_t), or
+       p ∉ (pre_pl neigh_of_t). *)
+    assert (Hvee_in_pre_pl := classic (In p (pre_pl neigh_of_t))).
+    inversion Hvee_in_pre_pl as [Hin_p_pre | Hnotin_p_pre]; clear Hvee_in_pre_pl.
+    (* First case, p ∈ pre_pl, then applies update_residual_marking_aux_correct. *)
+    - explode_well_defined_spn.
+      (* Builds NoDup pre_pl. *)
+      assert (Hin_flat : In p (flatten_neighbours neigh_of_t))
+        by (unfold flatten_neighbours; apply in_or_app; left; assumption).      
+      unfold NoDupInNeighbours in Hnodup_neigh.
+      specialize (Hnodup_neigh t neigh_of_t Hin_lneigh) as Hnodup_flat.
+      unfold flatten_neighbours in Hnodup_flat;
+        apply nodup_app in Hnodup_flat; apply proj1 in Hnodup_flat.
+      (* Then, applies update_residual_marking_aux_correct. *)
+      apply (update_residual_marking_aux_correct
+               spn residual_marking t (pre_pl neigh_of_t) neigh_of_t final_marking
+               Hwell_def_spn Hnodup_resm Hin_lneigh Hnodup_flat
+               (incl_refl (pre_pl neigh_of_t)) Hfun p n Hin_p_pre Hin_resm).
+    (* Second case, p ∉ pre_pl, then applies 
+       update_residual_marking_aux_not_in_pre_places. *)
+    - explode_well_defined_spn.
+      unfold AreWellDefinedPreEdges in Hwell_def_pre.
+      specialize (Hwell_def_pre t neigh_of_t p Hin_lneigh) as Hw_pre_edges.
+      apply proj2 in Hw_pre_edges; specialize (Hw_pre_edges Hnotin_p_pre).
+      rewrite Hw_pre_edges; rewrite Nat.sub_0_r.
+      specialize (update_residual_marking_aux_not_in_pre_places
+                    spn residual_marking t (pre_pl neigh_of_t) final_marking
+                    Hfun p Hnotin_p_pre n) as Hequiv.
+      rewrite <- Hequiv; assumption.
+  Qed.
     
   (** If :
       - spn_fire_aux spn s residual fired pg = Some final_fired
@@ -2759,12 +2856,12 @@ Section SpnSensitizedByResidual.
         apply (spn_fire_aux_in_fired spn s residual_marking' (fired ++ [t]) tail final_fired t
                                      Hin_t_fired Hfun).
       (* Second subcase, In t' tail then apply the induction hypothesis. *)
-      (* Builds condition 1 : 
-         ∀ (p, n) ∈ (marking s) -> 
-           (p, n - pre_sum spn p (fired ++ [t])) ∈ residual_marking' *)
-      (* We need ∀ (p, n) ∈ residual_marking ⇒ 
-                   (p, n - pre_sum spn p [t]) ∈ residual_marking' *)
-      + (* Builds (fs (marking s)) = (fs res_marking) *)
+      + (* Builds condition 1: 
+           ∀ (p, n) ∈ (marking s) -> 
+             (p, n - pre_sum spn p (fired ++ [t])) ∈ residual_marking' *)
+        (* We need ∀ (p, n) ∈ residual_marking ⇒ 
+                     (p, n - pre_sum spn p [t]) ∈ residual_marking' *)
+        (* Builds (fs (marking s)) = (fs res_marking) *)
         explode_well_defined_spn_state.
         unfold MarkingHaveSameStruct in *.
         assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
@@ -2801,8 +2898,62 @@ Section SpnSensitizedByResidual.
           rewrite Heq_presum in Hin_ms.
           assumption.
         }
-        admit.
-        
+        (* Builds condition 2: 
+           ∀ t'' ∈ (fired ++ [t]), t'' ≻ t' ∧ t'' ∈ final_fired. *)
+        assert(Hhigh_in_fired' :
+                 forall t'' : Trans, In t'' (fired ++ [t]) ->
+                                     HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired).
+        {
+          intros t'' Hin_fired_app;
+            apply in_app_or in Hin_fired_app;
+            inversion Hin_fired_app as [Hin_fired | Heq_tst]; clear Hin_fired_app.
+          - apply (Hhigh_in_fired t'' Hin_fired).
+          - inversion Heq_tst as [Heq_tt | Hin_nil].
+            (* Two things to build, t'' ≻ t' and t'' ∈ ff. *)
+            + (* First, t'' ∈ ff *)
+              assert (Hin_fired_app : In t (fired ++ [t]))
+                     by (apply in_or_app; right; apply in_eq).
+              specialize (spn_fire_aux_in_fired
+                            spn s residual_marking' (fired ++ [t]) tail final_fired t
+                            Hin_fired_app Hfun) as Hin_ff.
+              (* Second, t'' ≻ t' *)
+              assert (Hsucc_ts_tp : HasHigherPriority spn t t' pgroup).
+              {
+                unfold HasHigherPriority.
+                specialize (is_decreased_list_incl Hdec_list) as Hincl.
+                split. assumption. split. assumption.
+                split. unfold incl in Hincl. apply (Hincl t (in_eq t tail)).
+                split. unfold incl in Hincl. apply (Hincl t' (in_cons t t' tail Hin_t'_tail)).
+                unfold IsPredInNoDupList.
+                split.
+                (* Proves t <> t'. *)
+                apply NoDup_remove_2 in Hnodup_pg.
+                apply not_app_in in Hnodup_pg; apply proj2 in Hnodup_pg.
+                apply (not_in_in_diff t t' tail (conj Hnodup_pg Hin_t'_tail)).
+                split.
+                (* Proves NoDup pgroup. *)
+                unfold NoIntersectInPriorityGroups in Hno_inter.
+                apply (nodup_concat_gen (priority_groups spn) Hno_inter
+                                        pgroup Hin_spn_pgs).
+                (* Proves IsPredInlist *)
+                specialize (is_pred_in_list_in_tail t t' tail Hin_t'_tail) as His_pred.
+                unfold NoIntersectInPriorityGroups in Hno_inter.
+                specialize (nodup_concat_gen (priority_groups spn) Hno_inter
+                                             pgroup Hin_spn_pgs) as Hnodup_pgroup.
+                apply (is_pred_in_dec_list His_pred Hdec_list Hnodup_pgroup).
+              }
+              rewrite <- Heq_tt.
+              apply (conj Hsucc_ts_tp Hin_ff).
+            + inversion Hin_nil.
+        }
+        (* Builds a few other hypotheses, and then applies IHo. *)
+        apply update_residual_marking_aux_same_struct in e5.
+        rewrite e5 in Hsame_struct.
+        rewrite <- app_assoc in IHo.
+        apply (IHo pgroup final_fired
+                   Hwell_def_spn Hwell_def_state Hin_spn_pgs (is_decreased_list_cons Hdec_list)
+                   Hnodup_pg Hresid'_m Hsame_struct Hfun t' res_marking Hin_t'_tail
+                   Hfirable_t Hsens_t Hhigh_in_fired' Hsame_struct' Hres_m).
     (* ERROR CASE, update_residual_marking = None. *)
     - inversion Hfun.
     (* CASE, is_sensitized = Some false. *)
@@ -2812,6 +2963,7 @@ Section SpnSensitizedByResidual.
          and IsSensitized spn t' res_marking. *)
       (* Then, we need to show that we have IsSensitized spn t' residual_marking.
          We can deduce it from Hsens_t. *)
+      (* Hpr_is_fired is needed to specialize Hres_m. *)
       + assert (Hpr_is_fired :
                   forall t'' : Trans, 
                     HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired -> In t'' fired). 
@@ -2960,8 +3112,9 @@ Section SpnSensitizedByResidual.
                    Hin_t'_tail Hfirable_t Hsens_t Hhigh_in_fired Hsame_struct' Hres_m).
     (* ERROR CASE, spn_is_firable = None. *)
     - inversion Hfun.
-      (* ERROR CASE, get_neighbours = None. *)
-  Admitted.
+    (* ERROR CASE, get_neighbours = None. *)
+    - inversion Hfun.
+  Qed.
 
   Lemma pr_is_unique :
     forall (spn : Spn)
@@ -3051,14 +3204,13 @@ Section SpnSensitizedByResidual.
         ~In t fired ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s t ->
-        (forall (p : Place)
-                (n preSum : nat)
-                (pr : list Trans),
+        (forall (pr : list Trans),
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <-> In t' pr) ->
-            In (p, n) s.(marking) ->
-            PreSum spn p pr preSum ->
-            In (p, n - preSum) residual_marking) ->
+            (forall (p : Place)
+                    (n : nat),
+                    In (p, n) s.(marking) ->
+                    In (p, n - pre_sum spn p pr) residual_marking)) ->
         IsSensitized spn residual_marking t ->
         In t final_fired.
   Proof.
@@ -3085,28 +3237,41 @@ Section SpnSensitizedByResidual.
         (* Builds an hypothesis close to Hres_mark, except final_fired is replaced by fired_trs. 
            Necessary to apply spn_fire_aux_sens_by_residual. *)
         assert (Hres_mark' :
-                  forall (p : Place) (n preSum : nat) (pr : list Trans),
+                  forall (pr : list Trans),
                     (forall t' : Trans,
                         HasHigherPriority spn t' t pgroup' /\ In t' fired_trs <-> In t' pr) ->
-                    In (p, n) (marking s) ->
-                    PreSum spn p pr preSum ->
-                    In (p, n - preSum) residual_marking).
+                    forall (p : Place) (n : nat),
+                      In (p, n) (marking s) ->
+                      In (p, n - pre_sum spn p pr) residual_marking).
         {
-          intros p n preSum pr Hin_pr Hin_m_s Hpre_sum.
+          intros pr Hin_pr p n Hin_m_s.
           (* Builds hypotheses necessary to apply pr_is_unique. *)
           rewrite concat_cons in Hnodup_concat_pgs.
           (* Applies pr_is_unique. *)
           specialize (pr_is_unique
                         spn s (marking s) pgroup' fired_trs fired_transitions
                         pgroups_tail final_fired t pr Hnodup_concat_pgs e0 Hfun Hin_pr) as Hin_pr'.
-          apply (Hres_mark p n preSum pr Hin_pr' Hin_m_s Hpre_sum).
+          apply (Hres_mark pr Hin_pr' p n Hin_m_s).
         }
+        (* Builds ∀ (p, n) ∈ (marking s) ⇒ (p, n - pre_sum spn p []) ∈ residual *)
+        assert (Hresid_m :
+                  forall (p : Place) (n : nat),
+                    In (p, n) (marking s) -> In (p, n - pre_sum spn p []) (marking s))
+          by (simpl; intros; rewrite Nat.sub_0_r; assumption).
+        (* Builds MarkingHaveSamestruct (initial_marking spn) (marking s) *)
+        explode_well_defined_spn_state.
+        (* Builds ∀ t' ∈ [] ⇒ t' ≻ t ∧ t' ∈ ff. *)
+        assert (Hhigh_in_fired :
+                  forall t' : Trans, In t' [] ->
+                                     HasHigherPriority spn t' t pgroup' /\ In t' fired_trs)
+               by (intros t' Hin_nil; inversion Hin_nil).
         (* Builds In t fired_trs. *)
         specialize (spn_fire_aux_sens_by_residual
                       spn s (marking s) [] pgroup' pgroup' fired_trs
-                      Hwell_def_spn Hwell_def_s Hin_spn_pgs (IsDecreasedList_refl pgroup')
-                      Hnodup_pg e0 t residual_marking Hin_t_pg Hmark_struct Hfirable_t Hsens_t
-                      Hres_mark') as Hin_t_fired.
+                      Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecreasedList_refl pgroup')
+                      Hnodup_pg Hresid_m Hsame_marking_spn e0
+                      t residual_marking Hin_t_pg Hfirable_t Hsens_t Hhigh_in_fired
+                      Hmark_struct Hres_mark') as Hin_t_fired.
         (* Then if t ∈ fired_trs ⇒ t ∈ (fired_transitions ++ fired_trs) ⇒ t ∈ final_fired *)
         assert (Hin_fired_app : In t (fired_transitions ++ fired_trs))
           by (apply in_or_app; right; assumption).
@@ -3169,13 +3334,13 @@ Section SpnSensitizedByResidual.
              (residual_marking : list (Place * nat)),
         In pgroup spn.(priority_groups) ->
         In t pgroup ->
-        SpnIsFirable spn s' t ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
+        SpnIsFirable spn s' t ->
         (forall (pr : list Trans),
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             (forall (p : Place) (n : nat),
-                In (p, n) s'.(marking) <-> In (p, n - pre_sum spn p pr) residual_marking)) ->
+                In (p, n) s'.(marking) -> In (p, n - pre_sum spn p pr) residual_marking)) ->
         IsSensitized spn residual_marking t ->
         In t s'.(fired).
   Proof.
@@ -3197,16 +3362,20 @@ Section SpnSensitizedByResidual.
       explode_well_defined_spn.
       unfold NoIntersectInPriorityGroups in *.
       assert (Hnot_in_nil : ~In t []) by apply in_nil.
-      revert H10 H12.
+      revert H11 H13.
       (* Applies spn_map_fire_aux_sens_by_residual *)
       apply (spn_map_fire_aux_sens_by_residual 
                spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s
                (incl_refl (priority_groups spn)) Hno_inter e pgroup t
-               residual_marking Hin_spn_pgs Hin_t_pg Hnot_in_nil Hmark_struct Hfirable_t). 
+               residual_marking Hin_spn_pgs Hin_t_pg Hnot_in_nil Hmark_struct Hfirable_t).
+    (* ERROR CASE *)
     - inversion Hfun.    
   Qed.
   
 End SpnSensitizedByResidual.
+
+
+
 
 (** Correctness proof between spn_cycle and SpnSemantics_falling_edge. *)
 
@@ -3243,6 +3412,10 @@ Proof.
       apply (spn_map_fire_higher_priority_not_firable
                spn s inter_state Hwell_def_spn Hwell_def_state e).
     (* Proves ∀ t ∈ firable(s'), t ∈ sens(m - ∑ pre(t_i)) ⇒ t ∈ Fired'  *)
+    + injection Hfun as Heq_istate Heq_fstate; rewrite <- Heq_istate.
+      apply (spn_map_fire_sens_by_residual
+               spn s inter_state Hwell_def_spn Hwell_def_state e).
+    (* Proves ∀ t ∈ firable(s'), t ∉ sens(m - ∑ pre(t_i)) ⇒ t ∉ Fired'  *)
     +
   - inversion H3.
   - inversion H3.
