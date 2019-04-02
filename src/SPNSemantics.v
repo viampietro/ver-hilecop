@@ -293,6 +293,14 @@ Definition PreSumWD (spn : Spn) (p : Place) (l : list Trans) (sum : nat) :=
 
 (** PostSum: Sums all weight of edges coming from transitions of the l list to place p. *)
 
+Fixpoint post_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
+  match l with
+  | t :: tail => (post spn t p) + post_sum spn p tail
+  | [] => 0
+  end.
+
+Functional Scheme post_sum_ind := Induction for post_sum Sort Prop.
+
 Inductive PostSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
 | PostSum_nil :
     PostSum spn p [] 0
@@ -393,6 +401,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             forall (p : Place)
@@ -412,6 +421,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             forall (p : Place)
@@ -433,10 +443,8 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
     s.(fired) = s'.(fired) ->
     (* M' = M - ∑ (pre(t_i) - post(t_i)), ∀ t_i ∈ Fired *)
     (forall (p : Place)
-            (n preSum postSum : nat),
+            (n : nat),
         In (p, n) s.(marking) ->
-        PreSumWD spn p s.(fired) preSum ->
-        PostSumWD spn p s.(fired) postSum ->
-        In (p, n - preSum + postSum) s'.(marking)) ->
+        In (p, n - (pre_sum spn p s.(fired)) + (post_sum spn p s.(fired))) s'.(marking)) ->
     
     SpnSemantics spn s s' raising_edge.

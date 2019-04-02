@@ -226,6 +226,8 @@ Section UpdateMarkingSpn.
     | [] => Some marking
     end.
 
+  Functional Scheme update_marking_pre_aux_ind := Induction for update_marking_pre_aux Sort Prop.
+  
   (** Wrapper around [update_marking_pre_aux]. *)
   
   Definition update_marking_pre
@@ -237,6 +239,8 @@ Section UpdateMarkingSpn.
       update_marking_pre_aux spn marking t (pre_pl neighbours_of_t)
     | None => None
     end.
+
+  Functional Scheme update_marking_pre_ind := Induction for update_marking_pre Sort Prop.
 
   (**  Applies [update_marking_pre] on every transition t ∈ fired,
        and returns the resulting [spn] *)
@@ -254,6 +258,8 @@ Section UpdateMarkingSpn.
       end
     | [] => Some marking
     end.
+
+  Functional Scheme map_update_marking_pre_ind := Induction for map_update_marking_pre Sort Prop.
   
   (** Function : Adds some tokens to the post places of [t], result 
                  of the firing of [t].
@@ -275,6 +281,8 @@ Section UpdateMarkingSpn.
     | [] => Some marking
     end.
 
+  Functional Scheme update_marking_post_aux_ind := Induction for update_marking_post_aux Sort Prop.
+
   (** Wrapper around update_marking_post_aux. *)
   
   Definition update_marking_post
@@ -286,6 +294,8 @@ Section UpdateMarkingSpn.
       update_marking_post_aux spn marking t (post_pl neighbours_of_t)
     | None => None
     end.
+
+  Functional Scheme update_marking_post_ind := Induction for update_marking_post Sort Prop.
 
   (**  Applies [update_marking_post] on every transition t ∈ fired,
        and returns the resulting [spn] *)
@@ -304,6 +314,8 @@ Section UpdateMarkingSpn.
     | [] => Some marking
     end.
 
+  Functional Scheme map_update_marking_post_ind := Induction for map_update_marking_post Sort Prop.
+
   (** Updates the marking of [spn] ∀ t ∈ fired. Returns the resulting [spn].*)
   
   Definition spn_update_marking
@@ -318,6 +330,24 @@ Section UpdateMarkingSpn.
       end
     | None => None
     end.
+
+  Functional Scheme spn_update_marking_ind := Induction for spn_update_marking Sort Prop.
+  
+  (** ∀ spn, s, [spn_update_marking spn s] returns a state [s'] 
+      with [s'.(fired)] = [s.(fired)] *)
+  
+  Lemma spn_update_marking_same_fired :
+    forall (spn : Spn) (s s': SpnState),
+      spn_update_marking spn s = Some s' ->
+      s.(fired) = s'.(fired).
+  Proof.
+    do 2 intro;
+      functional induction (spn_update_marking spn s) using spn_update_marking_ind;
+      intros s' Hfun.
+    - injection Hfun as Heq_ss; rewrite <- Heq_ss; simpl; reflexivity.
+    - inversion Hfun.
+    - inversion Hfun.
+  Qed.
   
 End UpdateMarkingSpn.
 

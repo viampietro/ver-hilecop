@@ -72,15 +72,15 @@ Ltac explode_well_defined_spn :=
 Ltac rename_well_defined_spn_state :=
   match goal with
   | [ H: MarkingHaveSameStruct (initial_marking ?spn) ?s |- _ ] =>
-    rename H into Hsame_marking_spn
+    rename H into Hsame_marking_state_spn
   end;
   match goal with
   | [ H: incl (SPN.fired ?s) (transs ?spn) |- _ ] =>
-    rename H into Hincl_fired_transs
+    rename H into Hincl_state_fired_transs
   end;
   match goal with
   | [ H: NoDup (SPN.fired ?s) |- _ ] =>
-    rename H into Hnodup_fired
+    rename H into Hnodup_state_fired
   end.
 
 Ltac explode_well_defined_spn_state :=

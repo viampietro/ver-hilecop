@@ -1142,7 +1142,7 @@ Section SpnIsFirable.
     rename Hin_lneigh' into Hin_transs.
     (* Builds IsSensitized *)
     generalize (is_sensitized_correct spn (marking state) t neigh_of_t Hwell_def_spn
-                                      Hsame_marking_spn Hin_lneigh Hfun) as His_sens; intro.
+                                      Hsame_marking_state_spn Hin_lneigh Hfun) as His_sens; intro.
     apply (conj Hwell_def_spn (conj Hwell_def_state (conj Hin_transs His_sens))).
   Qed.
 
@@ -2118,7 +2118,7 @@ Section SpnHigherPriorityNotFirable.
         specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0)
                    as Hin_lneigh.
         specialize (is_sensitized_complete
-                      spn (marking s) t neighbours_of_t Hwell_def_spn Hsame_marking_spn
+                      spn (marking s) t neighbours_of_t Hwell_def_spn Hsame_marking_state_spn
                       Hin_lneigh His_sens) as His_sens_true.
         rewrite Heq_marking in e3.
         rewrite e3 in His_sens_true.
@@ -2833,6 +2833,7 @@ Section SpnSensitizedByResidual.
         (* Hypotheses on res_marking. *)
         MarkingHaveSameStruct spn.(initial_marking) res_marking ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
                 In t' pr) ->
@@ -2865,12 +2866,12 @@ Section SpnSensitizedByResidual.
         explode_well_defined_spn_state.
         unfold MarkingHaveSameStruct in *.
         assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
-          by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct; reflexivity).
+          by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
         (* Builds NoDup (fs residual_marking) to apply nodup_same_pair. *)
         explode_well_defined_spn.
         unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
         rewrite Hunm_place in Hnodup_places;
-          rewrite Hsame_marking_spn in Hnodup_places;
+          rewrite Hsame_marking_state_spn in Hnodup_places;
           rewrite <- Hsame_residm_sm in Hnodup_places.
         (* Builds In (t, neigh_of_t) (lneighbours spn) *)
         specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0)
@@ -2992,7 +2993,9 @@ Section SpnSensitizedByResidual.
                   forall t'' : Trans,
                     HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired <-> In t'' fired)
           by (intros t'0; split; [apply (Hpr_is_fired t'0) | apply (Hhigh_in_fired t'0)]).
-        specialize (Hres_m fired Hpr_iff).
+        specialize (nodup_app fired (t :: tail) Hnodup_pg) as Hnodup_fired.
+        apply proj1 in Hnodup_fired.
+        specialize (Hres_m fired Hnodup_fired Hpr_iff).
         (* Now we can show the equivalence between residual_marking and res_marking. *)
         assert (Hequiv_m : forall (p : Place) (n : nat), In (p, n) res_marking <->
                                                          In (p, n) residual_marking).
@@ -3000,11 +3003,11 @@ Section SpnSensitizedByResidual.
           intros p n.
           split.
           - intro Hin_res_m.
-            (* Builds (fs (marking s)) = (fs res_marking) *)
+            (* Builds (fs (marking s)) = (fs res_marking) *)            
             explode_well_defined_spn_state.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_resm_sm : fst (split res_marking) = fst (split (marking s)))
-              by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct'; reflexivity).
+              by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct'; reflexivity).
             (* Builds In (p, x) (marking s) from In (p, n) res_marking. *)
             specialize (in_fst_split p n res_marking Hin_res_m) as Hin_fs_resm.
             rewrite Hsame_resm_sm in Hin_fs_resm.
@@ -3017,7 +3020,7 @@ Section SpnSensitizedByResidual.
             explode_well_defined_spn.
             unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
             rewrite Hunm_place in Hnodup_places;
-              rewrite Hsame_marking_spn in Hnodup_places;
+              rewrite Hsame_marking_state_spn in Hnodup_places;
               rewrite <- Hsame_resm_sm in Hnodup_places.
             (* Builds fs (p, n) = fs (p, x - pre_sum spn p fired) *)
             assert (Heq_fs : fst (p, n) = fst (p, x - pre_sum spn p fired))
@@ -3034,7 +3037,7 @@ Section SpnSensitizedByResidual.
             explode_well_defined_spn_state.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
-              by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct; reflexivity).
+              by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
             (* Builds In (p, x) (marking s) from In (p, n) residual_marking. *)
             specialize (in_fst_split p n residual_marking Hin_resid_m) as Hin_fs_residm.
             rewrite Hsame_residm_sm in Hin_fs_residm.
@@ -3047,7 +3050,7 @@ Section SpnSensitizedByResidual.
             explode_well_defined_spn.
             unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
             rewrite Hunm_place in Hnodup_places;
-              rewrite Hsame_marking_spn in Hnodup_places;
+              rewrite Hsame_marking_state_spn in Hnodup_places;
               rewrite <- Hsame_residm_sm in Hnodup_places.
             (* Builds fs (p, n) = fs (p, x - pre_sum spn p fired) *)
             assert (Heq_fs : fst (p, n) = fst (p, x - pre_sum spn p fired))
@@ -3205,6 +3208,7 @@ Section SpnSensitizedByResidual.
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s t ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <-> In t' pr) ->
             (forall (p : Place)
@@ -3238,20 +3242,21 @@ Section SpnSensitizedByResidual.
            Necessary to apply spn_fire_aux_sens_by_residual. *)
         assert (Hres_mark' :
                   forall (pr : list Trans),
+                    NoDup pr ->
                     (forall t' : Trans,
                         HasHigherPriority spn t' t pgroup' /\ In t' fired_trs <-> In t' pr) ->
                     forall (p : Place) (n : nat),
                       In (p, n) (marking s) ->
                       In (p, n - pre_sum spn p pr) residual_marking).
         {
-          intros pr Hin_pr p n Hin_m_s.
+          intros pr Hnodup_pr Hin_pr p n Hin_m_s.
           (* Builds hypotheses necessary to apply pr_is_unique. *)
           rewrite concat_cons in Hnodup_concat_pgs.
           (* Applies pr_is_unique. *)
           specialize (pr_is_unique
                         spn s (marking s) pgroup' fired_trs fired_transitions
                         pgroups_tail final_fired t pr Hnodup_concat_pgs e0 Hfun Hin_pr) as Hin_pr'.
-          apply (Hres_mark pr Hin_pr' p n Hin_m_s).
+          apply (Hres_mark pr Hnodup_pr Hin_pr' p n Hin_m_s).
         }
         (* Builds ∀ (p, n) ∈ (marking s) ⇒ (p, n - pre_sum spn p []) ∈ residual *)
         assert (Hresid_m :
@@ -3269,7 +3274,7 @@ Section SpnSensitizedByResidual.
         specialize (spn_fire_aux_sens_by_residual
                       spn s (marking s) [] pgroup' pgroup' fired_trs
                       Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecreasedList_refl pgroup')
-                      Hnodup_pg Hresid_m Hsame_marking_spn e0
+                      Hnodup_pg Hresid_m Hsame_marking_state_spn e0
                       t residual_marking Hin_t_pg Hfirable_t Hsens_t Hhigh_in_fired
                       Hmark_struct Hres_mark') as Hin_t_fired.
         (* Then if t ∈ fired_trs ⇒ t ∈ (fired_transitions ++ fired_trs) ⇒ t ∈ final_fired *)
@@ -3337,6 +3342,7 @@ Section SpnSensitizedByResidual.
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             (forall (p : Place) (n : nat),
@@ -3417,6 +3423,7 @@ Section SpnNotSensitizedByResidual.
         (* Hypotheses on res_marking. *)
         MarkingHaveSameStruct spn.(initial_marking) res_marking ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
                 In t' pr) ->
@@ -3477,7 +3484,9 @@ Section SpnNotSensitizedByResidual.
                   forall t'' : Trans,
                     HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired <-> In t'' fired)
           by (intros t'0; split; [apply (Hpr_is_fired t'0) | apply (Hhigh_in_fired t'0)]).
-        specialize (Hres_m fired Hpr_iff).
+        specialize (nodup_app fired (t :: tail) Hnodup_pg) as Hnodup_fired.
+        apply proj1 in Hnodup_fired.
+        specialize (Hres_m fired Hnodup_fired Hpr_iff).
         (* Now we can show the equivalence between residual_marking and res_marking. *)
         assert (Hequiv_m : forall (p : Place) (n : nat), In (p, n) res_marking <->
                                                          In (p, n) residual_marking).
@@ -3489,7 +3498,7 @@ Section SpnNotSensitizedByResidual.
             explode_well_defined_spn_state.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_resm_sm : fst (split res_marking) = fst (split (marking s)))
-              by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct'; reflexivity).
+              by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct'; reflexivity).
             (* Builds In (p, x) (marking s) from In (p, n) res_marking. *)
             specialize (in_fst_split p n res_marking Hin_res_m) as Hin_fs_resm.
             rewrite Hsame_resm_sm in Hin_fs_resm.
@@ -3502,7 +3511,7 @@ Section SpnNotSensitizedByResidual.
             explode_well_defined_spn.
             unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
             rewrite Hunm_place in Hnodup_places;
-              rewrite Hsame_marking_spn in Hnodup_places;
+              rewrite Hsame_marking_state_spn in Hnodup_places;
               rewrite <- Hsame_resm_sm in Hnodup_places.
             (* Builds fs (p, n) = fs (p, x - pre_sum spn p fired) *)
             assert (Heq_fs : fst (p, n) = fst (p, x - pre_sum spn p fired))
@@ -3519,7 +3528,7 @@ Section SpnNotSensitizedByResidual.
             explode_well_defined_spn_state.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
-              by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct; reflexivity).
+              by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
             (* Builds In (p, x) (marking s) from In (p, n) residual_marking. *)
             specialize (in_fst_split p n residual_marking Hin_resid_m) as Hin_fs_residm.
             rewrite Hsame_residm_sm in Hin_fs_residm.
@@ -3532,7 +3541,7 @@ Section SpnNotSensitizedByResidual.
             explode_well_defined_spn.
             unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
             rewrite Hunm_place in Hnodup_places;
-              rewrite Hsame_marking_spn in Hnodup_places;
+              rewrite Hsame_marking_state_spn in Hnodup_places;
               rewrite <- Hsame_residm_sm in Hnodup_places.
             (* Builds fs (p, n) = fs (p, x - pre_sum spn p fired) *)
             assert (Heq_fs : fst (p, n) = fst (p, x - pre_sum spn p fired))
@@ -3578,12 +3587,12 @@ Section SpnNotSensitizedByResidual.
         explode_well_defined_spn_state.
         unfold MarkingHaveSameStruct in *.
         assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
-          by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct; reflexivity).
+          by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
         (* Builds NoDup (fs residual_marking) to apply nodup_same_pair. *)
         explode_well_defined_spn.
         unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
         rewrite Hunm_place in Hnodup_places;
-          rewrite Hsame_marking_spn in Hnodup_places;
+          rewrite Hsame_marking_state_spn in Hnodup_places;
           rewrite <- Hsame_residm_sm in Hnodup_places.
         (* Builds In (t, neigh_of_t) (lneighbours spn) *)
         specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0)
@@ -3729,6 +3738,7 @@ Section SpnNotSensitizedByResidual.
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s t ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' final_fired <-> In t' pr) ->
             (forall (p : Place)
@@ -3765,20 +3775,21 @@ Section SpnNotSensitizedByResidual.
            Necessary to apply spn_fire_aux_sens_by_residual. *)
         assert (Hres_mark' :
                   forall (pr : list Trans),
+                    NoDup pr ->
                     (forall t' : Trans,
                         HasHigherPriority spn t' t pgroup' /\ In t' fired_trs <-> In t' pr) ->
                     forall (p : Place) (n : nat),
                       In (p, n) (marking s) ->
                       In (p, n - pre_sum spn p pr) residual_marking).
         {
-          intros pr Hin_pr p n Hin_m_s.
+          intros pr Hnodup_pr Hin_pr p n Hin_m_s.
           (* Builds hypotheses necessary to apply pr_is_unique. *)
           rewrite concat_cons in Hnodup_concat_pgs.
           (* Applies pr_is_unique. *)
           specialize (pr_is_unique
                         spn s (marking s) pgroup' fired_trs fired_transitions
                         pgroups_tail final_fired t pr Hnodup_concat_pgs e0 Hfun Hin_pr) as Hin_pr'.
-          apply (Hres_mark pr Hin_pr' p n Hin_m_s).
+          apply (Hres_mark pr Hnodup_pr Hin_pr' p n Hin_m_s).
         }
         (* Builds ∀ (p, n) ∈ (marking s) ⇒ (p, n - pre_sum spn p []) ∈ residual *)
         assert (Hresid_m :
@@ -3796,7 +3807,7 @@ Section SpnNotSensitizedByResidual.
         specialize (spn_fire_aux_not_sens_by_residual
                       spn s (marking s) [] pgroup' pgroup' fired_trs
                       Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecreasedList_refl pgroup')
-                      Hnodup_pg Hresid_m Hsame_marking_spn e0
+                      Hnodup_pg Hresid_m Hsame_marking_state_spn e0
                       t residual_marking Hin_t_pg Hfirable_t Hnotsens_t Hhigh_in_fired
                       Hmark_struct Hres_mark') as Hnot_in_fired'.
         (* Then we need, ~In t (concat pgroups_tail) *)
@@ -3872,6 +3883,7 @@ Section SpnNotSensitizedByResidual.
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
         (forall (pr : list Trans),
+            NoDup pr ->
             (forall t' : Trans,
                 HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
             (forall (p : Place) (n : nat),
@@ -3909,6 +3921,396 @@ Section SpnNotSensitizedByResidual.
   Qed.
   
 End SpnNotSensitizedByResidual.
+
+(** *** Last part of correctness proof (raising_edge) *)
+  
+(** The goal in this part is to prove: 
+    spn_cycle spn s = (s', s'') ⇒ SpnSemantics spn s' s'' raising_edge. 
+    
+    Multiple subproofs :
+    
+    1. spn_update_marking spn s' = s'' ⇒ IsWelldefinedspnstate s''.
+    2. M' = M - ∑ pre(t) + ∑ post(t), forall t ∈ fired s'.
+*)
+
+(** First subproof: spn_update_marking spn s' = s'' ⇒ IsWelldefinedspnstate s''. *)
+
+Lemma update_marking_pre_aux_same_marking :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (t : Trans)
+         (pre_places : list Place)
+         (m' : list (Place * nat)),
+    update_marking_pre_aux spn m t pre_places = Some m' ->
+    MarkingHaveSameStruct m m'.
+Proof.
+  intros spn m t pre_places;
+    functional induction (update_marking_pre_aux spn m t pre_places)
+               using update_marking_pre_aux_ind;
+    intros fm Hfun.
+  (* BASE CASE *)
+  - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+  (* GENERAL CASE *)
+  - apply modify_m_same_struct in e0.
+    specialize (IHo fm Hfun) as Hsame_struct.
+    unfold MarkingHaveSameStruct in *.
+    transitivity (fst (split m')); [assumption | assumption].
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma update_marking_pre_same_marking :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (t : Trans)
+         (m' : list (Place * nat)),
+    update_marking_pre spn m t = Some m' ->
+    MarkingHaveSameStruct m m'.
+Proof.
+  intros spn m t;
+    functional induction (update_marking_pre spn m t) using update_marking_pre_ind;
+    intros m' Hfun.
+  (* GENERAL CASE *)
+  - apply update_marking_pre_aux_same_marking in Hfun; assumption.
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma map_update_marking_pre_same_marking :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (fired : list Trans)
+         (m' : list (Place * nat)),
+    map_update_marking_pre spn m fired = Some m' ->
+    MarkingHaveSameStruct m m'.
+Proof.
+  intros spn m fired;
+    functional induction (map_update_marking_pre spn m fired) using map_update_marking_pre_ind;
+    intros fm Hfun.
+  (* BASE CASE *)
+  - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+  (* GENERAL CASE *)
+  - apply update_marking_pre_same_marking in e0.
+    specialize (IHo fm Hfun) as Hsame_struct.
+    unfold MarkingHaveSameStruct in *.
+    transitivity (fst (split m')); [assumption | assumption].
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma update_marking_post_aux_same_marking :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (t : Trans)
+         (post_places : list Place)
+         (m' : list (Place * nat)),
+    update_marking_post_aux spn m t post_places = Some m' ->
+    MarkingHaveSameStruct m m'.
+Proof.
+  intros spn m t post_places;
+    functional induction (update_marking_post_aux spn m t post_places)
+               using update_marking_post_aux_ind;
+    intros fm Hfun.
+  (* BASE CASE *)
+  - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+  (* GENERAL CASE *)
+  - apply modify_m_same_struct in e0.
+    specialize (IHo fm Hfun) as Hsame_struct.
+    unfold MarkingHaveSameStruct in *.
+    transitivity (fst (split m')); [assumption | assumption].
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma update_marking_post_same_marking :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (t : Trans)
+         (m' : list (Place * nat)),
+    update_marking_post spn m t = Some m' ->
+    MarkingHaveSameStruct m m'.
+Proof.
+  intros spn m t;
+    functional induction (update_marking_post spn m t) using update_marking_post_ind;
+    intros m' Hfun.
+  (* GENERAL CASE *)
+  - apply update_marking_post_aux_same_marking in Hfun; assumption.
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma map_update_marking_post_same_marking :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (fired : list Trans)
+         (m' : list (Place * nat)),
+    map_update_marking_post spn m fired = Some m' ->
+    MarkingHaveSameStruct m m'.
+Proof.
+  intros spn m fired;
+    functional induction (map_update_marking_post spn m fired) using map_update_marking_post_ind;
+    intros fm Hfun.
+  (* BASE CASE *)
+  - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+  (* GENERAL CASE *)
+  - apply update_marking_post_same_marking in e0.
+    specialize (IHo fm Hfun) as Hsame_struct.
+    unfold MarkingHaveSameStruct in *.
+    transitivity (fst (split m')); [assumption | assumption].
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma spn_update_marking_well_defined :
+  forall (spn : Spn) (s : SpnState) (s' : SpnState),
+    IsWellDefinedSpn spn ->
+    IsWellDefinedSpnState spn s ->
+    spn_update_marking spn s = Some s' ->
+    IsWellDefinedSpnState spn s'.
+Proof.
+  intros spn s;
+    functional induction (spn_update_marking  spn s) using spn_update_marking_ind;
+    intros s' Hwell_def_spn Hwell_def_s Hfun.
+  (* GENERAL CASE *)
+  - unfold IsWellDefinedSpnState.
+    split.
+    (* Proves that marking s' structure = initial. *)
+    + (* First we need Markinghavesamestruct (marking s) m'
+         from map_update_marking_pre_same_marking. *)
+      apply map_update_marking_pre_same_marking in e.
+    (* Then, we need Markinghavesamestruct m' m'' 
+       from map_update_marking_post_same_marking. *)
+      apply map_update_marking_post_same_marking in e0.
+      (* Then, the goal is deduced. *)
+      injection Hfun as Heq_ss; rewrite <- Heq_ss; simpl.
+      explode_well_defined_spn_state.
+      unfold MarkingHaveSameStruct in *.
+      rewrite Hsame_marking_state_spn.
+      transitivity (fst (split m')); [assumption | assumption].
+    + unfold IsWellDefinedSpnState in Hwell_def_s.
+      apply proj2 in Hwell_def_s.
+      injection Hfun as Heq_ss; rewrite <- Heq_ss; simpl; assumption.
+  (* ERROR CASE *)
+  - inversion Hfun.
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+(** Second subproof: M' = M - ∑ pre(t) + ∑ post(t), forall t ∈ fired s'. *)
+
+(** Needed to prove update_marking_aux_correct. *)
+
+Lemma update_marking_pre_aux_not_in_pre_places :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (t : Trans)
+         (pre_places : list Place)
+         (m' : list (Place * nat)),
+    update_marking_pre_aux spn m t pre_places = Some m' ->
+    forall (p : Place),
+      ~In p pre_places ->
+      forall (n : nat), In (p, n) m <-> In (p, n) m'.
+Proof.
+  intros spn m t pre_places;
+    functional induction (update_marking_pre_aux spn m t pre_places)
+               using update_marking_pre_aux_ind;
+    intros fm Hfun p' Hnot_in_pre n.
+  (* BASE CASE *)
+  - injection Hfun as Hfun.
+    rewrite Hfun; reflexivity.
+  (* GENERAL CASE *)
+  - apply not_in_cons in Hnot_in_pre.
+    elim Hnot_in_pre; intros Hdiff_pp' Hnot_in_tl.
+    apply not_eq_sym in Hdiff_pp'.
+    specialize (modify_m_in_if_diff
+                  marking p Nat.sub (pre spn t p) m'
+                  e0 p' n Hdiff_pp') as Hequiv.
+    rewrite Hequiv.
+    apply (IHo fm Hfun p' Hnot_in_tl n).
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+(** Correctness proof for [update_marking_pre_aux].
+      Express the structure of the returned [marking_pre'] regarding the structure
+      of [marking_pre]. 
+
+      Needed to prove update_marking_pre_correct. *)
+
+Lemma update_marking_pre_aux_correct :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (t : Trans)
+         (pre_places : list Place)
+         (neigh_of_t : Neighbours)
+         (m' : list (Place * nat)),
+    IsWellDefinedSpn spn ->
+    NoDup (fst (split m)) ->
+    In (t , neigh_of_t) (lneighbours spn) ->
+    NoDup pre_places ->
+    incl pre_places (pre_pl neigh_of_t) ->
+    update_marking_pre_aux spn m t pre_places = Some m' ->
+    forall (p : Place) (n : nat),
+      In p pre_places ->
+      In (p, n) m ->
+      In (p, n - (pre spn t p)) m'.
+Proof.
+  intros spn m t pre_places;
+    functional induction (update_marking_pre_aux spn m t pre_places)
+               using update_marking_pre_aux_ind;
+    intros neigh_of_t fm Hwell_def_spn Hnodup_m
+           Hin_lneigh Hnodup_pre_pl Hincl_pre_pl Hfun p' n Hin_pre_pl Hin_resid.
+  (* BASE CASE, pre_places = []. *)
+  - inversion Hin_pre_pl.
+  (* GENERAL CASE *)
+  - inversion Hin_pre_pl as [Heq_pp' | Hin_p'_tail].
+    (* First subcase, p = p'. *)
+    + rewrite <- Heq_pp' in Hin_pre_pl.
+      rewrite <- Heq_pp' in Hin_resid.
+      specialize (modify_m_correct
+                    marking p Nat.sub (pre spn t p) m'
+                    Hnodup_m e0 n Hin_resid) as Hin_resid'.
+      apply NoDup_cons_iff in Hnodup_pre_pl.
+      elim Hnodup_pre_pl; intros Hnot_in_tl Hnodup_tl.
+      rewrite Heq_pp' in Hnot_in_tl.
+      specialize (update_marking_pre_aux_not_in_pre_places
+                    spn m' t tail fm
+                    Hfun p' Hnot_in_tl (n - pre spn t p)) as Hin_equiv'.
+      rewrite Heq_pp' in Hin_resid'.
+      rewrite Heq_pp' in Hin_equiv'.
+      rewrite Hin_equiv' in Hin_resid'; assumption.
+    (* Second subcase, In p' tail, then apply induction hypothesis. *)
+    (* But we need to show NoDup (fst (split residual')) first. *)
+    + specialize (modify_m_same_struct
+                    marking m' p Nat.sub  (pre spn t p) e0)
+        as Hsame_struct.
+      unfold MarkingHaveSameStruct in Hsame_struct.
+      rewrite Hsame_struct in Hnodup_m.
+      (* Builds the other hypotheses, needed to specialize IHo. *)
+      apply NoDup_cons_iff in Hnodup_pre_pl;
+        elim Hnodup_pre_pl;
+        intros Hnot_in_tl Hnodup_tl.
+      apply incl_cons_inv in Hincl_pre_pl.        
+      (* Then specializes the induction hypothesis. *)
+      specialize (IHo neigh_of_t fm Hwell_def_spn Hnodup_m
+                      Hin_lneigh Hnodup_tl Hincl_pre_pl Hfun
+                      p' n Hin_p'_tail) as Himpl.
+      specialize (not_in_in_diff p p' tail (conj Hnot_in_tl Hin_p'_tail))
+        as Hdiff_pp.
+      specialize (modify_m_in_if_diff
+                    marking p Nat.sub (pre spn t p)
+                    m' e0 p' n Hdiff_pp) as Hequiv'.
+      rewrite <- Hequiv' in Himpl.
+      apply (Himpl Hin_resid).
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+(** Correctness proof for [update_marking_pre]. 
+
+      Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
+Lemma update_marking_pre_correct :
+  forall (spn : Spn)
+         (marking : list (Place * nat))
+         (t : Trans)
+         (final_marking : list (Place * nat)),
+    IsWellDefinedSpn spn ->
+    NoDup (fst (split marking)) ->
+    update_marking_pre spn marking t = Some final_marking ->
+    forall (p : Place) (n : nat),
+      In (p, n) marking -> In (p, n - (pre spn t p)) final_marking.
+Proof.
+  intros spn marking t;
+    functional induction (update_marking_pre spn marking t)
+               using update_marking_pre_ind;
+    intros final_marking Hwell_def_spn Hnodup_resm Hfun p n Hin_resm.
+  (* GENERAL CASE *)
+  - (* Two cases, either p ∈ (pre_pl neigh_of_t), or
+       p ∉ (pre_pl neigh_of_t). *)
+    assert (Hvee_in_pre_pl := classic (In p (pre_pl neighbours_of_t))).
+    inversion_clear Hvee_in_pre_pl as [Hin_p_pre | Hnotin_p_pre];
+      specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e) as Hin_lneigh.
+    (* First case, p ∈ pre_pl, then applies update_marking_pre_aux_correct. *)
+    + explode_well_defined_spn.
+      (* Builds NoDup pre_pl. *)
+      assert (Hin_flat : In p (flatten_neighbours neighbours_of_t))
+        by (unfold flatten_neighbours; apply in_or_app; left; assumption).      
+      unfold NoDupInNeighbours in Hnodup_neigh.
+      specialize (Hnodup_neigh t neighbours_of_t Hin_lneigh) as Hnodup_flat.
+      unfold flatten_neighbours in Hnodup_flat;
+        apply nodup_app in Hnodup_flat; apply proj1 in Hnodup_flat.
+      (* Then, applies update_marking_pre_aux_correct. *)
+      apply (update_marking_pre_aux_correct
+               spn marking t (pre_pl neighbours_of_t) neighbours_of_t final_marking
+               Hwell_def_spn Hnodup_resm Hin_lneigh Hnodup_flat
+               (incl_refl (pre_pl neighbours_of_t)) Hfun p n Hin_p_pre Hin_resm).
+    (* Second case, p ∉ pre_pl, then applies 
+       update_marking_pre_aux_not_in_pre_places. *)
+    + explode_well_defined_spn.
+      unfold AreWellDefinedPreEdges in Hwell_def_pre.
+      specialize (Hwell_def_pre t neighbours_of_t p Hin_lneigh) as Hw_pre_edges.
+      apply proj2 in Hw_pre_edges; specialize (Hw_pre_edges Hnotin_p_pre).
+      rewrite Hw_pre_edges; rewrite Nat.sub_0_r.
+      specialize (update_marking_pre_aux_not_in_pre_places
+                    spn marking t (pre_pl neighbours_of_t) final_marking
+                    Hfun p Hnotin_p_pre n) as Hequiv.
+      rewrite <- Hequiv; assumption.
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma map_update_marking_pre_sub_pre :
+  forall (spn : Spn)
+         (m : list (Place * nat))
+         (fired : list Trans)
+         (m' : list (Place * nat)),
+    IsWellDefinedSpn spn ->
+    NoDup (fst (split m)) ->
+    map_update_marking_pre spn m fired = Some m' ->
+    forall (p : Place) (n : nat),
+      In (p, n) m -> In (p, n - pre_sum spn p fired) m'.
+Proof.
+  intros spn m fired;
+    functional induction (map_update_marking_pre spn m fired) using map_update_marking_pre_ind;
+    intros fm Hwell_def_spn Hnodup_m Hfun p n Hin_m.
+  (* BASE CASE *)
+  - injection Hfun as Heq_marking; rewrite <- Heq_marking.
+    simpl; rewrite Nat.sub_0_r; assumption.
+  (* GENERAL CASE *)
+  - simpl. 
+    rewrite Nat.sub_add_distr.
+    specialize (update_marking_pre_correct
+                  spn marking t m' Hwell_def_spn Hnodup_m e0 p n Hin_m) as Hin_m'.
+    apply update_marking_pre_same_marking in e0;
+      unfold MarkingHaveSameStruct in e0;
+      rewrite e0 in Hnodup_m.
+    apply (IHo fm Hwell_def_spn Hnodup_m Hfun p (n - pre spn t p) Hin_m').
+  (* ERROR CASE *)
+  - inversion Hfun.
+Qed.
+
+Lemma spn_update_marking_sub_pre_add_post :
+  forall (spn : Spn)
+         (s : SpnState)
+         (s' : SpnState),
+    IsWellDefinedSpn spn ->
+    IsWellDefinedSpnState spn s ->
+    spn_update_marking spn s = Some s' ->
+    (forall (p : Place)
+            (n : nat),
+        In (p, n) s.(marking) ->
+        In (p, n - (pre_sum spn p s.(fired)) + (post_sum spn p s.(fired))) s'.(marking)).
+Proof.
+  intros spn s;
+    functional induction (spn_update_marking spn s) using spn_update_marking_ind;
+    intros s' Hwell_def_spn Hwell_def_s Hfun p n Hin_ms.
+  (* GENERAL CASE *)
+  - (* We need ∀ (p, n) ∈ (marking s) ⇒ (p, n - presum) ∈ m'. 
+       map_update_marking_pre_sub_pre gives it. *)
+    (* Builds NoDup (fst (split (marking s)) 
+      to apply map_update_marking_pre_sub_pre *)
+    apply map_update_marking_pre_sub_pre.
+Qed.
 
 (** Correctness proof between spn_cycle and SpnSemantics_falling_edge. *)
 
@@ -3965,11 +4367,40 @@ Theorem spn_semantics_raising_edge_correct :
     (s s' s'' : SpnState),
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
-    IsWellDefinedSpnState spn s' ->
-    IsWellDefinedSpnState spn s'' ->
     spn_cycle spn s = Some (s', s'') ->
     SpnSemantics spn s' s'' raising_edge.
 Proof.
-  do 2 intro.
-  functional induction (spn_cycle spn s) using spn_cycle_ind; intros.
-Qed.
+  do 2 intro;
+    functional induction (spn_cycle spn s) using spn_cycle_ind;
+    intros s' s'' Hwell_def_spn Hwell_def_s Hfun.
+  (* GENERAL CASE *)
+  - apply SpnSemantics_raising_edge.
+    (* Trivial proof IsWellDefinedSpn *)
+    + assumption.
+    (* Proves IsWellDefinedSpnState spn s'. *)
+    + injection Hfun; intros Heq_fstate Heq_istate; rewrite <- Heq_istate.
+      apply (spn_map_fire_well_defined_state
+               spn s inter_state Hwell_def_spn Hwell_def_s e).
+    (* Proves IsWellDefinedSpnState spn s''. *)
+    + injection Hfun as Heq_istate Heq_fstate; rewrite <- Heq_fstate.
+      apply (spn_map_fire_well_defined_state
+               spn s inter_state Hwell_def_spn Hwell_def_s) in e.
+      apply (spn_update_marking_well_defined
+               spn inter_state final_state Hwell_def_spn e e0).
+    (* Proves fired s' = fired s'' *)
+    + apply spn_update_marking_same_fired in e0.
+      injection Hfun as Heq_istate Heq_fstate;
+        rewrite <- Heq_istate, <- Heq_fstate; assumption.
+    (* Proves M' = M - ∑ pre(t) + ∑ post(t), forall t ∈ fired s' *)
+    + specialize (spn_map_fire_well_defined_state
+                    spn s inter_state Hwell_def_spn Hwell_def_s e)
+        as Hwell_def_s'.
+      injection Hfun as Heq_istate Heq_fstate;
+        rewrite <- Heq_istate, <- Heq_fstate.
+      apply (spn_update_marking_sub_pre_add_post
+               spn inter_state final_state Hwell_def_s' e0).
+  (* ERROR CASE *)
+  - inversion Hfun.
+  (* ERROR CASE *)
+  - inversion Hfun.
+Admitted.
