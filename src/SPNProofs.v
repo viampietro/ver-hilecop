@@ -3435,7 +3435,279 @@ Section SpnNotSensitizedByResidual.
     (* GENERAL CASE, with two subcases. *)
     - inversion_clear Hin_t_pg as [ Heq_tt' | Hin_t'_tail ].
       (* First subcase, t = t' *)
-  Admitted.
+      (* We need to prove that residual_marking and res_marking are the same, 
+         therefore, there is a contradiction between e3 and Hnotsens_t. *)
+      + (* Hpr_is_fired is needed to specialize Hres_m. *)
+        assert (Hpr_is_fired :
+                  forall t'' : Trans, 
+                    HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired ->
+                    In t'' fired). 
+        {
+          intros t'' Hw; elim Hw; intros Hhas_high Hin_ts_ff; clear Hw.
+          specialize (spn_fire_aux_final_fired_vee
+                        spn s residual_marking' (fired ++ [t]) tail final_fired t'')
+            as Hff_vee.
+          rewrite <- app_assoc in Hff_vee.
+          specialize (Hff_vee Hnodup_pg Hin_ts_ff Hfun) as Hin_ts_vee; clear Hff_vee.
+          inversion_clear Hin_ts_vee as [Hin_fired | Hin_ts_tail].
+          - apply in_app_or in Hin_fired.
+            inversion_clear Hin_fired as [Hin_fired_strict | Hin_tst].
+            + assumption.
+            + inversion Hin_tst as [Heq_tst | Hin_nil].
+              (* Contradiction with the definition of t'' ≻ t' *)
+              -- unfold HasHigherPriority in Hhas_high.
+                 do 4 (apply proj2 in Hhas_high).
+                 unfold IsPredInNoDupList in Hhas_high.
+                 apply proj1 in Hhas_high.
+                 symmetry in Heq_tst; rewrite Heq_tt' in Heq_tst.
+                 contradiction.
+              -- inversion Hin_nil.
+          (* If t'' ∈ tail, then ~IsPredInNoDupList t'' t' (t' :: tail) ⇒ 
+             ~IsPredInNoDupList t'' t' pgroup, then contradiction. *)
+          - unfold HasHigherPriority in Hhas_high.
+            (* Builds ~IsPredInNoDuplist t'' t' (t' :: tail) *)
+            assert (Hnot_is_pred : ~IsPredInNoDupList t'' t' (t' :: tail)) by
+                apply not_is_pred_in_list_if_hd.
+            rewrite Heq_tt' in Hdec_list.
+            specialize (not_is_pred_in_dec_list Hdec_list Hin_ts_tail) as Hnot_is_pred_in_pg.
+            decompose [and] Hhas_high; contradiction.
+        }
+        (* Now we have Hpr_is_fired, we can specialize Hres_m. *)
+        assert (Hpr_iff :
+                  forall t'' : Trans,
+                    HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired <-> In t'' fired)
+          by (intros t'0; split; [apply (Hpr_is_fired t'0) | apply (Hhigh_in_fired t'0)]).
+        specialize (Hres_m fired Hpr_iff).
+        (* Now we can show the equivalence between residual_marking and res_marking. *)
+        assert (Hequiv_m : forall (p : Place) (n : nat), In (p, n) res_marking <->
+                                                         In (p, n) residual_marking).
+        {
+          intros p n.
+          split.
+          - intro Hin_res_m.
+            (* Builds (fs (marking s)) = (fs res_marking) *)
+            explode_well_defined_spn_state.
+            unfold MarkingHaveSameStruct in *.
+            assert (Hsame_resm_sm : fst (split res_marking) = fst (split (marking s)))
+              by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct'; reflexivity).
+            (* Builds In (p, x) (marking s) from In (p, n) res_marking. *)
+            specialize (in_fst_split p n res_marking Hin_res_m) as Hin_fs_resm.
+            rewrite Hsame_resm_sm in Hin_fs_resm.
+            specialize (in_fst_split_in_pair p (marking s) Hin_fs_resm) as Hex_ms.
+            elim Hex_ms; intros x Hin_x_ms.
+            (* Applies Hresid_m and Hres_m. *)
+            specialize (Hresid_m p x Hin_x_ms) as Hin_resid_m'.
+            specialize (Hres_m p x Hin_x_ms) as Hin_res_m'.
+            (* Builds NoDup (fs res_marking) to apply nodup_same_pair. *)
+            explode_well_defined_spn.
+            unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
+            rewrite Hunm_place in Hnodup_places;
+              rewrite Hsame_marking_spn in Hnodup_places;
+              rewrite <- Hsame_resm_sm in Hnodup_places.
+            (* Builds fs (p, n) = fs (p, x - pre_sum spn p fired) *)
+            assert (Heq_fs : fst (p, n) = fst (p, x - pre_sum spn p fired))
+              by (simpl; reflexivity).                    
+            (* Applies nodup_same_pair to get n = x - pre_sum spn p fired. *)
+            specialize (nodup_same_pair
+                          res_marking Hnodup_places (p, n) (p, x - pre_sum spn p fired)
+                          Hin_res_m Hin_res_m' Heq_fs) as Heq_nx.
+            injection Heq_nx as Heq_nx.
+            rewrite Heq_nx.
+            assumption.
+          - intro Hin_resid_m.
+            (* Builds (fs (marking s)) = (fs res_marking) *)
+            explode_well_defined_spn_state.
+            unfold MarkingHaveSameStruct in *.
+            assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
+              by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct; reflexivity).
+            (* Builds In (p, x) (marking s) from In (p, n) residual_marking. *)
+            specialize (in_fst_split p n residual_marking Hin_resid_m) as Hin_fs_residm.
+            rewrite Hsame_residm_sm in Hin_fs_residm.
+            specialize (in_fst_split_in_pair p (marking s) Hin_fs_residm) as Hex_ms.
+            elim Hex_ms; intros x Hin_x_ms.
+            (* Applies Hresid_m and Hres_m. *)
+            specialize (Hresid_m p x Hin_x_ms) as Hin_resid_m'.
+            specialize (Hres_m p x Hin_x_ms) as Hin_res_m'.
+            (* Builds NoDup (fs residual_marking) to apply nodup_same_pair. *)
+            explode_well_defined_spn.
+            unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
+            rewrite Hunm_place in Hnodup_places;
+              rewrite Hsame_marking_spn in Hnodup_places;
+              rewrite <- Hsame_residm_sm in Hnodup_places.
+            (* Builds fs (p, n) = fs (p, x - pre_sum spn p fired) *)
+            assert (Heq_fs : fst (p, n) = fst (p, x - pre_sum spn p fired))
+              by (simpl; reflexivity).                    
+            (* Applies nodup_same_pair to get n = x - pre_sum spn p fired. *)
+            specialize (nodup_same_pair
+                          residual_marking Hnodup_places (p, n) (p, x - pre_sum spn p fired)
+                          Hin_resid_m Hin_resid_m' Heq_fs) as Heq_nx.
+            injection Heq_nx as Heq_nx.
+            rewrite Heq_nx.
+            assumption.
+        }
+        (* Useful to introduce IsSensitized spn res_marking t. *)
+        apply get_neighbours_correct in e0.
+        apply (is_sensitized_correct
+                 spn residual_marking t neighbours_of_t Hwell_def_spn
+                 Hsame_struct e0) in e3.
+        assert (Hsens_t_in_res_m : IsSensitized spn res_marking t).
+        {
+          unfold IsSensitized.
+          split. assumption.
+          split. assumption.
+          split. apply in_fst_split in e0.
+          explode_well_defined_spn.
+          unfold NoUnknownTransInLNeighbours in *.
+          rewrite <- Hunk_tr_neigh in e0.
+          assumption.
+          intros p n Hin_resid_m.
+          rewrite Hequiv_m in Hin_resid_m.
+          unfold IsSensitized in e3.
+          do 3 (apply proj2 in e3).
+          apply (e3 p n Hin_resid_m).
+        }
+        rewrite Heq_tt' in Hsens_t_in_res_m.
+        contradiction.
+      (* Second subcase, In t' tail then apply the induction hypothesis. *)
+      + (* Builds condition 1: 
+           ∀ (p, n) ∈ (marking s) -> 
+             (p, n - pre_sum spn p (fired ++ [t])) ∈ residual_marking' *)
+        (* We need ∀ (p, n) ∈ residual_marking ⇒ 
+                     (p, n - pre_sum spn p [t]) ∈ residual_marking' *)
+        (* Builds (fs (marking s)) = (fs res_marking) *)
+        explode_well_defined_spn_state.
+        unfold MarkingHaveSameStruct in *.
+        assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
+          by (rewrite <- Hsame_marking_spn; rewrite <- Hsame_struct; reflexivity).
+        (* Builds NoDup (fs residual_marking) to apply nodup_same_pair. *)
+        explode_well_defined_spn.
+        unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
+        rewrite Hunm_place in Hnodup_places;
+          rewrite Hsame_marking_spn in Hnodup_places;
+          rewrite <- Hsame_residm_sm in Hnodup_places.
+        (* Builds In (t, neigh_of_t) (lneighbours spn) *)
+        specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0)
+          as Hin_lneigh.
+        specialize (update_residual_marking_correct
+                      spn residual_marking t neighbours_of_t residual_marking'
+                      Hwell_def_spn Hnodup_places Hin_lneigh e5) as Hin_res_in_fin.
+        (* Then we need pre_sum_app_add *)
+        specialize (pre_sum_app_add spn) as Heq_presum.
+        (* Finally, deduces condition 1. *)
+        assert (
+            Hresid'_m :
+              (forall (p : Place) (n : nat),
+                  In (p, n) (marking s) ->
+                  In (p, n - pre_sum spn p (fired ++ [t])) residual_marking')
+          ).
+        {
+          intros p n Hin_ms.
+          apply Hresid_m in Hin_ms.
+          apply Hin_res_in_fin with (n := n - pre_sum spn p fired) in Hin_ms.
+          assert (Heq_presum' : pre_sum spn p [t] = pre spn t p) by (simpl; auto).
+          rewrite <- Nat.sub_add_distr in Hin_ms.
+          specialize (Heq_presum p fired t).
+          rewrite <- Heq_presum' in Hin_ms.
+          rewrite Heq_presum in Hin_ms.
+          assumption.
+        }
+        (* Builds condition 2: 
+           ∀ t'' ∈ (fired ++ [t]), t'' ≻ t' ∧ t'' ∈ final_fired. *)
+        assert(Hhigh_in_fired' :
+                 forall t'' : Trans, In t'' (fired ++ [t]) ->
+                                     HasHigherPriority spn t'' t' pgroup /\ In t'' final_fired).
+        {
+          intros t'' Hin_fired_app;
+            apply in_app_or in Hin_fired_app;
+            inversion Hin_fired_app as [Hin_fired | Heq_tst]; clear Hin_fired_app.
+          - apply (Hhigh_in_fired t'' Hin_fired).
+          - inversion Heq_tst as [Heq_tt | Hin_nil].
+            (* Two things to build, t'' ≻ t' and t'' ∈ ff. *)
+            + (* First, t'' ∈ ff *)
+              assert (Hin_fired_app : In t (fired ++ [t]))
+                by (apply in_or_app; right; apply in_eq).
+              specialize (spn_fire_aux_in_fired
+                            spn s residual_marking' (fired ++ [t]) tail final_fired t
+                            Hin_fired_app Hfun) as Hin_ff.
+              (* Second, t'' ≻ t' *)
+              assert (Hsucc_ts_tp : HasHigherPriority spn t t' pgroup).
+              {
+                unfold HasHigherPriority.
+                specialize (is_decreased_list_incl Hdec_list) as Hincl.
+                split. assumption. split. assumption.
+                split. unfold incl in Hincl. apply (Hincl t (in_eq t tail)).
+                split. unfold incl in Hincl. apply (Hincl t' (in_cons t t' tail Hin_t'_tail)).
+                unfold IsPredInNoDupList.
+                split.
+                (* Proves t <> t'. *)
+                apply NoDup_remove_2 in Hnodup_pg.
+                apply not_app_in in Hnodup_pg; apply proj2 in Hnodup_pg.
+                apply (not_in_in_diff t t' tail (conj Hnodup_pg Hin_t'_tail)).
+                split.
+                (* Proves NoDup pgroup. *)
+                unfold NoIntersectInPriorityGroups in Hno_inter.
+                apply (nodup_concat_gen (priority_groups spn) Hno_inter
+                                        pgroup Hin_spn_pgs).
+                (* Proves IsPredInlist *)
+                specialize (is_pred_in_list_in_tail t t' tail Hin_t'_tail) as His_pred.
+                unfold NoIntersectInPriorityGroups in Hno_inter.
+                specialize (nodup_concat_gen (priority_groups spn) Hno_inter
+                                             pgroup Hin_spn_pgs) as Hnodup_pgroup.
+                apply (is_pred_in_dec_list His_pred Hdec_list Hnodup_pgroup).
+              }
+              rewrite <- Heq_tt.
+              apply (conj Hsucc_ts_tp Hin_ff).
+            + inversion Hin_nil.
+        }
+        (* Builds a few other hypotheses, and then applies IHo. *)
+        apply update_residual_marking_aux_same_struct in e5.
+        rewrite e5 in Hsame_struct.
+        rewrite <- app_assoc in IHo.
+        apply (IHo pgroup final_fired
+                   Hwell_def_spn Hwell_def_state Hin_spn_pgs (is_decreased_list_cons Hdec_list)
+                   Hnodup_pg Hresid'_m Hsame_struct Hfun t' res_marking Hin_t'_tail
+                   Hfirable_t Hnotsens_t Hhigh_in_fired' Hsame_struct' Hres_m).
+    (* ERROR CASE, update_residual_marking = None. *)
+    - inversion Hfun.
+    (* CASE is_sensitized = Some false. *)
+    - inversion_clear Hin_t_pg as [ Heq_tt' | Hin_tail].
+      (* Subcase 1, t = t', apply spn_fire_aux_not_in_not_fired. *)
+      + apply NoDup_remove_2 in Hnodup_pg.
+        apply not_app_in in Hnodup_pg.
+        inversion_clear Hnodup_pg as (Hnot_in_fired & Hnot_in_tl).
+        rewrite <- Heq_tt'.
+        apply (spn_fire_aux_not_in_not_fired
+                 spn s residual_marking fired tail final_fired t
+                 Hnot_in_fired Hnot_in_tl Hfun).
+      (* Subcase 2, t ∈ tail, then aplpy induction hypothesis. *)
+      + apply is_decreased_list_cons in Hdec_list. 
+        apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
+        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
+                   Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
+                   Hfun t' res_marking
+                   Hin_tail Hfirable_t Hnotsens_t Hhigh_in_fired Hsame_struct' Hres_m).
+    (* ERROR CASE, is_sensitized = None. *)
+    - inversion Hfun.
+    (* CASE, spn_is_firable = Some false. *)
+    - inversion_clear Hin_t_pg as [ Heq_tt' | Hin_t'_tail ].
+      (* First subcase t = t', show a contradiction between e1 and Hfirable_t. *)
+      + rewrite <- Heq_tt' in Hfirable_t.
+        apply get_neighbours_correct in e0.
+        apply (spn_is_firable_complete
+                 spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0) in Hfirable_t.
+        rewrite Hfirable_t in e1; inversion e1.
+      (* Second subcase, In t' tail, then apply induction hypothesis. *)
+      + apply is_decreased_list_cons in Hdec_list. 
+        apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
+        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
+                   Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
+                   Hfun t' res_marking
+                   Hin_t'_tail Hfirable_t Hnotsens_t Hhigh_in_fired Hsame_struct' Hres_m).
+    (* ERROR CASE, spn_is_firable = None. *)
+    - inversion Hfun.
+    (* ERROR CASE, get_neighbours = None. *)
+    - inversion Hfun.
+  Qed.
   
   Lemma spn_map_fire_aux_not_sens_by_residual :
     forall (spn : Spn)
@@ -3677,9 +3949,13 @@ Proof.
       apply (spn_map_fire_sens_by_residual
                spn s inter_state Hwell_def_spn Hwell_def_state e).
     (* Proves ∀ t ∈ firable(s'), t ∉ sens(m - ∑ pre(t_i)) ⇒ t ∉ Fired'  *)
-    +
-  - inversion H3.
-  - inversion H3.
+    + injection Hfun as Heq_istate Heq_fstate; rewrite <- Heq_istate.
+      apply (spn_map_fire_not_sens_by_residual
+               spn s inter_state Hwell_def_spn Hwell_def_state e).
+  (* ERROR CASE *)
+  - inversion Hfun.
+  (* ERROR CASE *)
+  - inversion Hfun.
 Qed.
 
 (** Correctness proof between spn_cycle and SpnSemantics_raising_edge. *)
