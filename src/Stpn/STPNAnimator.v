@@ -1,5 +1,5 @@
-Require Export Hilecop.STPN.
-Require Export Hilecop.SPNAnimator.
+Require Export Hilecop.Stpn.STPN.
+Require Export Hilecop.Spn.SPNAnimator.
 
 (** * List sensitized section *)
 

@@ -1,4 +1,4 @@
-Require Export Hilecop.SPN.
+Require Export Hilecop.Spn.SPN.
 
 (*! ====================================== !*)
 (*! TYPES FOR GENERALIZED, EXTENDED, TIME  !*)

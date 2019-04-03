@@ -1,4 +1,4 @@
-Require Import Hilecop.SPN.
+Require Import Hilecop.Spn.Spn.
 
 (*! ============================================================ !*)
 (*! ================ FIRING ALGORITHM for Spn ================== !*)

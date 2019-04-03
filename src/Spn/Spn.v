@@ -209,6 +209,19 @@ Definition AreWellDefinedInhibEdges (spn : Spn) :=
     (In p (inhib_pl neighbours_of_t) -> (inhib spn t p) >= 1) /\
     (~In p (inhib_pl neighbours_of_t) -> (inhib spn t p) = 0).
 
+(** ∀ p ∈ P, ∀ (t, neighb) ∈ spn.(lneighbours), 
+    if p ∈ (post_pl neighb) then post(p, t) >= 1 and
+    if p ∉ (post_pl neighb) then post(p, t) = 0.
+ *)
+
+Definition AreWellDefinedPostEdges (spn : Spn) :=
+  forall (t : Trans)
+    (neighbours_of_t : Neighbours)
+    (p : Place),
+    In (t, neighbours_of_t) spn.(lneighbours) ->
+    (In p (post_pl neighbours_of_t) -> (post spn t p) >= 1) /\
+    (~In p (post_pl neighbours_of_t) -> (post spn t p) = 0).
+
 (** *** Properties on marking *)
 
 (** For all place p, p is in spn.(places) iff p is referenced in marking. *)
@@ -230,6 +243,7 @@ Definition IsWellDefinedSpn (spn : Spn) :=
   AreWellDefinedPreEdges spn /\
   AreWellDefinedTestEdges spn /\
   AreWellDefinedInhibEdges spn /\
+  AreWellDefinedPostEdges spn /\
   NoUnmarkedPlace spn.
 
 (** ** Spn state. *)

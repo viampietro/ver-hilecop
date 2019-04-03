@@ -1,4 +1,4 @@
-Require Import Hilecop.SPN.
+Require Import Hilecop.Spn.Spn.
 
 (** Renames all hypotheses resulting of the decomposition 
     of the IsWelldefinedSpn predicate. *)
@@ -53,6 +53,10 @@ Ltac rename_well_defined_spn :=
     rename H into Hwell_def_inhib
   end;
   match goal with
+  | [ H: AreWellDefinedPostEdges ?spn |- _ ] =>
+    rename H into Hwell_def_post
+  end;
+  match goal with
   | [ H: NoUnmarkedPlace ?spn |- _ ] =>
     rename H into Hunm_place
   end.
@@ -75,11 +79,11 @@ Ltac rename_well_defined_spn_state :=
     rename H into Hsame_marking_state_spn
   end;
   match goal with
-  | [ H: incl (SPN.fired ?s) (transs ?spn) |- _ ] =>
+  | [ H: incl (Spn.fired ?s) (transs ?spn) |- _ ] =>
     rename H into Hincl_state_fired_transs
   end;
   match goal with
-  | [ H: NoDup (SPN.fired ?s) |- _ ] =>
+  | [ H: NoDup (Spn.fired ?s) |- _ ] =>
     rename H into Hnodup_state_fired
   end.
 

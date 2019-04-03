@@ -1,23 +1,14 @@
 -Q src/ Hilecop 
--Q src/utils Hilecop.Utils
 -Q test/ Hilecop.Test
 
-src/utils/HilecopLemmas.v
-src/utils/HilecopTactics.v
+src/Utils/HilecopLemmas.v
+src/Utils/HilecopTactics.v
 
-src/SPN.v
-src/SPNAnimator.v
-src/SPNSemantics.v
-src/SPNTactics.v
-src/SPNProofs.v
-
-src/STPN.v
-src/STPNAnimator.v
-src/STPNTactics.v
-
-src/SITPN.v
-src/SITPNAnimator.v
-
-test/spn_examples.v
-test/stpn_examples.v
-test/sitpn_examples.v
+src/Spn/Spn.v
+src/Spn/SpnAnimator.v
+src/Spn/SpnSemantics.v
+src/Spn/SpnTactics.v
+src/Spn/SpnCoreLemmas.v
+src/Spn/SpnMapFireCorrect.v
+src/Spn/SpnUpdateMarkingCorrect.v
+src/Spn/SpnCorrect.v

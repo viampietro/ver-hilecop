@@ -1,4 +1,4 @@
-Require Import Hilecop.SPN.
+Require Import Hilecop.Spn.Spn.
 Require Import Omega.
 Require Import Classical_Prop.
 
