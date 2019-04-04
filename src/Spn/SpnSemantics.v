@@ -10,32 +10,35 @@ Set Implicit Arguments.
 
 (** * Preliminary definitions *)
 
-(** ** Predicate IsDecreasedList and facts. *)
+(** ** Predicate IsDecListCons and facts. *)
 
 Section DecreasedList.
 
   Variable A : Type.
   
-  (** List l is a decreased version of list l'. Useful for proof involving recursion on lists.  *)
-
-  Inductive IsDecreasedList : list A -> list A -> Prop :=
-  | IsDecreasedList_refl : forall l : list A, IsDecreasedList l l
-  | IsDecreasedList_eq : forall (a : A) (l : list A), IsDecreasedList l (a :: l)
-  | IsDecreasedList_cons :
+  (** List l is a decreased or equal version of list l'. 
+      l' is built from l by adding elements in the front (cons).
+       
+      Useful for proof involving recursion on lists.  *)
+  
+  Inductive IsDecListCons : list A -> list A -> Prop :=
+  | IsDecListCons_refl : forall l : list A, IsDecListCons l l
+  | IsDecListCons_eq : forall (a : A) (l : list A), IsDecListCons l (a :: l)
+  | IsDecListCons_cons :
       forall (a : A) (l l' : list A),
-      IsDecreasedList l l' ->      
-      IsDecreasedList l (a :: l').
+      IsDecListCons l l' ->      
+      IsDecListCons l (a :: l').
     
-  Lemma is_decreased_list_nil :
-    forall (l : list A), IsDecreasedList [] l.
+  Lemma is_dec_list_cons_nil :
+    forall (l : list A), IsDecListCons [] l.
   Proof.
     induction l.
-    - apply IsDecreasedList_refl.
-    - apply IsDecreasedList_cons; assumption.
+    - apply IsDecListCons_refl.
+    - apply IsDecListCons_cons; assumption.
   Qed.
   
-  Lemma is_decreased_list_incl :
-    forall l' l : list A, IsDecreasedList l l' -> incl l l'.
+  Lemma is_dec_list_cons_incl :
+    forall l' l : list A, IsDecListCons l l' -> incl l l'.
   Proof.
     induction l'.
     - intros l His_dec x Hin_l.
@@ -52,18 +55,37 @@ Section DecreasedList.
         assumption.      
   Qed.
 
-  Lemma is_decreased_list_cons :
-    forall (a : A) (l' l : list A), IsDecreasedList (a :: l) l' -> IsDecreasedList l l'.
+  Lemma is_dec_list_cons_cons :
+    forall (a : A) (l' l : list A), IsDecListCons (a :: l) l' -> IsDecListCons l l'.
   Proof.
     intros a l'.
     induction l'.
     - intros l His_dec; inversion His_dec.
     - intros l His_dec; inversion His_dec.
-      + apply IsDecreasedList_eq.
-      + apply IsDecreasedList_cons; apply IsDecreasedList_eq.
-      + apply IsDecreasedList_cons; apply (IHl' l H1).
+      + apply IsDecListCons_eq.
+      + apply IsDecListCons_cons; apply IsDecListCons_eq.
+      + apply IsDecListCons_cons; apply (IHl' l H1).
   Qed.
 
+  (** List l is a decreased or equal version of list l'. 
+      l' is built from l by adding elements in the front (cons).
+       
+      Useful for proof involving recursion on lists.  *)
+
+  Inductive IsDecListApp : list A -> list A -> Prop :=
+  | IsDecListApp_refl : forall l : list A, IsDecListApp l l
+  | IsDecListApp_eq : forall (a : A) (l : list A), IsDecListApp l (l ++ [a])
+  | IsDecListApp_cons :
+      forall (a : A) (l l' : list A),
+        IsDecListApp l l' ->
+        IsDecListApp l (l' ++ [a]).
+
+  Lemma is_dec_list_app_eq_if_incl :
+    forall (l l' : list A),
+      NoDup l -> NoDup l' -> IsDecListApp l l' -> incl l' l -> l = l'.
+  Proof.
+  Admitted.
+  
 End DecreasedList.
 
 (** ** Predicate IsPredInList and facts. *)
@@ -105,7 +127,7 @@ Section PredInList.
   
   Theorem is_pred_in_dec_list :
     forall (l l' : list A) (x y : A),
-      IsPredInList x y l -> IsDecreasedList l l' -> NoDup l' -> IsPredInList x y l'.
+      IsPredInList x y l -> IsDecListCons l l' -> NoDup l' -> IsPredInList x y l'.
   Proof.
     induction l'.
     - intros x y His_pred His_dec Hnodup.
@@ -194,7 +216,7 @@ Section PredInList.
 
   Theorem not_is_pred_in_dec_list :
     forall (l' l : list A) (x y : A),
-      IsDecreasedList (y :: l) l' ->
+      IsDecListCons (y :: l) l' ->
       In x l ->
       ~IsPredInNoDupList x y l'.
   Proof.
@@ -211,8 +233,8 @@ Section PredInList.
            apply in_cons with (a := y) in Hin_x_l.
            apply NoDup_cons_iff in Hnodup.
            apply proj1 in Hnodup; contradiction.
-        -- apply is_decreased_list_cons in H3.
-           apply is_decreased_list_incl in H3.
+        -- apply is_dec_list_cons_cons in H3.
+           apply is_dec_list_cons_incl in H3.
            apply H3 in Hin_x_l.
            rewrite <- H0 in Hnodup.
            apply NoDup_cons_iff in Hnodup.
@@ -224,8 +246,8 @@ Section PredInList.
            apply in_cons with (a := y) in Hin_x_l.
            apply NoDup_cons_iff in Hnodup.
            apply proj1 in Hnodup; contradiction.
-        -- apply is_decreased_list_cons in H4.
-           apply is_decreased_list_incl in H4.
+        -- apply is_dec_list_cons_cons in H4.
+           apply is_dec_list_cons_incl in H4.
            apply H4 in Hin_x_l.
            rewrite <- H in Hnodup.
            apply NoDup_cons_iff in Hnodup.

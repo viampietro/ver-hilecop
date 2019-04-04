@@ -811,7 +811,7 @@ Section SpnHigherPriorityNotFirable.
       IsWellDefinedSpnState spn s ->
       residual_marking = (marking s) ->
       In pgroup spn.(priority_groups) ->
-      IsDecreasedList pg pgroup ->
+      IsDecListCons pg pgroup ->
       NoDup pg ->
       spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
       forall (t : Trans),
@@ -857,7 +857,7 @@ Section SpnHigherPriorityNotFirable.
         assert (Hhas_high_t : HasHigherPriority spn t t' pgroup).
         {
           unfold HasHigherPriority.
-          apply is_decreased_list_incl in Hdec_list.
+          apply is_dec_list_cons_incl in Hdec_list.
           repeat (assumption || split).
           - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
             apply (Hdec_list t Hin_eq).
@@ -908,7 +908,7 @@ Section SpnHigherPriorityNotFirable.
         {
           unfold HasHigherPriority;
             repeat (assumption || split);
-            apply is_decreased_list_incl in Hdec_list.
+            apply is_dec_list_cons_incl in Hdec_list.
           - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
             apply (Hdec_list t Hin_eq).
           - apply (Hdec_list t' Hin_t_pg).
@@ -944,9 +944,9 @@ Section SpnHigherPriorityNotFirable.
           apply in_cons with (a := t) in Hin_t'0_tail.
           apply (Hhas_high t'0 Hin_t'0_tail Hhas_high_t'0).
         }
-        (* Builds NoDup tail and IsDecreasedList tail pgroup. *)
+        (* Builds NoDup tail and IsDecListCons tail pgroup. *)
         apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; intros Hnot_in_tail Hnodup_tail.
-        apply is_decreased_list_cons in Hdec_list.
+        apply is_dec_list_cons_cons in Hdec_list.
         apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s Heq_marking Hin_spn_pgs
                    Hdec_list Hnodup_tail Hfun t' Hin_t'_tail Hfirable_t Hhas_high').
     (* ERROR CASE, spn_is_firable = None. *)
@@ -1003,7 +1003,7 @@ Section SpnHigherPriorityNotFirable.
         specialize (spn_fire_aux_higher_priority_not_firable
                       spn s (marking s) [] pgroup' pgroup' fired_trs
                       Hwell_def_spn Hwell_def_s
-                      (eq_refl (marking s)) Hin_spn_pgs (IsDecreasedList_refl pgroup')
+                      (eq_refl (marking s)) Hin_spn_pgs (IsDecListCons_refl pgroup')
                       Hnodup_pg
                       e0 t Hin_pg
                       Hfirable_t Hhas_high) as Hin_fired.
@@ -1583,7 +1583,7 @@ Section SpnSensitizedByResidual.
       (* Hypotheses on pgroup. *)
       In pgroup spn.(priority_groups) ->
       (* Hypotheses on pg. *)
-      IsDecreasedList pg pgroup ->
+      IsDecListCons pg pgroup ->
       NoDup (fired ++ pg) ->
       (* Hypotheses on residual_marking. *)
       (forall (p : Place) (n : nat),
@@ -1691,7 +1691,7 @@ Section SpnSensitizedByResidual.
               assert (Hsucc_ts_tp : HasHigherPriority spn t t' pgroup).
               {
                 unfold HasHigherPriority.
-                specialize (is_decreased_list_incl Hdec_list) as Hincl.
+                specialize (is_dec_list_cons_incl Hdec_list) as Hincl.
                 split. assumption. split. assumption.
                 split. unfold incl in Hincl. apply (Hincl t (in_eq t tail)).
                 split. unfold incl in Hincl. apply (Hincl t' (in_cons t t' tail Hin_t'_tail)).
@@ -1722,7 +1722,7 @@ Section SpnSensitizedByResidual.
         rewrite e5 in Hsame_struct.
         rewrite <- app_assoc in IHo.
         apply (IHo pgroup final_fired
-                   Hwell_def_spn Hwell_def_state Hin_spn_pgs (is_decreased_list_cons Hdec_list)
+                   Hwell_def_spn Hwell_def_state Hin_spn_pgs (is_dec_list_cons_cons Hdec_list)
                    Hnodup_pg Hresid'_m Hsame_struct Hfun t' res_marking Hin_t'_tail
                    Hfirable_t Hsens_t Hhigh_in_fired' Hsame_struct' Hres_m).
     (* ERROR CASE, update_residual_marking = None. *)
@@ -1860,7 +1860,7 @@ Section SpnSensitizedByResidual.
         rewrite Heq_tt' in e3.
         rewrite Hsens_t_false in e3; inversion e3.
       (* Second subcase, In t' tail then apply the induction hypothesis. *)
-      + apply is_decreased_list_cons in Hdec_list. 
+      + apply is_dec_list_cons_cons in Hdec_list. 
         apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
         apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
                    Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
@@ -1877,7 +1877,7 @@ Section SpnSensitizedByResidual.
                  spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0) in Hfirable_t.
         rewrite Hfirable_t in e1; inversion e1.
       (* Second subcase, In t' tail, then apply induction hypothesis. *)
-      + apply is_decreased_list_cons in Hdec_list. 
+      + apply is_dec_list_cons_cons in Hdec_list. 
         apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
         apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
                    Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
@@ -2043,7 +2043,7 @@ Section SpnSensitizedByResidual.
         (* Builds In t fired_trs. *)
         specialize (spn_fire_aux_sens_by_residual
                       spn s (marking s) [] pgroup' pgroup' fired_trs
-                      Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecreasedList_refl pgroup')
+                      Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecListCons_refl pgroup')
                       Hnodup_pg Hresid_m Hsame_marking_state_spn e0
                       t residual_marking Hin_t_pg Hfirable_t Hsens_t Hhigh_in_fired
                       Hmark_struct Hres_mark') as Hin_t_fired.
@@ -2176,7 +2176,7 @@ Section SpnNotSensitizedByResidual.
       (* Hypotheses on pgroup. *)
       In pgroup spn.(priority_groups) ->
       (* Hypotheses on pg. *)
-      IsDecreasedList pg pgroup ->
+      IsDecListCons pg pgroup ->
       NoDup (fired ++ pg) ->
       (* Hypotheses on residual_marking. *)
       (forall (p : Place) (n : nat),
@@ -2415,7 +2415,7 @@ Section SpnNotSensitizedByResidual.
               assert (Hsucc_ts_tp : HasHigherPriority spn t t' pgroup).
               {
                 unfold HasHigherPriority.
-                specialize (is_decreased_list_incl Hdec_list) as Hincl.
+                specialize (is_dec_list_cons_incl Hdec_list) as Hincl.
                 split. assumption. split. assumption.
                 split. unfold incl in Hincl. apply (Hincl t (in_eq t tail)).
                 split. unfold incl in Hincl. apply (Hincl t' (in_cons t t' tail Hin_t'_tail)).
@@ -2446,7 +2446,7 @@ Section SpnNotSensitizedByResidual.
         rewrite e5 in Hsame_struct.
         rewrite <- app_assoc in IHo.
         apply (IHo pgroup final_fired
-                   Hwell_def_spn Hwell_def_state Hin_spn_pgs (is_decreased_list_cons Hdec_list)
+                   Hwell_def_spn Hwell_def_state Hin_spn_pgs (is_dec_list_cons_cons Hdec_list)
                    Hnodup_pg Hresid'_m Hsame_struct Hfun t' res_marking Hin_t'_tail
                    Hfirable_t Hnotsens_t Hhigh_in_fired' Hsame_struct' Hres_m).
     (* ERROR CASE, update_residual_marking = None. *)
@@ -2462,7 +2462,7 @@ Section SpnNotSensitizedByResidual.
                  spn s residual_marking fired tail final_fired t
                  Hnot_in_fired Hnot_in_tl Hfun).
       (* Subcase 2, t ∈ tail, then aplpy induction hypothesis. *)
-      + apply is_decreased_list_cons in Hdec_list. 
+      + apply is_dec_list_cons_cons in Hdec_list. 
         apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
         apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
                    Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
@@ -2479,7 +2479,7 @@ Section SpnNotSensitizedByResidual.
                  spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0) in Hfirable_t.
         rewrite Hfirable_t in e1; inversion e1.
       (* Second subcase, In t' tail, then apply induction hypothesis. *)
-      + apply is_decreased_list_cons in Hdec_list. 
+      + apply is_dec_list_cons_cons in Hdec_list. 
         apply NoDup_remove in Hnodup_pg; apply proj1 in Hnodup_pg.
         apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s 
                    Hin_spn_pgs Hdec_list Hnodup_pg Hresid_m Hsame_struct
@@ -2579,7 +2579,7 @@ Section SpnNotSensitizedByResidual.
         (* Builds ~In t fired_trs. *)
         specialize (spn_fire_aux_not_sens_by_residual
                       spn s (marking s) [] pgroup' pgroup' fired_trs
-                      Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecreasedList_refl pgroup')
+                      Hwell_def_spn Hwell_def_state Hin_spn_pgs (IsDecListCons_refl pgroup')
                       Hnodup_pg Hresid_m Hsame_marking_state_spn e0
                       t residual_marking Hin_t_pg Hfirable_t Hnotsens_t Hhigh_in_fired
                       Hmark_struct Hres_mark') as Hnot_in_fired'.
