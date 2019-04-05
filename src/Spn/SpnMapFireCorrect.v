@@ -565,8 +565,9 @@ Section SpnNotFirableNotFired.
       as Hnodup_pgroup; intro.              
     (* Applies spn_fire_aux_not_firable_not_fired. *)
     generalize (spn_fire_aux_not_firable_not_fired
-                  spn state state.(marking) [] pgroup pgroup fired Hwell_def_spn
-                                            Hwell_def_state Hin_pgroups Hnodup_pgroup Hincl_pgroup Hfun) as Hspec; intro.
+                  spn state (marking state)
+                  [] pgroup pgroup fired Hwell_def_spn
+                  Hwell_def_state Hin_pgroups Hnodup_pgroup Hincl_pgroup Hfun) as Hspec; intro.
     assert (Hnot_in : ~In t []) by (apply in_nil).
     apply (Hspec t Hin_pgroup Hnot_in Hnot_firable). 
   Qed.
