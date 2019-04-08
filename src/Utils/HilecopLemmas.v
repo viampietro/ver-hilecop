@@ -2,6 +2,7 @@
 
 Require Export Coq.Program.Equality.
 Require Import Omega.
+Require Import FunInd.
 
 (** To use [list] and its notations. *)
 
@@ -508,4 +509,99 @@ Proof.
   exists (n + m).
   omega.
 Qed.
-    
+
+(** Lemmas about remove function. *)
+
+Functional Scheme remove_ind := Induction for remove Sort Prop.
+
+Lemma not_in_remove_eq {A : Type} :
+  forall (eq_dec : forall (x y : A), {x = y} + {x <> y})
+         (a  : A)
+         (l : list A),
+    ~In a l -> remove eq_dec a l = l.
+Proof.
+  intros eq_dec a l;
+    functional induction (remove eq_dec a l) using remove_ind;
+    intros Hnot_in_l.
+  - reflexivity.
+  - apply not_in_cons in Hnot_in_l; apply proj1 in Hnot_in_l.
+    elim Hnot_in_l; reflexivity.
+  - apply not_in_cons in Hnot_in_l; apply proj2 in Hnot_in_l.
+    specialize (IHl0 Hnot_in_l) as Heq_rm; rewrite Heq_rm; reflexivity.
+Qed.
+
+Lemma in_remove_iff {A : Type} :
+  forall (a  : A)
+         (eq_dec : forall (x y : A), {x = y} + {x <> y})
+         (x : A)
+         (l : list A),
+    In a (remove eq_dec x l) <-> In a l /\ a <> x.
+Proof.
+  intros a eq_dec x l;
+    functional induction (remove eq_dec x l) using remove_ind.
+  - split; [auto | intro Hw_in; apply proj1 in Hw_in; inversion Hw_in].
+  - split.
+    + intro Hin_a_rm.
+      rewrite  IHl0 in Hin_a_rm.
+      split; [apply in_cons; apply proj1 in Hin_a_rm; assumption |
+              apply proj2 in Hin_a_rm; assumption].
+    + intro Hw_in.
+      elim Hw_in; intros Hin_ctl Hdiff_ax; clear Hw_in.
+      inversion Hin_ctl as [Heq_ax | Hin_tl];
+        [ symmetry in Heq_ax; contradiction |
+          rewrite IHl0; apply (conj Hin_tl Hdiff_ax) ].
+  - split.
+    + intro Hin_a_rm; inversion_clear Hin_a_rm as [Heq_ay | Hin_rm_tl].
+      -- split.
+         ++ rewrite Heq_ay; apply in_eq.
+         ++ intro Heq_ax;
+              symmetry in Heq_ax;
+              rewrite <- Heq_ay in Heq_ax;
+              contradiction.
+      -- rewrite IHl0 in Hin_rm_tl; split.
+         ++ apply in_cons; apply proj1 in Hin_rm_tl; assumption.
+         ++ apply (proj2 Hin_rm_tl).
+    + intro Hin_a_l.
+      elim Hin_a_l; clear Hin_a_l; intros Hin_a_l Hdiff_ax.
+      simpl; inversion_clear Hin_a_l as [Heq_ay | Hin_tl].
+      -- left; assumption.
+      -- right; rewrite IHl0; apply (conj Hin_tl Hdiff_ax). 
+Qed.
+
+Lemma not_in_not_in_remove {A : Type} :
+  forall (a  : A) (l : list A),
+    ~In a l ->
+    forall (x : A)
+           (eq_dec : forall (x y : A), {x = y} + {x <> y}),
+      ~In a (remove eq_dec x l).
+Proof.
+  intros a l Hnot_in_a_l x eq_dec;
+    functional induction (remove eq_dec x l) using remove_ind.
+  - apply in_nil.
+  - rewrite (not_in_cons a y tl) in Hnot_in_a_l; apply proj2 in Hnot_in_a_l.
+    apply (IHl0 Hnot_in_a_l).
+  - rewrite not_in_cons; split.
+    + rewrite (not_in_cons a y tl) in Hnot_in_a_l; apply proj1 in Hnot_in_a_l; assumption.
+    + rewrite (not_in_cons a y tl) in Hnot_in_a_l; apply proj2 in Hnot_in_a_l.
+      apply (IHl0 Hnot_in_a_l).
+Qed.
+
+Lemma nodup_if_remove {A : Type} :
+  forall (l : list A),
+    NoDup l ->
+    forall (a : A)
+           (eq_dec : forall (x y : A), {x = y} + {x <> y}),
+      NoDup (remove eq_dec a l).
+Proof.
+  intros l Hnodup_l a eq_dec;
+    functional induction (remove eq_dec a l) using remove_ind.
+  - apply NoDup_nil.
+  - rewrite NoDup_cons_iff in Hnodup_l;
+      apply proj2 in Hnodup_l;
+      apply (IHl0 Hnodup_l).
+  - apply NoDup_cons.
+    + rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+      apply (not_in_not_in_remove y tl Hnodup_l a eq_dec).
+    + rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+      apply (IHl0 Hnodup_l).
+Qed.

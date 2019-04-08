@@ -40,6 +40,37 @@ Definition IsResidualMarking
       In (p, n) initial_marking ->
       In (p, n - pre_sum spn p pr) residual_marking.  
 
+Lemma pre_sum_add_rm : 
+  forall (spn : Spn)
+         (p : Place)
+         (l : list Trans)
+         (t : Trans),
+    In t l -> NoDup l -> pre_sum spn p l = pre spn t p + pre_sum spn p (remove eq_nat_dec t l).
+Proof.
+  intros spn p l;
+    functional induction (pre_sum spn p l) using pre_sum_ind;
+    intros a Hin_a_l Hnodup_l.
+  - inversion Hin_a_l.
+  - inversion_clear Hin_a_l as [Heq_at | Hin_a_tl].
+    + rewrite <- Heq_at.
+      simpl; case (Nat.eq_dec t t).
+      -- intro Heq_refl.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_remove_eq Nat.eq_dec t tail Hnodup_l) as Heq_rm.
+         rewrite Heq_rm; reflexivity.
+      -- intro Heq_diff; elim Heq_diff; reflexivity.
+    + simpl; case (Nat.eq_dec a t).
+      -- rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_in_diff t a tail (conj Hnodup_l Hin_a_tl)) as Hdiff_ta.
+         intro Heq_at; symmetry in Heq_at; contradiction.
+      -- intro Hdiff_at.
+         simpl; symmetry; rewrite Nat.add_comm.
+         rewrite <- Nat.add_assoc.
+         rewrite Nat.add_cancel_l; symmetry; rewrite Nat.add_comm.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+         apply (IHn a Hin_a_tl Hnodup_l).
+Qed.
+
 Lemma pre_sum_eq_iff_incl :
   forall (spn : Spn)
          (p : Place)
@@ -58,9 +89,34 @@ Proof.
     + assert (Hin_eq : In t (t :: tail)) by apply in_eq.
       rewrite <- Hequiv in Hin_eq; inversion Hin_eq.
   (* GENERAL CASE *)
-  - admit.
-Admitted.
-    
+  - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+    rewrite Hequiv in Hin_eq.
+    specialize (pre_sum_add_rm spn p l' t Hin_eq Hnodup_l') as Heq_presum.
+    rewrite Heq_presum.
+    rewrite Nat.add_cancel_l.
+    assert (Hequiv_tl : forall t0 : Trans, In t0 tail <-> In t0 (remove Nat.eq_dec t l')).
+    {
+      intro t0; split.
+      - intro Hin_tl; specialize (in_cons t t0 tail Hin_tl) as Hin_t0_ctl.
+        rewrite NoDup_cons_iff in Hnodup_l.
+        apply proj1 in Hnodup_l.
+        specialize (not_in_in_diff t t0 tail (conj Hnodup_l Hin_tl)) as Hdiff_tt0.
+        apply not_eq_sym in Hdiff_tt0.
+        rewrite Hequiv in Hin_t0_ctl.
+        rewrite in_remove_iff; apply (conj Hin_t0_ctl Hdiff_tt0).
+      - intro Hin_rm.
+        rewrite in_remove_iff in Hin_rm.
+        elim Hin_rm; clear Hin_rm; intros Hin_t0_l' Hdiff_t0t.
+        rewrite <- Hequiv in Hin_t0_l'.
+        inversion_clear Hin_t0_l' as [Heq_t0t | Hin_t0_tl].
+        + symmetry in Heq_t0t; contradiction.
+        + assumption.
+    }
+    rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+    specialize (nodup_if_remove l' Hnodup_l' t Nat.eq_dec) as Hnodup_rm.
+    apply (IHn (remove Nat.eq_dec t l') Hnodup_l Hnodup_rm Hequiv_tl). 
+Qed.
+
 Lemma spn_fire_aux_not_in_final_if :
   forall (spn : Spn)
          (s : SpnState)
@@ -457,7 +513,72 @@ Proof.
             { assumption. }
             {
               (* Prepares hypotheses to specialize spn_fire_aux_not_in_final_if *)
-              
+
+              (* Builds In pgroup (priority_groups spn) *)
+              assert (Hin_pg_pgs : In pgroup (pgroup :: pgroups_tail)) by apply in_eq.
+              apply Hincl_pgs in Hin_pg_pgs.
+
+              (* Builds IsDecListCons pgroup pgroup. *)
+              assert (His_dec_cons : IsDecListCons pgroup pgroup) by apply IsDecListCons_refl.
+
+              (* Builds NoDup ([] ++ pgroup) *)
+              assert (Hnodup_nil_pg := Hnodup_f_pgs).
+              rewrite concat_cons in Hnodup_nil_pg.
+              apply nodup_app in Hnodup_nil_pg; apply proj2 in Hnodup_nil_pg.
+              apply nodup_app in Hnodup_nil_pg; apply proj1 in Hnodup_nil_pg.
+              rewrite <- app_nil_l in Hnodup_nil_pg.
+
+              (* Builds In (p, n) (marking s) -> In (p, n - pre_sum spn p []) (marking s) *)
+              assert (Hresid_m :
+                        forall (p : Place) (n : nat),
+                          In (p, n) (marking s) ->
+                          In (p, n - pre_sum spn p []) (marking s))
+                by (intros p n Hin_ms; simpl; rewrite Nat.sub_0_r; assumption).
+
+              (* Builds Markinghavesamestruct (initial_marking spn) (marking s) *)
+              explode_well_defined_spn_state.
+
+              (* Builds In t'' fired -> HasHigherPriority spn t'' t pgroup /\ In t'' final_fired *)
+              assert (Hf_has_high :
+                        forall t : Trans,
+                          In t [] -> HasHigherPriority spn t a pgroup /\ In t fired_trs)
+                by (intros t Hin_nil; inversion Hin_nil).
+
+              (* Finally, specializes spn_fire_aux_not_in_final_if *)
+              specialize (spn_fire_aux_not_in_final_if
+                            spn s (marking s) [] pgroup pgroup fired_trs
+                            Hwell_def_spn Hwell_def_state Hin_pg_pgs His_dec_cons
+                            Hnodup_nil_pg Hresid_m Hsame_marking_state_spn
+                            e0 a Hin_a_pg Hnot_in_ftrs Hf_has_high) as Hv_not_in_ff.
+
+              (* Then uses Hv_not_in_ff and spec hypotheses 
+                 to show contradictions with In a final_fired. *)
+              inversion_clear Hv_not_in_ff as [Hnot_fira_a | Hnot_sens_by_res_a].
+              - assert (Hin_pg_eq : In pgroup (pgroup :: pgroups_tail)) by apply in_eq. 
+                specialize (Hnot_fira_not_fired pgroup a Hin_pg_eq Hin_a_pg Hnot_fira_a)
+                  as Hnot_in_ff.
+                contradiction.
+              - specialize (proj1 Hnot_sens_by_res_a) as Hfira_a.
+                apply proj2 in Hnot_sens_by_res_a.
+                inversion_clear Hnot_sens_by_res_a as (res_m & Hnot_sens_by_resm_a).
+                elim Hnot_sens_by_resm_a; intros Hsame_struct_resm H; clear Hnot_sens_by_resm_a;
+                  elim H; intros His_res_resm Hnot_sens_resm_a; clear H.
+                assert (Hin_pg_eq : In pgroup (pgroup :: pgroups_tail)) by apply in_eq.
+
+                unfold IsResidualMarking in *.
+                
+                assert (Hequiv_succ :
+                          (forall t' : Trans,
+                              HasHigherPriority spn t' a pgroup /\ In t' fired_trs)
+                          <->
+                          (forall t' : Trans,
+                              HasHigherPriority spn t' a pgroup /\ In t' final_fired)).
+                { admit. }
+                rewrite Hequiv_succ in Hnot_sens_by_res.
+                specialize (Hnot_sens_by_res
+                              pgroup a res_m Hin_pg_eq Hin_a_pg
+                              Hsame_struct_resm Hfira_a His_res_resm Hnot_sens_resm_a)
+                  as Hnot_in_ff.
             }
          ++ right; apply in_or_app; right; assumption.
             
