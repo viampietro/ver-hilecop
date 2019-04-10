@@ -160,12 +160,12 @@ Section FireSpn.
       match spn_fire spn state pgroup with
       (* If spn_fire succeeds, then adds the fired transitions
        * in fired_transitions list. *)
-      | Some (fired_trs) =>
+      | Some fired_trs =>
         spn_map_fire_aux spn state (fired_transitions ++ fired_trs) pgroups_tail
       (* Case of error! *)
       | None => None
       end
-    | [] => Some (fired_transitions)
+    | [] => Some fired_transitions
     end.
 
   Functional Scheme spn_map_fire_aux_ind := Induction for spn_map_fire_aux Sort Prop.

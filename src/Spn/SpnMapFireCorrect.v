@@ -291,7 +291,7 @@ Section SpnMapFireWellDefinedState.
     - unfold IsWellDefinedSpnState; split.
       (* Proves MarkingHaveSameStruct (initial_marking spn) (marking s'). 
          Easy because marking is not updated between s and s'. *)
-      + explode_well_defined_spn_state.
+      + explode_well_defined_spn_state Hwell_def_s.
         injection Hfun; intro Heq_s'; rewrite <- Heq_s'; simpl; assumption.
       + split;
           assert (Hincl_pgs : incl spn.(priority_groups) spn.(priority_groups))
@@ -785,301 +785,6 @@ Section SpnNotFirableNotFired.
 End SpnNotFirableNotFired.
 
 (** *** Second part of correctness proof *)
-
-(** The goal in this part is to prove: 
-
-    spn_map_fire = Some s' ⇒ 
-    ∀ t ∈ firable(s'), (∀ t'|t' ≻ t, t' ∉ firable(s')) ⇒ t ∉ Fired' *)
-
-Section SpnHigherPriorityNotFirable.
-
-  (** spn_fire_aux spn s residual_markng fired pgroup  = Some final_fired ⇒
-      (marking s) = residual_marking) ⇒
-      ∀ t ∈ pgroup, t ∈ firable(s), (∀ t'|t' ≻ t, t' ∉ firable(s)) ⇒ t ∈ final_fired 
-      
-      Here, we make the hypothesis the (marking s) = residual_marking, because all transitions
-      with a higher priority than t (predecessors in list pgroup) were not fired, then
-      the marking was never updated. *)
-
-  Theorem spn_fire_aux_higher_priority_not_firable :
-    forall (spn : Spn)
-           (s : SpnState)
-           (residual_marking : list (Place * nat))
-           (fired : list Trans)
-           (pg pgroup : list Trans)
-           (final_fired : list Trans),
-      IsWellDefinedSpn spn ->
-      IsWellDefinedSpnState spn s ->
-      residual_marking = (marking s) ->
-      In pgroup spn.(priority_groups) ->
-      IsDecListCons pg pgroup ->
-      NoDup pg ->
-      spn_fire_aux spn s residual_marking fired pg = Some final_fired ->
-      forall (t : Trans),
-        In t pg ->
-        SpnIsFirable spn s t ->
-        (forall (t' : Trans), In t' pg ->
-                              HasHigherPriority spn t' t pgroup ->
-                              ~SpnIsFirable spn s t') ->
-        In t final_fired. 
-  Proof.
-    intros spn s residual_marking fired pg;
-      functional induction (spn_fire_aux spn s residual_marking fired pg)
-                 using spn_fire_aux_ind;
-      intros pgroup final_fired Hwell_def_spn Hwell_def_s Heq_marking
-             Hin_spn_pgs Hdec_list Hnodup_pg Hfun t' Hin_t_pg Hfirable_t Hhas_high.
-    (* BASE CASE *)
-    - inversion Hin_t_pg.
-    (* GENERAL CASE *)
-    (* Two cases, either t' is head of pg, or is in tail. *)
-    - elim Hin_t_pg.
-      (* Case t = t' *)
-      + intro Heq_tt'.
-        (* Builds In t (fired ++ [t]) to apply spn_fire_aux_in_fired. *)
-        assert (Hin_fired_t : In t (fired ++ [t])) by (apply in_or_app; right; simpl; auto).
-        rewrite <- Heq_tt'.
-        apply (spn_fire_aux_in_fired
-                 spn s residual_marking' (fired ++ [t]) tail final_fired t
-                 Hin_fired_t Hfun).
-      (* Case In t' tail. *)
-      + intro Hin_t'_tail.
-        (* Builds ~SpnIsFirable t in the context, and shows a contradiction with e1. *)
-        (* Obviously, if t' ∈ tail ∧ NoDup (t :: tail), 
-           then IsPredInNoDupList t t' (t :: tail) ⇒ IsPredInNoDupList t t' pgroup      
-                                                   ⇒ t ≻ t' *)
-        specialize (is_pred_in_list_in_tail t t' tail Hin_t'_tail) as His_pred.
-        (* Builds NoDup pgroup. *)
-        explode_well_defined_spn.
-        unfold NoIntersectInPriorityGroups in *.
-        specialize (nodup_concat_gen (priority_groups spn) Hno_inter pgroup Hin_spn_pgs)
-          as Hnodup_pg'.
-        (* Builds IsPredInList t t' pgroup. *)
-        specialize (is_pred_in_dec_list His_pred Hdec_list Hnodup_pg') as His_pred_in_pg.
-        assert (Hhas_high_t : HasHigherPriority spn t t' pgroup).
-        {
-          unfold HasHigherPriority.
-          apply is_dec_list_cons_incl in Hdec_list.
-          repeat (assumption || split).
-          - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
-            apply (Hdec_list t Hin_eq).
-          - apply (Hdec_list t' Hin_t_pg).
-          - intro.
-            rewrite <- H in Hin_t'_tail.
-            apply NoDup_cons_iff in Hnodup_pg.
-            apply proj1 in Hnodup_pg; contradiction.
-        }
-        specialize (Hhas_high t (in_eq t tail) Hhas_high_t) as Hnot_firable_t.
-        apply (get_neighbours_correct (lneighbours spn) t neighbours_of_t) in e0.
-        apply (spn_is_firable_correct spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0) in e1.
-        contradiction.
-    (* ERROR CASE, update_residual_marking = None. *)
-    - inversion Hfun.
-    (* CASE is_sensitized = Some false. *)
-    - elim Hin_t_pg.
-      (* First case, t' is head of (t :: tail). 
-         then as t' is firable, and residual_marking equals (marking s),
-         then t' must be sensitized by residual_marking.
-         Shows a contradiction with the hypotheses. *)
-      + intro Heq_tt'.
-        rewrite <- Heq_tt' in Hfirable_t.
-        (* Builds is_sensitized = Some true in Hfirable_t. *)
-        unfold SpnIsFirable in Hfirable_t; decompose [and] Hfirable_t.
-        clear H H1 H0; rename H3 into His_sens.
-        explode_well_defined_spn_state.
-        specialize (get_neighbours_correct (lneighbours spn) t neighbours_of_t e0)
-          as Hin_lneigh.
-        specialize (is_sensitized_complete
-                      spn (marking s) t neighbours_of_t Hwell_def_spn Hsame_marking_state_spn
-                      Hin_lneigh His_sens) as His_sens_true.
-        rewrite Heq_marking in e3.
-        rewrite e3 in His_sens_true.
-        inversion His_sens_true.
-      (* Second case, t' ∈ tail ∧ NoDup (t :: tail) ⇒ t ≻ t' ⇒ t ∉ firable(s). 
-           Then, contradicts e1: spn_is_firable = Some true. *)
-      + intro Hin_t'_tail.
-        specialize (is_pred_in_list_in_tail t t' tail Hin_t'_tail) as His_pred.
-        (* Builds NoDup pgroup. *)
-        explode_well_defined_spn.
-        unfold NoIntersectInPriorityGroups in *.
-        specialize (nodup_concat_gen (priority_groups spn) Hno_inter pgroup Hin_spn_pgs)
-          as Hnodup_pg'.
-        (* Builds IsPredInList t t' pgroup. *)
-        specialize (is_pred_in_dec_list His_pred Hdec_list Hnodup_pg') as His_pred_in_pg.
-        assert (Hhas_high_t : HasHigherPriority spn t t' pgroup).
-        {
-          unfold HasHigherPriority;
-            repeat (assumption || split);
-            apply is_dec_list_cons_incl in Hdec_list.
-          - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
-            apply (Hdec_list t Hin_eq).
-          - apply (Hdec_list t' Hin_t_pg).
-          - intro.
-            rewrite <- H in Hin_t'_tail.
-            apply NoDup_cons_iff in Hnodup_pg.
-            apply proj1 in Hnodup_pg; contradiction.
-        }
-        specialize (Hhas_high t (in_eq t tail) Hhas_high_t) as Hnot_firable_t.
-        apply (get_neighbours_correct (lneighbours spn) t neighbours_of_t) in e0.
-        apply (spn_is_firable_correct spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0) in e1.
-        contradiction.
-    (* ERROR CASE, is_sensitized = None. *)
-    - inversion Hfun.
-    (* CASE spn_is_firable = Some false *)
-    - elim Hin_t_pg.
-      (* First case, t = t', then Hfirable_t is in contradiction with e1. *)
-      + intro Heq_tt'.
-        rewrite <- Heq_tt' in Hfirable_t.
-        apply (get_neighbours_correct (lneighbours spn) t neighbours_of_t) in e0.
-        apply (spn_is_firable_complete spn s neighbours_of_t t Hwell_def_spn Hwell_def_s e0)
-          in Hfirable_t.
-        rewrite e1 in Hfirable_t.
-        inversion Hfirable_t.
-      (* Second case, applies the induction hypothesis. *)
-      + intro Hin_t'_tail.
-        (* Builds Hhas_high' to apply IHo. *)
-        assert (Hhas_high' :
-                  forall t'0 : Trans,
-                    In t'0 tail -> HasHigherPriority spn t'0 t' pgroup -> ~ SpnIsFirable spn s t'0).
-        {
-          intros t'0 Hin_t'0_tail Hhas_high_t'0.
-          apply in_cons with (a := t) in Hin_t'0_tail.
-          apply (Hhas_high t'0 Hin_t'0_tail Hhas_high_t'0).
-        }
-        (* Builds NoDup tail and IsDecListCons tail pgroup. *)
-        apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; intros Hnot_in_tail Hnodup_tail.
-        apply is_dec_list_cons_cons in Hdec_list.
-        apply (IHo pgroup final_fired Hwell_def_spn Hwell_def_s Heq_marking Hin_spn_pgs
-                   Hdec_list Hnodup_tail Hfun t' Hin_t'_tail Hfirable_t Hhas_high').
-    (* ERROR CASE, spn_is_firable = None. *)
-    - inversion Hfun.
-    (* ERROR CASE, get_neighbours = None. *)
-    - inversion Hfun.
-  Qed.
-  
-  (** spn_map_fire_aux spn s fired pgroups = Some fired ⇒ 
-      ∀ pgroup ∈ pgroups, t ∈ pgroup, t ∈ firable(s), 
-        (∀ t'|t' ≻ t, t' ∉ firable(s)) ⇒ t ∈ fired *)
-  
-  Theorem spn_map_fire_aux_higher_priority_not_firable :
-    forall (spn : Spn)
-           (s : SpnState)
-           (fired_transitions : list Trans)
-           (pgroups : list (list Trans))
-           (final_fired : list Trans),
-      IsWellDefinedSpn spn ->
-      IsWellDefinedSpnState spn s ->
-      incl pgroups (priority_groups spn) ->
-      spn_map_fire_aux spn s fired_transitions pgroups = Some final_fired ->
-      forall (pgroup : list Trans) (t : Trans),
-        In pgroup pgroups ->
-        In t pgroup ->
-        SpnIsFirable spn s t ->
-        (forall (t' : Trans),
-            In t' pgroup ->
-            HasHigherPriority spn t' t pgroup ->
-            ~SpnIsFirable spn s t') ->
-        In t final_fired.
-  Proof.
-    intros spn s fired_transitions pgroups;
-      functional induction (spn_map_fire_aux spn s fired_transitions pgroups)
-                 using spn_map_fire_aux_ind;
-      intros final_fired Hwell_def_spn Hwell_def_s Hincl_pgs Hfun
-             pgroup' t Hin_pgs Hin_pg Hfirable_t Hhas_high.
-    (* BASE CASE, pgroups = [] *)
-    - inversion Hin_pgs.
-    (* GENERAL CASE *)
-    - elim Hin_pgs.
-      (* First case, pgroup = pgroup'. *)
-      + intro Heq_pg.
-        rewrite Heq_pg in *.
-        (* Builds pgroup' ∈ (priority_groups spn). *)
-        specialize (Hincl_pgs pgroup' Hin_pgs) as Hin_spn_pgs.
-        (* Builds NoDup pgroup'. *)
-        explode_well_defined_spn.
-        unfold NoIntersectInPriorityGroups in *.
-        specialize (nodup_concat_gen (priority_groups spn)
-                                     Hno_inter pgroup' Hin_spn_pgs) as Hnodup_pg.
-        (* Builds In t fired_trs. *)
-        unfold spn_fire in *.
-        specialize (spn_fire_aux_higher_priority_not_firable
-                      spn s (marking s) [] pgroup' pgroup' fired_trs
-                      Hwell_def_spn Hwell_def_s
-                      (eq_refl (marking s)) Hin_spn_pgs (IsDecListCons_refl pgroup')
-                      Hnodup_pg
-                      e0 t Hin_pg
-                      Hfirable_t Hhas_high) as Hin_fired.
-        (* Applies spn_map_fire_aux_in_fired *)
-        specialize (in_or_app fired_transitions fired_trs t
-                              (or_intror (In t fired_transitions) Hin_fired))
-          as Hin_fired_app.
-        apply (spn_map_fire_aux_in_fired
-                 spn s (fired_transitions ++ fired_trs) pgroups_tail final_fired
-                 Hfun t Hin_fired_app).
-      (* Second case, pgroup' ∈ pgroups_tail, then apply IHo. *)
-      + intro Hin_pgs_tail.
-        apply (IHo final_fired Hwell_def_spn Hwell_def_s
-                   (incl_cons_inv pgroup pgroups_tail (priority_groups spn) Hincl_pgs)
-                   Hfun pgroup' t Hin_pgs_tail Hin_pg Hfirable_t Hhas_high).
-    (* ERROR CASE, spn_map_fire_aux returns None. *)
-    - inversion Hfun.
-  Qed.
-  
-  (** spn_map_fire spn s = Some s' ⇒ 
-      ∀ t ∈ firable(s'), (∀ t'|t' ≻ t, t' ∉ firable(s')) ⇒ t ∈ s'.(fired) *)
-
-  Theorem spn_map_fire_higher_priority_not_firable :
-    forall (spn : Spn)
-           (s s' : SpnState),
-      IsWellDefinedSpn spn ->
-      IsWellDefinedSpnState spn s ->
-      spn_map_fire spn s = Some s' ->
-      (forall (pgroup : list Trans) (t : Trans),
-          In pgroup spn.(priority_groups) ->
-          In t pgroup ->
-          SpnIsFirable spn s' t ->
-          (forall (t' : Trans),
-              In t' pgroup ->
-              HasHigherPriority spn t' t pgroup ->
-              ~SpnIsFirable spn s' t') ->
-          In t s'.(fired)).
-  Proof.
-    
-    intros spn s s' Hwell_def_spn Hwell_def_s Hfun;
-      specialize (spn_map_fire_well_defined_state
-                    spn s s' Hwell_def_spn Hwell_def_s Hfun) as Hwell_def_s'.
-    functional induction (spn_map_fire spn s) using spn_map_fire_ind;
-      intros pgroup t Hin_pgs Hin_t_pg Hfirable_t Hnot_firable_high.
-    (* GENERAL CASE *)
-    - injection Hfun; intro Heq_state; rewrite <- Heq_state; simpl.
-      
-      (* Builds (marking s) = (marking s') *)
-      assert (Heq_marking_state : (marking s) = (marking s'))
-        by (rewrite <- Heq_state; simpl; auto).
-      (* Transforms SpnIsFirable spn s t in SpnIsFirable spn s' t. *)
-      specialize (state_same_marking_firable_iff
-                    spn s s' Hwell_def_spn Hwell_def_s Hwell_def_s'
-                    Heq_marking_state) as Hfirable_iff.
-      assert (Hhas_high :
-                forall t' : Trans,
-                  In t' pgroup ->
-                  HasHigherPriority spn t' t pgroup -> ~ SpnIsFirable spn s t').
-      {
-        intros t' Hin_t'_pgroup Hhas_high. 
-        rewrite Hfirable_iff with (t := t').
-        apply (Hnot_firable_high t' Hin_t'_pgroup Hhas_high).
-      }
-      rewrite <- Hfirable_iff in *.
-      apply (spn_map_fire_aux_higher_priority_not_firable
-               spn s [] (priority_groups spn) fired
-               Hwell_def_spn Hwell_def_s (incl_refl (priority_groups spn))
-               e pgroup t Hin_pgs Hin_t_pg Hfirable_t Hhas_high).
-    (* ERROR CASE, spn_map_fire_aux returns None. *)
-    - inversion Hfun.
-  Qed.
-  
-End SpnHigherPriorityNotFirable.
-
-(** *** Third part of correctness proof *)
 
 (** The goal in this part is to prove: 
 
@@ -1634,7 +1339,7 @@ Section SpnSensitizedByResidual.
         (* We need ∀ (p, n) ∈ residual_marking ⇒ 
                      (p, n - pre_sum spn p [t]) ∈ residual_marking' *)
         (* Builds (fs (marking s)) = (fs res_marking) *)
-        explode_well_defined_spn_state.
+        explode_well_defined_spn_state Hwell_def_s.
         unfold MarkingHaveSameStruct in *.
         assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
           by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
@@ -1775,7 +1480,7 @@ Section SpnSensitizedByResidual.
           split.
           - intro Hin_res_m.
             (* Builds (fs (marking s)) = (fs res_marking) *)            
-            explode_well_defined_spn_state.
+            explode_well_defined_spn_state Hwell_def_s.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_resm_sm : fst (split res_marking) = fst (split (marking s)))
               by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct'; reflexivity).
@@ -1805,7 +1510,7 @@ Section SpnSensitizedByResidual.
             assumption.
           - intro Hin_resid_m.
             (* Builds (fs (marking s)) = (fs res_marking) *)
-            explode_well_defined_spn_state.
+            explode_well_defined_spn_state Hwell_def_s.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
               by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
@@ -2035,7 +1740,7 @@ Section SpnSensitizedByResidual.
                     In (p, n) (marking s) -> In (p, n - pre_sum spn p []) (marking s))
           by (simpl; intros; rewrite Nat.sub_0_r; assumption).
         (* Builds MarkingHaveSamestruct (initial_marking spn) (marking s) *)
-        explode_well_defined_spn_state.
+        explode_well_defined_spn_state Hwell_def_s.
         (* Builds ∀ t' ∈ [] ⇒ t' ≻ t ∧ t' ∈ ff. *)
         assert (Hhigh_in_fired :
                   forall t' : Trans, In t' [] ->
@@ -2155,7 +1860,7 @@ Section SpnSensitizedByResidual.
   
 End SpnSensitizedByResidual.
 
-(** *** Fourth part of correctness proof *)
+(** *** Third part of correctness proof *)
 
 (** The goal in this part is to prove: 
 
@@ -2269,7 +1974,7 @@ Section SpnNotSensitizedByResidual.
           split.
           - intro Hin_res_m.
             (* Builds (fs (marking s)) = (fs res_marking) *)
-            explode_well_defined_spn_state.
+            explode_well_defined_spn_state Hwell_def_s.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_resm_sm : fst (split res_marking) = fst (split (marking s)))
               by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct'; reflexivity).
@@ -2299,7 +2004,7 @@ Section SpnNotSensitizedByResidual.
             assumption.
           - intro Hin_resid_m.
             (* Builds (fs (marking s)) = (fs res_marking) *)
-            explode_well_defined_spn_state.
+            explode_well_defined_spn_state Hwell_def_s.
             unfold MarkingHaveSameStruct in *.
             assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
               by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
@@ -2358,7 +2063,7 @@ Section SpnNotSensitizedByResidual.
         (* We need ∀ (p, n) ∈ residual_marking ⇒ 
                      (p, n - pre_sum spn p [t]) ∈ residual_marking' *)
         (* Builds (fs (marking s)) = (fs res_marking) *)
-        explode_well_defined_spn_state.
+        explode_well_defined_spn_state Hwell_def_s.
         unfold MarkingHaveSameStruct in *.
         assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
           by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
@@ -2571,7 +2276,7 @@ Section SpnNotSensitizedByResidual.
                     In (p, n) (marking s) -> In (p, n - pre_sum spn p []) (marking s))
           by (simpl; intros; rewrite Nat.sub_0_r; assumption).
         (* Builds MarkingHaveSamestruct (initial_marking spn) (marking s) *)
-        explode_well_defined_spn_state.
+        explode_well_defined_spn_state Hwell_def_s.
         (* Builds ∀ t' ∈ [] ⇒ t' ≻ t ∧ t' ∈ ff. *)
         assert (Hhigh_in_fired :
                   forall t' : Trans, In t' [] ->

@@ -400,18 +400,6 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         ~SpnIsFirable spn s' t ->
         ~In t s'.(fired)) ->
-    (* ∀ t ∈ firable(s'), (∀ t', t' ≻ t ⇒ t' ∉ firable(s')) ⇒ t ∈ Fired' 
-       If all transitions with a higher firing priority than t are not firable,
-       then t is fired. *)
-    (forall (pgroup : list Trans) (t : Trans),
-        In pgroup spn.(priority_groups) ->
-        In t pgroup ->
-        SpnIsFirable spn s' t ->
-        (forall (t' : Trans),
-            In t' pgroup ->
-            HasHigherPriority spn t' t pgroup ->
-            ~SpnIsFirable spn s' t') ->
-        In t s'.(fired)) ->
     (* ∀ t ∈ firable(s'), t ∈ sens(M - ∑ pre(t'), ∀ t'∈ Pr(t)) ⇒ t ∈ Fired' 
        If t is sensitized by the residual marking, result of the firing of
        all higher priority transitions, then t is fired. *)

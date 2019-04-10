@@ -51,10 +51,6 @@ Proof.
     + injection Hfun; intros Heq_fstate Heq_istate; rewrite <- Heq_istate.
       apply (spn_map_fire_not_firable_not_fired
                spn s inter_state Hwell_def_spn Hwell_def_state e).
-    (* Proves ∀ t ∈ firable(s'), ∀ t' ∈ T|t' ≻ t, t' ∉ firable(s') ⇒ t ∈ Fired' *)
-    + injection Hfun; intros Heq_fstate Heq_istate; rewrite <- Heq_istate.
-      apply (spn_map_fire_higher_priority_not_firable
-               spn s inter_state Hwell_def_spn Hwell_def_state e).
     (* Proves ∀ t ∈ firable(s'), t ∈ sens(m - ∑ pre(t_i)) ⇒ t ∈ Fired'  *)
     + injection Hfun as Heq_istate Heq_fstate; rewrite <- Heq_istate.
       apply (spn_map_fire_sens_by_residual

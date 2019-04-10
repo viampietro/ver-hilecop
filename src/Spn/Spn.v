@@ -4,6 +4,8 @@ Require Export Sorting.Sorting.
 Export ListNotations.
 Export Permutation.
 
+Require Import Coq.Setoids.Setoid.
+
 (*
  * ============ CODING GUIDELINES ============
  * 
@@ -258,6 +260,54 @@ Definition IsWellDefinedSpnState (spn : Spn) (s : SpnState) :=
   MarkingHaveSameStruct spn.(initial_marking) s.(marking) /\
   incl s.(fired) spn.(transs) /\
   NoDup s.(fired).
+
+(** *** Equality between SpnState. *)
+
+(** Equality relation between two SpnState. *)
+
+Definition spnstate_eq (s s' : SpnState) : Prop :=
+  Permutation (marking s) (marking s') /\
+  Permutation (fired s) (fired s').
+
+(** Lemmas necessary to declare spnstate_eq as  
+    a parametric relation. *)
+
+Lemma spnstate_eq_refl :
+  forall (s : SpnState), spnstate_eq s s.
+Proof.
+  intros s; unfold spnstate_eq.
+  split; [ reflexivity | reflexivity ].
+Qed.
+
+Lemma spnstate_eq_sym :
+  forall (s s' : SpnState),
+    spnstate_eq s s' -> spnstate_eq s' s.
+Proof.
+  intros s s' Heq_ss'.
+  unfold spnstate_eq in *.
+  elim Heq_ss'; intros Hperm_m Hperm_f; clear Heq_ss'.
+  split; [ symmetry; assumption | symmetry; assumption ].
+Qed.
+
+Lemma spnstate_eq_trans :
+  forall (s s' s'' : SpnState),
+    spnstate_eq s s' -> spnstate_eq s' s'' -> spnstate_eq s s''.
+Proof.
+  intros s s' s'' Heq_ss' Heq_sp_ss.
+  unfold spnstate_eq in *.
+  elim Heq_ss'; intros Hperm_m Hperm_f; clear Heq_ss'.
+  elim Heq_sp_ss; intros Hperm_m' Hperm_f'; clear Heq_sp_ss.
+  split; [ apply (Permutation_trans Hperm_m Hperm_m') |
+           apply (Permutation_trans Hperm_f Hperm_f') ].
+Qed.
+
+(** Declares spnstate_eq as a parametric relation. *)
+
+Add Parametric Relation : (SpnState) (spnstate_eq)
+    reflexivity proved by (spnstate_eq_refl)
+    symmetry proved by (spnstate_eq_sym)
+    transitivity proved by (spnstate_eq_trans)
+      as spnstate_eq_rel.
 
 (*===============================================*)
 (*===== EQUALITY DECIDABILITY FOR Spn TYPES =====*)

@@ -87,9 +87,9 @@ Ltac rename_well_defined_spn_state :=
     rename H into Hnodup_state_fired
   end.
 
-Ltac explode_well_defined_spn_state :=
-  match goal with
-  | [ H: IsWellDefinedSpnState _ _ |- _ ] =>
+Ltac explode_well_defined_spn_state H :=
+  match H with
+  | H : IsWellDefinedSpnState _ _  =>
     assert (H' := H); 
     unfold IsWellDefinedSpnState in H;
     decompose [and] H;
@@ -97,4 +97,5 @@ Ltac explode_well_defined_spn_state :=
     rename_well_defined_spn_state;
     clear H;
     rename H' into Hwell_def_state
+  | _ => fail "No predicate IsWellDefinedSpnState found"
   end.

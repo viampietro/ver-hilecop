@@ -1133,7 +1133,7 @@ Section SpnIsFirable.
            Hfun.
     unfold spn_is_firable in Hfun.
     unfold SpnIsFirable; intros.
-    explode_well_defined_spn_state.
+    explode_well_defined_spn_state Hwell_def_state.
     explode_well_defined_spn.
     (* Builds In t (transs spn) *)
     unfold NoUnknownTransInLNeighbours in *.
