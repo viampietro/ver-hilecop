@@ -3,6 +3,8 @@
 Require Export Coq.Program.Equality.
 Require Import Omega.
 Require Import FunInd.
+Require Import Permutation.
+Require Import Classical_Prop.
 
 (** To use [list] and its notations. *)
 

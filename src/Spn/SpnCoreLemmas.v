@@ -107,6 +107,25 @@ Section GetM.
         -- assumption.
   Qed.
 
+  (* No error lemma for get_m. *)
+
+  Lemma get_m_no_error :
+    forall (marking : list (Place * nat)) (p : Place),
+      In p (fst (split marking)) ->
+      exists n : nat, get_m marking p = Some n.
+  Proof.
+    intros marking p Hin_fs.
+    induction marking.
+    - simpl in Hin_fs; inversion Hin_fs.
+    - dependent induction a; simpl; case_eq (p =? a).
+      + intro; exists b; reflexivity.
+      + intro Heq_false; rewrite fst_split_cons_app in Hin_fs.
+        simpl in Hin_fs.
+        inversion_clear Hin_fs as [Heq_ap | Hin_p_tl].
+        -- symmetry in Heq_ap; apply beq_nat_false in Heq_false; contradiction.
+        -- apply (IHmarking Hin_p_tl).
+  Qed.
+  
 End GetM.
 
 (** ** Lemmas on map_check functions. *)
@@ -180,6 +199,25 @@ Section MapCheckFunctions.
     apply leb_correct in Hspec; rewrite Hspec; reflexivity.
   Qed.
 
+  (* No error lemma for check_pre. *)
+
+  Lemma check_pre_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans),
+      In p (fst (split marking)) ->
+      exists b : bool,
+        check_pre spn marking p t = Some b.
+  Proof.
+    intros spn marking p t Hin_fs.
+    unfold check_pre.
+    specialize (get_m_no_error marking p Hin_fs) as Hget_m_ex.
+    inversion_clear Hget_m_ex as (nboftokens & Hget_m).
+    rewrite Hget_m; exists (pre spn t p <=? nboftokens).
+    reflexivity.
+  Qed.
+  
   (** ∀ spn, marking, pre_places, t, b,
       map_check_pre_aux spn marking pre_places t b = Some true ⇒
       b = true.
@@ -354,6 +392,33 @@ Section MapCheckFunctions.
       specialize (Hw_pre Hnotin_pre_pl) as Hw_pre; rewrite Hw_pre; apply Peano.le_0_n.
   Qed.
 
+  (** No error lemma for map_check_pre_aux. *)
+
+  Lemma map_check_pre_aux_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (pre_places : list Place)
+           (check_result : bool),
+      incl pre_places (fst (split marking)) ->
+      exists b : bool,
+        map_check_pre_aux spn marking pre_places t check_result = Some b.
+  Proof.
+    intros spn marking t; induction pre_places; intros check_result Hincl_prepl.
+    (* BASE CASE *)
+    - simpl; exists check_result; reflexivity.
+
+    (* INDUCTION CASE *)
+    - simpl.
+      assert (Hin_a_fs: In a (a :: pre_places)) by apply in_eq.
+      apply (Hincl_prepl a) in Hin_a_fs.
+      specialize (check_pre_no_error spn marking a t Hin_a_fs) as Hcheck_pre_ex.
+      inversion_clear Hcheck_pre_ex as (b & Hcheck_pre).
+      rewrite Hcheck_pre.
+      apply incl_cons_inv in Hincl_prepl.
+      apply (IHpre_places (b && check_result) Hincl_prepl).
+  Qed.
+  
   (** Correctness proof for map_check_pre. *)
 
   Lemma map_check_pre_complete :
@@ -383,6 +448,22 @@ Section MapCheckFunctions.
     - intros p n Hin_pre_pl Hin_m; apply (Hspec p n Hin_m).
   Qed.
 
+  (** No error lemma for map_check_pre. *)
+
+  Lemma map_check_pre_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (pre_places : list Place),
+      incl pre_places (fst (split marking)) ->
+      exists b : bool,
+        map_check_pre spn marking pre_places t = Some b.
+  Proof.
+    intros spn marking t pre_places Hincl_prepl.
+    unfold map_check_pre.
+    apply (map_check_pre_aux_no_error spn marking t pre_places true Hincl_prepl).
+  Qed.
+  
   (** Correctness proof for check_test. *)
 
   Lemma check_test_correct :
@@ -446,6 +527,25 @@ Section MapCheckFunctions.
     apply leb_correct in Hspec; rewrite Hspec; reflexivity.
   Qed.
 
+  (* No error lemma for check_test. *)
+
+  Lemma check_test_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans),
+      In p (fst (split marking)) ->
+      exists b : bool,
+        check_test spn marking p t = Some b.
+  Proof.
+    intros spn marking p t Hin_fs.
+    unfold check_test.
+    specialize (get_m_no_error marking p Hin_fs) as Hget_m_ex.
+    inversion_clear Hget_m_ex as (nboftokens & Hget_m).
+    rewrite Hget_m; exists (test spn t p <=? nboftokens).
+    reflexivity.
+  Qed.
+  
   (** ∀ spn, marking, test_places, t, b,
       map_check_test_aux spn marking test_places t b = Some true ⇒
       b = true.
@@ -588,6 +688,33 @@ Section MapCheckFunctions.
       rewrite e0 in Hcheck_test; inversion Hcheck_test.
   Qed.
 
+  (** No error lemma for map_check_test_aux. *)
+
+  Lemma map_check_test_aux_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (test_places : list Place)
+           (check_result : bool),
+      incl test_places (fst (split marking)) ->
+      exists b : bool,
+        map_check_test_aux spn marking test_places t check_result = Some b.
+  Proof.
+    intros spn marking t; induction test_places; intros check_result Hincl_testpl.
+    (* BASE CASE *)
+    - simpl; exists check_result; reflexivity.
+
+    (* INDUCTION CASE *)
+    - simpl.
+      assert (Hin_a_fs: In a (a :: test_places)) by apply in_eq.
+      apply (Hincl_testpl a) in Hin_a_fs.
+      specialize (check_test_no_error spn marking a t Hin_a_fs) as Hcheck_test_ex.
+      inversion_clear Hcheck_test_ex as (b & Hcheck_test).
+      rewrite Hcheck_test.
+      apply incl_cons_inv in Hincl_testpl.
+      apply (IHtest_places (b && check_result) Hincl_testpl).
+  Qed.
+  
   (** Correctness proof for map_check_test. *)
 
   Lemma map_check_test_correct :
@@ -651,6 +778,22 @@ Section MapCheckFunctions.
     - assumption.
     - assumption.
     - intros p n Hin_test_pl Hin_m; apply (Hspec p n Hin_m).
+  Qed.
+
+  (** No error lemma for map_check_test. *)
+
+  Lemma map_check_test_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (test_places : list Place),
+      incl test_places (fst (split marking)) ->
+      exists b : bool,
+        map_check_test spn marking test_places t = Some b.
+  Proof.
+    intros spn marking t test_places Hincl_testpl.
+    unfold map_check_test.
+    apply (map_check_test_aux_no_error spn marking t test_places true Hincl_testpl).
   Qed.
   
   (** Correctness proof for check_inhib. *)
@@ -945,6 +1088,68 @@ Section MapCheckFunctions.
     - intros p n Hin_inhib_pl Hin_m; apply (Hspec p n Hin_m).
   Qed.
 
+  (* No error lemma for check_inhib. *)
+
+  Lemma check_inhib_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans),
+      In p (fst (split marking)) ->
+      exists b : bool,
+        check_inhib spn marking p t = Some b.
+  Proof.
+    intros spn marking p t Hin_fs.
+    unfold check_inhib.
+    specialize (get_m_no_error marking p Hin_fs) as Hget_m_ex.
+    inversion_clear Hget_m_ex as (nboftokens & Hget_m).
+    rewrite Hget_m; exists ((nboftokens <? inhib spn t p) || (inhib spn t p =? 0)).
+    reflexivity.
+  Qed.
+  
+  (** No error lemma for map_check_inhib_aux. *)
+
+  Lemma map_check_inhib_aux_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (inhib_places : list Place)
+           (check_result : bool),
+      incl inhib_places (fst (split marking)) ->
+      exists b : bool,
+        map_check_inhib_aux spn marking inhib_places t check_result = Some b.
+  Proof.
+    intros spn marking t; induction inhib_places; intros check_result Hincl_inhibpl.
+    (* BASE CASE *)
+    - simpl; exists check_result; reflexivity.
+
+    (* INDUCTION CASE *)
+    - simpl.
+      assert (Hin_a_fs: In a (a :: inhib_places)) by apply in_eq.
+      apply (Hincl_inhibpl a) in Hin_a_fs.
+      specialize (check_inhib_no_error spn marking a t Hin_a_fs) as Hcheck_inhib_ex.
+      inversion_clear Hcheck_inhib_ex as (b & Hcheck_inhib).
+      rewrite Hcheck_inhib.
+      apply incl_cons_inv in Hincl_inhibpl.
+      apply (IHinhib_places (b && check_result) Hincl_inhibpl).
+  Qed.
+  
+  (** No error lemma for map_check_inhib. *)
+
+  Lemma map_check_inhib_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (inhib_places : list Place),
+      incl inhib_places (fst (split marking)) ->
+      exists b : bool,
+        map_check_inhib spn marking inhib_places t = Some b.
+  Proof.
+    intros spn marking t inhib_places Hincl_inhibpl.
+    unfold map_check_inhib.
+    apply (map_check_inhib_aux_no_error spn marking t inhib_places true Hincl_inhibpl).
+  Qed.
+  
 End MapCheckFunctions.
 
 (** ** Lemmas on is_sensitized. *)
@@ -1103,6 +1308,82 @@ Section IsSensitized.
     - rewrite Hmap_check_pre' in e; inversion e.
   Qed.
 
+  (** No error lemma for is_sensitized. *)
+
+  Theorem is_sensitized_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (neighbours_of_t : Neighbours),
+      incl (flatten_neighbours neighbours_of_t) (fst (split marking)) ->
+      exists b : bool,
+        is_sensitized spn marking neighbours_of_t t = Some b.
+  Proof.
+    intros spn marking t neighbours_of_t Hincl_flat.
+    unfold is_sensitized.
+
+    (* Prepares hypotheses to apply no error lemmas. *)
+    assert (Hincl_prepl : incl (pre_pl neighbours_of_t) (fst (split marking))).
+    {
+      intros p Hin_prepl.
+      apply or_introl
+        with (B := In p ((test_pl neighbours_of_t)
+                           ++ (inhib_pl neighbours_of_t)
+                           ++ (post_pl neighbours_of_t)))
+        in Hin_prepl.
+      apply in_or_app in Hin_prepl.
+      apply (Hincl_flat p Hin_prepl).      
+    }
+
+    assert (Hincl_testpl : incl (test_pl neighbours_of_t) (fst (split marking))).
+    {
+      intros p Hin_testpl.
+      apply or_intror
+        with (A := In p (pre_pl neighbours_of_t))
+        in Hin_testpl.
+      apply in_or_app in Hin_testpl.
+      apply or_introl
+        with (B := In p ((inhib_pl neighbours_of_t) ++ (post_pl neighbours_of_t)))
+        in Hin_testpl.
+      apply in_or_app in Hin_testpl.
+      rewrite <- app_assoc in Hin_testpl.
+      apply (Hincl_flat p Hin_testpl).      
+    }
+
+    assert (Hincl_inhibpl : incl (inhib_pl neighbours_of_t) (fst (split marking))).
+    {
+      intros p Hin_inhibpl.
+      apply or_intror
+        with (A := In p ((pre_pl neighbours_of_t) ++ (test_pl neighbours_of_t)))
+        in Hin_inhibpl.
+      apply in_or_app in Hin_inhibpl.
+      apply or_introl
+        with (B := In p (post_pl neighbours_of_t))
+        in Hin_inhibpl.
+      apply in_or_app in Hin_inhibpl.
+      do 2 (rewrite <- app_assoc in Hin_inhibpl).
+      apply (Hincl_flat p Hin_inhibpl).      
+    }
+
+    specialize (map_check_pre_no_error spn marking t (pre_pl neighbours_of_t) Hincl_prepl)
+      as Hmap_check_pre_ex.
+
+    specialize (map_check_test_no_error spn marking t (test_pl neighbours_of_t) Hincl_testpl)
+      as Hmap_check_test_ex.
+
+    specialize (map_check_inhib_no_error spn marking t (inhib_pl neighbours_of_t) Hincl_inhibpl)
+      as Hmap_check_inhib_ex.
+
+    inversion_clear Hmap_check_pre_ex as (check_pre_result & Hmap_check_pre).
+    inversion_clear Hmap_check_test_ex as (check_test_result & Hmap_check_test).
+    inversion_clear Hmap_check_inhib_ex as (check_inhib_result & Hmap_check_inhib).
+
+    rewrite Hmap_check_pre, Hmap_check_test, Hmap_check_inhib.
+
+    exists (check_pre_result && check_test_result && check_inhib_result); reflexivity.
+
+  Qed.
+  
 End IsSensitized.
 
 (** ** Lemmas on spn_is_firable. *)
@@ -1172,7 +1453,23 @@ Section SpnIsFirable.
     - assumption.
     - decompose [and] Hspec; auto.
   Qed.
+  
+  (** No error lemma for is_sensitized. *)
 
+  Theorem spn_is_firable_no_error :
+    forall (spn : Spn)
+           (s : SpnState)
+           (t : Trans)
+           (neigh_of_t : Neighbours),
+      incl (flatten_neighbours neigh_of_t) (fst (split (marking s))) ->
+      exists b : bool,
+        spn_is_firable spn s neigh_of_t t = Some b.
+  Proof.
+    intros spn s t neigh_of_t Hincl_ms.
+    unfold spn_is_firable.
+    apply (is_sensitized_no_error spn (marking s) t neigh_of_t Hincl_ms).
+  Qed.
+  
   (** Correctness and completeness conjunction for spn_is_firable. *)
   
   Theorem spn_is_firable_iff :
@@ -1190,6 +1487,52 @@ Section SpnIsFirable.
     - apply (spn_is_firable_complete spn state neigh_of_t t H H0 H1).
   Qed.
 
+  (** Correctness and completeness conjunction for ~spn_is_firable. *)
+  
+  Theorem not_spn_is_firable_iff :
+    forall (spn : Spn)
+           (state : SpnState)
+           (neigh_of_t : Neighbours)
+           (t : Trans),
+      IsWellDefinedSpn spn ->
+      IsWellDefinedSpnState spn state ->
+      In (t, neigh_of_t) spn.(lneighbours) ->
+      spn_is_firable spn state neigh_of_t t = Some false <-> ~SpnIsFirable spn state t.
+  Proof.
+    intros spn s neigh_of_t t Hwell_def_spn Hwell_def_s Hin_lneigh; split.
+    - intros Hfirable_fun Hfirable_spec.
+      rewrite <- (spn_is_firable_iff
+                    spn s neigh_of_t t Hwell_def_spn Hwell_def_s Hin_lneigh) in Hfirable_spec.
+      rewrite Hfirable_fun in Hfirable_spec.
+      inversion_clear Hfirable_spec.
+    - case_eq (spn_is_firable spn s neigh_of_t t).
+      + dependent induction b.
+        -- intros Hfirable_fun Hfirable_spec.
+           rewrite <- (spn_is_firable_iff spn s neigh_of_t t Hwell_def_spn Hwell_def_s Hin_lneigh)
+             in Hfirable_spec.
+           contradiction.
+        -- intros; reflexivity.
+      + intros Hfirable_fun Hfirable_spec.
+        
+        (* Specializes spn_is_firable_no_error to solve the subgoal. *)
+        explode_well_defined_spn.
+        unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+        assert (Hincl_flat_lneigh : incl (flatten_neighbours neigh_of_t)
+                                         (flatten_lneighbours (lneighbours spn))).
+        {
+          intros p Hin_p_flat;
+            apply (in_neigh_in_flatten spn t neigh_of_t p Hwell_def_spn Hin_lneigh Hin_p_flat).
+        }
+        specialize (incl_tran Hincl_flat_lneigh Hunk_pl_neigh) as Hincl_fl_m.
+        rewrite Hunm_place in Hincl_fl_m.
+        explode_well_defined_spn_state Hwell_def_s.
+        rewrite Hsame_marking_state_spn in Hincl_fl_m.
+        clear Hsame_marking_state_spn Hincl_state_fired_transs Hnodup_state_fired.
+        specialize (spn_is_firable_no_error spn s t neigh_of_t Hincl_fl_m) as Hfirable_ex.
+        inversion_clear Hfirable_ex as (b & Hfirable).
+        rewrite Hfirable in Hfirable_fun; inversion Hfirable_fun.
+  Qed.
+  
 End SpnIsFirable.
 
 (*!================================!*)

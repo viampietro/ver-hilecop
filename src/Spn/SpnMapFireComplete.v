@@ -421,6 +421,166 @@ Proof.
   apply (His_res pr Hnodup_pr Hhas_high_ftrs p n Hin_ms).
 Admitted.
 
+(** Completeness lemma for spn_fire_aux. *)
+
+Lemma spn_fire_aux_complete :
+  forall (spn : Spn)
+         (s s' : SpnState),
+    IsWellDefinedSpn spn ->
+    IsWellDefinedSpnState spn s ->
+    IsWellDefinedSpnState spn s' ->
+    SpnSemantics spn s s' falling_edge ->
+    forall (pg pgroup : list Trans)
+           (fired_transitions : list Trans)
+           (residual_marking : list (Place * nat)),
+      
+      (* Hypotheses on pg, pgroup and fired_transitions *)
+      In pgroup spn.(priority_groups) ->
+      IsDecListCons pg pgroup ->
+      NoDup (fired_transitions ++ pg) ->
+      incl fired_transitions (fired s') ->
+      (forall t t' : Trans,
+          In t pgroup ->
+          In t' fired_transitions ->
+          HasHigherPriority spn t' t pgroup /\ In t' (fired s')) ->
+      
+      (* Hypotheses on residual_marking. *)
+      (forall (p : Place) (n : nat),
+          In (p, n) (marking s) ->
+          In (p, n - (pre_sum spn p fired_transitions)) residual_marking) ->
+      MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
+
+      (* Conclusion *)
+      exists final_fired : list Trans,
+        spn_fire_aux spn s residual_marking fired_transitions pg = Some final_fired /\
+        incl final_fired s'.(fired) /\
+        (forall t : Trans, In t pg /\ In t s'.(fired) -> In t final_fired).
+Proof.
+  intros spn s s' Hwell_def_spn Hwell_def_s Hwell_def_s' Hspec.
+  induction pg;
+    intros pgroup fired_transitions residual_marking Hin_pgs His_dec Hnodup_app
+           Hincl_sf Hhigh_w_sf Hresid_m Hsame_struct.
+  
+  (* BASE CASE *)
+  - exists fired_transitions; simpl.
+    split; [ reflexivity | split; [assumption | intros t Hw; apply proj1 in Hw; inversion Hw]].
+
+  (* INDUCTION CASE *)
+  - simpl spn_fire_aux.
+    
+    (* First, apply get_neighbours_complete. 
+       To do so, we need (a, neigh_of_a) ∈ (lneighbours spn) ∧ NoDup (lneighbours spn) *)
+    explode_well_defined_spn.
+    assert (Hnodup_lneighbours := Hnodup_transs).
+    unfold NoDupTranss in Hnodup_lneighbours.
+    rewrite Hunk_tr_neigh in Hnodup_lneighbours.
+
+    (* Builds In a (concat (priority_groups spn)) *)
+    specialize (is_dec_list_cons_incl His_dec) as Hin_a_pg.
+    assert (Hin_eq : In a (a :: pg)) by apply in_eq.
+    specialize (Hin_a_pg a Hin_eq); clear Hin_eq.
+    specialize (in_concat a pgroup (priority_groups spn) Hin_a_pg Hin_pgs) as Hin_a_concat.
+    unfold NoUnknownInPriorityGroups in Hno_unk_pgroups.
+    rewrite <- Hno_unk_pgroups in Hin_a_concat.
+    rewrite Hunk_tr_neigh in Hin_a_concat.
+    specialize (in_fst_split_in_pair a (lneighbours spn) Hin_a_concat) as Hin_lneigh_ex.
+    inversion_clear Hin_lneigh_ex as (neigh_of_a & Hin_lneigh).
+
+    (* Specializes get_neighbours_complete, then rewrite the goal. *)
+    specialize (get_neighbours_complete
+                  (lneighbours spn) a neigh_of_a Hnodup_lneighbours Hin_lneigh)
+      as Hget_neigh.
+    rewrite Hget_neigh.    
+
+    (* Specializes spn_is_firable_no_error to skip the error case
+       when rewriting the goal. *)
+    unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+    assert (Hincl_flat_lneigh : incl (flatten_neighbours neigh_of_a)
+                                     (flatten_lneighbours (lneighbours spn))).
+    {
+      intros p Hin_p_flat;
+        apply (in_neigh_in_flatten spn a neigh_of_a p Hwell_def_spn Hin_lneigh Hin_p_flat).
+    }
+    specialize (incl_tran Hincl_flat_lneigh Hunk_pl_neigh) as Hincl_fl_m.
+    rewrite Hunm_place in Hincl_fl_m.
+    explode_well_defined_spn_state Hwell_def_s.
+    rewrite Hsame_marking_state_spn in Hincl_fl_m.
+    clear Hsame_marking_state_spn Hincl_state_fired_transs Hnodup_state_fired.
+    specialize (spn_is_firable_no_error spn s a neigh_of_a Hincl_fl_m) as Hfirable_ex.
+    inversion_clear Hfirable_ex as (b & Hfirable).
+    rewrite Hfirable.
+
+    (* Two cases, either spn_is_firable = Some true or Some false. *)
+    dependent induction b.
+
+    (* CASE spn_is_firable = Some true, then continues to dig the function. *)
+    + (* Specializes is_sensitized_no_error to skip the error case
+         when rewriting the goal. *)
+      explode_well_defined_spn_state Hwell_def_state.
+      rewrite <- Hsame_marking_state_spn in Hincl_fl_m.
+      rewrite Hsame_struct in Hincl_fl_m.
+      specialize (is_sensitized_no_error
+                    spn residual_marking a neigh_of_a Hincl_fl_m)
+        as Hsens_ex.
+      inversion_clear Hsens_ex as (b & Hsens).
+      rewrite Hsens.
+
+      (* Two cases, either is_sensitized = Some true or Some false. *)
+      dependent induction b.
+
+      (* CASE is_sensitized = Some true, then continues to dig the function. *)
+      -- admit.
+
+      (* CASE is_sensitized = Some false, then apply IHpg *)
+      -- specialize (is_dec_list_cons_cons His_dec) as His_dec_tl.
+         apply NoDup_remove in Hnodup_app; apply proj1 in Hnodup_app.
+         specialize (IHpg pgroup fired_transitions residual_marking Hin_pgs
+                          His_dec_tl Hnodup_app Hincl_sf Hhigh_w_sf Hresid_m
+                          Hsame_struct) as Hfire_aux_ex.
+         inversion_clear Hfire_aux_ex as (final_fired & Hfire_aux_w).
+         exists final_fired.
+         elim Hfire_aux_w; clear Hfire_aux_w; intros Hfire_aux Hfire_aux_w.
+         elim Hfire_aux_w; clear Hfire_aux_w; intros Hincl_ff Hin_ff.
+         split; [assumption | split; [assumption | auto]].
+         intros t Hin_t_w; elim Hin_t_w; clear Hin_t_w; intros Hin_t_pg Hin_t_fs.
+         inversion_clear Hin_t_pg as [Heq_ta | Hin_t_tl].
+
+         (* Using spec to prove that t ∉ (fired s'). *)
+         ++ inversion Hspec; clear H H0 H1 H3 H4;
+              rename H2 into Heq_marking, H5 into Hnot_sens_by_res.
+            
+           
+    (* CASE spn_is_firable = Some false. *)
+    + (* Build hypotheses to specialize IHpg *)
+      specialize (is_dec_list_cons_cons His_dec) as His_dec_tl.
+      apply NoDup_remove in Hnodup_app; apply proj1 in Hnodup_app.
+      specialize (IHpg pgroup fired_transitions residual_marking Hin_pgs
+                       His_dec_tl Hnodup_app Hincl_sf Hhigh_w_sf Hresid_m
+                       Hsame_struct) as Hfire_aux_ex.
+      inversion_clear Hfire_aux_ex as (final_fired & Hfire_aux_w).
+      exists final_fired.
+      elim Hfire_aux_w; clear Hfire_aux_w; intros Hfire_aux Hfire_aux_w.
+      elim Hfire_aux_w; clear Hfire_aux_w; intros Hincl_ff Hin_ff.
+      split; [assumption | split; [assumption | auto]].
+      intros t Hin_t_w; elim Hin_t_w; clear Hin_t_w; intros Hin_t_pg Hin_t_fs.
+      inversion_clear Hin_t_pg as [Heq_ta | Hin_t_tl].
+      (* Using spec to prove that t ∉ (fired s'). *)
+      -- inversion Hspec.
+         rename H3 into Hnot_firable.
+         rename H2 into Heq_marking.
+         rewrite (not_spn_is_firable_iff
+                    spn s neigh_of_a a Hwell_def_spn Hwell_def_state Hin_lneigh)
+           in Hfirable.
+         rewrite (state_same_marking_firable_iff
+                    spn s s' Hwell_def_spn Hwell_def_state Hwell_def_s'
+                    Heq_marking a) in Hfirable.
+         specialize (Hnot_firable pgroup a Hin_pgs Hin_a_pg Hfirable) as Hnot_in_a_sf.
+         rewrite Heq_ta in Hnot_in_a_sf; contradiction.
+      (* Applies result for IHpg. *)
+      -- apply (Hin_ff t (conj Hin_t_tl Hin_t_fs)).
+         
+Admitted.
+
 (** Completeness lemma for spn_map_fire_aux. *)
 
 Lemma spn_map_fire_aux_complete :
@@ -451,8 +611,99 @@ Proof.
       simpl in Hnodup_app; rewrite app_nil_r in Hnodup_app.
       explode_well_defined_spn_state Hwell_def_s'.
       (* NoDup l ∧ NoDup l' ∧ incl l l' ∧ incl l' l ⇒ Permutation l l' *)
+      assert (Hincl_iff : forall a : Trans, In a fired_transitions <-> In a (fired s'))
+             by (intros a; split; [ specialize (Hincl_f a); assumption |
+                                    specialize (Hincl_sf a); assumption ]).               
+      apply (NoDup_Permutation Hnodup_app Hnodup_state_fired Hincl_iff).
       
-Admitted.        
+  (* INDUCTION CASE, pgroups = a :: pgroups *)
+  - simpl; unfold spn_fire.
+    (* We need to specialize spn_fire_aux_complete to rewrite spn_fire_aux
+       in the goal. Then, we'll apply IHpgroups. *)
+
+    (* To specialize spn_fire_aux_complete, we need a few hypotheses: *)
+    
+    (* Builds In a (priority_groups spn) *)
+    specialize (is_dec_list_cons_incl His_dec) as Hincl_a_pgs.
+    assert (Hin_eq : In a (a :: pgroups)) by apply in_eq.
+    specialize (Hincl_a_pgs a Hin_eq) as Hin_a_pgs; clear Hin_eq; clear Hincl_a_pgs.
+
+    (* Builds IsDeclistcons a a *)
+    assert (His_dec_refl : IsDecListCons a a) by apply IsDecListCons_refl.
+
+    (* Builds NoDup ([] ++ a) *)
+    specialize (nodup_app fired_transitions (concat (a :: pgroups)) Hnodup_app) as Hnodup_a.
+    apply proj2 in Hnodup_a.
+    rewrite concat_cons in Hnodup_a.
+    apply (nodup_app a (concat pgroups)) in Hnodup_a.
+    apply proj1 in Hnodup_a.
+    rewrite <- app_nil_l in Hnodup_a.
+
+    (* Builds incl [] (fired s'). *)
+    assert (Hincl_nil : incl [] (fired s')) by (intros x Hin_nil; inversion Hin_nil).
+
+    (* Builds ∀ t ∈ a ⇒ t' ∈ [] ⇒ t' ≻ t ∧ t' ∈ (fired s'). *)
+    assert (Hhigh_w_fired :
+              forall t t' : Trans,
+                In t a ->
+                In t' [] ->
+                HasHigherPriority spn t' t a /\ In t' (fired s'))
+      by (intros t t' Hin_a Hin_nil; inversion Hin_nil).
+
+    (* Builds ∀ (p, n) ∈ (marking s) ⇒ (p, n - pre_sum spn p []) ∈ (marking s) *)
+    assert (Hresid_m :
+              forall (p : Place) (n : nat),
+                In (p, n) (marking s) -> In (p, n - pre_sum spn p []) (marking s))
+      by (simpl; intros; rewrite Nat.sub_0_r; assumption).
+
+    (* Builds MarkingHaveSameStruct (initial_marking spn) (marking s) *)
+    explode_well_defined_spn_state Hwell_def_s.
+    clear Hincl_state_fired_transs Hnodup_state_fired.
+    rename Hsame_marking_state_spn into Hsame_struct.
+
+    (* Then, specialize spn_fire_aux *)
+    specialize (spn_fire_aux_complete
+                  spn s s' Hwell_def_spn Hwell_def_state Hwell_def_s' Hspec
+                  a a [] (marking s) Hin_a_pgs His_dec_refl Hnodup_a Hincl_nil
+                  Hhigh_w_fired Hresid_m Hsame_struct) as Hspn_fire_aux_ex.
+
+    (* Inversion of Hspn_fire_aux_ex to rewrite spn_fire_aux. *)
+    inversion_clear Hspn_fire_aux_ex as (fired_trs & Hspn_fire_aux_w).
+    elim Hspn_fire_aux_w; clear Hspn_fire_aux_w; intros Hspn_fire_aux Hincl_w.
+    elim Hincl_w; clear Hincl_w; intros Hincl_ftrs Hin_ftrs.
+    rewrite Hspn_fire_aux.
+
+    (* Then apply IHpgroups with fired_transitions := fired_transitions ++ fired_trs *)
+    apply IHpgroups with (fired_transitions := fired_transitions ++ fired_trs).
+
+    (* 4 subgoals, 3 trivials, 1 difficult. *)
+    + apply (is_dec_list_cons_cons His_dec).
+    + rewrite concat_cons in Hnodup_app.
+      specialize (spn_fire_aux_nodup_fired spn s (marking s) [] a fired_trs
+                                           Hwell_def_spn Hwell_def_state Hnodup_a
+                                           Hspn_fire_aux) as Hnodup_incl_w.
+      inversion_clear Hnodup_incl_w as (Hnodup_ftrs & Hincl_ftrs_a).
+      rewrite <- app_assoc.
+      apply (nodup_app_incl fired_transitions a (concat pgroups) fired_trs
+                            Hnodup_app Hnodup_ftrs Hincl_ftrs_a).
+    + intros x Hin_x_fsp.
+      rewrite <- app_assoc.
+      specialize (Hincl_sf x Hin_x_fsp).
+      apply in_app_or in Hincl_sf.
+      inversion_clear Hincl_sf as [Hin_x_f | Hin_x_concat].
+      -- apply in_or_app; left; assumption.
+      -- rewrite concat_cons in Hin_x_concat.
+         apply in_app_or in Hin_x_concat; inversion_clear Hin_x_concat as [Hin_x_a | Hin_x_conc].
+         {
+           specialize (Hin_ftrs x (conj Hin_x_a Hin_x_fsp));
+             apply in_or_app; right; apply in_or_app; left; assumption.
+         }
+         { do 2 (apply in_or_app; right); assumption. }           
+    + intros x Hin_x_app;
+        apply in_app_or in Hin_x_app;
+        inversion_clear Hin_x_app as [Hin_x_fired | Hin_x_ftrs];
+        [ apply (Hincl_f x Hin_x_fired) | apply (Hincl_ftrs x Hin_x_ftrs) ].
+Qed.        
 
 (* Proof. *)
 (*   intros spn s fired_transitions pgroups. *)

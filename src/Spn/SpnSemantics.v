@@ -79,12 +79,6 @@ Section DecreasedList.
       forall (a : A) (l l' : list A),
         IsDecListApp l l' ->
         IsDecListApp l (l' ++ [a]).
-
-  Lemma is_dec_list_app_eq_if_incl :
-    forall (l l' : list A),
-      NoDup l -> NoDup l' -> IsDecListApp l l' -> incl l' l -> l = l'.
-  Proof.
-  Admitted.
   
 End DecreasedList.
 
