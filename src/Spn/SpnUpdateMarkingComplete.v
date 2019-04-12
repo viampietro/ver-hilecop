@@ -23,7 +23,16 @@ Lemma spn_update_marking_complete :
   forall (spn : Spn) (s : SpnState) (s' : SpnState),
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
+    IsWellDefinedSpnState spn s' ->
     SpnSemantics spn s s' raising_edge ->
-    spn_update_marking spn s = Some s'.
+    exists state : SpnState,
+      spn_update_marking spn s = Some state /\
+      spnstate_eq s' state.
 Proof.
+  intros spn s s' Hwell_def_spn Hwell_def_s Hwell_def_s' Hspec.
+  unfold spn_update_marking.
+
+  (* Specializes map_update_marking_pre_no_error and rewrite 
+     the goal, skipping error case. *)
+  
 Admitted.
