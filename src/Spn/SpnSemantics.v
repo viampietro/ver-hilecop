@@ -291,6 +291,23 @@ Fixpoint pre_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
 
 Functional Scheme pre_sum_ind := Induction for pre_sum Sort Prop.
 
+(** pre_sum spn p l + pre_sum spn p [t] = pres_um spn p (l ++ [t]) 
+
+    Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
+
+Lemma pre_sum_app_add :
+  forall (spn : Spn) (p : Place) (l : list Trans) (t : Trans),
+    pre_sum spn p l + pre_sum spn p [t] = pre_sum spn p (l ++ [t]).
+Proof.
+  intros spn p l; functional induction (pre_sum spn p l) using pre_sum_ind; intro t'.
+  - simpl; reflexivity.
+  - simpl.
+    rewrite <- (IHn t').
+    simpl.
+    rewrite plus_assoc_reverse.
+    reflexivity.
+Qed.
+
 Inductive PreSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
 | PreSum_nil :
     PreSum spn p [] 0
@@ -355,8 +372,8 @@ Definition IsSensitized
 
 (** SpnIsFirable:
  
-      ∀ t ∈ T, state s = (m), marking m, t ∈ firable(s) if 
-      t ∈ sens(m) *)
+    ∀ t ∈ T, state s = (m), marking m, t ∈ firable(s) if 
+    t ∈ sens(m) *)
 
 Definition SpnIsFirable
            (spn : Spn)
@@ -404,12 +421,12 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        (forall (pr : list Trans),
-            NoDup pr ->
-            (forall t' : Trans,
-                HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
-            forall (p : Place)
-                   (n : nat),
+        forall (pr : list Trans),
+          NoDup pr ->
+          (forall t' : Trans,
+              HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
+          (forall (p : Place)
+                  (n : nat),
               In (p, n) s'.(marking) ->
               In (p, n - pre_sum spn p pr) residual_marking) ->
         IsSensitized spn residual_marking t ->
@@ -424,12 +441,12 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        (forall (pr : list Trans),
-            NoDup pr ->
-            (forall t' : Trans,
-                HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
-            forall (p : Place)
-                   (n : nat),
+        forall (pr : list Trans),
+          NoDup pr ->
+          (forall t' : Trans,
+              HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
+          (forall (p : Place)
+                  (n : nat),
               In (p, n) s'.(marking) ->
               In (p, n - pre_sum spn p pr) residual_marking) ->
         ~IsSensitized spn residual_marking t ->
