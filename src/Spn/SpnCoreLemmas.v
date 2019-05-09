@@ -2133,8 +2133,9 @@ Section UpdateResidualMarking.
         by (unfold flatten_neighbours; apply in_or_app; left; assumption).      
       unfold NoDupInNeighbours in Hnodup_neigh.
       specialize (Hnodup_neigh t neigh_of_t Hin_lneigh) as Hnodup_flat.
-      unfold flatten_neighbours in Hnodup_flat;
-        apply nodup_app in Hnodup_flat; apply proj1 in Hnodup_flat.
+      apply proj1 in Hnodup_flat;
+        apply nodup_app in Hnodup_flat;
+        apply proj1 in Hnodup_flat.
       (* Then, applies update_residual_marking_aux_correct. *)
       apply (update_residual_marking_aux_correct
                spn residual_marking t (pre_pl neigh_of_t) neigh_of_t final_marking
@@ -2171,8 +2172,13 @@ Section UpdateResidualMarking.
   
 End UpdateResidualMarking.
 
+(** Lemmas on update_marking_pre and update_marking_post functions, and  
+ *  their mapped versions. *)
+
 Section SpnUpdateMarking.
 
+  (** [update_marking_pre_aux] preserves marking structure. *)
+  
   Lemma update_marking_pre_aux_same_marking :
     forall (spn : Spn)
            (m : list (Place * nat))
@@ -2197,6 +2203,8 @@ Section SpnUpdateMarking.
     - inversion Hfun.
   Qed.
 
+  (** [update_marking_pre] preserves marking structure. *)
+  
   Lemma update_marking_pre_same_marking :
     forall (spn : Spn)
            (m : list (Place * nat))
@@ -2214,91 +2222,6 @@ Section SpnUpdateMarking.
     - inversion Hfun.
   Qed.
 
-  Lemma map_update_marking_pre_same_marking :
-    forall (spn : Spn)
-           (m : list (Place * nat))
-           (fired : list Trans)
-           (m' : list (Place * nat)),
-      map_update_marking_pre spn m fired = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    intros spn m fired;
-      functional induction (map_update_marking_pre spn m fired) using map_update_marking_pre_ind;
-      intros fm Hfun.
-    (* BASE CASE *)
-    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
-    (* GENERAL CASE *)
-    - apply update_marking_pre_same_marking in e0.
-      specialize (IHo fm Hfun) as Hsame_struct.
-      unfold MarkingHaveSameStruct in *.
-      transitivity (fst (split m')); [assumption | assumption].
-    (* ERROR CASE *)
-    - inversion Hfun.
-  Qed.
-
-  Lemma update_marking_post_aux_same_marking :
-    forall (spn : Spn)
-           (m : list (Place * nat))
-           (t : Trans)
-           (post_places : list Place)
-           (m' : list (Place * nat)),
-      update_marking_post_aux spn m t post_places = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    intros spn m t post_places;
-      functional induction (update_marking_post_aux spn m t post_places)
-                 using update_marking_post_aux_ind;
-      intros fm Hfun.
-    (* BASE CASE *)
-    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
-    (* GENERAL CASE *)
-    - apply modify_m_same_struct in e0.
-      specialize (IHo fm Hfun) as Hsame_struct.
-      unfold MarkingHaveSameStruct in *.
-      transitivity (fst (split m')); [assumption | assumption].
-    (* ERROR CASE *)
-    - inversion Hfun.
-  Qed.
-
-  Lemma update_marking_post_same_marking :
-    forall (spn : Spn)
-           (m : list (Place * nat))
-           (t : Trans)
-           (m' : list (Place * nat)),
-      update_marking_post spn m t = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    intros spn m t;
-      functional induction (update_marking_post spn m t) using update_marking_post_ind;
-      intros m' Hfun.
-    (* GENERAL CASE *)
-    - apply update_marking_post_aux_same_marking in Hfun; assumption.
-    (* ERROR CASE *)
-    - inversion Hfun.
-  Qed.
-
-  Lemma map_update_marking_post_same_marking :
-    forall (spn : Spn)
-           (m : list (Place * nat))
-           (fired : list Trans)
-           (m' : list (Place * nat)),
-      map_update_marking_post spn m fired = Some m' ->
-      MarkingHaveSameStruct m m'.
-  Proof.
-    intros spn m fired;
-      functional induction (map_update_marking_post spn m fired) using map_update_marking_post_ind;
-      intros fm Hfun.
-    (* BASE CASE *)
-    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
-    (* GENERAL CASE *)
-    - apply update_marking_post_same_marking in e0.
-      specialize (IHo fm Hfun) as Hsame_struct.
-      unfold MarkingHaveSameStruct in *.
-      transitivity (fst (split m')); [assumption | assumption].
-    (* ERROR CASE *)
-    - inversion Hfun.
-  Qed.
-  
   (** Needed to prove update_marking_pre_aux_correct. *)
 
   Lemma update_marking_pre_aux_not_in_pre_places :
@@ -2439,6 +2362,7 @@ Section SpnUpdateMarking.
   (** Correctness proof for [update_marking_pre]. 
 
       Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
+  
   Lemma update_marking_pre_correct :
     forall (spn : Spn)
            (marking : list (Place * nat))
@@ -2467,8 +2391,9 @@ Section SpnUpdateMarking.
           by (unfold flatten_neighbours; apply in_or_app; left; assumption).      
         unfold NoDupInNeighbours in Hnodup_neigh.
         specialize (Hnodup_neigh t neighbours_of_t Hin_lneigh) as Hnodup_flat.
-        unfold flatten_neighbours in Hnodup_flat;
-          apply nodup_app in Hnodup_flat; apply proj1 in Hnodup_flat.
+        apply proj1 in Hnodup_flat;
+          apply nodup_app in Hnodup_flat;
+          apply proj1 in Hnodup_flat.
         (* Then, applies update_marking_pre_aux_correct. *)
         apply (update_marking_pre_aux_correct
                  spn marking t (pre_pl neighbours_of_t) neighbours_of_t final_marking
@@ -2524,7 +2449,41 @@ Section SpnUpdateMarking.
     }
     apply (update_marking_pre_aux_no_error spn t (pre_pl neigh_of_t) marking Hincl_prepl).
   Qed.
-    
+
+  (** [map_update_marking_pre] preserves marking structure. *)
+  
+  Lemma map_update_marking_pre_same_marking :
+    forall (spn : Spn)
+           (m : list (Place * nat))
+           (fired : list Trans)
+           (m' : list (Place * nat)),
+      map_update_marking_pre spn m fired = Some m' ->
+      MarkingHaveSameStruct m m'.
+  Proof.
+    intros spn m fired;
+      functional induction (map_update_marking_pre spn m fired) using map_update_marking_pre_ind;
+      intros fm Hfun.
+    (* BASE CASE *)
+    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+    (* GENERAL CASE *)
+    - apply update_marking_pre_same_marking in e0.
+      specialize (IHo fm Hfun) as Hsame_struct.
+      unfold MarkingHaveSameStruct in *.
+      transitivity (fst (split m')); [assumption | assumption].
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
+  (** 
+   * Correctness lemma for [map_update_marking_pre].
+   * 
+   * map_update_marking_pre spn m fired = m' ⇒ m' = m - ∑ pre(t), ∀ t ∈ fired
+   * 
+   * [map_update_marking_pre] substracts tokens in the pre-places 
+   *  of all transitions ∈ fired. 
+   *  
+   *)
+  
   Lemma map_update_marking_pre_sub_pre :
     forall (spn : Spn)
            (m : list (Place * nat))
@@ -2555,7 +2514,7 @@ Section SpnUpdateMarking.
     - inversion Hfun.
   Qed.
 
-  (** No error lemma for map_update_marking_pre *)
+  (** No error lemma for [map_update_marking_pre]. *)
 
   Lemma map_update_marking_pre_no_error :
     forall (spn : Spn)
@@ -2595,6 +2554,54 @@ Section SpnUpdateMarking.
       apply (IHfired final_marking Hwell_def_spn Hincl_f_lneigh Hincl_fl_m).
   Qed.
   
+  (** ----------------------------------------------------------- **)
+  (** ----------------------------------------------------------- **)
+
+  (** [update_marking_post_aux] preserves marking structure. *)
+  
+  Lemma update_marking_post_aux_same_marking :
+    forall (spn : Spn)
+           (m : list (Place * nat))
+           (t : Trans)
+           (post_places : list Place)
+           (m' : list (Place * nat)),
+      update_marking_post_aux spn m t post_places = Some m' ->
+      MarkingHaveSameStruct m m'.
+  Proof.
+    intros spn m t post_places;
+      functional induction (update_marking_post_aux spn m t post_places)
+                 using update_marking_post_aux_ind;
+      intros fm Hfun.
+    (* BASE CASE *)
+    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+    (* GENERAL CASE *)
+    - apply modify_m_same_struct in e0.
+      specialize (IHo fm Hfun) as Hsame_struct.
+      unfold MarkingHaveSameStruct in *.
+      transitivity (fst (split m')); [assumption | assumption].
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
+  (** [update_marking_post] preserves marking structure. *)
+  
+  Lemma update_marking_post_same_marking :
+    forall (spn : Spn)
+           (m : list (Place * nat))
+           (t : Trans)
+           (m' : list (Place * nat)),
+      update_marking_post spn m t = Some m' ->
+      MarkingHaveSameStruct m m'.
+  Proof.
+    intros spn m t;
+      functional induction (update_marking_post spn m t) using update_marking_post_ind;
+      intros m' Hfun.
+    (* GENERAL CASE *)
+    - apply update_marking_post_aux_same_marking in Hfun; assumption.
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
   (** Needed to prove update_marking_post_aux_correct. *)
 
   Lemma update_marking_post_aux_not_in_post_places :
@@ -2703,9 +2710,75 @@ Section SpnUpdateMarking.
     - inversion Hfun.
   Qed.
 
+  (** No error lemma for update_marking_post_aux. *)
+  
+  Lemma update_marking_post_aux_no_error :
+    forall (spn : Spn)
+           (t : Trans)
+           (post_places : list Place)
+           (m : list (Place * nat)),
+      incl post_places (fst (split m)) ->
+      exists m' : list (Place * nat),
+        update_marking_post_aux spn m t post_places = Some m'.
+  Proof.
+    intros spn t; induction post_places; intros residual_marking Hincl_post.
+    (* BASE CASE *)
+    - simpl; exists residual_marking; reflexivity.
+    (* INDUCTION CASE *)
+    - simpl.
+      assert (Hin_eq : In a (a :: post_places)) by apply in_eq.
+      specialize (Hincl_post a Hin_eq) as Hin_a_res.
+      specialize (modify_m_no_error residual_marking a Nat.add (post spn t a) Hin_a_res)
+        as Hmodify_ex.
+      inversion_clear Hmodify_ex as (m' & Hmodify).
+      rewrite Hmodify.
+      apply incl_cons_inv in Hincl_post.
+      specialize (modify_m_same_struct residual_marking m' a Nat.add (post spn t a) Hmodify)
+        as Hsame_struct.
+      rewrite Hsame_struct in Hincl_post.
+      apply (IHpost_places m' Hincl_post).
+  Qed.
+
+  (** No error lemma for [update_marking_post]. *)
+  
+  Lemma update_marking_post_no_error :
+    forall (spn : Spn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (neigh_of_t : Neighbours),
+      IsWellDefinedSpn spn ->
+      In (t, neigh_of_t) (lneighbours spn) ->
+      incl (flatten_neighbours neigh_of_t) (fst (split marking)) ->
+      exists final_marking : list (Place * nat),
+        update_marking_post spn marking t = Some final_marking.
+  Proof.
+    intros spn marking t neigh_of_t Hwell_def_spn Hin_t_fs Hincl_flat.
+    explode_well_defined_spn.
+    unfold NoUnknownTransInLNeighbours in Hunk_tr_neigh.
+    unfold NoDupTranss in Hnodup_transs.
+    rewrite Hunk_tr_neigh in Hnodup_transs.
+    specialize (get_neighbours_complete (lneighbours spn) t neigh_of_t Hnodup_transs Hin_t_fs)
+      as Hget_neigh.
+    unfold update_marking_post.
+    rewrite Hget_neigh.
+    assert (Hincl_postpl : incl (post_pl neigh_of_t) (fst (split marking))).
+    {
+      intros x Hin_x_post.
+      apply or_intror
+        with (A := In x (pre_pl neigh_of_t ++ test_pl neigh_of_t ++ inhib_pl neigh_of_t))
+        in Hin_x_post.
+      apply in_or_app in Hin_x_post.
+      rewrite <- app_assoc in Hin_x_post.
+      rewrite <- app_assoc in Hin_x_post.
+      apply (Hincl_flat x Hin_x_post).
+    }
+    apply (update_marking_post_aux_no_error spn t (post_pl neigh_of_t) marking Hincl_postpl).
+  Qed.
+  
   (** Correctness proof for [update_marking_post]. 
 
       Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
+  
   Lemma update_marking_post_correct :
     forall (spn : Spn)
            (marking : list (Place * nat))
@@ -2734,8 +2807,7 @@ Section SpnUpdateMarking.
           by (unfold flatten_neighbours; do 3 (apply in_or_app; right); assumption).
         unfold NoDupInNeighbours in Hnodup_neigh.
         specialize (Hnodup_neigh t neighbours_of_t Hin_lneigh) as Hnodup_flat.
-        unfold flatten_neighbours in Hnodup_flat;
-          do 3 (apply nodup_app in Hnodup_flat; apply proj2 in Hnodup_flat).
+        apply proj2 in Hnodup_flat.
         (* Then, applies update_marking_post_aux_correct. *)
         apply (update_marking_post_aux_correct
                  spn marking t (post_pl neighbours_of_t) neighbours_of_t final_marking
@@ -2755,6 +2827,30 @@ Section SpnUpdateMarking.
     (* ERROR CASE *)
     - inversion Hfun.
   Qed.
+
+  (** [map_update_marking_post] preserves marking structure. *)
+  
+  Lemma map_update_marking_post_same_marking :
+    forall (spn : Spn)
+           (m : list (Place * nat))
+           (fired : list Trans)
+           (m' : list (Place * nat)),
+      map_update_marking_post spn m fired = Some m' ->
+      MarkingHaveSameStruct m m'.
+  Proof.
+    intros spn m fired;
+      functional induction (map_update_marking_post spn m fired) using map_update_marking_post_ind;
+      intros fm Hfun.
+    (* BASE CASE *)
+    - injection Hfun as Hfun; rewrite Hfun; reflexivity.
+    (* GENERAL CASE *)
+    - apply update_marking_post_same_marking in e0.
+      specialize (IHo fm Hfun) as Hsame_struct.
+      unfold MarkingHaveSameStruct in *.
+      transitivity (fst (split m')); [assumption | assumption].
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.  
 
   Lemma map_update_marking_post_add_post :
     forall (spn : Spn)
@@ -2784,6 +2880,46 @@ Section SpnUpdateMarking.
       apply (IHo fm Hwell_def_spn Hnodup_m Hfun p (n + post spn t p) Hin_m').
     (* ERROR CASE *)
     - inversion Hfun.
+  Qed.
+
+  (** No error lemma for [map_update_marking_post]. *)
+
+  Lemma map_update_marking_post_no_error :
+    forall (spn : Spn)
+           (fired : list Trans)
+           (m : list (Place * nat)),
+      IsWellDefinedSpn spn ->
+      incl fired (fst (split (lneighbours spn))) ->
+      (forall (t : Trans)
+              (neigh_of_t : Neighbours),
+          In (t, neigh_of_t) (lneighbours spn) ->
+          incl (flatten_neighbours neigh_of_t) (fst (split m))) ->
+      exists m' : list (Place * nat),
+        map_update_marking_post spn m fired = Some m'.
+  Proof.
+    intros spn; induction fired; intros m Hwell_def_spn Hincl_f_lneigh Hincl_fl_m.
+
+    (* BASE CASE *)
+    - simpl; exists m; reflexivity.
+
+    (* INDUCTION CASE *)
+    - simpl.
+      assert (Hin_eq : In a (a :: fired)) by apply in_eq.
+      specialize (Hincl_f_lneigh a Hin_eq) as Hin_a_fs_ln.
+      specialize (in_fst_split_in_pair a (lneighbours spn) Hin_a_fs_ln)
+        as Hin_fs_ln.
+      inversion_clear Hin_fs_ln as ( neigh_of_a & Hin_ln ).
+      specialize (Hincl_fl_m a neigh_of_a Hin_ln) as Hincl_flat.
+      specialize (update_marking_post_no_error
+                    spn m a neigh_of_a Hwell_def_spn Hin_ln Hincl_flat)
+        as Hupdate_post_ex.
+      inversion_clear Hupdate_post_ex as ( final_marking & Hupdate_post ).
+      rewrite Hupdate_post.
+      apply incl_cons_inv in Hincl_f_lneigh.
+      specialize (update_marking_post_same_marking spn m a final_marking Hupdate_post)
+        as Hsame_struct.
+      rewrite Hsame_struct in Hincl_fl_m.
+      apply (IHfired final_marking Hwell_def_spn Hincl_f_lneigh Hincl_fl_m).
   Qed.
   
 End SpnUpdateMarking.

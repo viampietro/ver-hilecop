@@ -13,13 +13,25 @@ Require Import Hilecop.Spn.SpnTactics.
 
 Require Import Hilecop.Spn.SpnCoreLemmas.
 
-(* Import lemmas about spn_map_fire's completeness. *)
+(* Import lemmas about spn_map_fire's completeness and soundness. *)
 
+Require Import Hilecop.Spn.SpnMapFireCorrect.
 Require Import Hilecop.Spn.SpnMapFireComplete.
 
 (* Import lemmas about spn_update_marking's completeness. *)
 
 Require Import Hilecop.Spn.SpnUpdateMarkingComplete.
+
+(*! [spnstate_eq] preserves [SpnSemantics] relation on raising edge. !*)
+
+(* Lemma spnstate_eq_spn_sem_raising : *)
+(*   forall (spn : Spn) *)
+(*          (s s' : SpnState), *)
+(*     IsWellDefinedSpn spn -> *)
+(*     IsWellDefinedSpnState spn s -> *)
+(*     IsWellDefinedSpnState spn s' -> *)
+(*     spnstate_eq s s' -> *)
+(*     spnstate_eq (spn_update_marking spn s) (spn_update_marking spn s). *)
 
 (*! Completeness proof between spn_cycle and SpnSemantics_falling_edge. !*)
 
@@ -32,11 +44,41 @@ Theorem spn_semantics_complete :
     IsWellDefinedSpnState spn s'' ->
     SpnSemantics spn s s' falling_edge ->
     SpnSemantics spn s' s'' raising_edge ->
-    spn_cycle spn s = Some (s', s'').
+    exists (istate fstate : SpnState),
+      spn_cycle spn s = Some (istate, fstate) /\
+      spnstate_eq s' istate /\
+      spnstate_eq s'' fstate.
 Proof.
   intros spn s s' s'' Hwell_def_spn Hwell_def_s
          Hwell_def_s' Hwell_def_s'' Hfalling_edge Hraising_edge.
-   
+
+  unfold spn_cycle.
+
+  (* Specializes spn_map_fire_complete and rewrite the goal,
+     therefore skipping the error case. *)
+  specialize (spn_map_fire_complete spn s s' Hwell_def_spn Hwell_def_s Hwell_def_s' Hfalling_edge)
+    as Hspn_map_fire_ex.
+  inversion Hspn_map_fire_ex as (istate & Hspn_map_fire_w).
+  inversion Hspn_map_fire_w as (Hspn_map_fire & Hsteq_s').
+  rewrite Hspn_map_fire.
+
+  (* Specializes spn_update_marking_complete and rewrite the goal,
+     therefore skipping the error case. *)
+
+  (* Need hyp. IsWellDefinedSpnState spn istate. *)
+  specialize (spn_map_fire_well_defined_state spn s istate Hwell_def_spn Hwell_def_s Hspn_map_fire)
+    as Hwell_def_istate.
+  
+  specialize (spn_update_marking_complete
+                spn s' s'' Hwell_def_spn Hwell_def_s' Hwell_def_s'' Hraising_edge)
+    as Hspn_update_marking_ex.
+  inversion Hspn_update_marking_ex as (fstate & Hspn_update_marking_w).
+  inversion Hspn_update_marking_w as (Hspn_update_marking & Hsteq_s'').
+  exists istate.
+  rewrite Hsteq_s' in Hspn_update_marking.
+  rewrite Hspn_update_marking.
+
+  
   (* Functional induction on spn_cycle. *)
   functional induction (spn_cycle spn s) using spn_cycle_ind.
 

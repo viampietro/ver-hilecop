@@ -140,13 +140,20 @@ Definition NoIntersectInPriorityGroups (spn : Spn) :=
 
 (** *** Properties on lneighbours *)
 
-(** No duplicates in all transitions t's neighbours. 
+(** No duplicates in pre places (including test and inhib) and
+    post places in the neighbourhood of transitions.
+ 
     Forbid the fact that a place p is linked to a transition t
-    by multiple edges. *)
+    by multiple edges. 
+    
+    Exception is the cycle: t is linked to p by one pre, 
+    test or inhib edge and one post edge. *)
 
 Definition NoDupInNeighbours (spn : Spn) :=
   forall (t : Trans) (neigh_of_t : Neighbours),
-    In (t, neigh_of_t) (lneighbours spn) -> NoDup (flatten_neighbours neigh_of_t).
+    In (t, neigh_of_t) (lneighbours spn) ->
+    NoDup ((pre_pl neigh_of_t) ++ (test_pl neigh_of_t) ++ (inhib_pl neigh_of_t)) /\
+    NoDup ((post_pl neigh_of_t)).
 
 (** For all place p, p is in places iff p is in the neighbourhood 
     of at least one transition. *)
@@ -376,10 +383,10 @@ Section Marking.
 
   Functional Scheme replace_occ_ind := Induction for replace_occ Sort Prop.
   
-  (** Function : Given a marking m, add/remove nboftokens tokens (if not None)
-                 inside place p and returns the new marking.
+  (** Given a marking m, add/remove nboftokens tokens (if not None)
+      inside place p and returns the new marking.
    
-      Param nboftokens : number of tokens to add or sub for place p.
+      Param nboftokens : number of tokens to add or sub in place p.
    
       Param op : addition or substraction operator. *)
   
@@ -389,7 +396,6 @@ Section Marking.
              (op : nat -> nat -> nat)
              (nboftokens : nat) : option (list (Place * nat)) :=
     match get_m marking p with
-    (* The couple (i, n) to remove must be unique. *)
     | Some n =>
       Some (replace_occ prodnat_eq_dec (p, n) (p, (op n nboftokens)) marking)
     | None => None 
@@ -405,19 +411,20 @@ End Marking.
 
 Section Neighbours.
 
-  (** Function : Returns the element of type Neighbours
-                 associated with transition t in the list lneighbours.
+  (** Returns the element of type Neighbours
+      associated with transition t in the list lneighbours.
                
-                 Returns None if transition t is not referenced
-                 in lneighbours. *)
+      Returns None if transition t is not referenced
+      in lneighbours. *)
   
   Fixpoint get_neighbours
            (lneighbours : list (Trans * Neighbours))
            (t : Trans) {struct lneighbours} : option Neighbours :=
     match lneighbours with
-    | (t', neighbours) :: tail => if t' =? t then
-                                    Some neighbours
-                                  else get_neighbours tail t
+    | (t', neighbours) :: tail =>
+      if t' =? t then
+        Some neighbours
+      else get_neighbours tail t
     | [] => None 
     end.
 

@@ -308,22 +308,6 @@ Proof.
     reflexivity.
 Qed.
 
-Inductive PreSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
-| PreSum_nil :
-    PreSum spn p [] 0
-| PreSum_cons :
-    forall (l : list Trans)
-           (t : Trans)
-           (sum : nat),
-      PreSum spn p l sum ->
-      PreSum spn p (t :: l) ((pre spn t p) + sum).
-
-(** PreSum with some conditions about well-definedness. *)
-
-Definition PreSumWD (spn : Spn) (p : Place) (l : list Trans) (sum : nat) :=
-  IsWellDefinedSpn spn /\ In p spn.(places) /\ incl l spn.(transs) /\
-  PreSum spn p l sum. 
-
 (** PostSum: Sums all weight of edges coming from transitions of the l list to place p. *)
 
 Fixpoint post_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
@@ -333,22 +317,6 @@ Fixpoint post_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
   end.
 
 Functional Scheme post_sum_ind := Induction for post_sum Sort Prop.
-
-Inductive PostSum (spn : Spn) (p : Place) : list Trans -> nat -> Prop :=
-| PostSum_nil :
-    PostSum spn p [] 0
-| PostSum_cons :
-    forall (l : list Trans)
-      (t : Trans)
-      (sum : nat),
-      PostSum spn p l sum ->
-      PostSum spn p (t :: l) ((post spn t p) + sum).
-
-(** PostSum with some conditions about well-definedness. *)
-
-Definition PostSumWD (spn : Spn) (p : Place) (l : list Trans) (sum : nat) :=
-  IsWellDefinedSpn spn /\ In p spn.(places) /\ incl l spn.(transs) /\
-  PostSum spn p l sum. 
 
 (** IsSensitized:
     ∀ t ∈ T, marking m, t ∈ sens(m) if

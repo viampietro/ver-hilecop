@@ -362,10 +362,10 @@ Section AnimateSpn.
   
   Definition spn_cycle (spn : Spn) (starting_state : SpnState) :
     option (SpnState * SpnState) :=
-    (* Fires/Determines the fired transitions in spn. *)
+    (* Determines the fired transitions. *)
     match spn_map_fire spn starting_state with
     | Some inter_state =>
-      (* Updates the marking in spn. *)
+      (* Updates the marking. *)
       match spn_update_marking spn inter_state with
       (* Returns the couple (inter_state, final_state). *)
       | Some final_state => Some (inter_state, final_state)
