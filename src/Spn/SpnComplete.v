@@ -24,14 +24,15 @@ Require Import Hilecop.Spn.SpnUpdateMarkingComplete.
 
 (*! [spnstate_eq] preserves [SpnSemantics] relation on raising edge. !*)
 
-(* Lemma spnstate_eq_spn_sem_raising : *)
-(*   forall (spn : Spn) *)
-(*          (s s' : SpnState), *)
-(*     IsWellDefinedSpn spn -> *)
-(*     IsWellDefinedSpnState spn s -> *)
-(*     IsWellDefinedSpnState spn s' -> *)
-(*     spnstate_eq s s' -> *)
-(*     spnstate_eq (spn_update_marking spn s) (spn_update_marking spn s). *)
+Lemma spn_update_marking_spnstate_eq_morph :
+  forall (spn : Spn)
+    (s s' state state' : SpnState),
+    spnstate_eq s state ->
+    spn_update_marking spn s = Some s' ->
+    spn_update_marking spn state = Some state' ->
+    spnstate_eq s' state'.
+Proof.
+Admitted.
 
 (*! Completeness proof between spn_cycle and SpnSemantics_falling_edge. !*)
 
@@ -62,71 +63,41 @@ Proof.
   inversion Hspn_map_fire_w as (Hspn_map_fire & Hsteq_s').
   rewrite Hspn_map_fire.
 
-  (* Specializes spn_update_marking_complete and rewrite the goal,
+  (* Specializes spn_update_marking_no_error and rewrite the goal,
      therefore skipping the error case. *)
 
   (* Need hyp. IsWellDefinedSpnState spn istate. *)
   specialize (spn_map_fire_well_defined_state spn s istate Hwell_def_spn Hwell_def_s Hspn_map_fire)
     as Hwell_def_istate.
-  
-  specialize (spn_update_marking_complete
-                spn s' s'' Hwell_def_spn Hwell_def_s' Hwell_def_s'' Hraising_edge)
-    as Hspn_update_marking_ex.
-  inversion Hspn_update_marking_ex as (fstate & Hspn_update_marking_w).
-  inversion Hspn_update_marking_w as (Hspn_update_marking & Hsteq_s'').
-  exists istate.
-  rewrite Hsteq_s' in Hspn_update_marking.
-  rewrite Hspn_update_marking.
 
-  
-  (* Functional induction on spn_cycle. *)
-  functional induction (spn_cycle spn s) using spn_cycle_ind.
+  specialize (spn_update_marking_no_error spn istate Hwell_def_spn Hwell_def_istate)
+    as Hup_mark_ex.
+  inversion Hup_mark_ex as (fstate & Hup_mark_istate).
+  rewrite Hup_mark_istate.
 
-  (* GENERAL CASE, apply spn_map_fire_complete and spn_update_marking_complete. *)
-  - (* Specializes spn_map_fire_complete, and then shows inter_state = s'. *)
-    specialize (spn_map_fire_complete spn s s' Hwell_def_spn Hwell_def_s Hfalling_edge)
-      as Hspn_map_fire.
-    rewrite Hspn_map_fire in e;
-      injection e as Heq_s'_istate;
-      rewrite Heq_s'_istate.
+  (* Instantiates state couple with istate and fstate. *)
+  exists istate, fstate.
 
-    (* Specializes spn_update_marking_complete, and then shows final_state = s''. *)
-    specialize (spn_update_marking_complete spn s' s'' Hwell_def_spn Hwell_def_s' Hraising_edge)
-      as Hspn_update_marking.
-    rewrite <- Heq_s'_istate in e0;
-      rewrite Hspn_update_marking in e0;
-      injection e0 as Heq_s''_fstate;
-      rewrite Heq_s''_fstate.
-    reflexivity.
+  (* Splits and solves each branch of the conjucntion. *)
+  split. reflexivity. split.
 
-  (* ERROR CASE, spn_update_marking = None. *)
-  - specialize (spn_map_fire_complete spn s s' Hwell_def_spn Hwell_def_s Hfalling_edge)
-      as Hspn_map_fire.
-    rewrite Hspn_map_fire in e;
-      injection e as Heq_s'_istate;
-      rewrite <- Heq_s'_istate in e0.
-    specialize (spn_update_marking_complete spn s' s'' Hwell_def_spn Hwell_def_s' Hraising_edge)
-      as Hspn_update_marking.
-    rewrite Hspn_update_marking in e0; inversion e0.
+  (* Solves spnstate_eq s' istate, trivial. *)
+  - assumption.
 
-  (* ERROR CASE, spn_map_fire = None *)
-  - specialize (spn_map_fire_complete spn s s' Hwell_def_spn Hwell_def_s Hfalling_edge)
-      as Hspn_map_fire.
-    rewrite Hspn_map_fire in e; inversion e.
+  (* Solves spnstate_eq s'' fstate, harder. *)
+  - clear Hup_mark_ex Hspn_map_fire_ex Hspn_map_fire_w.
+    
+    (* Specializes spn_update_marking_complete. *)
+    specialize (spn_update_marking_complete
+                  spn s' s'' Hwell_def_spn Hwell_def_s' Hwell_def_s'' Hraising_edge)
+      as Hspn_update_marking_ex.
+    inversion Hspn_update_marking_ex as (final_state & Hspn_update_marking_w).
+    inversion Hspn_update_marking_w as (Hspn_update_marking & Hsteq_s'').
+    clear Hspn_update_marking_ex Hspn_update_marking_w.
+
+    (* We need to specialize [spn_update_marking_spnstate_eq_morph] 
+     * to deduce spnstate_eq fstate final_state, 
+     * then deduce the goal by transitivity. *)
+    
 Qed.
-
-(* Renames hypotheses introduced by inversion of Hfalling_edge. *)
-(* inversion_clear Hfalling_edge; *)
-(*   clear H H0; *)
-(*   rename H1 into Hwell_def_s'; *)
-(*   rename H2 into Heq_marking; *)
-(*   rename H3 into Hnot_firable_not_fired; *)
-(*   rename H4 into Hnot_firable_succ; *)
-(*   rename H5 into Hsens_by_res; *)
-(*   rename H6 into Hnot_sens_by_res. *)
-
-(* Rename hypotheses introduced by inversion of Hraising_edge. *)
-(* inversion_clear Hraising_edge; *)
-(*   clear H H0 H1; *)
-(*   rename H2 into Heq_fired; *)
-(*   rename H3 into Hsub_pre_add_post. *)
+    

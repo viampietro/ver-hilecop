@@ -71,7 +71,7 @@ Proof.
   inversion Hmap_up_pre_ex as (m' & Hmap_up_pre).
   rewrite Hmap_up_pre.
 
-  (* Builds hyps. to specialize map_update_marking_post. *)
+  (* Builds hyps. to specialize map_update_marking_post_no_error. *)
   
   specialize (map_update_marking_pre_same_marking spn (marking s) (fired s) m' Hmap_up_pre)
     as Hsame_struct.
@@ -252,4 +252,75 @@ Proof.
       apply (NoDup_Permutation Hnodup_m_s' Hnodup_m'' Heq_ms'_m'').
       
     + simpl; rewrite Heq_fired; reflexivity.      
+Qed.
+
+(** No error lemma for spn_update_marking. *)
+
+Lemma spn_update_marking_no_error :
+  forall (spn : Spn) (s : SpnState),
+    IsWellDefinedSpn spn ->
+    IsWellDefinedSpnState spn s ->
+    exists state : SpnState,
+      spn_update_marking spn s = Some state.
+Proof.
+  intros spn s Hwell_def_spn Hwell_def_s.
+  unfold spn_update_marking.
+
+  (* Builds hyps to specialize map_update_marking_pre_no_error. *)
+
+  explode_well_defined_spn.
+  explode_well_defined_spn_state Hwell_def_s.
+
+  (* Hyp. incl (s fired) (fst (split lneighbours)) *)
+  
+  unfold NoUnknownTransInLNeighbours in Hunk_tr_neigh.
+  assert (Hincl_fired := Hincl_state_fired_transs);
+    rewrite Hunk_tr_neigh in Hincl_fired.
+
+  (* Hyp. forall t, neigh_of_t, In (t, neigh_of_t) (lneighbours spn) -> ... *)
+
+  unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+  unfold NoIsolatedPlace in Hiso_place.
+  assert (Hincl_flatten :
+            forall (t : Trans) (neigh_of_t : Neighbours),
+              In (t, neigh_of_t) (lneighbours spn) ->
+              incl (flatten_neighbours neigh_of_t) (fst (split (marking s)))).
+  {
+    intros t neigh_of_t Hin_lneigh p Hin_p_flat.
+    specialize (in_neigh_in_flatten spn t neigh_of_t p Hwell_def_spn Hin_lneigh Hin_p_flat)
+      as Hin_p_lflat.
+    apply Hunk_pl_neigh in Hin_p_lflat.
+    rewrite <- Hsame_marking_state_spn.
+    unfold NoUnmarkedPlace in Hunm_place.
+    rewrite Hunm_place in Hin_p_lflat.
+    assumption.
+  }
+  
+  (* Specializes map_update_marking_pre_no_error and rewrite 
+     the goal, skipping error case. *)
+  
+  specialize (map_update_marking_pre_no_error
+                spn (fired s) (marking s)
+                Hwell_def_spn Hincl_fired Hincl_flatten) as Hmap_up_pre_ex.
+  inversion Hmap_up_pre_ex as (m' & Hmap_up_pre).
+  rewrite Hmap_up_pre.
+
+  (* Builds hyps. to specialize map_update_marking_post_no_error. *)
+  
+  specialize (map_update_marking_pre_same_marking spn (marking s) (fired s) m' Hmap_up_pre)
+    as Hsame_struct.
+  rewrite Hsame_struct in Hincl_flatten.
+  
+  (* Specializes map_update_marking_post_no_error and rewrite 
+     the goal, skipping error case. *)
+  
+  specialize (map_update_marking_post_no_error
+                spn (fired s) m'
+                Hwell_def_spn Hincl_fired Hincl_flatten) as Hmap_up_post_ex.
+  inversion Hmap_up_post_ex as (m'' & Hmap_up_post).
+  rewrite Hmap_up_post.
+
+  (* Instantiates the resulting state and conclude. *)
+  exists {| fired := fired s; marking := m'' |}.
+  reflexivity.
 Qed.
