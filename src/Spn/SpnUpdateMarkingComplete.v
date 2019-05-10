@@ -324,3 +324,40 @@ Proof.
   exists {| fired := fired s; marking := m'' |}.
   reflexivity.
 Qed.
+
+
+(* [spn_update_marking] preserves marking structure. *)
+
+Lemma spn_update_marking_same_marking :
+  forall (spn : Spn)
+         (s s' : SpnState),
+    spn_update_marking spn s = Some s' ->
+    MarkingHaveSameStruct s.(marking) s'.(marking).
+Proof.
+  intros spn s s' Hfun.
+
+  functional induction (spn_update_marking spn s) using spn_update_marking_ind;
+    intros.
+
+  (* GENERAL CASE *)
+  - specialize (map_update_marking_pre_same_marking
+                spn (marking s) (fired s) m' e)
+      as Hsame_struct.
+
+    specialize (map_update_marking_post_same_marking
+                  spn m' (fired s) m'' e0)
+      as Hsame_struct'.
+
+    (* Rewrite the goal with s' value. *)
+    injection Hfun as Hfun.
+    rewrite <- Hfun; simpl.
+
+    transitivity (fst (split m')); [assumption | assumption].
+
+  (* Error case. *)
+  - inversion Hfun.
+
+  (* Error case. *)
+  - inversion Hfun.
+
+Qed.
