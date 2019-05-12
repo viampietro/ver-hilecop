@@ -21,7 +21,7 @@ Require Import Hilecop.Spn.SpnMapFireCorrect.
 
 Require Import Hilecop.Spn.SpnUpdateMarkingCorrect.
 
-(*! Correctness proof between spn_cycle and SpnSemantics_falling_edge. !*)
+(** * Correctness proof between spn_cycle and SpnSemantics_falling_edge. *)
 
 Theorem spn_semantics_falling_edge_correct :
   forall (spn : Spn)
@@ -65,7 +65,7 @@ Proof.
   - inversion Hfun.
 Qed.
 
-(*! Correctness proof between spn_cycle and SpnSemantics_raising_edge. !*)
+(** * Correctness proof between spn_cycle and SpnSemantics_raising_edge. *)
 
 Theorem spn_semantics_raising_edge_correct :
   forall (spn : Spn)
@@ -110,7 +110,9 @@ Proof.
   - inversion Hfun.
 Qed.
 
-(*! Conjunction of the two previous theorems. !*)
+(** * Correctness proof between [spn_cycle] and [SpnSemantics].
+      
+      Conjunction of the two previous theorems. *)
 
 Theorem spn_semantics_correct :
   forall (spn : Spn)

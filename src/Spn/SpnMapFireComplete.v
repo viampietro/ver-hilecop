@@ -19,12 +19,19 @@ Require Import Hilecop.Spn.SpnMapFireCorrect.
 Require Import Omega.
 Require Import Classical_Prop.
 
+(** * Lemmas on [pre_sum] and [post_sum] functions. *)
+
+(** ∀ t, ∀ l, t ∈ l ∧ NoDup l ⇒ pre_sum l = pre t + pre_sum (l - {t}) 
+ *  Needed to prove pre_sum_eq_iff_incl. *)
+
 Lemma pre_sum_add_rm : 
   forall (spn : Spn)
-         (p : Place)
-         (l : list Trans)
-         (t : Trans),
-    In t l -> NoDup l -> pre_sum spn p l = pre spn t p + pre_sum spn p (remove eq_nat_dec t l).
+    (p : Place)
+    (l : list Trans)
+    (t : Trans),
+    In t l ->
+    NoDup l ->
+    pre_sum spn p l = pre spn t p + pre_sum spn p (remove eq_nat_dec t l).
 Proof.
   intros spn p l;
     functional induction (pre_sum spn p l) using pre_sum_ind;
@@ -49,6 +56,9 @@ Proof.
          rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
          apply (IHn a Hin_a_tl Hnodup_l).
 Qed.
+
+(** For all list of transitions l and l', if l is a permutation 
+ *  of l', then pre_sum l = pre_sum l'. *)
 
 Lemma pre_sum_eq_iff_incl :
   forall (spn : Spn)
@@ -96,7 +106,90 @@ Proof.
     apply (IHn (remove Nat.eq_dec t l') Hnodup_l Hnodup_rm Hequiv_tl). 
 Qed.
 
-(** Completeness lemma for spn_fire_aux. *)
+(** ∀ t, ∀ l, t ∈ l ∧ NoDup l ⇒ post_sum l = post t + post_sum (l - {t}) 
+ *  Needed to prove post_sum_eq_iff_incl. *)
+
+Lemma post_sum_add_rm : 
+  forall (spn : Spn)
+         (p : Place)
+         (l : list Trans)
+         (t : Trans),
+    In t l -> NoDup l -> post_sum spn p l = post spn t p + post_sum spn p (remove eq_nat_dec t l).
+Proof.
+  intros spn p l;
+    functional induction (post_sum spn p l) using post_sum_ind;
+    intros a Hin_a_l Hnodup_l.
+  - inversion Hin_a_l.
+  - inversion_clear Hin_a_l as [Heq_at | Hin_a_tl].
+    + rewrite <- Heq_at.
+      simpl; case (Nat.eq_dec t t).
+      -- intro Heq_refl.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_remove_eq Nat.eq_dec t tail Hnodup_l) as Heq_rm.
+         rewrite Heq_rm; reflexivity.
+      -- intro Heq_diff; elim Heq_diff; reflexivity.
+    + simpl; case (Nat.eq_dec a t).
+      -- rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_in_diff t a tail (conj Hnodup_l Hin_a_tl)) as Hdiff_ta.
+         intro Heq_at; symmetry in Heq_at; contradiction.
+      -- intro Hdiff_at.
+         simpl; symmetry; rewrite Nat.add_comm.
+         rewrite <- Nat.add_assoc.
+         rewrite Nat.add_cancel_l; symmetry; rewrite Nat.add_comm.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+         apply (IHn a Hin_a_tl Hnodup_l).
+Qed.
+
+(** For all list of transitions l and l', if l is a permutation 
+ *  of l', then post_sum l = post_sum l'. *)
+
+Lemma post_sum_eq_iff_incl :
+  forall (spn : Spn)
+         (p : Place)
+         (l l' : list Trans),
+    NoDup l ->
+    NoDup l' ->
+    (forall t : Trans, In t l <-> In t l') ->
+    post_sum spn p l = post_sum spn p l'.
+Proof.
+  intros spn p l;
+    functional induction (post_sum spn p l) using post_sum_ind;
+    intros l' Hnodup_l Hnodup_l' Hequiv.
+  (* BASE CASE *)
+  - functional induction (post_sum spn p l') using post_sum_ind.
+    + reflexivity.
+    + assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+      rewrite <- Hequiv in Hin_eq; inversion Hin_eq.
+  (* GENERAL CASE *)
+  - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+    rewrite Hequiv in Hin_eq.
+    specialize (post_sum_add_rm spn p l' t Hin_eq Hnodup_l') as Heq_postsum.
+    rewrite Heq_postsum.
+    rewrite Nat.add_cancel_l.
+    assert (Hequiv_tl : forall t0 : Trans, In t0 tail <-> In t0 (remove Nat.eq_dec t l')).
+    {
+      intro t0; split.
+      - intro Hin_tl; specialize (in_cons t t0 tail Hin_tl) as Hin_t0_ctl.
+        rewrite NoDup_cons_iff in Hnodup_l.
+        apply proj1 in Hnodup_l.
+        specialize (not_in_in_diff t t0 tail (conj Hnodup_l Hin_tl)) as Hdiff_tt0.
+        apply not_eq_sym in Hdiff_tt0.
+        rewrite Hequiv in Hin_t0_ctl.
+        rewrite in_remove_iff; apply (conj Hin_t0_ctl Hdiff_tt0).
+      - intro Hin_rm.
+        rewrite in_remove_iff in Hin_rm.
+        elim Hin_rm; clear Hin_rm; intros Hin_t0_l' Hdiff_t0t.
+        rewrite <- Hequiv in Hin_t0_l'.
+        inversion_clear Hin_t0_l' as [Heq_t0t | Hin_t0_tl].
+        + symmetry in Heq_t0t; contradiction.
+        + assumption.
+    }
+    rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+    specialize (nodup_if_remove l' Hnodup_l' t Nat.eq_dec) as Hnodup_rm.
+    apply (IHn (remove Nat.eq_dec t l') Hnodup_l Hnodup_rm Hequiv_tl). 
+Qed.
+
+(** * Completeness lemma for spn_fire_aux. *)
 
 Lemma spn_fire_aux_complete :
   forall (spn : Spn)

@@ -23,11 +23,15 @@ Require Import Hilecop.Spn.SpnMapFireComplete.
 Require Import Hilecop.Spn.SpnUpdateMarkingCorrect.
 Require Import Hilecop.Spn.SpnUpdateMarkingComplete.
 
-(*! [spnstate_eq] preserves [SpnSemantics] relation on raising edge. !*)
+(** [spn_update_marking] is (almost) a morphism from [spnstate_eq] to [spnstate_eq]. 
+ *  Almost because [spn_update_marking] returns an [option SpnState], and not a [SpnState]. 
+ *  
+ *  Needed to prove [spn_semantics_complete].
+ *)
 
 Lemma spn_update_marking_spnstate_eq_morph :
   forall (spn : Spn)
-         (s s' state state' : SpnState),
+    (s s' state state' : SpnState),
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
     IsWellDefinedSpnState spn state ->
@@ -140,18 +144,98 @@ Proof.
 
         (* Builds post_sum (fired s) = post_sum (fired state). 
          * Deduced from Permutation (fired s) (fired state). *)
+
+        specialize (post_sum_eq_iff_incl
+                      spn a (fired s) (fired state)
+                      Hnodup_s_fired Hnodup_state_fired Hequiv_fired)
+          as Heq_postsum.
         
         (* Rewrites the goal, then concludes. *)
-        rewrite Heq_bx, Heq_presum. assumption.
+        rewrite Heq_bx, Heq_presum, Heq_postsum. assumption.
+        
+      (* In (p, n) (marking state') -> In (p, n) (marking s') *)
+      - intros Hin_mstate'.
 
+        (* Specializes spn_update_marking_sub_pre_add_post. *)
+
+        specialize (spn_update_marking_sub_pre_add_post
+                      spn s s' Hwell_def_spn Hwell_def_s Hup_mark_s)
+          as Hspec_ms'.
+        specialize (spn_update_marking_sub_pre_add_post
+                      spn state state' Hwell_def_spn Hwell_def_state Hup_mark_state)
+          as Hspec_mstate'.
+        
+        (* Builds In (a, x) (marking state) *)
+        
+        specialize (in_fst_split a b (marking state') Hin_mstate') as Hin_mstate_ex.
+        rewrite <- Hsame_struct_sstate' in Hin_mstate_ex.
+        apply in_fst_split_in_pair in Hin_mstate_ex.
+        inversion Hin_mstate_ex as (x & Hin_mstate).
+
+        (* Specializes Hspec_mstate' to get 
+           In (a, x - pre + post) (marking state') *)
+        specialize (Hspec_mstate' a x Hin_mstate) as Hin_mstate'_bis.
+
+        (* Builds b = x - pre + post *)
+        assert (Hfst_eq :
+                  fst (a, b) = fst (a, x - pre_sum spn a (fired s) + post_sum spn a (fired s)))
+          by (simpl; reflexivity).
+        specialize (nodup_same_pair
+                      (marking state') Hnodup_fs_m_st'
+                      (a, b)
+                      (a, x - pre_sum spn a (fired state) + post_sum spn a (fired state))
+                      Hin_mstate' Hin_mstate'_bis Hfst_eq)
+          as Heq_pair.
+        injection Heq_pair as Heq_bx.
+        inversion Hsteq_s_state as (Hperm_m & Hperm_fired).
+
+        (* Builds In (a, x) (marking s) by rewriting Hperm_m. *)
+        assert (Hin_ms := Hin_mstate).
+        rewrite <- Hperm_m in Hin_ms.
+        specialize (Hspec_ms' a x Hin_ms) as Hin_ms'.
+        
+        (* Builds pre_sum (fired s) = pre_sum (fired state). 
+         * Deduced from Permutation (fired s) (fired state). *)
+        
+        assert (Hequiv_fired: forall t : Trans, In t (fired s) <-> In t (fired state)) by
+            (intros t; rewrite Hperm_fired; reflexivity).
+        
+        specialize (pre_sum_eq_iff_incl
+                      spn a (fired s) (fired state)
+                      Hnodup_s_fired Hnodup_state_fired Hequiv_fired)
+          as Heq_presum.
+
+        (* Builds post_sum (fired s) = post_sum (fired state). 
+         * Deduced from Permutation (fired s) (fired state). *)
+
+        specialize (post_sum_eq_iff_incl
+                      spn a (fired s) (fired state)
+                      Hnodup_s_fired Hnodup_state_fired Hequiv_fired)
+          as Heq_postsum.
+        
+        (* Rewrites the goal, then concludes. *)
+        rewrite Heq_bx, <- Heq_presum, <- Heq_postsum. assumption.
     }
 
     (* Applies NoDUp_Permutation to complete the goal. *)
-    apply (NoDup_Permutation Hnodup_m_s' Hnodup_m'' Heq_ms'_m'').
-      
-Admitted.
+    apply (NoDup_Permutation Hnodup_m_s' Hnodup_m_st' Heq_ms'_mst').
 
-(*! Completeness proof between spn_cycle and SpnSemantics_falling_edge. !*)
+  (* CASE Permutation (fired s') (fired state') *)
+  - inversion Hsteq_s_state as (Hperm_m & Hperm_fired).
+    (* Builds (fired s) = (fired s') and 
+       (fired state) = (fired state') *)
+    specialize (spn_update_marking_same_fired
+                  spn s s' Hup_mark_s)
+      as Heq_fired_ss'.
+    specialize (spn_update_marking_same_fired
+                  spn state state' Hup_mark_state)
+      as Heq_fired_sstate'.
+
+    rewrite <- Heq_fired_ss', <- Heq_fired_sstate'.
+    assumption.    
+Qed.
+
+(** * Completeness proof between spn_cycle and SpnSemantics. *)
 
 Theorem spn_semantics_complete :
   forall (spn : Spn)
@@ -216,7 +300,9 @@ Proof.
      * to deduce spnstate_eq fstate final_state, 
      * then deduce the goal by transitivity. *)
     specialize (spn_update_marking_spnstate_eq_morph
-                  spn s' final_state istate fstate Hsteq_s'
+                  spn s' final_state istate fstate
+                  Hwell_def_spn Hwell_def_s' Hwell_def_istate
+                  Hsteq_s'
                   Hspn_update_marking
                   Hup_mark_istate) as Hsteq_s'_istate.
     transitivity final_state; [assumption | assumption].                  
