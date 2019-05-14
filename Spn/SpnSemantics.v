@@ -358,7 +358,7 @@ Definition SpnIsFirable
 
 Inductive Clock : Set :=
 | falling_edge : Clock
-| raising_edge : Clock.
+| rising_edge : Clock.
 
 (** Represents the Spn Semantics  *)
 
@@ -389,14 +389,14 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        forall (pr : list Trans),
+        (forall (pr : list Trans),
           NoDup pr ->
           (forall t' : Trans,
               HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
           (forall (p : Place)
                   (n : nat),
               In (p, n) s'.(marking) ->
-              In (p, n - pre_sum spn p pr) residual_marking) ->
+              In (p, n - pre_sum spn p pr) residual_marking)) ->
         IsSensitized spn residual_marking t ->
         In t s'.(fired)) ->
     (* ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t'), ∀ t' ∈ Pr(t)) ⇒ t ∉ Fired' 
@@ -409,21 +409,21 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In t pgroup ->
         MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
         SpnIsFirable spn s' t ->
-        forall (pr : list Trans),
+        (forall (pr : list Trans),
           NoDup pr ->
           (forall t' : Trans,
               HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
           (forall (p : Place)
                   (n : nat),
               In (p, n) s'.(marking) ->
-              In (p, n - pre_sum spn p pr) residual_marking) ->
-        ~IsSensitized spn residual_marking t ->
-        ~In t s'.(fired)) ->
+              In (p, n - pre_sum spn p pr) residual_marking)) ->
+          ~IsSensitized spn residual_marking t ->
+          ~In t s'.(fired)) ->
     
     SpnSemantics spn s s' falling_edge
     
 (* ↓clock : s = (Fired, M) ⇝ s' = (Fired, M') *)    
-| SpnSemantics_raising_edge :
+| SpnSemantics_rising_edge :
     
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
@@ -436,4 +436,4 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
         In (p, n) s.(marking) ->
         In (p, n - (pre_sum spn p s.(fired)) + (post_sum spn p s.(fired))) s'.(marking)) ->
     
-    SpnSemantics spn s s' raising_edge.
+    SpnSemantics spn s s' rising_edge.

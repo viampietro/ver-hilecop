@@ -13,7 +13,7 @@ Require Import Hilecop.Spn.SpnTactics.
 
 Require Import Hilecop.Spn.SpnCoreLemmas.
 
-(* Import lemmas about spn_map_fire's completeness and soundness. *)
+(* Import lemmas about spn_map_fire's completeness and correctness. *)
 
 Require Import Hilecop.Spn.SpnMapFireCorrect.
 Require Import Hilecop.Spn.SpnMapFireComplete.
@@ -245,14 +245,14 @@ Theorem spn_semantics_complete :
     IsWellDefinedSpnState spn s' ->
     IsWellDefinedSpnState spn s'' ->
     SpnSemantics spn s s' falling_edge ->
-    SpnSemantics spn s' s'' raising_edge ->
+    SpnSemantics spn s' s'' rising_edge ->
     exists (istate fstate : SpnState),
       spn_cycle spn s = Some (istate, fstate) /\
       spnstate_eq s' istate /\
       spnstate_eq s'' fstate.
 Proof.
   intros spn s s' s'' Hwell_def_spn Hwell_def_s
-         Hwell_def_s' Hwell_def_s'' Hfalling_edge Hraising_edge.
+         Hwell_def_s' Hwell_def_s'' Hfalling_edge Hrising_edge.
 
   unfold spn_cycle.
 
@@ -290,7 +290,7 @@ Proof.
     
     (* Specializes spn_update_marking_complete. *)
     specialize (spn_update_marking_complete
-                  spn s' s'' Hwell_def_spn Hwell_def_s' Hwell_def_s'' Hraising_edge)
+                  spn s' s'' Hwell_def_spn Hwell_def_s' Hwell_def_s'' Hrising_edge)
       as Hspn_update_marking_ex.
     inversion Hspn_update_marking_ex as (final_state & Hspn_update_marking_w).
     inversion Hspn_update_marking_w as (Hspn_update_marking & Hsteq_s'').

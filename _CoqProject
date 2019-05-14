@@ -1,14 +1,16 @@
--Q src/ Hilecop 
--Q test/ Hilecop.Test
+-Q . Hilecop 
 
-src/Utils/HilecopLemmas.v
-src/Utils/HilecopTactics.v
+Utils/HilecopLemmas.v
+Utils/HilecopTactics.v
 
-src/Spn/Spn.v
-src/Spn/SpnAnimator.v
-src/Spn/SpnSemantics.v
-src/Spn/SpnTactics.v
-src/Spn/SpnCoreLemmas.v
-src/Spn/SpnMapFireCorrect.v
-src/Spn/SpnUpdateMarkingCorrect.v
-src/Spn/SpnCorrect.v
+Spn/Spn.v
+Spn/SpnTokenPlayer.v
+Spn/SpnSemantics.v
+Spn/SpnTactics.v
+Spn/SpnCoreLemmas.v
+Spn/SpnMapFireCorrect.v
+Spn/SpnUpdateMarkingCorrect.v
+Spn/SpnCorrect.v
+Spn/SpnMapFireComplete.v
+Spn/SpnUpdateMarkingComplete.v
+Spn/SpnComplete.v

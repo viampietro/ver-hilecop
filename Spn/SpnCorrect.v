@@ -65,21 +65,21 @@ Proof.
   - inversion Hfun.
 Qed.
 
-(** * Correctness proof between spn_cycle and SpnSemantics_raising_edge. *)
+(** * Correctness proof between spn_cycle and SpnSemantics_rising_edge. *)
 
-Theorem spn_semantics_raising_edge_correct :
+Theorem spn_semantics_rising_edge_correct :
   forall (spn : Spn)
     (s s' s'' : SpnState),
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
     spn_cycle spn s = Some (s', s'') ->
-    SpnSemantics spn s' s'' raising_edge.
+    SpnSemantics spn s' s'' rising_edge.
 Proof.
   do 2 intro;
     functional induction (spn_cycle spn s) using spn_cycle_ind;
     intros s' s'' Hwell_def_spn Hwell_def_s Hfun.
   (* GENERAL CASE *)
-  - apply SpnSemantics_raising_edge.
+  - apply SpnSemantics_rising_edge.
     (* Trivial proof IsWellDefinedSpn *)
     + assumption.
     (* Proves IsWellDefinedSpnState spn s'. *)
@@ -120,12 +120,12 @@ Theorem spn_semantics_correct :
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
     spn_cycle spn s = Some (s', s'') ->
-    SpnSemantics spn s s' falling_edge /\ SpnSemantics spn s' s'' raising_edge.
+    SpnSemantics spn s s' falling_edge /\ SpnSemantics spn s' s'' rising_edge.
 Proof.
   intros spn s s' s'' Hwell_def_spn Hwell_def_s Hfun.
   specialize (spn_semantics_falling_edge_correct
                 spn s s' s'' Hwell_def_spn Hwell_def_s Hfun) as Hfalling_edge.
-  specialize (spn_semantics_raising_edge_correct
-                spn s s' s'' Hwell_def_spn Hwell_def_s Hfun) as Hraising_edge.
-  apply (conj Hfalling_edge Hraising_edge).
+  specialize (spn_semantics_rising_edge_correct
+                spn s s' s'' Hwell_def_spn Hwell_def_s Hfun) as Hrising_edge.
+  apply (conj Hfalling_edge Hrising_edge).
 Qed.

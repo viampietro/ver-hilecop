@@ -22,10 +22,10 @@ Require Import Hilecop.Spn.SpnMapFireCorrect.
 Require Import Omega.
 Require Import Classical_Prop.
 
-(** *** Last part of correctness proof (raising_edge) *)
+(** *** Last part of correctness proof (rising_edge) *)
 
 (** The goal in this part is to prove: 
-    spn_cycle spn s = (s', s'') ⇒ SpnSemantics spn s' s'' raising_edge. 
+    spn_cycle spn s = (s', s'') ⇒ SpnSemantics spn s' s'' rising_edge. 
     
     Multiple subproofs :
     

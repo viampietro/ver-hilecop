@@ -24,7 +24,7 @@ Lemma spn_update_marking_complete :
     IsWellDefinedSpn spn ->
     IsWellDefinedSpnState spn s ->
     IsWellDefinedSpnState spn s' ->
-    SpnSemantics spn s s' raising_edge ->
+    SpnSemantics spn s s' rising_edge ->
     exists state : SpnState,
       spn_update_marking spn s = Some state /\
       spnstate_eq s' state.

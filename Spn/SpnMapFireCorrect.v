@@ -888,13 +888,13 @@ Section SpnSensitizedByResidual.
         (* Hypotheses on res_marking. *)
         MarkingHaveSameStruct spn.(initial_marking) res_marking ->
         (forall (pr : list Trans),
-            NoDup pr ->
-            (forall t' : Trans,
-                HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
-                In t' pr) ->
-            (forall (p : Place) (n : nat),
-                In (p, n) (marking s) -> In (p, n - (pre_sum spn p pr)) res_marking)) ->
-        In t final_fired.
+          NoDup pr ->
+          (forall t' : Trans,
+              HasHigherPriority spn t' t pgroup /\ In t' final_fired <->
+              In t' pr) ->
+          (forall (p : Place) (n : nat),
+              In (p, n) (marking s) -> In (p, n - (pre_sum spn p pr)) res_marking)) ->
+          In t final_fired.
   Proof.
     intros spn s residual_marking fired pg;
       functional induction (spn_fire_aux spn s residual_marking fired pg)

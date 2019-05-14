@@ -318,7 +318,7 @@ Proof.
           as Hupdate_res_ex.
         inversion_clear Hupdate_res_ex as (residual_marking' & Hupdate_res).
         
-        (* Rewrites the goal. *)
+        (* Rewrites update_residual_marking in the goal. *)
         rewrite Hupdate_res.
 
         (* Then, inversion Hspec and specialization of one of the spec rule,
@@ -392,12 +392,42 @@ Proof.
         specialize (nodup_app fired_transitions (a :: pg) Hnodup_app) as Hnodup_ftrs;
           apply proj1 in Hnodup_ftrs.
         
-        (* Specializes the spec rule in Hsens_by_res to obtain In a (fired s'). *)
+        (* Builds residual marking definition hypothesis. *)
         rewrite Heq_marking in Hresid_m.
+        assert (Hresm_def :
+                  forall pr : list Trans,
+                    NoDup pr ->
+                    (forall t' : Trans,
+                        HasHigherPriority spn t' a pgroup /\ In t' (fired s') <-> In t' pr) ->
+                    forall (p : Place) (n : nat),
+                      In (p, n) (marking s') -> In (p, n - pre_sum spn p pr) residual_marking).
+        {
+          intros pr Hnodup_pr Hpr_def p n Hin_m'.
+          specialize (Hresid_m p n Hin_m') as Hin_resm.
+          assert (Heq_pr_ftrs: forall t : Trans, In t pr <-> In t fired_transitions).
+          {
+            intros t; split.
+            - intro Hin_pr.
+              rewrite <- Hpr_def with (t' := t) in Hin_pr.
+              rewrite Hhigh_sf_iff with (t := t) in Hin_pr.
+              assumption.
+            - intro Hin_ftrs.
+              rewrite <- Hhigh_sf_iff with (t := t) in Hin_ftrs.
+              rewrite Hpr_def with (t' := t) in Hin_ftrs.
+              assumption.
+          }
+          specialize (pre_sum_eq_iff_incl
+                        spn p pr fired_transitions Hnodup_pr
+                        Hnodup_ftrs Heq_pr_ftrs)
+            as Heq_presum.
+          rewrite Heq_presum.
+          assumption.
+        }
+        
+        (* Specializes the spec rule in Hsens_by_res to obtain In a (fired s'). *)
         specialize (Hsens_by_res
                       pgroup a residual_marking Hin_pgs Hin_a_pg Hsame_struct
-                      Hfirable fired_transitions Hnodup_ftrs Hhigh_sf_iff
-                      Hresid_m Hsens) as Hin_a_sf.
+                      Hfirable Hresm_def Hsens) as Hin_a_sf.
                    
         (* Next step, specializes IH with fired_transitions := fired_transitions ++ [a] 
            and residual_marking := residual_marking'. *)
@@ -614,13 +644,43 @@ Proof.
         (* Builds NoDup fired_transitions *)
         specialize (nodup_app fired_transitions (a :: pg) Hnodup_app) as Hnodup_ftrs;
           apply proj1 in Hnodup_ftrs.
+
+                (* Builds residual marking definition hypothesis. *)
+        rewrite Heq_marking in Hresid_m.
+        assert (Hresm_def :
+                  forall pr : list Trans,
+                    NoDup pr ->
+                    (forall t' : Trans,
+                        HasHigherPriority spn t' a pgroup /\ In t' (fired s') <-> In t' pr) ->
+                    forall (p : Place) (n : nat),
+                      In (p, n) (marking s') -> In (p, n - pre_sum spn p pr) residual_marking).
+        {
+          intros pr Hnodup_pr Hpr_def p n Hin_m'.
+          specialize (Hresid_m p n Hin_m') as Hin_resm.
+          assert (Heq_pr_ftrs: forall t : Trans, In t pr <-> In t fired_transitions).
+          {
+            intros t; split.
+            - intro Hin_pr.
+              rewrite <- Hpr_def with (t' := t) in Hin_pr.
+              rewrite Hhigh_sf_iff with (t := t) in Hin_pr.
+              assumption.
+            - intro Hin_ftrs.
+              rewrite <- Hhigh_sf_iff with (t := t) in Hin_ftrs.
+              rewrite Hpr_def with (t' := t) in Hin_ftrs.
+              assumption.
+          }
+          specialize (pre_sum_eq_iff_incl
+                        spn p pr fired_transitions Hnodup_pr
+                        Hnodup_ftrs Heq_pr_ftrs)
+            as Heq_presum.
+          rewrite Heq_presum.
+          assumption.
+        }
         
         (* Specializes the spec rule in Hnot_sens_by_res to obtain ~In a (fired s'). *)
-        rewrite Heq_marking in Hresid_m.
         specialize (Hnot_sens_by_res
                       pgroup a residual_marking Hin_pgs Hin_a_pg Hsame_struct
-                      Hfirable fired_transitions Hnodup_ftrs Hhigh_sf_iff
-                      Hresid_m Hsens) as Hnot_in_a_sf.
+                      Hfirable Hresm_def Hsens) as Hnot_in_a_sf.
         
         (* Builds hypotheses to specialize IH. *)
 
