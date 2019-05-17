@@ -1,4 +1,4 @@
-Require Import Hilecop.STPN.
+Require Import Hilecop.Stpn.Stpn.
 
 Ltac decide_are_well_formed_chronos :=
   match goal with

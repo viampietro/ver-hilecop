@@ -1,5 +1,652 @@
-Require Export Hilecop.Stpn.STPN.
-Require Export Hilecop.Spn.SPNAnimator.
+(* Import Spn and Stpn types, and predicates. *)
+
+Require Import Hilecop.Spn.Spn.
+Require Import Hilecop.Stpn.Stpn.
+
+(* Import functions from Spn token player. *)
+
+Require Import Hilecop.Spn.SpnTokenPlayer.
+
+(*===================================================*)
+(*=============== CHRONO SECTION  ===================*)
+(*===================================================*)
+
+Section Chrono.
+
+  (** Returns true if chrono doesn't exist,
+      or if the associated cnt is greater than or equal
+      to min_t and less than or equal to max_t.
+      
+      Returns false otherwise. *)
+  
+  Definition check_chrono (opt_chrono : option Chrono) : bool :=
+    match opt_chrono with
+    | None => true
+    | Some (mk_chrono cnt min_t max_t) =>
+      match max_t with
+      (* If upper bound is infinite, tests only the lower bound *)
+      | pos_inf => int min_t <=? cnt
+      | pos_val max_val =>
+        (int min_t <=? cnt) && (cnt <=? int max_val)
+      end
+    end.
+  
+  (** Returns the chrono associated to transition t 
+      if t is referenced in the chronos list.
+      
+      Raises an error (None value) otherwise. *)
+  
+  Fixpoint get_chrono
+           (chronos : list (Trans * option Chrono))
+           (t : Trans) {struct chronos} :
+    option (option Chrono) :=
+    match chronos with
+    | (t', opt_chrono) :: tail => if t =? t' then
+                                    Some opt_chrono
+                                  else get_chrono tail t
+    (* Case of error!!! *)
+    | [] => None
+    end.
+
+  Functional Scheme get_chrono_ind := Induction for get_chrono Sort Prop. 
+
+  (** If [get_chrono] returns Some [opt_chrono], then [opt_chrono] 
+      is in [chronos] *)
+  
+  Lemma get_chrono_in :
+    forall (chronos : list (Trans * option Chrono))
+      (t : Trans)
+      (opt_chrono : option Chrono),
+      get_chrono chronos t = Some opt_chrono ->
+      In opt_chrono (snd (split chronos)).
+  Proof.
+    intros chronos t.
+    functional induction (get_chrono chronos t)
+               using get_chrono_ind; intros.
+    - inversion H.
+    - rewrite snd_split_cons_app; simpl; left; injection H; auto.
+    - rewrite snd_split_cons_app; simpl; right; apply IHo; auto.
+  Qed.
+  
+  (** For all chronos and transition t, [get_chrono chronos t] returns no error
+      if t is referenced in chronos. *)
+  
+  Lemma get_chrono_no_error :
+    forall (chronos : list (Trans * option Chrono))
+           (t : Trans),
+      In t (fst (split chronos)) ->
+      exists v : option Chrono, get_chrono chronos t = Some v.
+  Proof.
+    intros chronos t H;
+      functional induction (get_chrono chronos t) using get_chrono_ind;
+      decide_accessor_no_err.
+  Qed.
+  
+  (** Returns true if chrono and chrono' are equal.
+   
+      Two chronos are equal only if their counter, lower bound and
+      upper bound values are the same. *)
+  
+  Definition beq_chrono (chrono chrono' : Chrono) : bool :=
+    match (max_t chrono), (max_t chrono') with
+    | pos_inf, pos_inf =>
+      ((cnt chrono) =? (cnt chrono'))
+        && ((int (min_t chrono)) =? (int (min_t chrono')))
+    | pos_val max_val, pos_val max_val' =>
+      ((cnt chrono) =? (cnt chrono'))
+        && ((int (min_t chrono)) =? (int (min_t chrono')))
+        && ((int (max_val)) =? (int (max_val')))
+    | _, _ => false
+    end.
+
+  Functional Scheme beq_chrono_ind := Induction for beq_chrono Sort Prop. 
+  
+  (** Returns a list of pairs (trans, chrono) where the first 
+      occurence of old_chrono has been replaced by new_chrono. *)
+  
+  Fixpoint replace_chrono
+           (old_chrono new_chrono : Chrono)
+           (chronos : list (Trans * option Chrono))
+           {struct chronos} :
+    list (Trans * option Chrono) :=
+    match chronos with
+    | (t, opt_chrono) :: tail =>
+      match opt_chrono with
+      (* opt_chrono has Some chrono. *)
+      | Some chrono =>
+        (* If old_chrono equals chrono, replaces old_chrono by new_chrono. *)
+        if beq_chrono old_chrono chrono then
+          (t, Some new_chrono) :: tail
+        else (t, opt_chrono) :: replace_chrono old_chrono new_chrono tail
+      (* If opt_chrono is None, then looks for old_chrono in the tail. *)
+      | None => (t, opt_chrono) :: replace_chrono old_chrono new_chrono tail
+      end
+    | [] => []
+    end.
+
+  Functional Scheme replace_chrono_ind := Induction for replace_chrono Sort Prop.
+  
+  (** Proves that replace_chrono preserves structure of [chronos]. *)
+  
+  Lemma replace_chrono_same_struct :
+    forall (old_chrono new_chrono : Chrono)
+      (chronos : list (Trans * option Chrono)),
+      ChronosHaveSameStruct (replace_chrono old_chrono new_chrono chronos) chronos.
+  Proof.
+    intros old_chrono new_chrono chronos.
+    unfold ChronosHaveSameStruct.
+    functional induction (replace_chrono old_chrono new_chrono chronos)
+               using replace_chrono_ind;
+      intros.
+    (* Base case. *)
+    - auto.
+    (* Case old_chrono is head of the list. *)
+    - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; simpl; auto.
+    (* Case old_chrono is not head of list. *)
+    - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; rewrite IHl; auto.
+    (* Case head of chronos is None. *)
+    - rewrite fst_split_cons_app; symmetry; rewrite fst_split_cons_app; rewrite IHl; auto.
+  Qed.
+
+  (** If all chronos in [chronos] are well-formed, then [replace_chrono] returns 
+      a list [chronos'] of well-formed chronos. *)
+  
+  Lemma replace_chrono_well_formed_chronos :
+    forall (old_chrono new_chrono : Chrono)
+           (chronos : list (Trans * option Chrono)),
+      IsWellFormedChrono new_chrono ->
+      (forall chrono : Chrono,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      forall chrono' : Chrono,
+        In (Some chrono') (snd (split (replace_chrono old_chrono new_chrono chronos))) ->
+        IsWellFormedChrono chrono'.
+  Proof.
+    intros old_chrono new_chrono chronos.
+    functional induction (replace_chrono old_chrono new_chrono chronos)
+               using replace_chrono_ind; intros.
+    (* Base case, chronos = [] *)
+    - elim H1.
+    (* Case old_chrono = hd chronos *)
+    - rewrite snd_split_cons_app in H1; simpl in H1; elim H1; intros.
+      + injection H2; intro; rewrite <- H3; assumption.
+      + apply or_intror with (A := In (Some chrono') (snd (split [(t, Some chrono)]))) in H2.
+        apply in_or_app in H2.
+        rewrite snd_split_cons_app in H0; apply (H0 chrono' H2).
+    (* Case old_chrono <> hd chronos *)
+    - rewrite snd_split_cons_app in H1; simpl in H1; elim H1; intros.
+      + apply or_introl with (B := In (Some chrono') (snd (split tail))) in H2.
+        rewrite snd_split_cons_app in H0; simpl in H0; apply (H0 chrono' H2).
+      + apply IHl.
+        -- assumption.
+        -- intros; apply or_intror with (A := (Some chrono = Some chrono0)) in H3.
+           rewrite snd_split_cons_app in H0; simpl in H0; apply (H0 chrono0 H3).
+        -- assumption.
+    (* Case None = hd chronos *)
+    - rewrite snd_split_cons_app in H1; simpl in H1; elim H1; intros.
+      + inversion H2.
+      + apply IHl.
+        -- assumption.
+        -- intros; apply or_intror with (A := (None = Some chrono)) in H3.
+           rewrite snd_split_cons_app in H0; simpl in H0; apply (H0 chrono H3).
+        -- assumption.
+  Qed.
+  
+  (** Returns a new list of chronos, where the time
+      counter of transition t is incremented.
+   
+      Raises an error (None value) if get_chrono returns
+      an error. *)
+  
+  Definition increment_chrono
+             (t : Trans) 
+             (chronos : list (Trans * option Chrono)) :
+    option (list (Trans * option Chrono)) :=
+    match get_chrono chronos t with
+    | Some opt_chrono =>
+      match opt_chrono with
+      (* Replaces old chrono by an incremented chrono 
+       * in chronos list.
+       *)
+      | Some (mk_chrono cnt min_t max_t) =>
+        Some (replace_chrono (mk_chrono cnt min_t max_t)
+                             (mk_chrono (cnt + 1) min_t max_t)
+                             chronos)
+      (* Otherwise, nothing to increment, t has no associated chrono. *)
+      | None => Some chronos
+      end
+    (* Case of error!!! *)
+    | None => None
+    end.
+
+  Functional Scheme increment_chrono_ind := Induction for increment_chrono Sort Prop. 
+  
+  (** Proves that increment_chrono preserves
+      the structure of the chronos passed as argument. *)
+  
+  Lemma increment_chrono_same_struct :
+    forall (t : Trans)
+           (chronos chronos': list (Trans * option Chrono)),
+      increment_chrono t chronos = Some chronos' ->
+      ChronosHaveSameStruct chronos chronos'.
+  Proof.
+    intros t chronos.
+    functional induction (increment_chrono t chronos)
+               using increment_chrono_ind;
+      intros.
+    - injection H; intros.
+      rewrite <- H0.
+      unfold ChronosHaveSameStruct; symmetry.
+      apply replace_chrono_same_struct.
+    - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
+    - inversion H.
+  Qed.
+
+  (** If all chronos in [chronos] are well-formed, then [increment_chrono] returns
+      a list [chronos'] of well-formed chronos. *)
+  
+  Lemma increment_chrono_well_formed_chronos :
+    forall (t : Trans)
+           (chronos chronos': list (Trans * option Chrono)),
+      (forall chrono : Chrono,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) -> 
+      increment_chrono t chronos = Some chronos' ->
+      (forall chrono' : Chrono,
+          In (Some chrono') (snd (split chronos')) -> IsWellFormedChrono chrono').
+  Proof.
+    intros t chronos.
+    functional induction (increment_chrono t chronos) using increment_chrono_ind; intros.
+    (* GENERAL CASE (all went well) *)
+    (* We need to prove that replace_chrono returns a list of well-formed chronos. *)
+    - generalize (get_chrono_in
+                    chronos t (Some {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}) e);
+        intro. 
+      apply H in H2.
+      injection H0; intro.
+      generalize (replace_chrono_well_formed_chronos
+                    {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}
+                    {| cnt := cnt0 + 1; min_t := min_t0; max_t := max_t0 |}
+                    chronos H2 H); intro.
+      rewrite H3 in H4.
+      apply (H4 chrono' H1).
+    - injection H0; intro; rewrite <- H2 in H1; apply (H chrono' H1).
+    - inversion H0.
+  Qed.
+  
+  (** For all transition [t] and [chronos], [increment_chrono t chronos] returns no error
+      if t is referenced in chronos. *)
+  
+  Lemma increment_chrono_no_error :
+    forall (t : Trans)
+           (chronos : list (Trans * option Chrono)),
+      In t (fst (split chronos)) ->
+      exists v : list (Trans * option Chrono),
+        increment_chrono t chronos = Some v.
+  Proof.
+    intros t chronos H.
+    functional induction (increment_chrono t chronos)
+               using increment_chrono_ind.    
+    (* Base case *)
+    - exists(replace_chrono
+               {| cnt := cnt0;
+                  min_t := min_t0;
+                  max_t := max_t0 |}
+               {| cnt := cnt0 + 1;
+                  min_t := min_t0;
+                  max_t := max_t0 |} 
+               chronos).
+      auto.
+    (* Case opt_chrono = None *)
+    - exists chronos; auto.    
+    (* Case get_chrono = None, not possible. *)
+    - apply get_chrono_no_error in H.
+      elim H; intros; rewrite H0 in e; inversion e.      
+  Qed.             
+  
+  (** Returns an option to a list of pairs (trans, option Chrono),
+      where all chronos associated to transition in the list 
+      [transs] have been incremented.
+    
+      Raises an error (None value) if an incrementation
+      went wrong for one of the transition in the list. *)
+  
+  Fixpoint increment_all_chronos
+           (chronos : list (Trans * option Chrono))
+           (transs : list Trans) :
+    option (list (Trans * option Chrono)) :=
+    match transs with
+    | t :: tail => match increment_chrono t chronos with
+                   (* If increment_chrono returns Some new_chronos, 
+                    * then passes new_chronos as argument of recursive call.
+                    *)
+                   | Some new_chronos => increment_all_chronos new_chronos tail
+                   (* Case of error!!! *)
+                   | None => None
+                   end
+    (* Recursion base case. *)
+    | [] => Some chronos
+    end.
+
+  Functional Scheme increment_all_chronos_ind := Induction for increment_all_chronos Sort Prop.
+    
+  (** Proves that increment_all_chronos preserves
+      the structure of the chronos passed as argument. *)
+  
+  Lemma increment_all_chronos_same_struct :
+    forall (chronos : list (Trans * option Chrono))
+           (transs : list Trans)
+           (incremented_chronos : list (Trans * option Chrono)),
+      increment_all_chronos chronos transs = Some incremented_chronos ->
+      ChronosHaveSameStruct chronos incremented_chronos.
+  Proof.
+    intros chronos transs.
+    functional induction (increment_all_chronos chronos transs)
+               using increment_all_chronos_ind; intros.
+    - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
+    - apply increment_chrono_same_struct in e0.
+      apply IHo in H.
+      unfold ChronosHaveSameStruct.
+      unfold ChronosHaveSameStruct in e0.
+      unfold ChronosHaveSameStruct in H.
+      transitivity (fst (split new_chronos)); [auto | auto].
+    - inversion H.
+  Qed.
+
+  (** If all chrono in [chronos] are well-formed, then [increment_all_chronos] 
+      returns a list [increment_chronos] of well-formed chronos. *)
+
+  Lemma increment_all_chronos_well_formed_chronos :
+    forall (chronos : list (Trans * option Chrono))
+      (transs : list Trans)
+      (incremented_chronos : list (Trans * option Chrono)),
+      (forall chrono : Chrono,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      increment_all_chronos chronos transs = Some incremented_chronos ->
+      (forall chrono' : Chrono,
+          In (Some chrono') (snd (split incremented_chronos)) -> IsWellFormedChrono chrono').
+  Proof.
+    intros chronos transs.
+    functional induction (increment_all_chronos chronos transs)
+               using increment_all_chronos_ind; intros.
+    (* BASE CASE *)
+    - injection H0; intros; rewrite <- H2 in H1; apply (H chrono' H1).
+    (* GENERAL CASE *)
+    (* We need to prove that increment_chrono returns a list of well-formed chronos. *)
+    - apply IHo with (incremented_chronos := incremented_chronos).
+      + intros.
+        generalize (increment_chrono_well_formed_chronos t chronos0 new_chronos H e0); intro.
+        apply (H3 chrono H2).
+      + assumption.
+      + assumption.
+    (* CASE increment_chrono returns None, 
+     * impossible regarding hypotheses 
+     *)
+    - inversion H0.
+  Qed.
+  
+  (** Proves that increment_all_chronos returns no error 
+      if all transitions of the list transs
+      are referenced in chronos. *)
+  
+  Lemma increment_all_chronos_no_error :
+    forall (chronos : list (Trans * option Chrono))
+           (transs : list Trans),
+      incl transs (fst (split chronos)) ->
+      exists v : list (Trans * option Chrono),
+        increment_all_chronos chronos transs = Some v.
+  Proof.
+    unfold incl.
+    intros chronos transs;
+      functional induction (increment_all_chronos chronos transs)
+                 using increment_all_chronos_ind;
+      intros.
+    (* Base case, transs = []. *)
+    - exists chronos0; auto.
+    (* Case increment_chrono returns new_chronos. *)
+    - apply IHo; intros.
+      apply (in_cons t) in H0.
+      apply H in H0.
+      apply increment_chrono_same_struct in e0.
+      unfold ChronosHaveSameStruct in e0.
+      rewrite <- e0.
+      auto.
+    (* Case increment_chrono returns None, 
+     * impossible regarding the hypothesis 
+     *)
+    - assert (H' := (in_eq t tail)).
+      apply H in H'.
+      apply (increment_chrono_no_error t) in H'.
+      elim H'; intros; rewrite e0 in H0; inversion H0.
+  Qed.
+  
+  (** --------------------------------------------------------- *)
+  (** --------------------------------------------------------- *)
+
+  (** Returns a new list of chronos, where the time
+      counter of transition t has been set to zero.
+   
+      Raises an error (None value) if get_chrono returns
+      an error. *)
+  
+  Definition reset_chrono
+             (t : Trans) 
+             (chronos : list (Trans * option Chrono)) :
+    option (list (Trans * option Chrono)) :=
+    match get_chrono chronos t with
+    | Some opt_chrono =>
+      match opt_chrono with
+      (* Replaces old chrono by a reset chrono in chronos list. *)
+      | Some (mk_chrono cnt min_t max_t) =>
+        Some (replace_chrono (mk_chrono cnt min_t max_t)
+                             (mk_chrono 0 min_t max_t)
+                             chronos)
+      (* Otherwise, nothing to reset, t has no associated chrono. *)
+      | None => Some chronos
+      end
+    (* Case of error!!! *)
+    | None => None
+    end.
+
+  Functional Scheme reset_chrono_ind := Induction for reset_chrono Sort Prop. 
+  
+  (** Proves that reset_chrono preserves
+      the structure of the chronos passed as argument. *)
+  
+  Lemma reset_chrono_same_struct :
+    forall (t : Trans)
+           (chronos chronos': list (Trans * option Chrono)),
+      reset_chrono t chronos = Some chronos' ->
+      ChronosHaveSameStruct chronos chronos'.
+  Proof.
+    intros t chronos.
+    functional induction (reset_chrono t chronos)
+               using reset_chrono_ind;
+      intros.
+    - injection H; intros.
+      rewrite <- H0.
+      unfold ChronosHaveSameStruct; symmetry.
+      apply replace_chrono_same_struct.
+    - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
+    - inversion H.
+  Qed.
+
+  (** If all chronos in [chronos] are well-formed, then [reset_chrono] returns
+      a list [chronos'] of well-formed chronos. *)
+  
+  Lemma reset_chrono_well_formed_chronos :
+    forall (t : Trans)
+      (chronos chronos': list (Trans * option Chrono)),
+      (forall chrono : Chrono,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) -> 
+      reset_chrono t chronos = Some chronos' ->
+      (forall chrono' : Chrono,
+          In (Some chrono') (snd (split chronos')) -> IsWellFormedChrono chrono').
+  Proof.
+    intros t chronos.
+    functional induction (reset_chrono t chronos) using reset_chrono_ind; intros.
+    (* GENERAL CASE (all went well) *)
+    (* We need to prove that replace_chrono returns a list of well-formed chronos. *)
+    - generalize (get_chrono_in
+                    chronos t (Some {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}) e); intro. 
+      apply H in H2.
+      injection H0; intro.
+      generalize (replace_chrono_well_formed_chronos
+                    {| cnt := cnt0; min_t := min_t0; max_t := max_t0 |}
+                    {| cnt := 0; min_t := min_t0; max_t := max_t0 |}
+                    chronos H2 H); intro.
+      rewrite H3 in H4.
+      apply (H4 chrono' H1).
+    - injection H0; intro; rewrite <- H2 in H1; apply (H chrono' H1).
+    - inversion H0.
+  Qed.
+      
+  (** For all transition t and chronos, reset_chrono t chronos returns no error
+      if t is referenced in chronos. *)
+  
+  Lemma reset_chrono_no_error :
+    forall (t : Trans)
+           (chronos : list (Trans * option Chrono)),
+      In t (fst (split chronos)) ->
+      exists v : list (Trans * option Chrono),
+        reset_chrono t chronos = Some v.
+  Proof.
+    intros t chronos H.
+    functional induction (reset_chrono t chronos)
+               using reset_chrono_ind.    
+    (* Base case *)
+    - exists(replace_chrono
+               {| cnt := cnt0;
+                  min_t := min_t0;
+                  max_t := max_t0 |}
+               {| cnt := 0;
+                  min_t := min_t0;
+                  max_t := max_t0 |}
+               chronos).
+      auto.
+    (* Case opt_chrono = None *)
+    - exists chronos; auto.    
+    (* Case get_chrono = None, not possible. *)
+    - apply get_chrono_no_error in H.
+      elim H; intros; rewrite H0 in e; inversion e.      
+  Qed.
+    
+  (** Returns an option to a list of pair (trans, option Chrono),
+      where all chronos associated to transition in the list 
+      transs have been set to zero.
+               
+      Raises an error (None value) if a reseting
+      went wrong for one of the transition of the list. *)
+  
+  Fixpoint reset_all_chronos
+           (chronos : list (Trans * option Chrono))
+           (transs : list Trans) :
+    option (list (Trans * option Chrono)) :=
+    match transs with
+    | t :: tail =>
+      match reset_chrono t chronos with
+      (* If reset_chrono returns Some new_chronos, 
+       * then passes new_chronos as argument of recursive call.
+       *)
+      | Some new_chronos =>
+        reset_all_chronos new_chronos tail
+      (* Case of error!!! *)
+      | None => None
+      end
+    (* Recursion base case. *)
+    | [] => Some chronos
+    end.
+
+  Functional Scheme reset_all_chronos_ind := Induction for reset_all_chronos Sort Prop.
+  
+  (** Proves that reset_all_chronos preserves
+      the structure of the chronos passed as argument. *)
+  
+  Lemma reset_all_chronos_same_struct :
+    forall (chronos : list (Trans * option Chrono))
+      (transs : list Trans)
+      (reset_chronos : list (Trans * option Chrono)),
+      reset_all_chronos chronos transs = Some reset_chronos ->
+      ChronosHaveSameStruct chronos reset_chronos.
+  Proof.
+    intros chronos transs.
+    functional induction (reset_all_chronos chronos transs)
+               using reset_all_chronos_ind; intros.
+    - injection H; intros; rewrite H0; unfold ChronosHaveSameStruct; auto.
+    - apply reset_chrono_same_struct in e0.
+      apply IHo in H.
+      unfold ChronosHaveSameStruct.
+      unfold ChronosHaveSameStruct in e0.
+      unfold ChronosHaveSameStruct in H.
+      transitivity (fst (split new_chronos)); [auto | auto].
+    - inversion H.
+  Qed.
+
+  (** If all chrono in [chronos] are well-formed, then [reset_all_chronos] 
+      returns a list [reset_chronos] of well-formed chronos. *)
+
+  Lemma reset_all_chronos_well_formed_chronos :
+    forall (chronos : list (Trans * option Chrono))
+      (transs : list Trans)
+      (reset_chronos : list (Trans * option Chrono)),
+      (forall chrono : Chrono,
+          In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
+      reset_all_chronos chronos transs = Some reset_chronos ->
+      (forall chrono' : Chrono,
+          In (Some chrono') (snd (split reset_chronos)) -> IsWellFormedChrono chrono').
+  Proof.
+    intros chronos transs.
+    functional induction (reset_all_chronos chronos transs)
+               using reset_all_chronos_ind; intros.
+    (* BASE CASE *)
+    - injection H0; intros; rewrite <- H2 in H1; apply (H chrono' H1).
+    (* GENERAL CASE *)
+    (* We need to prove that reset_chrono returns a list of well-formed chronos. *)
+    - apply IHo with (reset_chronos := reset_chronos).
+      + intros. generalize (reset_chrono_well_formed_chronos t chronos0 new_chronos H e0); intro.
+        apply (H3 chrono H2).
+      + assumption.
+      + assumption.
+    (* CASE reset_chrono returns None, 
+     * impossible regarding hypotheses 
+     *)
+    - inversion H0.
+  Qed.
+  
+  (** Proves that reset_all_chronos returns no error 
+      if all transitions of the list transs
+      are referenced in chronos. *)
+  
+  Lemma reset_all_chronos_no_error :
+    forall (chronos : list (Trans * option Chrono))
+           (transs : list Trans),
+      incl transs (fst (split chronos)) ->
+      exists v : list (Trans * option Chrono),
+        reset_all_chronos chronos transs = Some v.
+  Proof.
+    unfold incl.
+    intros chronos transs;
+      functional induction (reset_all_chronos chronos transs)
+                 using reset_all_chronos_ind;
+      intros.
+    (* Base case, transs = []. *)
+    - exists chronos0; auto.
+    (* Case reset_chrono returns new_chronos. *)
+    - apply IHo; intros.
+      apply (in_cons t) in H0.
+      apply H in H0.
+      apply reset_chrono_same_struct in e0.
+      unfold ChronosHaveSameStruct in e0.
+      rewrite <- e0.
+      auto.
+    (* Case reset_chrono returns None, 
+     * impossible regarding the hypothesis 
+     *)
+    - assert (H' := (in_eq t tail)).
+      apply H in H'.
+      apply (reset_chrono_no_error t) in H'.
+      elim H'; intros; rewrite e0 in H0; inversion H0.
+  Qed.
+
+End Chrono.
 
 (** * List sensitized section *)
 
@@ -10,10 +657,10 @@ Require Export Hilecop.Spn.SPNAnimator.
 Section ListSensitized.
   
   (* 
-   * Useless fonction for SPN but useful for 
+   * Useless fonction for Spn but useful for 
    *
    * -  _asynchronous_ Petri nets
-   * -  STPN (and SITPN by extension) 
+   * -  Stpn (and SITPN by extension) 
    *
    * Needed to list sensitized transitions, to increment 
    * time counters for these transitions at the beginning of the cycle.
@@ -858,16 +1505,16 @@ Section ListDisabled.
   
 End ListDisabled.
 
-(** * Firing algorithm for STPN *)
+(** * Firing algorithm for Stpn *)
 
 (*** ========================= ***)
-(*** FIRING ALGORITHM for STPN ***)
+(*** FIRING ALGORITHM for Stpn ***)
 (*** ========================= ***)
 
 Section FireStpn.
 
   (** Returns [true] if transition t is firable according
-      to "[STPN] standards", meaning that t is sensitized and
+      to "[Stpn] standards", meaning that t is sensitized and
       its time counter value is in the firable interval.
    
       Raises an error (None value) if spn_is_firable or get_chronos 
@@ -878,10 +1525,10 @@ Section FireStpn.
              (neighbours_t : Neighbours)
              (pre test inhib: Weight)
              (steadym decreasingm : list (Place * nat))
-             (chronos : list (Trans * option chrono_type)) :
+             (chronos : list (Trans * option Chrono)) :
     option bool :=
     match spn_is_firable t neighbours_t pre test inhib steadym decreasingm with
-    (* If t is firable according to "SPN standards", then checks its chrono. *)
+    (* If t is firable according to "Spn standards", then checks its chrono. *)
     | Some true =>
       match get_chrono chronos t with
       (* Case t is referenced in chronos. *)
@@ -889,7 +1536,7 @@ Section FireStpn.
       (* Error case!!! *)
       | None => None
       end
-    (* t is not firable according to SPN. *)
+    (* t is not firable according to Spn. *)
     | Some false => Some false
     (* Error case!!! *)
     | None => None
@@ -904,7 +1551,7 @@ Section FireStpn.
             (neighbours_t : Neighbours)
             (pre test inhib: Weight)
             (steadym decreasingm : list (Place * nat))
-            (chronos : list (Trans * option chrono_type)) :
+            (chronos : list (Trans * option Chrono)) :
     option bool -> Prop :=
   | StpnIsFirable_spn_err :
       SpnIsFirable t neighbours_t pre test inhib steadym decreasingm None ->
@@ -917,13 +1564,13 @@ Section FireStpn.
       GetChrono chronos t None ->
       StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos None
   | StpnIsFirable_cons_true :
-      forall (opt_chrono : option chrono_type),
+      forall (opt_chrono : option Chrono),
         SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some true) ->
         GetChrono chronos t (Some opt_chrono) ->
         CheckChrono opt_chrono ->
         StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos (Some true)
   | StpnIsFirable_cons_false :
-      forall (opt_chrono : option chrono_type),
+      forall (opt_chrono : option Chrono),
         SpnIsFirable t neighbours_t pre test inhib steadym decreasingm (Some true) ->
         GetChrono chronos t (Some opt_chrono) ->
         ~CheckChrono opt_chrono ->
@@ -936,7 +1583,7 @@ Section FireStpn.
       (neighbours_t : Neighbours)
       (pre test inhib: Weight)
       (steadym decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (optionb : option bool),
       stpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos = optionb ->
       StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos optionb.
@@ -977,7 +1624,7 @@ Section FireStpn.
       (neighbours_t : Neighbours)
       (pre test inhib: Weight)
       (steadym decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (optionb : option bool),
       StpnIsFirable t neighbours_t pre test inhib steadym decreasingm chronos optionb ->
       stpn_is_firable t neighbours_t pre test inhib steadym decreasingm chronos = optionb.
@@ -1018,7 +1665,7 @@ Section FireStpn.
            (neighbours_t : Neighbours)
            (pre test inhib : Weight)
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type)),
+           (chronos : list (Trans * option Chrono)),
       In t (fst (split chronos)) ->
       incl (pre_pl neighbours_t) (fst (split decreasingm)) ->
       incl (test_pl neighbours_t) (fst (split steadym)) ->
@@ -1060,7 +1707,7 @@ Section FireStpn.
            (pre test inhib : Weight)  
            (steadym : list (Place * nat))
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (fired_pre_group pgroup : list Trans) {struct pgroup} :
     option ((list Trans) * list (Place * nat)) :=
     match pgroup with
@@ -1101,7 +1748,7 @@ Section FireStpn.
             (pre test inhib : Weight) 
             (steadym : list (Place * nat)) 
             (decreasingm : list (Place * nat))
-            (chronos : list (Trans * option chrono_type))
+            (chronos : list (Trans * option Chrono))
             (fired_pre_group : list Trans) :
     list Trans -> option (list Trans * list (Place * nat)) -> Prop :=
   | StpnFirePreAux_nil :
@@ -1161,7 +1808,7 @@ Section FireStpn.
       (pre test inhib : Weight) 
       (steadym : list (Place * nat)) 
       (decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (fired_pre_group : list Trans)
       (pgroup : list Trans)
       (option_final_couple : option (list Trans * list (Place * nat))),
@@ -1206,7 +1853,7 @@ Section FireStpn.
            (pre test inhib : Weight) 
            (steadym : list (Place * nat)) 
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (fired_pre_group : list Trans)
            (pgroup : list Trans)
            (option_final_couple : option (list Trans * list (Place * nat))),
@@ -1250,7 +1897,7 @@ Section FireStpn.
       (pre test inhib : Weight) 
       (steadym : list (Place * nat)) 
       (decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (fired_pre_group : list Trans)
       (pgroup : list Trans)
       (pre_fired_transitions : list Trans)
@@ -1289,7 +1936,7 @@ Section FireStpn.
            (pre test inhib : Weight) 
            (steadym : list (Place * nat)) 
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (fired_pre_group : list Trans)
            (pgroup : list Trans)
            (final_fired_pre_group : list Trans)
@@ -1362,7 +2009,7 @@ Section FireStpn.
            (pre test inhib : Weight) 
            (steadym : list (Place * nat)) 
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (fired_pre_group : list Trans)
            (pgroup : list Trans)
            (final_fired_pre_group : list Trans)
@@ -1437,7 +2084,7 @@ Section FireStpn.
            (pre test inhib : Weight) 
            (steadym : list (Place * nat)) 
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (fired_pre_group : list Trans)
            (pgroup : list Trans),
       incl pgroup (fst (split chronos)) ->
@@ -1522,7 +2169,7 @@ Section FireStpn.
              (pre test inhib : Weight) 
              (steadym : list (Place * nat)) 
              (decreasingm : list (Place * nat))
-             (chronos : list (Trans * option chrono_type))
+             (chronos : list (Trans * option Chrono))
              (pgroup : list Trans) :
     option (list Trans * list (Place * nat)) :=
     stpn_fire_pre_aux lneighbours pre test inhib steadym decreasingm chronos [] pgroup.
@@ -1535,7 +2182,7 @@ Section FireStpn.
             (pre test inhib : Weight) 
             (steadym : list (Place * nat)) 
             (decreasingm : list (Place * nat))
-            (chronos : list (Trans * option chrono_type))
+            (chronos : list (Trans * option Chrono))
             (pgroup : list Trans) : option (list Trans * list (Place * nat)) -> Prop :=
   | StpnFirePre_cons :
       forall (option_final_couple : option (list Trans * list (Place * nat))),
@@ -1550,7 +2197,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight) 
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pgroup : list Trans)
            (option_final_couple : option (list Trans * list (Place * nat))),
       stpn_fire_pre lneighbours pre test inhib steadym decreasingm chronos pgroup = option_final_couple ->
@@ -1565,7 +2212,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight) 
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pgroup : list Trans)
            (option_final_couple : option (list Trans * list (Place * nat))),
       StpnFirePre lneighbours pre test inhib steadym decreasingm chronos pgroup option_final_couple ->
@@ -1587,7 +2234,7 @@ Section FireStpn.
       (pre test inhib : Weight) 
       (steadym : list (Place * nat)) 
       (decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (pgroup : list Trans)
       (pre_fired_transitions : list Trans)
       (decreasedm : list (Place * nat)),
@@ -1609,7 +2256,7 @@ Section FireStpn.
            (pre test inhib : Weight) 
            (steadym : list (Place * nat)) 
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pgroup : list Trans)
            (final_fired_pre_group : list Trans)
            (finalm : list (Place * nat)),
@@ -1649,7 +2296,7 @@ Section FireStpn.
       (pre test inhib : Weight) 
       (steadym : list (Place * nat)) 
       (decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (pgroup : list Trans)
       (final_fired_pre_group : list Trans)
       (finalm : list (Place * nat)),
@@ -1690,7 +2337,7 @@ Section FireStpn.
            (pre test inhib : Weight) 
            (steadym : list (Place * nat)) 
            (decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pgroup : list Trans),
       incl pgroup (fst (split chronos)) ->
       incl pgroup (fst (split lneighbours)) ->
@@ -1720,7 +2367,7 @@ Section FireStpn.
            (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pre_fired_transitions : list Trans)
            (priority_groups : list (list Trans)) :
     option (list Trans * list (Place * nat)) :=
@@ -1748,7 +2395,7 @@ Section FireStpn.
             (lneighbours : list (Trans * Neighbours))
             (pre test inhib : Weight)
             (steadym decreasingm : list (Place * nat))
-            (chronos : list (Trans * option chrono_type))
+            (chronos : list (Trans * option Chrono))
             (pre_fired_transitions : list Trans) :
     list (list Trans) -> option (list Trans * list (Place * nat)) -> Prop :=
   | StpnMapFirePreAux_nil :
@@ -1780,7 +2427,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (priority_groups : list (list Trans))
            (pre_fired_transitions : list Trans)
            (option_final_couple : option (list Trans * list (Place * nat))),
@@ -1814,7 +2461,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))           
+           (chronos : list (Trans * option Chrono))           
            (priority_groups : list (list Trans))
            (pre_fired_transitions : list Trans)
            (option_final_couple : option (list Trans * list (Place * nat))),
@@ -1840,7 +2487,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pre_fired_transitions : list Trans)
            (priority_groups : list (list Trans))
            (final_pre_fired : list Trans)
@@ -1880,7 +2527,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (steadym decreasingm : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (pre_fired_transitions : list Trans)
            (priority_groups : list (list Trans))
            (final_pre_fired : list Trans)
@@ -1947,7 +2594,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib : Weight)
       (steadym decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (pre_fired_transitions : list Trans)
       (priority_groups : list (list Trans))
       (final_pre_fired : list Trans)
@@ -2017,7 +2664,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib : Weight)
       (steadym decreasingm : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (priority_groups : list (list Trans))
       (pre_fired_transitions : list Trans),
       PriorityGroupsAreRefInChronos priority_groups chronos ->
@@ -2076,7 +2723,7 @@ Section FireStpn.
              (lneighbours : list (Trans * Neighbours))
              (pre test inhib : Weight)
              (m : list (Place * nat))
-             (chronos : list (Trans * option chrono_type))
+             (chronos : list (Trans * option Chrono))
              (priority_groups : list (list Trans)) :
     option (list Trans * list (Place * nat)) :=
     stpn_map_fire_pre_aux lneighbours pre test inhib m m chronos [] priority_groups.
@@ -2089,7 +2736,7 @@ Section FireStpn.
             (lneighbours : list (Trans * Neighbours))
             (pre test inhib : Weight)
             (m : list (Place * nat))
-            (chronos : list (Trans * option chrono_type))
+            (chronos : list (Trans * option Chrono))
             (priority_groups : list (list Trans)) :
     option (list Trans * list (Place * nat)) -> Prop :=
   | StpnMapFirePre_cons :
@@ -2104,7 +2751,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (priority_groups : list (list Trans))
            (option_final_couple : option (list Trans * list (Place * nat))),
       stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups = option_final_couple ->
@@ -2122,7 +2769,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib : Weight)
       (m : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (priority_groups : list (list Trans))
       (option_final_couple : option (list Trans * list (Place * nat))),
       StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
@@ -2142,7 +2789,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (priority_groups : list (list Trans))
            (final_pre_fired : list Trans)
            (intermediatem : list (Place * nat)),
@@ -2174,7 +2821,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib : Weight)
       (m : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (priority_groups : list (list Trans))
       (final_pre_fired : list Trans)
       (intermediatem : list (Place * nat)),
@@ -2209,7 +2856,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (priority_groups : list (list Trans)),
       PriorityGroupsAreRefInChronos priority_groups chronos ->
       PriorityGroupsAreRefInLneighbours priority_groups lneighbours ->
@@ -2233,7 +2880,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib : Weight)
       (m : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (priority_groups : list (list Trans))
       (final_pre_fired : list Trans)
       (intermediatem : list (Place * nat)),
@@ -2263,10 +2910,10 @@ Section FireStpn.
              (lneighbours : list (Trans * Neighbours))
              (pre test inhib post : Weight)
              (m : list (Place * nat))
-             (chronos : list (Trans * option chrono_type))
+             (chronos : list (Trans * option Chrono))
              (transs : list Trans)
              (priority_groups : list (list Trans)) :
-    option ((list Trans) * list (Place * nat) * (list (Trans * option chrono_type))) :=
+    option ((list Trans) * list (Place * nat) * (list (Trans * option Chrono))) :=
     (* Pre-fires the transitions in priority_groups. *)
     match stpn_map_fire_pre lneighbours pre test inhib m chronos priority_groups with
     | Some (pre_fired_transitions, intermediatem) =>
@@ -2305,10 +2952,10 @@ Section FireStpn.
             (lneighbours : list (Trans * Neighbours))
             (pre test inhib post : Weight)
             (m : list (Place * nat))
-            (chronos : list (Trans * option chrono_type))
+            (chronos : list (Trans * option Chrono))
             (transs : list Trans)
             (priority_groups : list (list Trans)) :
-    option ((list Trans) * list (Place * nat) * (list (Trans * option chrono_type))) ->
+    option ((list Trans) * list (Place * nat) * (list (Trans * option Chrono))) ->
     Prop :=
   | StpnFire_fire_pre_err :
       StpnMapFirePre lneighbours pre test inhib m chronos priority_groups None ->
@@ -2323,7 +2970,7 @@ Section FireStpn.
   | StpnFire_list_disabled_err :
       forall (pre_fired_transitions : list Trans)
              (intermediatem : list (Place * nat))
-             (updated_chronos : list (Trans * option chrono_type)),
+             (updated_chronos : list (Trans * option Chrono)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
@@ -2332,7 +2979,7 @@ Section FireStpn.
   | StpnFire_reset_chronos_err2 :
       forall (pre_fired_transitions : list Trans)
              (intermediatem : list (Place * nat))
-             (updated_chronos : list (Trans * option chrono_type))
+             (updated_chronos : list (Trans * option Chrono))
              (disabled_transs : list Trans),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
@@ -2343,9 +2990,9 @@ Section FireStpn.
   | StpnFire_fire_post_err :
       forall (pre_fired_transitions : list Trans)
              (intermediatem : list (Place * nat))
-             (updated_chronos : list (Trans * option chrono_type))
+             (updated_chronos : list (Trans * option Chrono))
              (disabled_transs : list Trans)
-             (final_chronos : list (Trans * option chrono_type)),
+             (final_chronos : list (Trans * option Chrono)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
         ResetAllChronos chronos pre_fired_transitions (Some updated_chronos) ->
@@ -2356,9 +3003,9 @@ Section FireStpn.
   | StpnFire_cons :
       forall (pre_fired_transitions : list Trans)
              (intermediatem : list (Place * nat))
-             (updated_chronos : list (Trans * option chrono_type))
+             (updated_chronos : list (Trans * option Chrono))
              (disabled_transs : list Trans)
-             (final_chronos : list (Trans * option chrono_type))
+             (final_chronos : list (Trans * option Chrono))
              (finalm : list (Place * nat)),
         StpnMapFirePre lneighbours pre test inhib m chronos priority_groups
                        (Some (pre_fired_transitions, intermediatem)) ->
@@ -2375,12 +3022,12 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib post : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (transs : list Trans)
            (priority_groups : list (list Trans))
            (opt_final_tuplet : option ((list Trans) *
                                        list (Place * nat) *
-                                       (list (Trans * option chrono_type)))),
+                                       (list (Trans * option Chrono)))),
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       opt_final_tuplet ->
       StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet.
@@ -2445,12 +3092,12 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib post : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (transs : list Trans)
            (priority_groups : list (list Trans))
            (opt_final_tuplet : option ((list Trans) *
                                        list (Place * nat) *
-                                       (list (Trans * option chrono_type)))),
+                                       (list (Trans * option Chrono)))),
       StpnFire lneighbours pre test inhib post m chronos transs priority_groups opt_final_tuplet ->
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = opt_final_tuplet.
   Proof.
@@ -2497,12 +3144,12 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib post : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (transs : list Trans)
            (priority_groups : list (list Trans))
            (fired_transitions : list (Trans))
            (newm : list (Place * nat))
-           (new_chronos : list (Trans * option chrono_type)),
+           (new_chronos : list (Trans * option Chrono)),
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       Some (fired_transitions, newm, new_chronos) ->
       MarkingHaveSameStruct m newm.
@@ -2535,12 +3182,12 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
            (pre test inhib post : Weight)
            (m : list (Place * nat))
-           (chronos : list (Trans * option chrono_type))
+           (chronos : list (Trans * option Chrono))
            (transs : list Trans)
            (priority_groups : list (list Trans))
            (fired_transitions : list (Trans))
            (newm : list (Place * nat))
-           (new_chronos : list (Trans * option chrono_type)),
+           (new_chronos : list (Trans * option Chrono)),
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       Some (fired_transitions, newm, new_chronos) ->
       ChronosHaveSameStruct chronos new_chronos.
@@ -2571,17 +3218,17 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib post : Weight)
       (m : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (transs : list Trans)
       (priority_groups : list (list Trans))
       (fired_transitions : list (Trans))
       (newm : list (Place * nat))
-      (new_chronos : list (Trans * option chrono_type)),
-      (forall chrono : chrono_type,
+      (new_chronos : list (Trans * option Chrono)),
+      (forall chrono : Chrono,
           In (Some chrono) (snd (split chronos)) -> IsWellFormedChrono chrono) ->
       stpn_fire lneighbours pre test inhib post m chronos transs priority_groups =
       Some (fired_transitions, newm, new_chronos) ->
-      (forall chrono' : chrono_type,
+      (forall chrono' : Chrono,
           In (Some chrono') (snd (split new_chronos)) -> IsWellFormedChrono chrono').
   Proof.
     intros lneighbours pre test inhib post m chronos transs priority_groups.
@@ -2616,7 +3263,7 @@ Section FireStpn.
     forall (lneighbours : list (Trans * Neighbours))
       (pre test inhib post : Weight)
       (m : list (Place * nat))
-      (chronos : list (Trans * option chrono_type))
+      (chronos : list (Trans * option Chrono))
       (transs : list Trans)
       (priority_groups : list (list Trans)),
       incl transs (fst (split chronos)) ->
@@ -2631,7 +3278,7 @@ Section FireStpn.
       (forall (t : Trans) (neighbours : Neighbours),
           In (t, neighbours) lneighbours ->
           incl neighbours.(post_pl) (fst (split m))) ->
-      exists v : (list Trans * list (Place * nat) * list (Trans * option chrono_type)),
+      exists v : (list Trans * list (Place * nat) * list (Trans * option Chrono)),
         stpn_fire lneighbours pre test inhib post m chronos transs priority_groups = Some v.
   Proof.
     unfold incl.
@@ -2723,10 +3370,10 @@ Section FireStpn.
   
 End FireStpn.
 
-(** * STPN cycle evolution *)
+(** * Stpn cycle evolution *)
 
 (*! ==================== !*)
-(*! STPN CYCLE EVOLUTION !*)
+(*! Stpn CYCLE EVOLUTION !*)
 (*! ==================== !*)
 
 Section AnimateStpn.
@@ -2736,11 +3383,11 @@ Section AnimateStpn.
       
       Also returns the list of fired transitions. *)
   
-  Definition stpn_cycle (stpn : STPN) : option ((list Trans) * STPN)  :=
+  Definition stpn_cycle (stpn : Stpn) : option ((list Trans) * Stpn)  :=
     match stpn with
-    | mk_STPN
+    | mk_Stpn
         chronos
-        (mk_SPN places transs pre post test inhib marking priority_groups lneighbours) =>
+        (mk_Spn places transs pre post test inhib marking priority_groups lneighbours) =>
       (* Lists all sensitized transitions. *)
       match list_sensitized lneighbours pre test inhib marking transs with
       | Some sensitized_transs =>           
@@ -2750,9 +3397,9 @@ Section AnimateStpn.
           match stpn_fire lneighbours pre test inhib post marking updated_chronos transs priority_groups with
           | Some (fired_transitions, nextm, next_chronos) =>
             Some (fired_transitions,
-                  (mk_STPN
+                  (mk_Stpn
                      next_chronos
-                     (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours)))
+                     (mk_Spn places transs pre post test inhib nextm priority_groups lneighbours)))
           (* Error, stpn_fire failed!!! *)
           | None => None
           end
@@ -2768,22 +3415,22 @@ Section AnimateStpn.
   
   (** Formal specification : stpn_cycle *)
   
-  Inductive StpnCycle (stpn : STPN) : option ((list Trans) * STPN) -> Prop :=
+  Inductive StpnCycle (stpn : Stpn) : option ((list Trans) * Stpn) -> Prop :=
   | StpnCycle_list_sensitized_err :
-      forall (chronos : list (Trans * option chrono_type))
+      forall (chronos : list (Trans * option Chrono))
              (places : list Place)
              (transs : list Trans)
              (pre post test inhib : Weight)
              (marking : list (Place * nat))
              (priority_groups : list (list Trans))
              (lneighbours : list (Trans * Neighbours)),
-        stpn = (mk_STPN
+        stpn = (mk_Stpn
                   chronos
-                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+                  (mk_Spn places transs pre post test inhib marking priority_groups lneighbours)) ->
         ListSensitized lneighbours pre test inhib marking transs None ->
         StpnCycle stpn None
   | StpnCycle_increment_chronos_err :
-      forall (chronos : list (Trans * option chrono_type))
+      forall (chronos : list (Trans * option Chrono))
              (places : list Place)
              (transs : list Trans)
              (pre post test inhib : Weight)
@@ -2791,14 +3438,14 @@ Section AnimateStpn.
              (priority_groups : list (list Trans))
              (lneighbours : list (Trans * Neighbours))
              (sensitized_transs : list Trans),
-        stpn = (mk_STPN
+        stpn = (mk_Stpn
                   chronos
-                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+                  (mk_Spn places transs pre post test inhib marking priority_groups lneighbours)) ->
         ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
         IncrementAllChronos chronos sensitized_transs None ->
         StpnCycle stpn None
   | StpnCycle_fire_err :
-      forall (chronos : list (Trans * option chrono_type))
+      forall (chronos : list (Trans * option Chrono))
              (places : list Place)
              (transs : list Trans)
              (pre post test inhib : Weight)
@@ -2806,16 +3453,16 @@ Section AnimateStpn.
              (priority_groups : list (list Trans))
              (lneighbours : list (Trans * Neighbours))
              (sensitized_transs : list Trans)
-             (updated_chronos : list (Trans * option chrono_type)),
-        stpn = (mk_STPN
+             (updated_chronos : list (Trans * option Chrono)),
+        stpn = (mk_Stpn
                   chronos
-                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+                  (mk_Spn places transs pre post test inhib marking priority_groups lneighbours)) ->
         ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
         IncrementAllChronos chronos sensitized_transs (Some updated_chronos) ->
         StpnFire lneighbours pre test inhib post marking updated_chronos transs priority_groups None -> 
         StpnCycle stpn None
   | StpnCycle_cons :
-      forall (chronos : list (Trans * option chrono_type))
+      forall (chronos : list (Trans * option Chrono))
         (places : list Place)
         (transs : list Trans)
         (pre post test inhib : Weight)
@@ -2823,27 +3470,27 @@ Section AnimateStpn.
         (priority_groups : list (list Trans))
         (lneighbours : list (Trans * Neighbours))
         (sensitized_transs : list Trans)
-        (updated_chronos : list (Trans * option chrono_type))
+        (updated_chronos : list (Trans * option Chrono))
         (fired_transitions : list Trans)
         (nextm : list (Place * nat))
-        (next_chronos : list (Trans * option chrono_type)),
-        stpn = (mk_STPN
+        (next_chronos : list (Trans * option Chrono)),
+        stpn = (mk_Stpn
                   chronos
-                  (mk_SPN places transs pre post test inhib marking priority_groups lneighbours)) ->
+                  (mk_Spn places transs pre post test inhib marking priority_groups lneighbours)) ->
         ListSensitized lneighbours pre test inhib marking transs (Some sensitized_transs) ->
         IncrementAllChronos chronos sensitized_transs (Some updated_chronos) ->
         StpnFire lneighbours pre test inhib post marking updated_chronos transs priority_groups
                  (Some (fired_transitions, nextm, next_chronos)) -> 
         StpnCycle stpn (Some (fired_transitions,
-                              (mk_STPN
+                              (mk_Stpn
                                  next_chronos
-                                 (mk_SPN places transs pre post test inhib nextm priority_groups lneighbours)))).
+                                 (mk_Spn places transs pre post test inhib nextm priority_groups lneighbours)))).
 
   (** Correctness proof : stpn_cycle *)
   
   Theorem stpn_cycle_correct :
-    forall (stpn : STPN)
-      (opt_final_couple : option ((list Trans) * STPN)),
+    forall (stpn : Stpn)
+      (opt_final_couple : option ((list Trans) * Stpn)),
       stpn_cycle stpn = opt_final_couple ->
       StpnCycle stpn opt_final_couple.
   Proof.
@@ -2908,8 +3555,8 @@ Section AnimateStpn.
   (** Completeness proof : stpn_cycle *)
   
   Theorem stpn_cycle_compl :
-    forall (stpn : STPN)
-           (opt_final_couple : option ((list Trans) * STPN)),
+    forall (stpn : Stpn)
+           (opt_final_couple : option ((list Trans) * Stpn)),
       StpnCycle stpn opt_final_couple ->
       stpn_cycle stpn = opt_final_couple.
   Proof.
@@ -2929,14 +3576,14 @@ Section AnimateStpn.
       apply stpn_fire_compl in H3; rewrite H3; auto.
   Qed.
 
-  (** For all [STPN] with properties [NoUnknownInPriorityGroups]
+  (** For all [Stpn] with properties [NoUnknownInPriorityGroups]
       and [NoUnknownTransInChronos] then transitions
-      in [STPN.(priority_groups)] are referenced in [STPN.(chronos)].
+      in [Stpn.(priority_groups)] are referenced in [Stpn.(chronos)].
           
       Useful to apply [stpn_fire_no_error] while proving [stpn_cycle_no_error]. *)
   
   Lemma priority_groups_in_chronos :
-    forall (stpn : STPN),
+    forall (stpn : Stpn),
       NoUnknownInPriorityGroups stpn ->
       NoUnknownTransInChronos stpn ->
       PriorityGroupsAreRefInChronos stpn.(priority_groups) stpn.(chronos).
@@ -2951,16 +3598,16 @@ Section AnimateStpn.
     auto.
   Qed.
   
-  (** For all [STPN] verifying the predicate [IsWellStructuredStpn],
+  (** For all [Stpn] verifying the predicate [IsWellDefinedStpn],
       [stpn_cycle] returns no error (always returns Some value). *)
   
   Theorem stpn_cycle_no_error :
-    forall (stpn : STPN),
-      IsWellStructuredStpn stpn ->
-      exists v : ((list Trans) * STPN),
+    forall (stpn : Stpn),
+      IsWellDefinedStpn stpn ->
+      exists v : ((list Trans) * Stpn),
         stpn_cycle stpn = Some v.
   Proof.
-    unfold IsWellStructuredStpn; intro.
+    unfold IsWellDefinedStpn; intro.
     functional induction (stpn_cycle stpn) using stpn_cycle_ind;
       set (stpn := {| chronos := chronos;
                       spn := {| places := places;
@@ -2997,11 +3644,11 @@ Section AnimateStpn.
     - unfold NoUnknownTransInChronos in H0.
       unfold NoUnknownTransInLNeighbours in H8.
       (* Deduces the hypotheses needed to apply stpn_fire_no_error 
-       * from the properties embedded in IsWellStructuredStpn.
+       * from the properties embedded in IsWellDefinedStpn.
        *)
-      assert (H' : incl (SPN.transs stpn) (fst (split (STPN.chronos stpn))))
+      assert (H' : incl (Spn.transs stpn) (fst (split (Stpn.chronos stpn))))
         by (rewrite H2; unfold incl; intros ; auto).
-      assert (H'' : incl (SPN.transs stpn) (fst (split (SPN.lneighbours stpn))))
+      assert (H'' : incl (Spn.transs stpn) (fst (split (Spn.lneighbours stpn))))
         by (rewrite H9; unfold incl; intros ; auto).
       generalize (priority_groups_in_chronos stpn H4 H2); intro.
       generalize (priority_groups_in_lneighbours stpn H4 H9); intro.
@@ -3030,7 +3677,7 @@ Section AnimateStpn.
     - unfold NoUnknownTransInChronos in H0.
       generalize (list_sensitized_incl_transs
                     lneighbours pre test inhib marking transs sensitized_transs e1); intro.
-      assert (H' : incl (SPN.transs stpn) (fst (split (STPN.chronos stpn))))
+      assert (H' : incl (Spn.transs stpn) (fst (split (Stpn.chronos stpn))))
         by (rewrite H2; unfold incl; intros ; auto).
       generalize (incl_tran H H'); intro.
       generalize (increment_all_chronos_no_error
@@ -3041,7 +3688,7 @@ Section AnimateStpn.
      * regarding the hypotheses. 
      *)
     - unfold NoUnknownTransInLNeighbours in H9.
-      assert (H'' : incl (SPN.transs stpn) (fst (split (SPN.lneighbours stpn))))
+      assert (H'' : incl (Spn.transs stpn) (fst (split (Spn.lneighbours stpn))))
         by (rewrite H9; unfold incl; intros ; auto).
       generalize (pre_places_in_marking stpn H12 H8); intro.
       unfold incl in H.
@@ -3051,23 +3698,23 @@ Section AnimateStpn.
       elim H11; intros; rewrite H13 in e1; inversion e1.
   Qed.
 
-  (** For all [stpn] verifying the property [IsWellStructuredStpn],
-      [stpn_cycle] returns a new STPN [next_stpn] verifying the relation
-      [IsWellStructuredStpn]. *)
+  (** For all [stpn] verifying the property [IsWellDefinedStpn],
+      [stpn_cycle] returns a new Stpn [next_stpn] verifying the relation
+      [IsWellDefinedStpn]. *)
   
   Theorem stpn_cycle_well_structured :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
       (fired_transitions : list Trans)
-      (next_stpn : STPN),
-      IsWellStructuredStpn stpn ->
+      (next_stpn : Stpn),
+      IsWellDefinedStpn stpn ->
       stpn_cycle stpn = Some (fired_transitions, next_stpn) ->
-      IsWellStructuredStpn next_stpn.
+      IsWellDefinedStpn next_stpn.
   Proof.
     intro.
     functional induction (stpn_cycle stpn) using stpn_cycle_ind; intros.
     (* GENERAL CASE. *)
-    - unfold IsWellStructuredStpn; unfold IsWellStructuredSpn.
-      unfold IsWellStructuredStpn in H; unfold IsWellStructuredSpn in H.
+    - unfold IsWellDefinedStpn; unfold IsWellStructuredSpn.
+      unfold IsWellDefinedStpn in H; unfold IsWellStructuredSpn in H.
       injection H0; clear H0; intros.
       unfold NoUnmarkedPlace in H.
       unfold NoUnknownTransInChronos in H.
@@ -3133,14 +3780,14 @@ Section AnimateStpn.
   (*! ====== ANIMATING DURING N CYCLES ======== !*)
   (*! ========================================= !*)
   
-  (** Returns the list of (transitions_fired(i), STPN(i)) for each cycle i, 
+  (** Returns the list of (transitions_fired(i), Stpn(i)) for each cycle i, 
       from 0 to n, representing the evolution of the Petri net [stpn]. *)
   
   Fixpoint stpn_animate_aux 
-           (stpn : STPN)
+           (stpn : Stpn)
            (n : nat)
-           (stpn_evolution : list (list Trans * STPN)) :
-    option (list (list Trans * STPN)) :=
+           (stpn_evolution : list (list Trans * Stpn)) :
+    option (list (list Trans * Stpn)) :=
     match n with
     (* Base case, returns the list storing the evolution. *)
     | O => Some stpn_evolution
@@ -3158,20 +3805,20 @@ Section AnimateStpn.
   
   (** Formal specification : stpn_animate_aux *)
 
-  Inductive StpnAnimateAux (stpn : STPN) :
+  Inductive StpnAnimateAux (stpn : Stpn) :
     nat ->
-    list (list Trans * STPN) ->
-    option (list (list Trans * STPN) )->
+    list (list Trans * Stpn) ->
+    option (list (list Trans * Stpn) )->
     Prop :=
   | StpnAnimateAux_0 :
-      forall (stpn_evolution : list (list Trans * STPN)),
+      forall (stpn_evolution : list (list Trans * Stpn)),
         StpnAnimateAux stpn 0 stpn_evolution (Some stpn_evolution) 
   | StpnAnimateAux_cons :
       forall (n : nat)
              (fired_trans_at_n : list Trans)
-             (stpn_at_n : STPN)
-             (stpn_evolution : list (list Trans * STPN))
-             (opt_evolution : option (list (list Trans * STPN))),
+             (stpn_at_n : Stpn)
+             (stpn_evolution : list (list Trans * Stpn))
+             (opt_evolution : option (list (list Trans * Stpn))),
         StpnCycle stpn (Some (fired_trans_at_n, stpn_at_n)) ->
         StpnAnimateAux stpn_at_n
                        n
@@ -3183,17 +3830,17 @@ Section AnimateStpn.
                        opt_evolution
   | StpnAnimateAux_err :
       forall (n : nat)
-             (stpn_evolution : list (list Trans * STPN)),
+             (stpn_evolution : list (list Trans * Stpn)),
         StpnCycle stpn None ->
         StpnAnimateAux stpn (S n) stpn_evolution None.
   
   (** Correctness proof : stpn_animate_aux *)
 
   Theorem stpn_animate_aux_correct :
-    forall (stpn :STPN)
+    forall (stpn :Stpn)
            (n : nat)
-           (stpn_evolution : list (list Trans * STPN))
-           (opt_evolution : option (list (list Trans * STPN))),
+           (stpn_evolution : list (list Trans * Stpn))
+           (opt_evolution : option (list (list Trans * Stpn))),
       stpn_animate_aux stpn n stpn_evolution = opt_evolution ->
       StpnAnimateAux stpn n stpn_evolution opt_evolution.
   Proof.                                                                                
@@ -3215,10 +3862,10 @@ Section AnimateStpn.
   (** Completeness proof : stpn_animate_aux *)
 
   Theorem stpn_animate_aux_compl :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat)
-           (stpn_evolution : list (list Trans * STPN))
-           (opt_evolution : option (list (list Trans * STPN))),
+           (stpn_evolution : list (list Trans * Stpn))
+           (opt_evolution : option (list (list Trans * Stpn))),
       StpnAnimateAux stpn n stpn_evolution opt_evolution ->
       stpn_animate_aux stpn n stpn_evolution = opt_evolution.
   Proof.
@@ -3234,14 +3881,14 @@ Section AnimateStpn.
       rewrite H0; auto.
   Qed.
 
-  (** For all [STPN] verifying the property [IsWellStructuredStpn], and for all number [n] 
+  (** For all [Stpn] verifying the property [IsWellDefinedStpn], and for all number [n] 
       of evolution cycles, [stpn_animate_aux] returns no error. *)
   Theorem stpn_animate_aux_no_error :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat)
-           (stpn_evolution : list (list Trans * STPN)),
-      IsWellStructuredStpn stpn ->
-      exists (v : list (list Trans * STPN)),
+           (stpn_evolution : list (list Trans * Stpn)),
+      IsWellDefinedStpn stpn ->
+      exists (v : list (list Trans * Stpn)),
         stpn_animate_aux stpn n stpn_evolution = Some v.
   Proof.
     do 3 intro.
@@ -3259,17 +3906,17 @@ Section AnimateStpn.
       rewrite H1 in e0; inversion e0.
   Qed.
 
-  (** For all well-structured [STPN] passed to [stpn_animate_aux], and for all list of well-structured [STPN]
-      stpn_evolution, the resulting list is only composed of well-structured [STPN]. *)
+  (** For all well-structured [Stpn] passed to [stpn_animate_aux], and for all list of well-structured [Stpn]
+      stpn_evolution, the resulting list is only composed of well-structured [Stpn]. *)
   
   Theorem stpn_animate_aux_well_structured :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat)
-           (stpn_evolution final_stpn_evolution : list (list Trans * STPN)),
-      IsWellStructuredStpn stpn ->
-      (forall stpn' : STPN, In stpn' (snd (split stpn_evolution)) -> IsWellStructuredStpn stpn') ->
+           (stpn_evolution final_stpn_evolution : list (list Trans * Stpn)),
+      IsWellDefinedStpn stpn ->
+      (forall stpn' : Stpn, In stpn' (snd (split stpn_evolution)) -> IsWellDefinedStpn stpn') ->
       stpn_animate_aux stpn n stpn_evolution = Some final_stpn_evolution ->
-      forall (stpn'' : STPN), In stpn'' (snd (split final_stpn_evolution)) -> IsWellStructuredStpn stpn''.
+      forall (stpn'' : Stpn), In stpn'' (snd (split final_stpn_evolution)) -> IsWellDefinedStpn stpn''.
   Proof.
     do 3 intro.
     functional induction (stpn_animate_aux stpn n stpn_evolution) using stpn_animate_aux_ind; intros.
@@ -3292,16 +3939,16 @@ Section AnimateStpn.
     - inversion H1.
   Qed.
 
-  (** For all well-structured [STPN] passed to [stpn_animate_aux], and for all [n], number 
+  (** For all well-structured [Stpn] passed to [stpn_animate_aux], and for all [n], number 
       of evolution cycles, the length of the resulting [final_stpn_evolution] list
       is equal to the number of evolution cycles plus the length of the [stpn_evolution] 
       list passed in argument. *)
   
   Theorem stpn_animate_aux_preserves_cycles :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat)
-           (stpn_evolution final_stpn_evolution : list (list Trans * STPN)),
-      IsWellStructuredStpn stpn ->
+           (stpn_evolution final_stpn_evolution : list (list Trans * Stpn)),
+      IsWellDefinedStpn stpn ->
       stpn_animate_aux stpn n stpn_evolution = Some final_stpn_evolution ->
       n + length stpn_evolution = length final_stpn_evolution.
   Proof.
@@ -3323,21 +3970,21 @@ Section AnimateStpn.
 
   (** Wrapper function around stpn_animate_aux. Here, stpn_evolution is initialized to nil. *)
   
-  Definition stpn_animate (stpn : STPN) (n : nat) :
-    option (list (list Trans * STPN)) := stpn_animate_aux stpn n [].
+  Definition stpn_animate (stpn : Stpn) (n : nat) :
+    option (list (list Trans * Stpn)) := stpn_animate_aux stpn n [].
 
   (** Formal specification : stpn_animate *)
   
-  Inductive StpnAnimate (stpn : STPN) (n : nat) : option (list (list Trans * STPN)) -> Prop :=
+  Inductive StpnAnimate (stpn : Stpn) (n : nat) : option (list (list Trans * Stpn)) -> Prop :=
   | StpnAnimate_cons :
-      forall (opt_stpn_evolution : option (list (list Trans * STPN))),
+      forall (opt_stpn_evolution : option (list (list Trans * Stpn))),
         StpnAnimateAux stpn n [] opt_stpn_evolution ->
         StpnAnimate stpn n opt_stpn_evolution.
 
   (** Correctness proof : stpn_animate *)
   
   Theorem stpn_animate_correct :
-    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list Trans * STPN))),
+    forall (stpn : Stpn) (n : nat) (opt_stpn_evolution : option (list (list Trans * Stpn))),
       stpn_animate stpn n = opt_stpn_evolution ->
       StpnAnimate stpn n opt_stpn_evolution.
   Proof.
@@ -3349,7 +3996,7 @@ Section AnimateStpn.
   (** Completeness proof : stpn_animate *)
   
   Theorem stpn_animate_compl :
-    forall (stpn : STPN) (n : nat) (opt_stpn_evolution : option (list (list Trans * STPN))),
+    forall (stpn : Stpn) (n : nat) (opt_stpn_evolution : option (list (list Trans * Stpn))),
       StpnAnimate stpn n opt_stpn_evolution ->
       stpn_animate stpn n = opt_stpn_evolution.
   Proof.
@@ -3358,14 +4005,14 @@ Section AnimateStpn.
     elim H; apply stpn_animate_aux_compl; auto.
   Qed.
 
-  (** For all [STPN] verifying the property [IsWellStructuredStpn],
+  (** For all [Stpn] verifying the property [IsWellDefinedStpn],
       and for all number [n] of evolution cycles, [stpn_animate] returns no error. *)
   
   Theorem stpn_animate_no_error :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat),
-      IsWellStructuredStpn stpn ->
-      exists (v : list ((list Trans) * STPN)),
+      IsWellDefinedStpn stpn ->
+      exists (v : list ((list Trans) * Stpn)),
         stpn_animate stpn n = Some v.
   Proof.
     unfold stpn_animate.
@@ -3376,36 +4023,36 @@ Section AnimateStpn.
     exists x; auto.
   Qed.
 
-  (** For all well-structured [STPN] passed to [stpn_animate], the resulting evolution 
-      list is only composed of well-structured [STPN]. *)
+  (** For all well-structured [Stpn] passed to [stpn_animate], the resulting evolution 
+      list is only composed of well-structured [Stpn]. *)
   
   Theorem stpn_animate_well_structured :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat)
-           (stpn_evolution : list (list Trans * STPN)),
-      IsWellStructuredStpn stpn ->
+           (stpn_evolution : list (list Trans * Stpn)),
+      IsWellDefinedStpn stpn ->
       stpn_animate stpn n = Some stpn_evolution ->
-      forall (stpn' : STPN), In stpn' (snd (split stpn_evolution)) -> IsWellStructuredStpn stpn'.
+      forall (stpn' : Stpn), In stpn' (snd (split stpn_evolution)) -> IsWellDefinedStpn stpn'.
   Proof.
     unfold stpn_animate.
     intros.
     (* We need this hypothesis to apply stpn_animate_aux_well_structured. *)
-    assert (H' : forall (stpn' : STPN), In stpn' [] -> IsWellStructuredStpn stpn')
+    assert (H' : forall (stpn' : Stpn), In stpn' [] -> IsWellDefinedStpn stpn')
       by (intros; elim H2).
     generalize (stpn_animate_aux_well_structured stpn n [] stpn_evolution H H' H0); intros.
     apply H2; assumption.
   Qed.
 
-  (** For all well-structured [STPN] passed to [stpn_animate], and for all [n], number 
+  (** For all well-structured [Stpn] passed to [stpn_animate], and for all [n], number 
       of evolution cycles, the length of the resulting [final_stpn_evolution] list
       is equal to the number of evolution cycles plus the length of the [stpn_evolution] 
       list passed in argument. *)
   
   Theorem stpn_animate_preserves_cycles :
-    forall (stpn : STPN)
+    forall (stpn : Stpn)
            (n : nat)
-           (stpn_evolution : list (list Trans * STPN)),
-      IsWellStructuredStpn stpn ->
+           (stpn_evolution : list (list Trans * Stpn)),
+      IsWellDefinedStpn stpn ->
       stpn_animate stpn n = Some stpn_evolution ->
       n = length stpn_evolution.
   Proof.
