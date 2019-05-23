@@ -1,7 +1,7 @@
 (** Import Spn's types, program and specification. *)
 
 Require Import Hilecop.Spn.Spn.
-Require Import Hilecop.Spn.SpnAnimator.
+Require Import Hilecop.Spn.SpnTokenPlayer.
 Require Import Hilecop.Spn.SpnSemantics.
 
 (** Import useful tactics and general-purpose lemmas. *)

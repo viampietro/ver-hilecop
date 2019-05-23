@@ -1,7 +1,7 @@
 (* Import Spn's types, program and specification. *)
 
 Require Import Hilecop.Spn.Spn.
-Require Import Hilecop.Spn.SpnAnimator.
+Require Import Hilecop.Spn.SpnTokenPlayer.
 Require Import Hilecop.Spn.SpnSemantics.
 
 (* Import useful tactics and general-purpose lemmas. *)
@@ -352,7 +352,7 @@ Proof.
 
           (* Exploded HasHigherpriority to obtain In t pgroup. *)
           unfold HasHigherPriority in Hhas_high.
-          do 2 (apply proj2 in Hhas_high).
+          apply proj2 in Hhas_high.
           inversion_clear Hhas_high as (Hin_t_pg & His_pred).
           apply proj2 in His_pred.
 
@@ -471,7 +471,6 @@ Proof.
                   specialize (is_dec_list_cons_incl His_dec) as Hincl.
                   split. assumption.
                   split. assumption.
-                  split. assumption. 
                   split. apply in_cons with (a := a) in Hin_t_pg. apply (Hincl t Hin_t_pg).
                   unfold IsPredInNoDupList.
                   split.
@@ -605,7 +604,7 @@ Proof.
 
           (* Exploded HasHigherpriority to obtain In t pgroup. *)
           unfold HasHigherPriority in Hhas_high.
-          do 2 (apply proj2 in Hhas_high).
+          apply proj2 in Hhas_high.
           inversion_clear Hhas_high as (Hin_t_pg & His_pred).
           apply proj2 in His_pred.
 

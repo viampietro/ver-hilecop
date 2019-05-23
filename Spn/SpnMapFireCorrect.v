@@ -1,7 +1,7 @@
 (* Import Spn's types, program and specification. *)
 
 Require Import Hilecop.Spn.Spn.
-Require Import Hilecop.Spn.SpnAnimator.
+Require Import Hilecop.Spn.SpnTokenPlayer.
 Require Import Hilecop.Spn.SpnSemantics.
 
 (* Import core lemmas necessary for Spn's correctness proof. *)
@@ -977,7 +977,7 @@ Section SpnSensitizedByResidual.
               {
                 unfold HasHigherPriority.
                 specialize (is_dec_list_cons_incl Hdec_list) as Hincl.
-                split. assumption. split. assumption.
+                split. assumption. 
                 split. unfold incl in Hincl. apply (Hincl t (in_eq t tail)).
                 split. unfold incl in Hincl. apply (Hincl t' (in_cons t t' tail Hin_t'_tail)).
                 unfold IsPredInNoDupList.
@@ -1122,19 +1122,10 @@ Section SpnSensitizedByResidual.
         assert (Hsens_t_in_residual_m : IsSensitized spn residual_marking t').
         {
           unfold IsSensitized.
-          split. assumption.
-          split. assumption.
-          split. apply get_neighbours_correct in e0.
-          apply in_fst_split in e0.
-          explode_well_defined_spn.
-          unfold NoUnknownTransInLNeighbours in *.
-          rewrite <- Hunk_tr_neigh in e0.
-          rewrite <- Heq_tt'; assumption.
           intros p n Hin_resid_m.
           rewrite <- Hequiv_m in Hin_resid_m.
           unfold IsSensitized in Hsens_t.
-          decompose [and] Hsens_t.
-          apply (H3 p n Hin_resid_m).
+          apply (Hsens_t p n Hin_resid_m).
         }
         (* Then we apply is_sensitized_complete to show the contradiction with e3. *)
         apply get_neighbours_correct in e0.
@@ -1211,7 +1202,7 @@ Section SpnSensitizedByResidual.
       (* Builds In t' pgroup *)
       + elim Hpr_wedge; intros Hhas_high Hin_ff.
         unfold HasHigherPriority in Hhas_high; decompose [and] Hhas_high.
-        clear H H1 H2 H4; rename H0 into Hin_t'_pg.
+        clear H H0 H3; rename H1 into Hin_t'_pg.
         (* Builds ~In t' fired /\ ~In t' concat pgroups *)
         apply NoDup_app_comm in Hnodup_app.
         rewrite <- app_assoc in Hnodup_app.
@@ -1521,7 +1512,7 @@ Section SpnNotSensitizedByResidual.
             + inversion Hin_tst as [Heq_tst | Hin_nil].
               (* Contradiction with the definition of t'' ≻ t' *)
               -- unfold HasHigherPriority in Hhas_high.
-                 do 4 (apply proj2 in Hhas_high).
+                 do 3 (apply proj2 in Hhas_high).
                  unfold IsPredInNoDupList in Hhas_high.
                  apply proj1 in Hhas_high.
                  symmetry in Heq_tst; rewrite Heq_tt' in Heq_tst.
@@ -1620,17 +1611,9 @@ Section SpnNotSensitizedByResidual.
         assert (Hsens_t_in_res_m : IsSensitized spn res_marking t).
         {
           unfold IsSensitized.
-          split. assumption.
-          split. assumption.
-          split. apply in_fst_split in e0.
-          explode_well_defined_spn.
-          unfold NoUnknownTransInLNeighbours in *.
-          rewrite <- Hunk_tr_neigh in e0.
-          assumption.
           intros p n Hin_resid_m.
           rewrite Hequiv_m in Hin_resid_m.
           unfold IsSensitized in e3.
-          do 3 (apply proj2 in e3).
           apply (e3 p n Hin_resid_m).
         }
         rewrite Heq_tt' in Hsens_t_in_res_m.
@@ -1701,7 +1684,7 @@ Section SpnNotSensitizedByResidual.
               {
                 unfold HasHigherPriority.
                 specialize (is_dec_list_cons_incl Hdec_list) as Hincl.
-                split. assumption. split. assumption.
+                split. assumption. 
                 split. unfold incl in Hincl. apply (Hincl t (in_eq t tail)).
                 split. unfold incl in Hincl. apply (Hincl t' (in_cons t t' tail Hin_t'_tail)).
                 unfold IsPredInNoDupList.

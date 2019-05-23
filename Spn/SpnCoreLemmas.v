@@ -1,4 +1,4 @@
-Require Import Hilecop.Spn.Spn Hilecop.Spn.SpnAnimator.
+Require Import Hilecop.Spn.Spn Hilecop.Spn.SpnTokenPlayer.
 Require Import Hilecop.Spn.SpnSemantics Hilecop.Spn.SpnTactics.
 Require Import Hilecop.Utils.HilecopLemmas.
 Require Import Omega.
@@ -49,9 +49,8 @@ Section SpnLemmas.
       unfold SpnIsFirable in *;
       (rewrite <- Heq_marking || rewrite Heq_marking);
       decompose [and] His_firable;
-      intros.
-    split; [assumption | split; [ assumption | split; [assumption | assumption]]].
-    split; [assumption | split; [ assumption | split; [assumption | assumption]]].
+      intros;
+      assumption.
   Qed.
   
 End SpnLemmas.
@@ -1200,16 +1199,11 @@ Section IsSensitized.
                     Hwell_def_spn Hsame_struct Hin_lneigh e1)
         as Hmap_inhib.
       (* Unfolds IsSensitized and applies all previous lemmas. *)
-      unfold IsSensitized; intros.
-      repeat (assumption || split).
-      + explode_well_defined_spn.
-        apply in_fst_split in Hin_lneigh.
-        unfold NoUnknownTransInLNeighbours in *.
-        rewrite <- Hunk_tr_neigh in *.
-        assumption.
-      + apply (Hmap_pre p n H).
-      + apply (Hmap_test p n H).
-      + apply (Hmap_inhib p n H).
+      unfold IsSensitized; intros p n Hin_m.
+      split;
+        [apply (Hmap_pre p n Hin_m)
+        | split; [ apply (Hmap_test p n Hin_m) |
+                   apply (Hmap_inhib p n Hin_m) ]].
     (* ERROR CASES *)
     - inversion Hfun.
     - inversion Hfun.
@@ -1242,9 +1236,6 @@ Section IsSensitized.
       unfold NoUnknownTransInLNeighbours in Hunk_tr_neigh;
       rewrite <- Hunk_tr_neigh in Hin_lneigh;
       rename Hin_lneigh into Hin_transs;
-      (* Applies Hspec, then clears it. *)
-      decompose [and] Hspec; clear Hspec;
-        clear H H1 H0; rename H3 into Hspec;
       (* Builds ∀ (p,n) ∈ marking, (pre spn t p) ≤ n, 
          then applies map_check_pre_complete.
        *)

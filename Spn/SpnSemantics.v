@@ -267,21 +267,18 @@ Section PredInList.
   
 End PredInList.
 
-(** In all the following definitions, (IsWellDefinedSpn spn) is a necessary condition. *)
-
 (** HasHigherPriority: ∀ t ∈ T, t' ∈ T/{t}, t ≻ t' *)
 
 Definition HasHigherPriority
            (spn : Spn)
            (t t' : Trans)
            (pgroup : list Trans) :=
-    IsWellDefinedSpn spn /\
     In pgroup spn.(priority_groups) /\
     In t pgroup /\
     In t' pgroup /\
     IsPredInNoDupList t t' pgroup.
 
-(** PreSum: Sums all weight of edges coming from place p to transitions of the l list. *)
+(** Sums all weight of edges coming from place p to transitions of the l list. *)
 
 Fixpoint pre_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
   match l with
@@ -308,7 +305,7 @@ Proof.
     reflexivity.
 Qed.
 
-(** PostSum: Sums all weight of edges coming from transitions of the l list to place p. *)
+(** Sums all weight of edges coming from transitions of the l list to place p. *)
 
 Fixpoint post_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
   match l with
@@ -328,9 +325,6 @@ Definition IsSensitized
            (spn : Spn)
            (marking : list (Place * nat))
            (t : Trans) : Prop :=
-  IsWellDefinedSpn spn /\
-  MarkingHaveSameStruct spn.(initial_marking) marking /\
-  In t spn.(transs) /\
   forall (p : Place)
          (n : nat),
     In (p, n) marking ->
@@ -340,16 +334,13 @@ Definition IsSensitized
 
 (** SpnIsFirable:
  
-    ∀ t ∈ T, state s = (m), marking m, t ∈ firable(s) if 
-    t ∈ sens(m) *)
+    ∀ t ∈ T, state s = (Fired, M), t ∈ firable(s) if 
+    t ∈ sens(M) *)
 
 Definition SpnIsFirable
            (spn : Spn)
            (state : SpnState)
            (t : Trans) :=
-  IsWellDefinedSpn spn /\
-  IsWellDefinedSpnState spn state /\
-  In t spn.(transs) /\
   IsSensitized spn state.(marking) t.
 
 (** * Semantics definition *)

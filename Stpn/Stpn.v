@@ -11,45 +11,44 @@ Require Import Hilecop.Spn.Spn.
 (*! EXTENDED, TIME PETRI NETS.                     !*)
 (*! ============================================== !*)
 
-(** * Types for Synchronous executed, generalized, extended, Time Petri Nets *)
+(** * Types for Synchronously executed, generalized, extended, Time Petri Nets *)
 
 (** Defines the inductive type to express positive or (positively)
     infinite values.  Useful to type the upper bound of the time
-    interval in [Chrono]. *)
+    interval in [TimeInterval]. *)
 
 Inductive PositiveIntervalBound : Set :=
 | pos_inf : PositiveIntervalBound
 | pos_val : nat -> PositiveIntervalBound.
 
-(** Defines the time interval structure associated with transitions.
-    Transitions are firable when min_t <= cnt <= max_t. 
+(** Defines the time interval structure associated with transitions. *)
 
-    The [blocked] field is true when cnt > max_t, meaning
-    that the time counter passed the time interval. *)
-
-Structure Chrono : Set :=
-  mk_chrono {
-      cnt : nat;  
+Structure TimeInterval : Set :=
+  mk_TimeItval {
       min_t : nat;
       max_t : PositiveIntervalBound;
     }.
 
-(** ** Properties on [Chrono] *)
+(** ** Properties on [TimeInterval] *)
 
-(** Predicate telling if a given [chrono] is well-formed according to
+(** Predicate telling if a given [itval] is well-formed according to
     Hilecop standard.
     
-    A chrono is well-formed if its lower bound is greater than 0 and
-    less than or equal to its upper bound. *)
+    A itval is well-formed if its lower bound is greater than 0 and
+    less than or equal to its upper bound. 
 
-Definition IsWellFormedChrono (chrono : Chrono) : Prop :=
-  match chrono with
-  | mk_chrono cnt min_t max_t =>
+    This predicate doesn't stand for DynamicTimeInterval,
+    as in dynamic time intervals, bounds can take zero as value.
+ *)
+
+Definition IsWellFormedTimeInterval (itval : TimeInterval) : Prop :=
+  match itval with
+  | mk_TimeItval min_t max_t =>
     (* Checks min_t and max_t structure. *)
     match min_t, max_t with
-    (* If min_t equals O then time interval is ill-formed. *)
+    (* If min_t equals O then itval is ill-formed. *)
     | O, _ => False
-    (* If max_t is infinite then chrono is well-formed. *)
+    (* If max_t is infinite then itval is well-formed. *)
     | _, pos_inf => True
     (* Else if max_t has a finite positive value, then 
      * checks that it is greater than or equal to min_t. *)
@@ -57,52 +56,56 @@ Definition IsWellFormedChrono (chrono : Chrono) : Prop :=
     end
   end.
 
-(** Defines the dynamic chrono (time interval) type. 
+(** Defines the dynamic time interval type. 
     
     Differentiate the behavior of static and dynamic time
     intervals as in the STPN semantics.
 
-    A dynamic chrono is either active or blocked. *)
+    A dynamic time interval is either active or blocked. *)
 
-Inductive DynamicChrono : Set :=
-| active : Chrono -> DynamicChrono
-| blocked : DynamicChrono.
+Inductive DynamicTimeInterval : Set :=
+| active : TimeInterval -> DynamicTimeInterval
+| blocked : DynamicTimeInterval.
 
 (** Defines the Stpn structure.
  
-    Basically, same structure as an [Spn] with chronos associated to
-    transitions.  (At most one chrono by transition, or None)
+    Basically, same structure as an [Spn] with time intervals
+    associated to transitions.  (At most one interval by transition,
+    or None)
  
-    Note that [static_chronos] associates static chrono (denoted by
-    the Chrono type) to transitions.
+    Note that [static_intervals] associates static time interval
+    (denoted by the TimeInterval type) to transitions.
 
     [Stpn] is declared as a coercion of [Spn]. *)
 
 Structure Stpn : Set :=
   mk_Stpn {
-      static_chronos : list (Trans * option Chrono);
+      static_intervals : list (Trans * option TimeInterval);
       spn :> Spn
     }.
 
 (** ** Properties on [Stpn] *)
 
-(** *** Properties on [Stpn.(chronos)] *)
+(** *** Properties on [Stpn.(static_intervals)] *)
 
-(** All chronos in [Stpn.(chronos)] are well-formed. *)
+(** All intervals in [Stpn.(static_intervals)] are well-formed. *)
 
-Definition AreWellFormedChronos (stpn : Stpn) :=
-  forall (chrono : Chrono),
-    In (Some chrono) (snd (split stpn.(static_chronos))) -> IsWellFormedChrono chrono.
+Definition AreWellFormedTimeIntervals (stpn : Stpn) :=
+  forall (chrono : TimeInterval),
+    In (Some chrono) (snd (split stpn.(static_intervals))) -> IsWellFormedTimeInterval chrono.
 
-(** All transitions in [Stpn.(chronos)] are in the list of transitions [Stpn.(transs)]. *)
+(** All transitions in [Stpn.(static_intervals)] are in the list of
+    transitions [Stpn.(transs)]. *)
 
-Definition NoUnknownTransInChronos (stpn : Stpn) :=
-  stpn.(transs) = fst (split stpn.(static_chronos)).
+Definition NoUnknownTransInTimeIntervals (stpn : Stpn) :=
+  stpn.(transs) = fst (split stpn.(static_intervals)).
 
 (** *** Properties on the whole [Stpn]. *)
 
 Definition IsWellDefinedStpn (stpn : Stpn) :=
-  AreWellFormedChronos stpn /\ NoUnknownTransInChronos stpn /\ IsWellDefinedSpn stpn.(spn).
+  AreWellFormedTimeIntervals stpn /\
+  NoUnknownTransInTimeIntervals stpn /\
+  IsWellDefinedSpn stpn.
 
 (** ** Stpn state. *)
 
@@ -110,19 +113,20 @@ Definition IsWellDefinedStpn (stpn : Stpn) :=
 
     - fired, marking: same as SpnState.
       
-    - chronos: contains the chronos value at the current state.
-               Implement the I function, associating dynamic time
-               interval to transitions in the STPN semantics.
+    - intervals: contains the time interval values at the current state.
+                 Implement the I function, associating dynamic time
+                 interval to transitions in the STPN semantics.
 
-    - reset: list of transitions having their chronos reset at this
+    - reset: list of transitions having their intervals reset at this
              clock cycle or the next (depending on how the current
              Stpn state is reached).
 
- *)
+             Even transitions with no intervals are referenced in the
+             reset list, and possibly receive a reset order.  *)
 
 Structure StpnState := mk_StpnState {
-                           chronos  : list (Trans * option DynamicChrono);
-                           reset    : list (Trans * option bool);
+                           intervals  : list (Trans * option DynamicTimeInterval);
+                           reset    : list (Trans * bool);
                            spnstate :> SpnState;
                          }.
 
@@ -134,22 +138,16 @@ Structure StpnState := mk_StpnState {
       [stpn.(transs)], and inversely.
 
     - All transitions referenced in
-      [s.(chronos)] are referenced in [stpn.(static_chronos)], and
+      [s.(intervals)] are referenced in [stpn.(static_intervals)], and
       inversely.
 
-    - ∄ t ∈ T, Is(t) ≠ ∅ ∧ (I(t) = ∅ ∨ reset(t) = ∅)
-    - ∄ t ∈ T, Is(t) = ∅ ∧ (I(t) ≠ ∅ ∨ reset(t) ≠ ∅)
-
- *)
+    - ∀ t ∈ T, (Is(t) = ∅ ∧ I(t) = ∅) ∨ (Is(t) ≠ ∅ ∧ I(t) ≠ ∅) *)
 
 Definition IsWellDefinedStpnState (stpn : Stpn) (s : StpnState) :=
   IsWellDefinedSpnState stpn s /\
-  fst (split stpn.(static_chronos)) = fst (split s.(chronos)) /\
-  fst (split stpn.(static_chronos)) = fst (split s.(reset)) /\
-  (forall (t : Trans) (chrono : Chrono),
-      In (t, Some chrono) stpn.(static_chronos) ->
-      ~In (t, None) s.(chronos) /\ ~In (t, None) s.(reset)) /\
+  fst (split stpn.(static_intervals)) = fst (split s.(intervals)) /\
+  fst (split stpn.(static_intervals)) = fst (split s.(reset)) /\
   (forall (t : Trans),
-      In (t, None) stpn.(static_chronos) ->
-      In (t, None) s.(chronos) /\ In (t, None) s.(reset)).
+      (In (t, None) stpn.(static_intervals) /\ In (t, None) s.(intervals)) \/
+      (~In (t, None) stpn.(static_intervals) /\ ~In (t, None) s.(intervals))).
 
