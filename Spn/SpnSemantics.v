@@ -343,7 +343,7 @@ Definition SpnIsFirable
            (t : Trans) :=
   IsSensitized spn state.(marking) t.
 
-(** * Semantics definition *)
+(** * Spn Semantics definition *)
 
 (** Represents the two clock events regulating the Spn evolution. *)
 
@@ -413,7 +413,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
     
     SpnSemantics spn s s' falling_edge
     
-(* ↓clock : s = (Fired, M) ⇝ s' = (Fired, M') *)    
+(* ↑clock : s = (Fired, M) ⇝ s' = (Fired, M') *)    
 | SpnSemantics_rising_edge :
     
     IsWellDefinedSpn spn ->
