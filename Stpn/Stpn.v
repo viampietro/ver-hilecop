@@ -92,7 +92,8 @@ Structure Stpn : Set :=
 
 Definition AreWellFormedTimeIntervals (stpn : Stpn) :=
   forall (chrono : TimeInterval),
-    In (Some chrono) (snd (split stpn.(static_intervals))) -> IsWellFormedTimeInterval chrono.
+    In (Some chrono) (snd (split stpn.(static_intervals))) ->
+    IsWellFormedTimeInterval chrono.
 
 (** All transitions in [Stpn.(static_intervals)] are in the list of
     transitions [Stpn.(transs)]. *)

@@ -115,20 +115,12 @@ Structure Spn : Set :=
 (*============ PROPERTIES ON Spn ===============*)
 (*==============================================*)
 
-(** *** Spn helpers predicates *)
-
-(* The same places are referenced in m and m'. *)
-
-Definition MarkingHaveSameStruct
-           (m : list (Place * nat))
-           (m' : list (Place * nat)) := fst (split m) = fst (split m').
-
 (** *** Properties on places and transitions *)
 
 Definition NoDupPlaces (spn : Spn) := NoDup spn.(places).  
 Definition NoDupTranss (spn : Spn) := NoDup spn.(transs).
 
-(** *** Properties on priority_groups *)
+(** *** Properties on [priority_groups] *)
 
 (** For all transition t, t is in [spn.(transs)] iff 
     there exists a group in [spn.(priority_groups)] containing t. *)
@@ -175,8 +167,9 @@ Definition NoUnknownPlaceInNeighbours (spn : Spn) :=
 Definition NoUnknownTransInLNeighbours (spn : Spn) :=
   spn.(transs) = fst (split spn.(lneighbours)).
 
-(** Forall neighbours_of_t in spn.(lneighbours), there exists one list of places that is not empty.
-    i.e. A transition has at least one neighbour place. *)
+(** Forall neighbours_of_t in spn.(lneighbours), there exists one list
+    of places that is not empty.  i.e. A transition has at least one
+    neighbour place. *)
 
 Definition NoIsolatedTrans (spn : Spn) :=
   forall (t : Trans) (neighbours_of_t : Neighbours),
@@ -264,6 +257,14 @@ Definition IsWellDefinedSpn (spn : Spn) :=
 (** Defines the state of an Spn. *)
 
 Structure SpnState := mk_SpnState { fired : list Trans; marking : list (Place * nat) }.
+
+(** *** Spn state helpers predicates *)
+
+(* The same places are referenced in m and m'. *)
+
+Definition MarkingHaveSameStruct
+           (m : list (Place * nat))
+           (m' : list (Place * nat)) := fst (split m) = fst (split m').
 
 (** Checks that state s is well-defined compared to spn's structure. *)
 
