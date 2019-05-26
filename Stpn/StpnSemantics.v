@@ -212,7 +212,8 @@ Inductive StpnSemantics (stpn : Stpn) (s s' : StpnState) : Clock -> Prop :=
     (forall (p : Place)
             (n : nat),
         In (p, n) s.(marking) ->
-        In (p, n - (pre_sum stpn p s.(fired)) + (post_sum stpn p s.(fired))) s'.(marking)) ->
+        In (p, n - (pre_sum stpn p s.(fired)) + (post_sum stpn p s.(fired)))
+           s'.(marking)) ->
 
     (* All transitions disabled by the transient marking, result of
        the withdrawal of tokens in the input places of the fired
@@ -223,8 +224,8 @@ Inductive StpnSemantics (stpn : Stpn) (s s' : StpnState) : Clock -> Prop :=
     (forall (t : Trans)
             (transient_marking : list (Place * nat)),
         (forall (p : Place) (n : nat),
-          In (p, n) s.(marking) ->
-          In (p, n - pre_sum stpn p s.(fired)) transient_marking) ->
+            In (p, n) s.(marking) ->
+            In (p, n - pre_sum stpn p s.(fired)) transient_marking) ->
         MarkingHaveSameStruct s.(marking) transient_marking ->
         In t stpn.(transs) ->
         ~IsSensitized stpn transient_marking t ->

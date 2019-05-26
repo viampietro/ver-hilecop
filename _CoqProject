@@ -14,3 +14,6 @@ Spn/SpnCorrect.v
 Spn/SpnMapFireComplete.v
 Spn/SpnUpdateMarkingComplete.v
 Spn/SpnComplete.v
+
+Sitpn/Sitpn.v
+Sitpn/SitpnSemantics.v

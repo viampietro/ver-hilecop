@@ -1,14 +1,17 @@
-Require Import Hilecop.Spn.Spn.
+(*! =============================== !*)
+(*! ======= SITPN SEMANTICS ======= !*)
+(*! =============================== !*)
+
 Require Import Omega.
 Require Import Classical_Prop.
 
 Set Implicit Arguments.
 
-(*! ============================= !*)
-(*! ======= Spn Semantics ======= !*)
-(*! ============================= !*)
+(** Import Sitpn and SitpnState structures. *)
 
-(** * Preliminary definitions *)
+Require Import Hilecop.Sitpn.Sitpn.
+
+(** * General preliminary definitions.  *)
 
 (** ** Predicates IsDecListCons, IsDecListApp and facts. *)
 
@@ -83,6 +86,8 @@ Section DecreasedList.
         IsDecListApp l (l' ++ [a]).
   
 End DecreasedList.
+
+(** * Predicates for priority definitions between transitions. *)
 
 (** ** Predicate IsPredInList and facts. *)
 
@@ -276,83 +281,80 @@ Section PredInList.
   
 End PredInList.
 
-(** HasHigherPriority: ∀ t ∈ T, t' ∈ T/{t}, t ≻ t' *)
+(** Defines a priority relation between a transition t and t', where t
+    has a higher priority than t', i.e: ∀ t ∈ T, t' ∈ T/{t}, t ≻ t' *)
 
 Definition HasHigherPriority
-           (spn : Spn)
+           (sitpn : Sitpn)
            (t t' : Trans)
            (pgroup : list Trans) :=
-    In pgroup spn.(priority_groups) /\
-    In t pgroup /\
-    In t' pgroup /\
-    IsPredInNoDupList t t' pgroup.
+  In pgroup sitpn.(priority_groups) /\
+  In t pgroup /\
+  In t' pgroup /\
+  IsPredInNoDupList t t' pgroup.
 
-(** Sums all weight of edges coming from place p to transitions of the l list. *)
+(** * Sensitization definition. *)
 
-Fixpoint pre_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
-  match l with
-  | t :: tail => (pre spn t p) + pre_sum spn p tail
-  | [] => 0
-  end.
-
-Functional Scheme pre_sum_ind := Induction for pre_sum Sort Prop.
-
-(** pre_sum spn p l + pre_sum spn p [t] = pres_um spn p (l ++ [t]) 
-
-    Needed to prove GENERAL CASE in spn_fire_aux_sens_by_residual. *)
-
-Lemma pre_sum_app_add :
-  forall (spn : Spn) (p : Place) (l : list Trans) (t : Trans),
-    pre_sum spn p l + pre_sum spn p [t] = pre_sum spn p (l ++ [t]).
-Proof.
-  intros spn p l; functional induction (pre_sum spn p l) using pre_sum_ind; intro t'.
-  - simpl; reflexivity.
-  - simpl.
-    rewrite <- (IHn t').
-    simpl.
-    rewrite plus_assoc_reverse.
-    reflexivity.
-Qed.
-
-(** Sums all weight of edges coming from transitions of the l list to place p. *)
-
-Fixpoint post_sum (spn : Spn) (p : Place) (l : list Trans) {struct l} : nat :=
-  match l with
-  | t :: tail => (post spn t p) + post_sum spn p tail
-  | [] => 0
-  end.
-
-Functional Scheme post_sum_ind := Induction for post_sum Sort Prop.
-
-(** IsSensitized:
-    ∀ t ∈ T, marking m, t ∈ sens(m) if
+(** ∀ t ∈ T, marking m, t ∈ sens(m) if
     ∀ p ∈ P, m(p) ≥ Pre(p, t) ∧ 
              m(p) ≥ Pre_t(p, t) ∧ 
              (m(p) < Pre_i(p, t) ∨ Pre_i(p, t) = 0) *)
 
 Definition IsSensitized
-           (spn : Spn)
+           (sitpn : Sitpn)
            (marking : list (Place * nat))
            (t : Trans) : Prop :=
   forall (p : Place)
          (n : nat),
     In (p, n) marking ->
-    (pre spn t p) <= n  /\
-    (test spn t p) <= n  /\
-    (n < (inhib spn t p) \/ (inhib spn t p) = 0).
+    (pre sitpn t p) <= n  /\
+    (test sitpn t p) <= n  /\
+    (n < (inhib sitpn t p) \/ (inhib sitpn t p) = 0).
 
-(** SpnIsFirable:
- 
-    ∀ t ∈ T, state s = (Fired, M), t ∈ firable(s) if 
-    t ∈ sens(M) *)
+(** * Predicates for Time Petri nets semantics. *)
 
-Definition SpnIsFirable
-           (spn : Spn)
-           (state : SpnState)
+(** Tests if [t] is associated in [d_intervals] with is an active time
+    interval with [min_t] = 0 (≡ 0 ∈ I). *)
+
+Definition HasReachedTimeWindow
+           (d_intervals : list (Trans * DynamicTimeInterval))
            (t : Trans) :=
-  IsSensitized spn state.(marking) t.
+  forall (upper_bound : PositiveIntervalBound),
+    In (t, active {| min_t := 0; max_t := upper_bound |}) d_intervals.
 
-(** * Spn Semantics definition *)
+(** Tests if the upper bound of a time interval equals 0. 
+    Useful when determining if a dynamic time interval 
+    should be blocked. *)
+
+Definition HasReachedMaxBound (itval : TimeInterval) :=
+  itval = {| min_t := 0; max_t := pos_val 0 |}.
+
+(** Decrements the bounds of a time interval. *)
+
+Definition dec_itval (itval : TimeInterval) :=
+  match itval with
+  | {| min_t := n; max_t := pos_val m |} =>
+    {| min_t := n - 1; max_t := pos_val (m - 1) |}
+  | {| min_t := n; max_t := pos_inf |} =>
+    {| min_t := n - 1; max_t := pos_inf |}
+  end.
+
+(** * Sitpn Semantics definition
+    
+      Inductive structure describing the rules regulating the
+      evolution of a SITPN.
+
+      Here, a given SITPN [sitpn] is moving from state [s] to state
+      [s'] at a certain [time_value] (discrete time value
+      corresponding to the count of clock cycles since the beginning).
+      
+      The [env] function gives the boolean value of conditions through
+      time. It simulates the information coming from the environment
+      of the SITPN.
+      
+      An instance of [Clock] parameterized the inductive structure,
+      telling if the state changing is due to the occurence of a
+      rising or a falling edge of a clock signal.  *)
 
 (** Represents the two clock events regulating the Spn evolution. *)
 
@@ -360,80 +362,218 @@ Inductive Clock : Set :=
 | falling_edge : Clock
 | rising_edge : Clock.
 
-(** Represents the Spn Semantics  *)
+(** Represents the Sitpn semantics. *)
 
-Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
+Inductive SitpnSemantics
+          (sitpn : Sitpn)
+          (s s' : SitpnState)
+          (time_value : nat)
+          (env : Condition -> nat -> bool) : Clock -> Prop :=
+
+(* ↓clock : s = (Fired, m, cond, ex, I, reset) ⇝ s' = (Fired', m, cond', ex', I', reset) *)
   
-(* ↓clock : s = (Fired, M) ⇝ s' = (Fired', M) *)
-| SpnSemantics_falling_edge :
-    
-    IsWellDefinedSpn spn ->
-    IsWellDefinedSpnState spn s ->
-    IsWellDefinedSpnState spn s' ->
+| SitpnSemantics_falling_edge :
+
+    IsWellDefinedSitpn sitpn ->
+    IsWellDefinedSitpnState sitpn s ->
+    IsWellDefinedSitpnState sitpn s' ->
+
     (* Marking stays the same between state s and s'. *)
     s.(marking) = s'.(marking) ->
-    (* ∀ t ∉ firable(s') ⇒ t ∉ Fired'  
-       All un-firable transitions are not fired. *)
-    (forall (pgroup : list Trans) (t : Trans),
-        In pgroup spn.(priority_groups) ->
+    
+    (* Time intervals are reset for all transitions with a time
+       interval (either active or blocked) that are sensitized by m
+       and either received a reset order or were previously fired.
+      
+       ∀ t ∈ Ti, t ∈ sens(m) ∧ (reset(t) = 1 ∨ t ∈ Fired) ⇒ I'(t) =
+       Is(t) - 1 where Ti = { ti | I(ti) ≠ ∅ } *)
+    
+    (forall (t : Trans)
+            (itval : TimeInterval),
+        In (t, Some itval) sitpn.(static_intervals) ->
+        IsSensitized sitpn s.(marking) t ->
+        (In (t, true) s.(reset) \/ In t s.(fired)) ->
+        In (t, Some (active (dec_itval itval))) s'.(intervals)) ->
+
+    (* Time intervals evolve normally for all transitions with an 
+       active time interval that are sensitized by m, didn't receive a reset order 
+       and were not fired at the last clock cycle. 
+      
+       ∀ t ∈ Ti, t ∈ sens(m) ∧ reset(t) = 0 ∧ t ∉ Fired ∧ I(t) ≠ ψ ⇒ 
+       I'(t) = I(t) - 1 *)
+
+    (forall (t : Trans)
+            (itval : TimeInterval),
+        In (t, Some (active itval)) s.(intervals) ->
+        IsSensitized sitpn s.(marking) t ->
+        In (t, false) s.(reset) ->
+        ~In t s.(fired) ->
+        In (t, Some (active (dec_itval itval))) s'.(intervals)) ->
+
+    (* Time intervals stay the same for all transitions with a blocked
+       time interval that are sensitized by m, didn't receive a reset
+       order and were not fired at the last clock cycle.
+      
+       ∀ t ∈ Ti, t ∈ sens(m) ∧ reset(t) = 0 ∧ t ∉ Fired ∧ I(t) = ψ ⇒
+       I'(t) = I(t) *)
+
+    (forall (t : Trans),
+        In (t, Some blocked) s.(intervals) ->
+        IsSensitized sitpn s.(marking) t ->
+        In (t, false) s.(reset) ->
+        ~In t s.(fired) ->
+        In (t, Some blocked) s'.(intervals)) ->
+
+    (* Time intervals are reset for all transitions with a time
+       interval (either active or blocked) that are not sensitized by
+       m.
+      
+       ∀ t ∈ Ti, t ∉ sens(m) ⇒ I'(t) = Is(t) - 1 *)
+    
+    (forall (t : Trans)
+            (itval : TimeInterval),
+        In (t, Some itval) sitpn.(static_intervals) ->
+        ~IsSensitized sitpn s.(marking) t ->
+        In (t, Some (active (dec_itval itval))) s'.(intervals)) ->
+
+    (* Transitions with no time intervals at state s 
+       have still no time intervals at state s'. *)
+    
+    (forall (t : Trans),
+        In (t, None) s.(intervals) ->
+        In (t, None) s'.(intervals)) ->
+    
+    (* All transitions that are not firable are not fired, i.e:
+       ∀ t ∉ firable(s') ⇒ t ∉ Fired' *)
+    
+    (forall (pgroup : list Trans)
+            (t : Trans),
+        In pgroup sitpn.(priority_groups) ->
         In t pgroup ->
-        ~SpnIsFirable spn s' t ->
+        ~SitpnIsFirable sitpn s' t ->
         ~In t s'.(fired)) ->
-    (* ∀ t ∈ firable(s'), t ∈ sens(M - ∑ pre(t'), ∀ t'∈ Pr(t)) ⇒ t ∈ Fired' 
-       If t is sensitized by the residual marking, result of the firing of
-       all higher priority transitions, then t is fired. *)
+
+    (* If t is firable and sensitized by the residual marking, result
+       of the firing of all higher priority transitions, then t is
+       fired, i.e: 
+       ∀ t ∈ firable(s'), t ∈ sens(M - ∑ pre(t'), ∀ t'∈ Pr(t)) ⇒ t ∈ Fired' *)
+    
     (forall (pgroup : list Trans)
-       (t : Trans)
-       (residual_marking : list (Place * nat)),
-        In pgroup spn.(priority_groups) ->
+            (t : Trans)
+            (residual_marking : list (Place * nat)),
+        In pgroup sitpn.(priority_groups) ->
         In t pgroup ->
-        MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
-        SpnIsFirable spn s' t ->
+        MarkingHaveSameStruct sitpn.(initial_marking) residual_marking ->
+        SitpnIsFirable sitpn s' t ->
         (forall (pr : list Trans),
-          NoDup pr ->
-          (forall t' : Trans,
-              HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
-          (forall (p : Place)
-                  (n : nat),
-              In (p, n) s'.(marking) ->
-              In (p, n - pre_sum spn p pr) residual_marking)) ->
-        IsSensitized spn residual_marking t ->
+            NoDup pr ->
+            (forall t' : Trans,
+                HasHigherPriority sitpn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
+            (forall (p : Place)
+                    (n : nat),
+                In (p, n) s'.(marking) ->
+                In (p, n - pre_sum sitpn p pr) residual_marking)) ->
+        IsSensitized sitpn residual_marking t ->
         In t s'.(fired)) ->
-    (* ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t'), ∀ t' ∈ Pr(t)) ⇒ t ∉ Fired' 
-       If t is not sensitized by the residual marking, result of the firing of
-       all higher priority transitions, then t is not fired. *)
+    
+    (* If t is firable and not sensitized by the residual marking then t is not fired, i.e: 
+       ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t'), ∀ t' ∈ Pr(t)) ⇒ t ∉ Fired' *)
+    
     (forall (pgroup : list Trans)
-       (t : Trans)
-       (residual_marking : list (Place * nat)),
-        In pgroup spn.(priority_groups) ->
+            (t : Trans)
+            (residual_marking : list (Place * nat)),
+        In pgroup sitpn.(priority_groups) ->
         In t pgroup ->
-        MarkingHaveSameStruct spn.(initial_marking) residual_marking ->
-        SpnIsFirable spn s' t ->
+        MarkingHaveSameStruct sitpn.(initial_marking) residual_marking ->
+        SitpnIsFirable sitpn s' t ->
         (forall (pr : list Trans),
-          NoDup pr ->
-          (forall t' : Trans,
-              HasHigherPriority spn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
-          (forall (p : Place)
-                  (n : nat),
-              In (p, n) s'.(marking) ->
-              In (p, n - pre_sum spn p pr) residual_marking)) ->
-          ~IsSensitized spn residual_marking t ->
-          ~In t s'.(fired)) ->
+            NoDup pr ->
+            (forall t' : Trans,
+                HasHigherPriority sitpn t' t pgroup /\ In t' s'.(fired) <-> In t' pr) ->
+            (forall (p : Place)
+                    (n : nat),
+                In (p, n) s'.(marking) ->
+                In (p, n - pre_sum sitpn p pr) residual_marking)) ->
+        ~IsSensitized sitpn residual_marking t ->
+        ~In t s'.(fired)) ->
     
-    SpnSemantics spn s s' falling_edge
+    SitpnSemantics sitpn s s' falling_edge
+
+(* ↑clock : s = (Fired, m, cond, ex, I, reset) ⇝ s' = (Fired, m', cond, ex', I', reset') *)
+                  
+| SitpnSemantics_rising_edge :
+
+    IsWellDefinedSitpn sitpn ->
+    IsWellDefinedSitpnState sitpn s ->
+    IsWellDefinedSitpnState sitpn s' ->
     
-(* ↑clock : s = (Fired, M) ⇝ s' = (Fired, M') *)    
-| SpnSemantics_rising_edge :
-    
-    IsWellDefinedSpn spn ->
-    IsWellDefinedSpnState spn s ->
-    IsWellDefinedSpnState spn s' ->
     (* Fired stays the same between state s and s'. *)
     s.(fired) = s'.(fired) ->
+    
     (* M' = M - ∑ (pre(t_i) - post(t_i)), ∀ t_i ∈ Fired *)
     (forall (p : Place)
             (n : nat),
         In (p, n) s.(marking) ->
-        In (p, n - (pre_sum spn p s.(fired)) + (post_sum spn p s.(fired))) s'.(marking)) ->
+        In (p, n - (pre_sum sitpn p s.(fired)) + (post_sum sitpn p s.(fired)))
+           s'.(marking)) ->
+
+    (* All transitions disabled by the transient marking, result of
+       the withdrawal of tokens in the input places of the fired
+       transitions, receive a reset order, i.e: 
+     
+       ∀ t ∉ sens(m - ∑ pre(ti), ∀ ti ∈ Fired) ⇒ reset'(t) = 1 *)
+
+    (forall (t : Trans)
+            (transient_marking : list (Place * nat)),
+        (forall (p : Place) (n : nat),
+            In (p, n) s.(marking) ->
+            In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
+        MarkingHaveSameStruct s.(marking) transient_marking ->
+        In t sitpn.(transs) ->
+        ~IsSensitized sitpn transient_marking t ->
+        In (t, true) s'.(reset)) ->
+
+    (* All transitions enabled by the transient marking receive no
+       reset order, i.e: 
+
+       ∀ t ∈ sens(m - ∑ pre(ti), ∀ ti ∈ Fired) ⇒ reset'(t) = 0 *)
+
+    (forall (t : Trans)
+            (transient_marking : list (Place * nat)),
+        (forall (p : Place) (n : nat),
+            In (p, n) s.(marking) ->
+            In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
+        MarkingHaveSameStruct s.(marking) transient_marking ->
+        In t sitpn.(transs) ->
+        IsSensitized sitpn transient_marking t ->
+        In (t, false) s'.(reset)) ->
+
+    (* Time intervals are blocked for all transitions that have
+       reached the upper bound of their time intervals and were not
+       fired at this clock cycle, i.e:  
+     
+       ∀ t ∈ T, ↑I(t) = 0 ∧ t ∉ Fired ⇒ I'(t) = ψ *)
     
-    SpnSemantics spn s s' rising_edge.
+    (forall (t : Trans)
+            (itval : TimeInterval),
+        In (t, Some (active itval)) s.(intervals) ->
+        HasReachedMaxBound itval ->
+        ~In t s.(fired) ->
+        In (t, Some blocked) s'.(intervals)) ->
+
+    (* Time intervals stay the same for all transitions that haven't
+       reached the upper bound of their time intervals or were
+       fired at this clock cycle, i.e:  
+     
+       ∀ t ∈ T, ↑I(t) ≠ 0 ∨ t ∈ Fired ⇒ I'(t) = I(t) *)
+    
+    (forall (t : Trans)
+            (itval : TimeInterval),
+        In (t, Some (active itval)) s.(intervals) ->
+        (~HasReachedMaxBound itval \/ In t s.(fired)) ->
+        In (t, Some (active itval)) s'.(intervals)) ->
+    
+    SitpnSemantics sitpn s s' rising_edge.
+
+
+
