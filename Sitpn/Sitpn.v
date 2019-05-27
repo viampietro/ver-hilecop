@@ -257,7 +257,7 @@ Definition IsWellFormedTimeInterval (opt_itval : option TimeInterval) :=
 
 Definition AreWellFormedTimeIntervals (sitpn : Sitpn) :=
   forall (t : Trans),
-    In t sitpn.(transs) -> IsWellFormedTimeInterval ((s_intervals sitpn) t).
+    In t sitpn.(transs) -> IsWellFormedTimeInterval (s_intervals sitpn t).
 
 (** ** Properties on [conditions], [actions] and [functions]. *)
 
@@ -450,7 +450,7 @@ Definition IsWellDefinedSitpnState (sitpn : Sitpn) (s : SitpnState) :=
   
   (* All transitions that own a time interval in sitpn.(s_intervals) are in d_intervals *)
   (forall (t : Trans),
-      In t sitpn.(transs) /\ ((s_intervals sitpn) t) <> None ->
+      In t sitpn.(transs) /\ (s_intervals sitpn t) <> None ->
       In t (fst (split s.(d_intervals)))) /\
 
   (* All conditions in cond_values must be in sitpn.(conditions), and
