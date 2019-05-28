@@ -1,10 +1,10 @@
-(*! ============================================================ !*)
-(*! DEFINITION OF SYNCHRONOUSLY EXECUTED, GENERALIZED, EXTENDED, !*)
-(*! INTERPRETED, TIME PETRI NETS (SITPNs).                       !*)
-(*! ============================================================ !*)
-(*! SITPNs descibe the behavior of digital components in HILECOP !*)
-(*! high-level models.                                           !*)
-(*! ============================================================ !*)
+(*! ============================================================= !*)
+(*! DEFINITION OF SYNCHRONOUSLY EXECUTED, GENERALIZED, EXTENDED,  !*)
+(*! INTERPRETED, TIME PETRI NETS (SITPNs).                        !*)
+(*! ============================================================= !*)
+(*! SITPNs describe the behavior of digital components in HILECOP !*)
+(*! high-level models.                                            !*)
+(*! ============================================================= !*)
 
 (*
  * ============ CODING GUIDELINES ============
@@ -443,16 +443,25 @@ Definition IsWellDefinedSitpnState (sitpn : Sitpn) (s : SitpnState) :=
 
   (* All places in marking must be places in sitpn.(places), and conversely, i.e: *)
   sitpn.(places) = fst (split s.(marking)) /\
-
-  (* All transitions in d_intervals must be referenced in sitpn.(transs), i.e: *)
-  incl (fst (split s.(d_intervals))) sitpn.(transs) /\
-  NoDup (fst (split s.(d_intervals))) /\
   
-  (* All transitions that own a time interval in sitpn.(s_intervals) are in d_intervals *)
+  (* All transitions that own a time interval in sitpn.(s_intervals)
+     must be referenced in d_intervals, and conversely, i.e: *)
   (forall (t : Trans),
-      In t sitpn.(transs) /\ (s_intervals sitpn t) <> None ->
+      In t sitpn.(transs) /\ (s_intervals sitpn t) <> None <->
       In t (fst (split s.(d_intervals)))) /\
 
+  (* There are no duplicates in d_intervals, i.e: *)
+  NoDup (fst (split s.(d_intervals))) /\
+  
+  (* All transitions that own a time interval in sitpn.(s_intervals)
+     must be referenced in reset, and conversely, i.e: *)
+  (forall (t : Trans),
+      In t sitpn.(transs) /\ (s_intervals sitpn t) <> None <->
+      In t (fst (split s.(reset)))) /\
+
+  (* There are no duplicates in reset, i.e: *)
+  NoDup (fst (split s.(reset))) /\
+  
   (* All conditions in cond_values must be in sitpn.(conditions), and
      conversely, i.e: *)
   sitpn.(conditions) = fst (split s.(cond_values)) /\
