@@ -64,27 +64,6 @@ Structure Neighbours : Set := mk_neighbours {
                                   post_pl : list Place
                                 }.
 
-(** Returns the concatenation of all list of places contained in neighb. 
-    
-    Useful for [NoIsolatedPlace] sitpn's property. *)
-
-Definition flatten_neighbours (neighb : Neighbours) : list Place :=
-  neighb.(pre_pl) ++ neighb.(test_pl) ++ neighb.(inhib_pl) ++ neighb.(post_pl).
-
-(** Returns the list of all places referenced in lneighbours.
-    A same place can possibly appear multiple times in the
-    resulting list.            
-    
-    Useful for NoIsolatedPlace sitpn's property. *)
-
-Fixpoint flatten_lneighbours (lneighbours : list (Trans * Neighbours)) :
-  list Place :=
-  match lneighbours with
-  | (t, neighb) :: tail => (flatten_neighbours neighb) ++ (flatten_lneighbours tail)
-  | [] => []
-  end.
-
-Functional Scheme flatten_lneighbours_ind := Induction for flatten_lneighbours Sort Prop.
 
 (** * Types for Time Petri Nets *)
 
@@ -201,7 +180,7 @@ Structure Sitpn : Set :=
                      
       (* Contains the list of neighbour places 
        * associated with each transition. *)
-      lneighbours : list (Trans * Neighbours);
+      lneighbours : Trans -> Neighbours;
       
     }.
 
@@ -267,6 +246,29 @@ Definition NoDupFunctions (sitpn : Sitpn) := NoDup sitpn.(functions).
 
 (** ** Properties on [lneighbours]. *)
 
+(** Returns the concatenation of all list of places contained in neighb. 
+    
+    Useful for [NoIsolatedPlace] sitpn's property. *)
+
+Definition flatten_neighbours (neighb : Neighbours) : list Place :=
+  neighb.(pre_pl) ++ neighb.(test_pl) ++ neighb.(inhib_pl) ++ neighb.(post_pl).
+
+(** Returns the list of all places referenced as neighbour places 
+    of transitions in the [transs] list.
+    A same place can possibly appear multiple times in the
+    resulting list.            
+    
+    Useful for NoIsolatedPlace sitpn's property. *)
+
+Fixpoint flatten_lneighbours (sitpn : Sitpn) (transs : list Trans) :
+  list Place :=
+  match transs with
+  | t :: tl => (flatten_neighbours (lneighbours sitpn t)) ++ (flatten_lneighbours sitpn tl)
+  | [] => []
+  end.
+
+Functional Scheme flatten_lneighbours_ind := Induction for flatten_lneighbours Sort Prop.
+
 (** No duplicates in pre places (including test and inhib) and
     post places in the neighbourhood of transitions.
  
@@ -277,88 +279,81 @@ Definition NoDupFunctions (sitpn : Sitpn) := NoDup sitpn.(functions).
     test or inhib edge and one post edge. *)
 
 Definition NoDupInNeighbours (sitpn : Sitpn) :=
-  forall (t : Trans) (neigh_of_t : Neighbours),
-    In (t, neigh_of_t) (lneighbours sitpn) ->
-    NoDup ((pre_pl neigh_of_t) ++ (test_pl neigh_of_t) ++ (inhib_pl neigh_of_t)) /\
-    NoDup ((post_pl neigh_of_t)).
+  forall (t : Trans),
+    In t sitpn.(transs) ->
+    NoDup ((pre_pl (lneighbours sitpn t))
+             ++ (test_pl (lneighbours sitpn t))
+             ++ (inhib_pl (lneighbours sitpn t))) /\
+    NoDup (post_pl (lneighbours sitpn t)).
 
 (** For all place p, p is in places iff p is in the neighbourhood 
     of at least one transition. *)
 
 Definition NoIsolatedPlace (sitpn : Sitpn) := 
-  incl sitpn.(places) (flatten_lneighbours sitpn.(lneighbours)).
+  incl sitpn.(places) (flatten_lneighbours sitpn sitpn.(transs)).
 
 (** All places in [flatten_lneighbours sitpn.(lneighbours)] are in [sitpn.(places)]. *)
 
 Definition NoUnknownPlaceInNeighbours (sitpn : Sitpn) :=
-  incl (flatten_lneighbours sitpn.(lneighbours)) sitpn.(places).
-
-(** For all transition t, t is in sitpn.transs iff t is referenced in
-    [sitpn.(lneighbours)]. *)
-
-Definition NoUnknownTransInLNeighbours (sitpn : Sitpn) :=
-  sitpn.(transs) = fst (split sitpn.(lneighbours)).
+  incl (flatten_lneighbours sitpn sitpn.(transs)) sitpn.(places).
 
 (** Forall neighbours_of_t in sitpn.(lneighbours), there exists one list
     of places that is not empty.  i.e. A transition has at least one
     neighbour place. *)
 
 Definition NoIsolatedTrans (sitpn : Sitpn) :=
-  forall (t : Trans) (neighbours_of_t : Neighbours),
-    In (t, neighbours_of_t) sitpn.(lneighbours) ->
-    (flatten_neighbours neighbours_of_t) <> [].
+  forall (t : Trans),
+    In t sitpn.(transs) ->
+    (flatten_neighbours (lneighbours sitpn t)) <> [].
 
-(** ∀ p ∈ P, ∀ (t, neighb) ∈ sitpn.(lneighbours), 
-    if p ∈ (pre_pl neighb) then pre(p, t) >= 1 and
-    if p ∉ (pre_pl neighb) then pre(p, t) = 0.
- *)
+(** In the scope of a Sitpn sitpn:
+    ∀ p ∈ P, ∀ t ∈ T, 
+    if p is a "classic" input place of t then pre(p, t) >= 1 and
+    if p is not a "classic" input place of t then pre(p, t) = 0. *)
 
 Definition AreWellDefinedPreEdges (sitpn : Sitpn) :=
   forall (t : Trans)
-    (neighbours_of_t : Neighbours)
-    (p : Place),
-    In (t, neighbours_of_t) sitpn.(lneighbours) ->
-    (In p (pre_pl neighbours_of_t) -> (pre sitpn t p) >= 1) /\
-    (~In p (pre_pl neighbours_of_t) -> (pre sitpn t p) = 0).
+         (p : Place),
+    In t sitpn.(transs) ->
+    (In p (pre_pl (lneighbours sitpn t)) -> (pre sitpn t p) >= 1) /\
+    (~In p (pre_pl (lneighbours sitpn t)) -> (pre sitpn t p) = 0).
 
-(** ∀ p ∈ P, ∀ (t, neighb) ∈ sitpn.(lneighbours), 
-    if p ∈ (test_pl neighb) then test(p, t) >= 1 and
-    if p ∉ (test_pl neighb) then test(p, t) = 0.
- *)
+(** In the scope of a Sitpn sitpn:
+    ∀ p ∈ P, ∀ t ∈ T, 
+    if p is a "test" input place of t then test(p, t) >= 1 and
+    if p is not a "test" input place of t then test(p, t) = 0. *)
 
 Definition AreWellDefinedTestEdges (sitpn : Sitpn) :=
   forall (t : Trans)
-    (neighbours_of_t : Neighbours)
-    (p : Place),
-    In (t, neighbours_of_t) sitpn.(lneighbours) ->
-    (In p (test_pl neighbours_of_t) -> (test sitpn t p) >= 1) /\
-    (~In p (test_pl neighbours_of_t) -> (test sitpn t p) = 0).
+         (p : Place),
+    In t sitpn.(transs) ->
+    (In p (test_pl (lneighbours sitpn t)) -> (test sitpn t p) >= 1) /\
+    (~In p (test_pl (lneighbours sitpn t)) -> (test sitpn t p) = 0).
 
-(** ∀ p ∈ P, ∀ (t, neighb) ∈ sitpn.(lneighbours), 
-    if p ∈ (inhib_pl neighb) then inhib(p, t) >= 1 and
-    if p ∉ (inhib_pl neighb) then inhib(p, t) = 0.
- *)
+(** In the scope of a Sitpn sitpn:
+    ∀ p ∈ P, ∀ t ∈ T, 
+    if p is an "inhibiting" input place of t then inhib(p, t) >= 1 and
+    if p is not an "inhibiting" input place of t then inhib(p, t) = 0. *)
 
 Definition AreWellDefinedInhibEdges (sitpn : Sitpn) :=
   forall (t : Trans)
-    (neighbours_of_t : Neighbours)
-    (p : Place),
-    In (t, neighbours_of_t) sitpn.(lneighbours) ->
-    (In p (inhib_pl neighbours_of_t) -> (inhib sitpn t p) >= 1) /\
-    (~In p (inhib_pl neighbours_of_t) -> (inhib sitpn t p) = 0).
+         (neighbours_of_t : Neighbours)
+         (p : Place),
+    In t sitpn.(transs) ->
+    (In p (inhib_pl (lneighbours sitpn t)) -> (inhib sitpn t p) >= 1) /\
+    (~In p (inhib_pl (lneighbours sitpn t)) -> (inhib sitpn t p) = 0).
 
-(** ∀ p ∈ P, ∀ (t, neighb) ∈ sitpn.(lneighbours), 
-    if p ∈ (post_pl neighb) then post(p, t) >= 1 and
-    if p ∉ (post_pl neighb) then post(p, t) = 0.
- *)
+(** In the scope of a Sitpn sitpn:
+    ∀ p ∈ P, ∀ t ∈ T, 
+    if p is an output place of t then post(p, t) >= 1 and
+    if p is not an output place of t then post(p, t) = 0. *)
 
 Definition AreWellDefinedPostEdges (sitpn : Sitpn) :=
   forall (t : Trans)
-    (neighbours_of_t : Neighbours)
-    (p : Place),
-    In (t, neighbours_of_t) sitpn.(lneighbours) ->
-    (In p (post_pl neighbours_of_t) -> (post sitpn t p) >= 1) /\
-    (~In p (post_pl neighbours_of_t) -> (post sitpn t p) = 0).
+         (p : Place),
+    In t sitpn.(transs) ->
+    (In p (post_pl (lneighbours sitpn t)) -> (post sitpn t p) >= 1) /\
+    (~In p (post_pl (lneighbours sitpn t)) -> (post sitpn t p) = 0).
 
 (** Predicate of well-definition for an SITPN. *)
 
@@ -374,7 +369,6 @@ Definition IsWellDefinedSitpn (sitpn : Sitpn) :=
   NoDupInNeighbours sitpn /\
   NoIsolatedPlace sitpn /\
   NoUnknownPlaceInNeighbours sitpn /\
-  NoUnknownTransInLNeighbours sitpn /\
   NoIsolatedTrans sitpn /\
   AreWellDefinedPreEdges sitpn /\
   AreWellDefinedTestEdges sitpn /\
