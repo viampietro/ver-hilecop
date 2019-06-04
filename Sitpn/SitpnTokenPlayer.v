@@ -35,35 +35,7 @@ Section SitpnHelperFunctions.
     end.
 
   Functional Scheme get_value_ind := Induction for get_value Sort Prop.
-
-  (** Replaces the couple (key, old_value) by the couple (key, value)
-      in [l], if [key] is referenced in [l]. Raises an error (None)
-      otherwise. *)
   
-  Fixpoint set_value
-           (eq_dec : forall (x y : A), {x = y} + {x <> y})
-           (key : A)
-           (value : B)
-           (l : list (A * B))
-           {struct l} : option (list (A * B)) :=
-    match l with
-    (* eq_dec is evaluated into a boolean expr
-     * thanks to the def Bool.Sumbool.bool_of_sumbool *)
-    | (x, v) :: tl =>
-      if eq_dec x key then
-        Some ((key, value) :: tl)
-      else
-        match set_value eq_dec key value tl with
-        | Some l' => Some ((x, v) :: l')
-        (* Inductive call returned an error, then error. *)
-        | None => None
-        end
-    (* Key is not in l, then error. *)
-    | [] => None
-    end.
-
-  Functional Scheme set_value_ind := Induction for set_value Sort Prop.
-
   (** Functional implementation of the [In] predicate, declared in the
       Coq Standard Library. *)
 
@@ -101,6 +73,22 @@ Section InterpretationFunctions.
     | [] => cond_values
     end.
 
+  (** Returns true if for all conditions in [cond_values] 
+      associated to t is sitpn are true. *)
+  
+  Fixpoint are_all_conditions_true
+           (sitpn : Sitpn)
+           (cond_values : list (Condition * bool))
+           (t: Trans) {struct cond_values} : bool :=
+    match cond_values with
+    | (c, b) :: tl =>
+      if has_condition sitpn t c then
+        b && are_all_conditions_true sitpn tl t
+      else
+        are_all_conditions_true sitpn tl t
+    | [] => true
+    end.
+  
   (** Returns true if there exists a place p in marking 
       with at least one token that is associated to action a
       in sitpn. *)
@@ -331,8 +319,8 @@ Section Sensitization.
   Definition is_sensitized
              (sitpn : Sitpn)
              (marking : list (Place * nat))
+             (neighbours_of_t : Neighbours)
              (t : Trans) : option bool :=
-    let neighbours_of_t := (lneighbours sitpn t) in
     match map_check_pre sitpn marking (pre_pl neighbours_of_t) t with
     | Some check_pre_result =>  
       match map_check_test sitpn marking (test_pl neighbours_of_t) t with
@@ -357,26 +345,63 @@ End Sensitization.
 (** * Functions for Time. *)
 
 Section TimeFunctions.
+
+  (** Returns true if [dyn_itval] has reached its upper bound. 
+      false otherwise. *)
+
+  Definition has_reached_upper_bound (dyn_itval : DynamicTimeInterval) : bool :=
+    match dyn_itval with
+    | active {| min_t := 0; max_t := pos_val 0 |} | blocked => true
+    | _ => false    
+    end.
+
+  (** Returns true if the dynamic time interval associated to in
+      [d_intervals] has a lower bound equal to zero. 
+      
+      Raises an error if t is not referenced in [d_intervals]. *)
+  
+  Definition has_entered_time_window
+             (sitpn : Sitpn)
+             (d_intervals : list (Trans * DynamicTimeInterval))
+             (t : Trans) : option bool :=
+    (* Checks if t is associated with a time interval. *)
+    match s_intervals sitpn t with
+    | Some stc_itval =>
+      match get_value eq_nat_dec t d_intervals with
+      (* Checks if dyn_itval has a lower bound equal to 0. *)
+      | Some dyn_itval =>
+        match dyn_itval with
+        | active {| min_t := 0; max_t := _ |} => Some true
+        | _ => Some false
+        end
+      (* Error: t is not referenced in d_intervals. *)
+      | None => None
+      end
+    (* If t is not associated with a time itval, then its 
+       firability is not restricted to a time window. *)
+    | None => Some true
+    end.
   
   (** Builds a new list of couples (Trans, DynamicTimeInterval) based 
-      on the state of dynamic intervals in the [d_intervals] list, and
+      on the state of dynamic intervals in the [d_itvals] list, and
       of current state s of sitpn. *)
   
   Fixpoint update_time_intervals
            (sitpn : Sitpn)
            (s : SitpnState)
-           (d_intervals : list (Trans * DynamicTimeInterval))
+           (d_itvals : list (Trans * DynamicTimeInterval))
            (new_d_itvals : list (Trans * DynamicTimeInterval))
-           {struct d_intervals} :
+           {struct d_itvals} :
     option (list (Trans * DynamicTimeInterval)) :=
-  match d_intervals with
+  match d_itvals with
   | (t, dyn_itval) :: tl =>
     (* Checks if t is associated with a static time interval in sitpn. *)
     match s_intervals sitpn t with
     (* Normal case, t is associated with a static itval. *)
-    | Some stc_itval => 
+    | Some stc_itval =>
+      let neighbours_of_t := lneighbours sitpn t in
       (* Checks if t is sensitized by the marking at state s. *)
-      match is_sensitized sitpn s.(marking) t with
+      match is_sensitized sitpn s.(marking) neighbours_of_t t with
       (* If t is sensitized, determines its time interval status. *)
       | Some true =>
         (* If t is in the fired list of state s then resets t's itval
@@ -416,11 +441,372 @@ Section TimeFunctions.
       (* Error: is_sensitized raised an error. *)
       | None => None
       end
-    (* Error: t is associated with a dynamic itval in d_intervals, 
+    (* Error: t is associated with a dynamic itval in d_itvals, 
               but with no static itval in sitpn. *)
     | None => None
     end
   | [] => Some new_d_itvals
   end.
   
+  (** Returns two lists build on the [d_itvals] list: 
+      
+      - A list of reset orders, computed for all transitions based
+        on the sensitization by the transient marking.
+      - A dynamic time interval list with newly blocked
+        intervals. *)
+
+  Fixpoint get_blocked_itvals_and_reset_orders
+           (sitpn : Sitpn)
+           (s : SitpnState)
+           (d_itvals : list (Trans * DynamicTimeInterval))
+           (transient_marking : list (Place * nat))
+           (reset_orders : list (Trans * bool))
+           (new_d_itvals : list (Trans * DynamicTimeInterval))
+           {struct d_itvals} :
+    option ((list (Trans * bool)) * (list (Trans * DynamicTimeInterval))) :=
+  match d_itvals with
+  | (t, dyn_itval) :: tl =>
+    (* Retrieves neighbour places of t. *)
+    let neighbours_of_t := lneighbours sitpn t in
+    (* If t is sensitized by the transient marking, then 
+       no reset order is given. *)
+    match is_sensitized sitpn transient_marking neighbours_of_t t with
+    | Some true =>
+      let reset_orders' := reset_orders ++ [(t, false)] in
+      (* If t is not a fired transition at state s, and its dynamic
+         interval has reached is upper bound, then t is associated with 
+         a blocked time interval in new_d_itvals'. *)
+      if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
+        let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
+        (* Recursive call. *)
+        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+      (* Else copies current dynamic interval. *)
+      else
+        let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
+        (* Recursive call. *)
+        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+    (* Else gives a reset order to t. *)
+    | Some false =>
+      let reset_orders' := reset_orders ++ [(t, true)] in
+      (* If t is not a fired transition at state s, and its dynamic
+         interval has reached is upper bound, then t is associated with 
+         a blocked time interval in new_d_itvals'. *)
+      if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
+        let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
+        (* Recursive call. *)
+        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+      (* Else copies current dynamic interval. *)
+      else
+        let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
+        (* Recursive call. *)
+        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+    (* Error: is_sensitized raised an error. *)
+    | None => None
+    end
+  | [] => Some (reset_orders, new_d_itvals)
+  end.
+  
 End TimeFunctions.
+
+(** * Firability functions. *)
+
+Section Firability.
+
+  (** Returns true if transition t is firable according
+      to SITPN semantics firability definition. *)
+  
+  Definition sitpn_is_firable
+             (sitpn : Sitpn)
+             (s : SitpnState)
+             (neighbours_of_t : Neighbours)
+             (t : Trans) : option bool :=
+    (* Checks if t is sensitized by marking at state s. *)
+    match is_sensitized sitpn s.(marking) neighbours_of_t t with
+    | Some true =>
+      (* Checks if t's time interval is ready for firing. *)
+      match has_entered_time_window sitpn s.(d_intervals) t with
+      | Some true =>
+        (* Finlly, checks if all conditions associated to t are true. *)
+        Some (are_all_conditions_true sitpn s.(cond_values) t)
+      (* If time window not reached then t is not firable. *)
+      | Some false => Some false
+      (* Error: has_entered_time_window raised an error. *)
+      | None => None
+      end
+    (* If t is not sensitized by marking at state s then t is not
+       firable. *)
+    | Some false => Some false
+    (* Error: is_sensitized raised an error. *)
+    | None => None
+    end.
+  
+End Firability.
+
+(** * Marking update. *)
+
+Section Updatemarking.
+
+  (** Defines the two operations that can be applied to a marking, i.e
+      addition or subtraction of tokens. *)
+  
+  Inductive MarkingOp : Set :=
+  | madd : MarkingOp
+  | msub : MarkingOp.
+  
+  (** Adds/subtracts (according to [op]) [nboftokens] tokens from place [p] in
+      marking [m], and returns an resulting marking [m']. 
+
+      Raises an error if p is not referenced in marking [m]. *)
+
+  Fixpoint modify_m
+           (marking : list (Place * nat))
+           (p : Place)
+           (op : MarkingOp)
+           (nboftokens : nat) {struct marking} :
+    option (list (Place * nat)) :=
+    match marking with
+    | (p', n) :: tl =>      
+      (* If p is a key in the head couple of marking then 
+         either adds or substracts tokens according to op. *)
+      if p' =? p then
+        match op with
+        | madd => Some ((p, Nat.add n nboftokens) :: tl)
+        | msub => Some ((p, Nat.sub n nboftokens) :: tl)
+        end
+      (* Recursive call otherwise. *)
+      else 
+        match modify_m tl p op nboftokens with
+        | Some m' => Some ((p', n) :: m')
+        | None => None
+        end
+    | [] => None
+    end.
+    
+  (** Removes some tokens from [pre_places], result  
+      of the firing of t. 
+                 
+      Returns an updated marking. *)
+  
+  Fixpoint update_marking_pre_aux
+           (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (pre_places : list Place) : option (list (Place * nat)) :=
+    match pre_places with
+    | p :: tail =>
+      match modify_m marking p msub (pre sitpn t p) with
+      | Some m' => update_marking_pre_aux sitpn m' t tail
+      (* Error: p is not referenced in sitpn.(marking). *)
+      | None => None
+      end
+    | [] => Some marking
+    end.
+
+  Functional Scheme update_marking_pre_aux_ind := Induction for update_marking_pre_aux Sort Prop.
+  
+  (** Wrapper around [update_marking_pre_aux]. *)
+  
+  Definition update_marking_pre
+             (sitpn : Sitpn)
+             (marking : list (Place * nat))
+             (neighbours_of_t : Neighbours)
+             (t : Trans) : option (list (Place * nat)) :=
+    update_marking_pre_aux sitpn marking t (pre_pl neighbours_of_t).
+
+  Functional Scheme update_marking_pre_ind := Induction for update_marking_pre Sort Prop.
+
+  (**  Applies [update_marking_pre] on every transition t ∈ fired,
+       and returns the resulting marking. 
+       
+       Raises an error if update_marking_pre fails. *)
+  
+  Fixpoint map_update_marking_pre
+           (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (fired : list Trans) {struct fired} :
+    option (list (Place * nat)) :=
+    match fired with
+    | t :: tail =>
+      (* Retrieves nieghbour places of t. *)
+      let neighbours_of_t := lneighbours sitpn t in
+      (* Substracts tokens from input places of t, and returns new
+         marking. *)
+      match update_marking_pre sitpn marking neighbours_of_t t with
+      | Some m' => map_update_marking_pre sitpn m' tail
+      (* Error: update_marking_pre failed. *)
+      | None => None
+      end
+    | [] => Some marking
+    end.
+
+  Functional Scheme map_update_marking_pre_ind := Induction for map_update_marking_pre Sort Prop.
+
+  (** Adds tokens from [post_places] (input places of t), result  
+      of the firing of t. 
+                 
+      Returns an updated marking. *)
+  
+  Fixpoint update_marking_post_aux
+           (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans)
+           (post_places : list Place) : option (list (Place * nat)) :=
+    match post_places with
+    | p :: tail =>
+      match modify_m marking p madd (post sitpn t p) with
+      | Some m' => update_marking_post_aux sitpn m' t tail
+      (* Error: p is not referenced in sitpn.(marking). *)
+      | None => None
+      end
+    | [] => Some marking
+    end.
+
+  Functional Scheme update_marking_post_aux_ind := Induction for update_marking_post_aux Sort Prop.
+  
+  (** Wrapper around [update_marking_post_aux]. *)
+  
+  Definition update_marking_post
+             (sitpn : Sitpn)
+             (marking : list (Place * nat))
+             (neighbours_of_t : Neighbours)
+             (t : Trans) : option (list (Place * nat)) :=
+    update_marking_post_aux sitpn marking t (post_pl neighbours_of_t).
+
+  Functional Scheme update_marking_post_ind := Induction for update_marking_post Sort Prop.
+
+  (**  Applies [update_marking_post] on every transition t ∈ fired,
+       and returns the resulting marking. 
+       
+       Raises an error if update_marking_post fails. *)
+  
+  Fixpoint map_update_marking_post
+           (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (fired : list Trans) {struct fired} :
+    option (list (Place * nat)) :=
+    match fired with
+    | t :: tail =>
+      (* Retrieves nieghbour places of t. *)
+      let neighbours_of_t := lneighbours sitpn t in
+      (* Substracts tokens from input places of t, and returns new
+         marking. *)
+      match update_marking_post sitpn marking neighbours_of_t t with
+      | Some m' => map_update_marking_post sitpn m' tail
+      (* Error: update_marking_post failed. *)
+      | None => None
+      end
+    | [] => Some marking
+    end.
+
+  Functional Scheme map_update_marking_post_ind := Induction for map_update_marking_post Sort Prop.
+  
+End Updatemarking.
+
+(** * Determining transitions to be fired. *)
+
+Section TransitionsToBeFired.
+
+  (** Returns the list of transitions to be fired in priority group
+      [pgroup] at the current state of [sitpn]. *)
+  
+  Fixpoint sitpn_fire_aux
+           (sitpn : Sitpn)
+           (s : SitpnState)
+           (residual_marking : list (Place * nat))
+           (fired : list Trans)
+           (pgroup : list Trans):
+    option (list Trans) :=
+    match pgroup with
+    | t :: tail =>
+      (* Retrieves the neighbour places of t. *)
+      let neighbours_of_t := lneighbours sitpn t in
+      match sitpn_is_firable sitpn s neighbours_of_t t with
+      (* If t is firable, then checks if t is sensitized by residual_marking.  *)
+      | Some true =>
+        (* If t is sensitized by residual_marling, then, 
+           updates the residual_marking, and add t to the fired transitions. *)
+        match is_sensitized sitpn residual_marking neighbours_of_t t with
+        | Some true =>
+          match update_marking_pre sitpn residual_marking neighbours_of_t t with
+          (* Recursive call with updated residual marking *)
+          | Some residual_marking' =>
+            sitpn_fire_aux sitpn s residual_marking' (fired ++ [t]) tail
+          (* Something went wrong, error! *)
+          | None => None
+          end
+        (* Else no changes but inductive progress. *)
+        | Some false =>
+          sitpn_fire_aux sitpn s residual_marking fired tail
+        (* Something went wrong, error! *)
+        | None => None
+        end
+      (* Else no changes but inductive progress. *)
+      | Some false =>
+        sitpn_fire_aux sitpn s residual_marking fired tail
+      (* Something went wrong, error! *)
+      | None => None
+      end
+    | []  => Some fired
+    end.
+
+  Functional Scheme sitpn_fire_aux_ind := Induction for sitpn_fire_aux Sort Prop.
+  
+  (*****************************************************)
+  (*****************************************************)
+  
+  (** Wrapper function around sitpn_fire_pre_aux. *)
+  
+  Definition sitpn_fire
+             (sitpn : Sitpn)
+             (s : SitpnState)
+             (pgroup : list Trans) :
+    option (list Trans) :=
+    sitpn_fire_aux sitpn s s.(marking) [] pgroup.
+  
+  (***********************************************************************)
+  (***********************************************************************)
+  
+  (** Returns the list of fired transitions at the current state of [sitpn].
+               
+      Applies sitpn_fire over ALL priority group of transitions. *)
+  
+  Fixpoint sitpn_map_fire_aux
+           (sitpn : Sitpn)
+           (state : SitpnState)
+           (fired_transitions : list Trans)
+           (priority_groups : list (list Trans)) :
+    option (list Trans) :=
+    match priority_groups with
+    (* Loops over all priority group of transitions (pgroup) and
+     * calls sitpn_fire. *)
+    | pgroup :: pgroups_tail =>
+      match sitpn_fire sitpn state pgroup with
+      (* If sitpn_fire succeeds, then adds the fired transitions
+       * in fired_transitions list. *)
+      | Some fired_trs =>
+        sitpn_map_fire_aux sitpn state (fired_transitions ++ fired_trs) pgroups_tail
+      (* Case of error! *)
+      | None => None
+      end
+    | [] => Some fired_transitions
+    end.
+
+  Functional Scheme sitpn_map_fire_aux_ind := Induction for sitpn_map_fire_aux Sort Prop.
+  
+  (***********************************************************************)
+  (***********************************************************************)
+  
+  (** Wrapper around sitpn_map_fire_aux function. *)
+  
+  Definition sitpn_map_fire (sitpn : Sitpn) (s : SitpnState) :
+    option SitpnState :=
+    match sitpn_map_fire_aux sitpn s [] sitpn.(priority_groups) with
+    | Some fired => Some (mk_SitpnState fired (marking s)
+                                        (d_intervals s) (reset s)
+                                        (cond_values s) (exec_a s) (exec_f s))
+    | None => None
+    end.
+
+  Functional Scheme sitpn_map_fire_ind := Induction for sitpn_map_fire Sort Prop.
+  
+End TransitionsToBeFired.

@@ -366,11 +366,14 @@ Definition IsSensitized
 (** * Predicates for Time Petri nets semantics. *)
 
 (** Tests if [t] is associated in [d_intervals] with is an active time
-    interval with [min_t] = 0 (≡ 0 ∈ I). *)
+    interval with [min_t] = 0 (≡ 0 ∈ I) or if t has no static time
+    interval in sitpn. *)
 
 Definition HasEnteredTimeWindow
+           (sitpn : Sitpn)
            (d_intervals : list (Trans * DynamicTimeInterval))
            (t : Trans) :=
+  s_intervals sitpn t = None \/
   forall (upper_bound : PositiveIntervalBound),
     In (t, active {| min_t := 0; max_t := upper_bound |}) d_intervals.
 
@@ -378,8 +381,8 @@ Definition HasEnteredTimeWindow
     Useful when determining if a dynamic time interval 
     should be blocked. *)
 
-Definition HasReachedMaxBound (itval : TimeInterval) :=
-  itval = {| min_t := 0; max_t := pos_val 0 |}.
+Definition HasReachedUpperBound (dyn_itval : DynamicTimeInterval) :=
+  dyn_itval = active {| min_t := 0; max_t := pos_val 0 |} \/ dyn_itval = blocked.
 
 (** Decrements the bounds of a time interval. *)
 
@@ -422,7 +425,7 @@ Definition SitpnIsFirable
            (s : SitpnState)
            (t : Trans) :=
   IsSensitized sitpn s.(marking) t /\
-  HasEnteredTimeWindow s.(d_intervals) t /\
+  HasEnteredTimeWindow sitpn s.(d_intervals) t /\
   HasReachedAllConditions sitpn s.(cond_values) t.
 
 (** * Sitpn Semantics definition.
@@ -665,9 +668,9 @@ Inductive SitpnSemantics
        ∀ t ∈ T, ↑I(t) = 0 ∧ t ∉ Fired ⇒ I'(t) = ψ *)
     
     (forall (t : Trans)
-            (itval : TimeInterval),
-        In (t, active itval) s.(d_intervals) ->
-        HasReachedMaxBound itval ->
+            (dyn_itval : DynamicTimeInterval),
+        In (t, dyn_itval) s.(d_intervals) ->
+        HasReachedUpperBound dyn_itval ->
         ~In t s.(fired) ->
         In (t, blocked) s'.(d_intervals)) ->
 
@@ -678,10 +681,10 @@ Inductive SitpnSemantics
        ∀ t ∈ T, ↑I(t) ≠ 0 ∨ t ∈ Fired ⇒ I'(t) = I(t) *)
     
     (forall (t : Trans)
-            (itval : TimeInterval),
-        In (t, active itval) s.(d_intervals) ->
-        (~HasReachedMaxBound itval \/ In t s.(fired)) ->
-        In (t, active itval) s'.(d_intervals)) ->
+            (dyn_itval : DynamicTimeInterval),
+        In (t, dyn_itval) s.(d_intervals) ->
+        (~HasReachedUpperBound dyn_itval \/ In t s.(fired)) ->
+        In (t, dyn_itval) s'.(d_intervals)) ->
 
     (* Condition values stay the same. *)
 

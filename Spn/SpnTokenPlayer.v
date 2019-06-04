@@ -38,8 +38,7 @@ Section FireSpn.
   
   (** Returns true if t ∈ sensitized(residual_marking). 
       [state] is not used in [spn_is_firable], but it is here
-      to recall that a transitions is firable at a certain state.
-   *)
+      to recall that a transitions is firable at a certain state. *)
   
   Definition spn_is_firable
              (spn : Spn)
@@ -206,10 +205,10 @@ End FireSpn.
 
 Section UpdateMarkingSpn.
 
-  (** Function : Removes some tokens from [pre_places], result  
-                 of the firing of t. 
+  (** Removes some tokens from [pre_places], result  
+      of the firing of t. 
                  
-                 Returns a new [spn] with an updated marking. *)
+      Returns a new [spn] with an updated marking. *)
   
   Fixpoint update_marking_pre_aux
            (spn : Spn)
