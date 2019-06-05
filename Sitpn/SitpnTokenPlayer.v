@@ -929,3 +929,82 @@ Section SitpnCycle.
     end.
   
 End SitpnCycle.
+
+(** * Animation function for Sitpn. *)
+
+Section SitpnAnimate.
+
+  (** Returns a list of couples (trans, dynamic itval) for all
+      transitions associated with a static itval in [s_intervals]. 
+
+      Useful to build the initial state of a Sitpn. *)
+  
+  Fixpoint s_intervals2d_intervals
+           (transs : list Trans)
+           (s_intervals : Trans -> option TimeInterval) :
+    list (Trans * DynamicTimeInterval) :=
+    match transs with
+    | t :: tl =>
+      match s_intervals t with
+      | Some itval => (t, active itval) :: s_intervals2d_intervals tl s_intervals
+      | None => s_intervals2d_intervals tl s_intervals
+      end
+    | [] => []
+    end.
+  
+  (** Returns the marking of all places defined in the [places] list
+      as a list of couples (place, nboftokens). 
+
+      Useful to build the initial state of a Sitpn. *)
+
+  Fixpoint marking2list
+           (places : list Place)
+           (marking : Place -> nat) {struct places} :
+    list (Place * nat) :=
+    match places with
+    | p :: tl => (p, marking p) :: marking2list tl marking
+    | [] => []
+    end.
+
+  (** Animates a Sitpn [sitpn] during [n] cycles, starting from state
+      [s] of [sitpn].  *)
+
+  Fixpoint sitpn_animate_aux
+           (sitpn : Sitpn)
+           (s : SitpnState)
+           (n : nat)
+           (time_value : nat)
+           (env : Condition -> nat -> bool)
+           (states : list (SitpnState * SitpnState)) {struct n} :
+    option (list (SitpnState * SitpnState)) :=
+    match n with
+    | S m =>
+      (* Plus one evolution cycle from state s. *)
+      match sitpn_cycle sitpn s time_value env with
+      | Some (s', s'') =>
+        (* Decrements n, increments time value, and adds new state
+           couple to states list. *)
+        sitpn_animate_aux sitpn s'' m (S time_value) env (states ++ [(s', s'')])
+      (* Error: something went wrong with sitpn_cycle.  *)
+      | None => None
+      end
+    (* Animation is over, returns list of states. *)
+    | O => Some states
+    end. 
+
+  (** Animates a Sitpn sitpn during n cycles, starting from the inital
+      state of [sitpn], i.e s0 = (∅, m0, ∅, I0, ∅, ∅, ∅), where m0 is
+      the initial marking of [sitpn] and I0 is the [s_intervals]
+      function of [sitpn].  *)
+  
+  Definition sitpn_animate
+             (sitpn : Sitpn)
+             (n : nat)
+             (env : Condition -> nat -> bool) :
+    option (list (SitpnState * SitpnState)) := 
+    let m0 := marking2list (places sitpn) (initial_marking sitpn) in
+    let d_intervals0 := s_intervals2d_intervals (transs sitpn) (s_intervals sitpn) in
+    let s0 := mk_SitpnState [] m0 d_intervals0 [] [] [] [] in
+    sitpn_animate_aux sitpn s0 n 0 env [].
+  
+End SitpnAnimate.

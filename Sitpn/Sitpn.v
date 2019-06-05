@@ -175,11 +175,12 @@ Structure Sitpn : Set :=
       (* The function associating actions to places. *)
       has_action : Place -> Action -> bool;
 
-      (* The function associating interpretation functions to transitions. *)
+      (* The function associating interpretation functions to
+         transitions. *)
       has_function : Trans -> IFunction -> bool;
                      
-      (* Contains the list of neighbour places 
-       * associated with each transition. *)
+      (* Contains the list of neighbour places associated with each
+         transition. *)
       lneighbours : Trans -> Neighbours;
       
     }.
@@ -380,9 +381,9 @@ Definition IsWellDefinedSitpn (sitpn : Sitpn) :=
       Describe the structure of an Sitpn state.
       
       An SitpnState instance has a meaning only if it is related to a
-      given SITPN by the [IsWellDefinedSitpnState] relation (see definition
-      below). Therefore, we express in comments properties of the
-      SitpnState fields under the scope of an Sitpn instance.
+      given SITPN by the [IsWellDefinedSitpnState] relation (see
+      definition below). Therefore, we express in comments properties
+      of the SitpnState fields under the scope of an Sitpn instance.
 
       The rules defining how an Sitpn should go from one state to
       another are defined by the Sitpn semantics (see file
@@ -395,8 +396,10 @@ Definition IsWellDefinedSitpn (sitpn : Sitpn) :=
 Structure SitpnState :=
   mk_SitpnState {
 
-      (* - On falling edge: the list transitions fired at the previous cycle. 
-         - On rising edge: the list of transitions to be fired at this cycle. *)
+      (* - On falling edge: the list transitions fired at the previous
+           cycle.  
+         - On rising edge: the list of transitions to be fired at
+           this cycle. *)
       
       fired : list Trans;
 
@@ -408,8 +411,10 @@ Structure SitpnState :=
       
       d_intervals : list (Trans * DynamicTimeInterval);
 
-      (* - On falling edge: orders to reset time counters at this cycle. 
-         - On rising edge: orders to reset time counters at the next cycle. *)
+      (* - On falling edge: orders to reset time counters at this
+           cycle.  
+         - On rising edge: orders to reset time counters at the
+           next cycle. *)
       
       reset : list (Trans * bool);
 
