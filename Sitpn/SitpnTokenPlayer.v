@@ -707,7 +707,7 @@ End Updatemarking.
 Section TransitionsToBeFired.
 
   (** Returns the list of transitions to be fired in priority group
-      [pgroup] at the current state of [sitpn]. *)
+      [pgroup] at the state [s] of [sitpn]. *)
   
   Fixpoint sitpn_fire_aux
            (sitpn : Sitpn)
@@ -751,8 +751,8 @@ Section TransitionsToBeFired.
 
   Functional Scheme sitpn_fire_aux_ind := Induction for sitpn_fire_aux Sort Prop.
   
-  (*****************************************************)
-  (*****************************************************)
+  (* -------------------------------------------------- *)
+  (* -------------------------------------------------- *)
   
   (** Wrapper function around sitpn_fire_pre_aux. *)
   
@@ -762,17 +762,17 @@ Section TransitionsToBeFired.
              (pgroup : list Trans) :
     option (list Trans) :=
     sitpn_fire_aux sitpn s s.(marking) [] pgroup.
+
+  (* -------------------------------------------------- *)
+  (* -------------------------------------------------- *)
   
-  (***********************************************************************)
-  (***********************************************************************)
-  
-  (** Returns the list of fired transitions at the current state of [sitpn].
+  (** Returns the list of transitions to be fired at state [s] of [sitpn].
                
       Applies sitpn_fire over ALL priority group of transitions. *)
   
   Fixpoint sitpn_map_fire_aux
            (sitpn : Sitpn)
-           (state : SitpnState)
+           (s : SitpnState)
            (fired_transitions : list Trans)
            (priority_groups : list (list Trans)) :
     option (list Trans) :=
@@ -780,11 +780,11 @@ Section TransitionsToBeFired.
     (* Loops over all priority group of transitions (pgroup) and
      * calls sitpn_fire. *)
     | pgroup :: pgroups_tail =>
-      match sitpn_fire sitpn state pgroup with
+      match sitpn_fire sitpn s pgroup with
       (* If sitpn_fire succeeds, then adds the fired transitions
        * in fired_transitions list. *)
       | Some fired_trs =>
-        sitpn_map_fire_aux sitpn state (fired_transitions ++ fired_trs) pgroups_tail
+        sitpn_map_fire_aux sitpn s (fired_transitions ++ fired_trs) pgroups_tail
       (* Case of error! *)
       | None => None
       end
@@ -792,21 +792,140 @@ Section TransitionsToBeFired.
     end.
 
   Functional Scheme sitpn_map_fire_aux_ind := Induction for sitpn_map_fire_aux Sort Prop.
-  
-  (***********************************************************************)
-  (***********************************************************************)
+
+  (* -------------------------------------------------- *)
+  (* -------------------------------------------------- *)
   
   (** Wrapper around sitpn_map_fire_aux function. *)
   
   Definition sitpn_map_fire (sitpn : Sitpn) (s : SitpnState) :
-    option SitpnState :=
-    match sitpn_map_fire_aux sitpn s [] sitpn.(priority_groups) with
-    | Some fired => Some (mk_SitpnState fired (marking s)
-                                        (d_intervals s) (reset s)
-                                        (cond_values s) (exec_a s) (exec_f s))
-    | None => None
-    end.
+    option (list Trans) := sitpn_map_fire_aux sitpn s [] sitpn.(priority_groups).
 
   Functional Scheme sitpn_map_fire_ind := Induction for sitpn_map_fire Sort Prop.
   
 End TransitionsToBeFired.
+
+(** * Falling edge state changing. *)
+
+Section FallingEdge.
+
+  (** Returns a new SitpnState computed from state [s] of [sitpn]
+      by following the rules of state changing after the occurence of
+      a falling edge event. 
+      
+      Raises an error (i.e, None) if one function call fails. *)
+  
+  Definition sitpn_falling_edge
+             (sitpn : Sitpn)
+             (s : SitpnState)
+             (time_value : nat)
+             (env : Condition -> nat -> bool) : option SitpnState :=
+    (* Retrieves boolean values at the current time value for
+       all conditions defined in sitpn. *)
+    let cond_values' := get_condition_values (conditions sitpn) time_value env [] in
+    (* Retrieves activation states for all actions defined in sitpn. *)
+    let exec_a' := get_action_states sitpn s (actions sitpn) [] in
+    (* Updates dynamic time intervals based on their values at state
+       s, and returns a new dynamic time itvals list. *)
+    match update_time_intervals sitpn s (d_intervals s) [] with
+    | Some d_intervals' =>
+      (* Builds a temporary state based on the results of the previous
+         function calls. tmp_state has an empty list of transs to be
+         fired, that's the only difference with the final state
+         returned by sitpn_falling_edge. *)
+      let tmp_state := mk_SitpnState
+                         [] (marking s) d_intervals' (reset s)
+                         cond_values' exec_a' (exec_f s) in
+      (* Determines transitions to be fired from tmp_state. *)
+      match sitpn_map_fire sitpn tmp_state with
+      | Some trs_2b_fired =>
+        (* Builds and returns the new SitpnState. *)
+        Some
+          (mk_SitpnState trs_2b_fired (marking tmp_state)
+                         (d_intervals tmp_state) (reset tmp_state)
+                         (cond_values tmp_state) (exec_a tmp_state)
+                         (exec_f tmp_state))
+      (* Error: something went wrong in sitpn_map_fire. *)
+      | None => None
+      end
+    (* Error: something went wrong in update_time_intervals. *)
+    | None => None
+    end.
+ 
+End FallingEdge.
+
+
+(** * Rising edge state changing. *)
+
+Section RisingEdge.
+
+  (** Returns a new SitpnState computed from state [s] of [sitpn]
+      by following the rules of state changing after the occurence of
+      a rising edge event. 
+      
+      Raises an error (i.e, None) if one function call fails. *)
+
+  Definition sitpn_rising_edge
+             (sitpn : Sitpn)
+             (s : SitpnState) : option SitpnState :=
+  (* Subtracts tokens from the input places of fired transitions, and
+     returns the resulting transient marking. *)
+    match map_update_marking_pre sitpn (marking s) (fired s) with
+    | Some transient_marking =>
+      (* Computes a new list of reset orders based on the transient
+         marking, and determines which dynamic time intervals are
+         blocked. *)
+      match get_blocked_itvals_and_reset_orders sitpn s (d_intervals s) transient_marking [] [] with
+      | Some (reset', d_intervals') =>
+        (* Adds tokens in output places of fired transitions, and
+           returns the resulting marking. *)
+        match map_update_marking_post sitpn transient_marking (fired s) with
+        | Some final_marking =>
+          (* Retrieves function execution states, then builds and
+             returns the final state. *)
+          let exec_f' := get_function_states sitpn s (functions sitpn) [] in
+          Some (mk_SitpnState (fired s) final_marking
+                              d_intervals' reset'
+                              (cond_values s) (exec_a s) exec_f')
+          
+        (* Error: something went wrong in map_update_marking_post. *)
+        | None => None
+        end
+      (* Error: something went wrong in get_blocked_itvals_and_reset_orders. *)
+      | None => None
+      end
+    (* Error: something went wrong in map_update_marking_pre. *)
+    | None => None
+    end.
+  
+End RisingEdge.
+
+
+Section SitpnCycle.
+
+  (** Computes one evolution cycle for Sitpn [sitpn] starting from
+      state [s].
+
+      Returns a couple of SitpnState (s', s'') where s' is computed
+      from s by applying the falling edge state changing rules, and
+      s'' is computed from s' by applying the rising edge state
+      changing rules. *)
+  
+  Definition sitpn_cycle
+             (sitpn : Sitpn)
+             (s : SitpnState)
+             (time_value : nat)
+             (env : Condition -> nat -> bool) :
+    option (SitpnState * SitpnState) :=
+    match sitpn_falling_edge sitpn s time_value env with
+    | Some s' =>
+      match sitpn_rising_edge sitpn s' with
+      | Some s'' => Some (s', s'')
+      (* Error: something went wrong in sitpn_rising_edge. *)
+      | None => None
+      end
+    (* Error: something went wrong in sitpn_falling_edge. *)
+    | None => None
+    end.
+  
+End SitpnCycle.
