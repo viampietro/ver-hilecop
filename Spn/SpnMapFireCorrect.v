@@ -147,8 +147,8 @@ Section SpnMapFireWellDefinedState.
     - inversion Hfun.
   Qed.
 
-  (* Under some hypotheses, the list of fired transitions returned by 
-     [spn_fire_aux spn s pgroup] contains no duplicate and is included in [pgroup]. *)
+  (** Under some hypotheses, the list of fired transitions returned by 
+      [spn_fire_aux spn s pgroup] contains no duplicate and is included in [pgroup]. *)
 
   Lemma spn_fire_aux_nodup_fired :
     forall (spn : Spn)

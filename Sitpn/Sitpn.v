@@ -436,11 +436,13 @@ Structure SitpnState :=
 
 Definition IsWellDefinedSitpnState (sitpn : Sitpn) (s : SitpnState) :=
 
-  (* All transitions in fired must be referenced in sitpn.(transs), i.e: *)
+  (* All transitions in fired must be referenced in sitpn.(transs),
+     i.e: *)
   incl s.(fired) sitpn.(transs) /\
   NoDup s.(fired) /\
 
-  (* All places in marking must be places in sitpn.(places), and conversely, i.e: *)
+  (* All places in marking must be places in sitpn.(places), and
+     conversely, i.e: *)
   sitpn.(places) = fst (split s.(marking)) /\
   
   (* All transitions that own a time interval in sitpn.(s_intervals)

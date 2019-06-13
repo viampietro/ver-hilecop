@@ -447,6 +447,9 @@ Section TimeFunctions.
     end
   | [] => Some new_d_itvals
   end.
+
+  Functional Scheme update_time_intervals_ind :=
+    Induction for update_time_intervals Sort Prop.
   
   (** Returns two lists build on the [d_itvals] list: 
       
@@ -851,7 +854,10 @@ Section FallingEdge.
     (* Error: something went wrong in update_time_intervals. *)
     | None => None
     end.
- 
+
+  Functional Scheme sitpn_falling_edge_ind :=
+    Induction for sitpn_falling_edge Sort Prop.
+  
 End FallingEdge.
 
 
@@ -897,6 +903,9 @@ Section RisingEdge.
     (* Error: something went wrong in map_update_marking_pre. *)
     | None => None
     end.
+
+  Functional Scheme sitpn_rising_edge_ind :=
+    Induction for sitpn_rising_edge Sort Prop.
   
 End RisingEdge.
 
@@ -927,6 +936,8 @@ Section SitpnCycle.
     (* Error: something went wrong in sitpn_falling_edge. *)
     | None => None
     end.
+
+  Functional Scheme sitpn_cycle_ind := Induction for sitpn_cycle Sort Prop.
   
 End SitpnCycle.
 

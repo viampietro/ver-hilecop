@@ -516,7 +516,7 @@ Inductive SitpnSemantics
         In (t, active (dec_itval itval)) s'.(d_intervals)) ->
 
     (* Time intervals evolve normally for all transitions sensitized
-       by m and an active time interval, that didn't receive a reset
+       by m, having an active time interval, that didn't receive a reset
        order and were not fired at the last clock cycle, i.e:
       
        ∀ t ∈ Ti, t ∈ sens(m) ∧ reset(t) = 0 ∧ t ∉ Fired ∧ I(t) ≠ ψ ⇒
@@ -594,8 +594,11 @@ Inductive SitpnSemantics
         IsSensitized sitpn residual_marking t ->
         In t s'.(fired)) ->
     
-    (* If t is firable and not sensitized by the residual marking then t is not fired, i.e: 
-       ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t'), ∀ t' ∈ Pr(t)) ⇒ t ∉ Fired' *)
+    (* If t is firable and not sensitized by the residual marking then
+       t is not fired, i.e:
+
+       ∀ t ∈ firable(s'), t ∉ sens(M - ∑ pre(t'), ∀ t' ∈ Pr(t)) ⇒ t ∉
+       Fired' *)
     
     (forall (pgroup : list Trans)
             (t : Trans)
