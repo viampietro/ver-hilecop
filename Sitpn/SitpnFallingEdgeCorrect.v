@@ -45,7 +45,7 @@ Proof.
   - apply (sitpn_falling_edge_get_condv sitpn s time_value env s' Hfun).
 
   (* CASE ∀a ∈ A, ∃p ∈ P, ... ⇒ ex'(a) = 1. *)
-  - admit.
+  - apply (sitpn_falling_edge_activate_actions sitpn s time_value env s' Hfun).
 
   (* CASE ∀a ∈ A, ∀p ∈ P, ... ⇒ ex'(a) = 0. *)
   - admit.

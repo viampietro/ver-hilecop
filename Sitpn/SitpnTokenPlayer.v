@@ -109,6 +109,8 @@ Section InterpretationFunctions.
     | [] => false
     end.
 
+  Functional Scheme is_activated_ind := Induction for is_activated Sort Prop.
+
   (** Returns the list of couples (action, activated?) --where
       activated? is a boolean-- denoting the activation state of
       all actions of the actions list at state s of sitpn. *)

@@ -486,9 +486,9 @@ Inductive SitpnSemantics
     
     (forall (a : Action),
         In a sitpn.(actions) ->
-        exists (p : Place) (n : nat),
-          In (p, n) s.(marking) /\ n > 0 /\ (has_action sitpn p a) = true ->
-          In (a, true) s'.(exec_a)) ->
+        (exists (p : Place) (n : nat),
+            In (p, n) s.(marking) /\ n > 0 /\ (has_action sitpn p a) = true) ->
+        In (a, true) s'.(exec_a)) ->
     
     (* Actions only associated with unmarked places (no tokens) 
        are deactivated, i.e: 
