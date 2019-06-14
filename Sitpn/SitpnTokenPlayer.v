@@ -73,6 +73,9 @@ Section InterpretationFunctions.
     | [] => cond_values
     end.
 
+  Functional Scheme get_condition_values_ind :=
+    Induction for get_condition_values Sort Prop.
+  
   (** Returns true if for all conditions in [cond_values] 
       associated to t is sitpn are true. *)
   
@@ -122,6 +125,9 @@ Section InterpretationFunctions.
   | [] => a_states
   end.
 
+  Functional Scheme get_action_states_ind :=
+    Induction for get_action_states Sort Prop.
+  
   (** Returns true if there exists a transition [t] 
       in list [fired] that is associated to function [f]
       in [sitpn]. *)

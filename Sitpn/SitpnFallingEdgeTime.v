@@ -12,6 +12,8 @@ Require Import Hilecop.Utils.HilecopLemmas.
 
 (** * Falling Edge Lemmas about Time-Related Semantics Rules. *)
 
+(** ** Lemmas about structure preservation of dynamic time intervals. *)
+
 Section SitpnFallingEdgeSameStructDItvals.
 
   (** [update_time_intervals] preserves the structure of
@@ -82,3 +84,31 @@ Section SitpnFallingEdgeSameStructDItvals.
       
 End SitpnFallingEdgeSameStructDItvals.
 
+(** ** Lemmas about structure preservation of reset orders. *)
+
+Section SitpnFallingEdgeResetEq.
+
+    (** [sitpn_falling_edge] preserves the structure of the
+        [d_intervals] in the returned state. *)
+  
+  Lemma sitpn_falling_edge_same_reset :
+    forall (sitpn : Sitpn)
+           (s s' : SitpnState)
+           (time_value : nat)
+           (env : Condition -> nat -> bool),
+      sitpn_falling_edge sitpn s time_value env = Some s' ->
+      (reset s) = (reset s').
+  Proof.
+    intros sitpn s s' time_value env Hfun.
+    functional induction (sitpn_falling_edge sitpn s time_value env)
+               using sitpn_falling_edge_ind;
+
+      (* GENERAL CASE, all went well. *)
+      ((simpl in Hfun;
+        injection Hfun as Heq_s';
+        rewrite <- Heq_s'; simpl; reflexivity)
+       (* ERROR CASE. *)
+       || inversion Hfun).
+  Qed.
+      
+End SitpnFallingEdgeResetEq.

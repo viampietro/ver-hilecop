@@ -16,6 +16,10 @@ Require Import Hilecop.Sitpn.SitpnTactics.
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeTime.
 
+(* Import lemmas on interpretation rules. *)
+
+Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
+
 (** * sitpn_falling_edge and well-definedness of states. *)
 
 (** [sitpn_falling_edge] returns a SitpnState with the same marking 
@@ -78,7 +82,6 @@ Proof.
   (* CASE t ∈ (d_intervals s') ⇔ t ∈ Ti *)
   split.
   explode_well_defined_sitpn_state Hwell_def_s.
-  revert t.
   specialize (sitpn_falling_edge_same_struct_ditvals sitpn s s' time_value env Hfun)
     as Heq_fs_ditvals.
   rewrite <- Heq_fs_ditvals; assumption.
@@ -92,20 +95,32 @@ Proof.
 
   (* CASE t ∈ (reset s') ⇔ t ∈ Ti *)
   split.
-  admit.
+  explode_well_defined_sitpn_state Hwell_def_s.
+  specialize (sitpn_falling_edge_same_reset sitpn s s' time_value env Hfun)
+    as Heq_reset.
+  rewrite <- Heq_reset; assumption.
 
   (* CASE NoDup (fst (split (reset s'))) *)
   split.
-  admit.
+  explode_well_defined_sitpn_state Hwell_def_s.
+  specialize (sitpn_falling_edge_same_reset sitpn s s' time_value env Hfun)
+    as Heq_reset.
+  rewrite <- Heq_reset; assumption.
 
   (* CASE C = fst (split (cond_values s')) *)
   split.
-  admit.
-
+  explode_well_defined_sitpn_state Hwell_def_s.
+  specialize (sitpn_falling_edge_same_struct_condv sitpn s time_value env s' Hfun)
+    as Heq_fs_condv; assumption.
+  
   (* CASE A = fst (split (exec_a s')) *)
   split.
-  admit.
+  explode_well_defined_sitpn_state Hwell_def_s.
+  specialize (sitpn_falling_edge_same_struct_actions sitpn s time_value env s' Hfun)
+    as Heq_fs_actions; assumption.
 
   (* CASE F = fst (split (exec_f s')) *)
-  admit.
-Admitted.
+  explode_well_defined_sitpn_state Hwell_def_s.
+  specialize (sitpn_falling_edge_same_functions sitpn s time_value env s' Hfun) as Heq_execf.
+  rewrite <- Heq_execf; assumption.
+Qed.

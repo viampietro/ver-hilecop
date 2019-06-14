@@ -8,6 +8,11 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
 
+(* Import lemmas about interpretation-related semantics rules. *)
+
+Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
+
+
 (** * Correctness of sitpn_falling_edge function. *)
 
 Lemma sitpn_falling_edge_correct :
@@ -34,10 +39,10 @@ Proof.
              sitpn s s' time_value env Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE marking s = marking s' *)
-  - admit.
+  - apply (sitpn_falling_edge_same_marking sitpn s s' time_value env Hfun).
 
   (* CASE ∀ c ∈ C, cond'(c) = env(c) *)
-  - admit.
+  - apply (sitpn_falling_edge_get_condv sitpn s time_value env s' Hfun).
 
   (* CASE ∀a ∈ A, ∃p ∈ P, ... ⇒ ex'(a) = 1. *)
   - admit.
