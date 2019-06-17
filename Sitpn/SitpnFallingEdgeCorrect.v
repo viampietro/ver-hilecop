@@ -48,7 +48,7 @@ Proof.
   - apply (sitpn_falling_edge_activate_actions sitpn s time_value env s' Hfun).
 
   (* CASE ∀a ∈ A, ∀p ∈ P, ... ⇒ ex'(a) = 0. *)
-  - admit.
+  - apply (sitpn_falling_edge_deactivate_actions sitpn s time_value env s' Hfun).
 
   (* CASE reset(t) = 1 ∨ t ∈ Fired ⇒ I'(t) = Is(t) - 1 *)
   - admit.

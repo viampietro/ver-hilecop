@@ -443,3 +443,128 @@ Section SitpnFallingEdgeActivateActions.
   Qed.
   
 End SitpnFallingEdgeActivateActions.
+
+(** ** Deactivation of actions on falling edge. *)
+
+Section SitpnFallingEdgeDeactivateActions.
+
+  Lemma is_activated_complete_conv :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (a : Action),
+      (forall (p : Place) (n : nat),
+          In (p, n) marking -> n = 0 \/ (has_action sitpn p a) = false) ->
+      is_activated sitpn marking a = false.
+  Proof.
+    intros sitpn marking a;
+      functional induction (is_activated sitpn marking a)
+                 using is_activated_ind;
+      intros Hunm_or_unassoc.
+
+    (* BASE CASE. *)
+    - reflexivity.
+
+    (* CASE, test is true then contradiction. *)
+    - assert (Hin_hd: In (p, n) ((p, n) :: tl)) by apply in_eq.
+      specialize (Hunm_or_unassoc p n Hin_hd) as Hpunm_or_aunassoc.
+
+      (* Two cases, n = 0 or A(p, a) = 0. *)
+      inversion_clear Hpunm_or_aunassoc as [Hp_unm | Ha_unassoc];
+        rewrite andb_true_iff in e1;
+        inversion_clear e1 as (Ha_assoc & Hp_mrk).
+
+      (* Case n = 0. *)
+      + rewrite Hp_unm in Hp_mrk.
+        rewrite Nat.ltb_irrefl in Hp_mrk.
+        inversion Hp_mrk.
+
+      (* Case A(p, a) = 0. *)
+      + rewrite Ha_assoc in Ha_unassoc;
+          inversion Ha_unassoc.
+
+    (* INDUCTION CASE. *)
+    - apply IHb.
+      intros pl nboftokens Hin_tl.
+      apply in_cons with (a := (p, n)) in Hin_tl.
+      apply (Hunm_or_unassoc pl nboftokens Hin_tl).
+  Qed.
+  
+  (** If action [a] ∈ [actions] is only associated to unmarked places
+      in marking [(marking s)] then [(a, false)] is in the list returned by
+      [get_action_states]. *)
+  
+  Lemma get_action_states_cons_conv :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (actions : list Action)
+           (a_states : list (Action * bool))
+           (a : Action),
+      In a actions ->
+      (forall (p : Place) (n : nat),
+          In (p, n) s.(marking) -> n = 0 \/ (has_action sitpn p a) = false) ->
+      In (a, false) (get_action_states sitpn s actions a_states).
+  Proof.
+    intros sitpn s actions a_states;
+      functional induction (get_action_states sitpn s actions a_states);
+      intros action Hin_a_actions Hunm_or_unassoc.
+
+    (* BASE CASE. *)
+    - inversion Hin_a_actions.
+
+    (* INDUCTION CASE. *)
+    - (* Two cases, action = a or action ∈ tl. *)
+      inversion_clear Hin_a_actions as [Heq_aaction | Hin_action_tl].
+
+      (* Case a = action. *)
+      + (* We need to prove that is_activated sitpn (marking s) a
+           returns false. *)
+        specialize (is_activated_complete_conv sitpn (marking s) action Hunm_or_unassoc) as His_act_false.
+        rewrite Heq_aaction; rewrite His_act_false.
+
+        (* Builds In (action, true) (a_states ++ [(action, true)]) *)
+        assert (Hin_astates: In (action, false) (a_states ++ [(action, false)]))
+          by (apply in_or_app; right; apply in_eq).
+
+        (* Applies get_action_states_in_astates. *)
+        apply (get_action_states_in_astates
+                 sitpn s tl (a_states ++ [(action, false)])
+                 action false Hin_astates).
+        
+      (* Case In action tl *)
+      + apply (IHl action Hin_action_tl Hunm_or_unassoc).
+  Qed.
+    
+  (** All actions that are associated only with unmarked places
+      are marked as deactivate in [s'.exec_a], where [s']
+      is the SitpnState returned by [sitpn_falling_edge]. *)
+  
+  Lemma sitpn_falling_edge_deactivate_actions :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (time_value : nat)
+           (env : Condition -> nat -> bool)
+           (s' : SitpnState),
+      sitpn_falling_edge sitpn s time_value env = Some s' ->
+      (forall (a : Action),
+          In a sitpn.(actions) ->
+          (forall (p : Place) (n : nat),
+              In (p, n) s.(marking) -> n = 0 \/ (has_action sitpn p a) = false) ->
+          In (a, false) s'.(exec_a)).
+  Proof.
+    intros sitpn s time_value env;
+      functional induction (sitpn_falling_edge sitpn s time_value env)
+                 using sitpn_falling_edge_ind;
+      intros s' Hfun;
+
+      (* GENERAL CASE *)
+      (simpl in Hfun;
+       injection Hfun as Heq_s';
+       rewrite <- Heq_s';
+       simpl;
+       apply get_action_states_cons_conv)
+
+      (* ERROR CASE *)
+      || inversion Hfun.
+  Qed.
+  
+End SitpnFallingEdgeDeactivateActions.

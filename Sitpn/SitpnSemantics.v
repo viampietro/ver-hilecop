@@ -495,9 +495,10 @@ Inductive SitpnSemantics
        
        ∀ a ∈ actions, ∀ p ∈ P, m(p) = 0 ∨ A(p, a) = 0 ⇒ ex'(a) = 0. *)
 
-    (forall (a : Action) (p : Place),
+    (forall (a : Action),
         In a sitpn.(actions) ->
-        (In (p, 0) s.(marking) \/ (has_action sitpn p a) = false) ->
+        (forall (p : Place) (n : nat),
+            In (p, n) s.(marking) -> n = 0 \/ (has_action sitpn p a) = false) ->
         In (a, false) s'.(exec_a)) ->
                    
     (* Time intervals are reset for all transitions sensitized by m
