@@ -504,15 +504,15 @@ Inductive SitpnSemantics
     (* Time intervals are reset for all transitions sensitized by m
        and that received a reset order or were previously fired, i.e:
       
-       ∀ t ∈ Ti, t ∈ sens(m) ∧ (reset(t) = 1 ∨ t ∈ Fired) ⇒ 
+       ∀ t ∈ Ti, t ∉ sens(m) ∨ (t ∈ sens(m) ∧ (reset(t) = 1 ∨ t ∈ Fired)) ⇒ 
        I'(t) = Is(t) - 1 
        where Ti = { ti | I(ti) ≠ ∅ } *)
     
     (forall (t : Trans)
             (itval : TimeInterval),
         In t (fst (split s.(d_intervals))) ->
-        IsSensitized sitpn s.(marking) t ->
-        (In (t, true) s.(reset) \/ In t s.(fired)) ->
+        (~IsSensitized sitpn s.(marking) t \/
+         (IsSensitized sitpn s.(marking) t /\ (In (t, true) s.(reset) \/ In t s.(fired)))) ->
         Some itval = (s_intervals sitpn t) ->
         In (t, active (dec_itval itval)) s'.(d_intervals)) ->
 
@@ -544,19 +544,6 @@ Inductive SitpnSemantics
         In (t, false) s.(reset) ->
         ~In t s.(fired) ->
         In (t, blocked) s'.(d_intervals)) ->
-        
-    (* Time intervals are reset for all transitions with a time
-       interval (either active or blocked) that are not sensitized by
-       m, i.e:
-      
-       ∀ t ∈ Ti, t ∉ sens(m) ⇒ I'(t) = Is(t) - 1 *)
-    
-    (forall (t : Trans)
-            (itval : TimeInterval),
-        In t (fst (split s.(d_intervals))) ->
-        ~IsSensitized sitpn s.(marking) t ->
-        Some itval = (s_intervals sitpn t) ->
-        In (t, active (dec_itval itval)) s'.(d_intervals)) ->
 
     (* Reset orders stay the same. *)
     

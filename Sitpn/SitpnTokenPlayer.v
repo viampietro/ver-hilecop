@@ -401,60 +401,60 @@ Section TimeFunctions.
            (new_d_itvals : list (Trans * DynamicTimeInterval))
            {struct d_itvals} :
     option (list (Trans * DynamicTimeInterval)) :=
-  match d_itvals with
-  | (t, dyn_itval) :: tl =>
-    (* Checks if t is associated with a static time interval in sitpn. *)
-    match s_intervals sitpn t with
-    (* Normal case, t is associated with a static itval. *)
-    | Some stc_itval =>
-      let neighbours_of_t := lneighbours sitpn t in
-      (* Checks if t is sensitized by the marking at state s. *)
-      match is_sensitized sitpn s.(marking) neighbours_of_t t with
-      (* If t is sensitized, determines its time interval status. *)
-      | Some true =>
-        (* If t is in the fired list of state s then resets t's itval
+    match d_itvals with
+    | (t, dyn_itval) :: tl =>
+      (* Checks if t is associated with a static time interval in sitpn. *)
+      match s_intervals sitpn t with
+      (* Normal case, t is associated with a static itval. *)
+      | Some stc_itval =>
+        let neighbours_of_t := lneighbours sitpn t in
+        (* Checks if t is sensitized by the marking at state s. *)
+        match is_sensitized sitpn s.(marking) neighbours_of_t t with
+        (* If t is sensitized, determines its time interval status. *)
+        | Some true =>
+          (* If t is in the fired list of state s then resets t's itval
            and goes on. *)
-        if in_list eq_nat_dec s.(fired) t then
-          let reset_itval := dec_itval stc_itval in
-          update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active reset_itval)])
-        (* Else looks at the reset orders given to t at state s. *)
-        else
-          match get_value eq_nat_dec t s.(reset) with
-          (* If t received a reset order at state s, then resets t's
-             itval and goes on. *)
-          | Some true =>
+          if in_list eq_nat_dec s.(fired) t then
             let reset_itval := dec_itval stc_itval in
             update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active reset_itval)])
-          (* If t is not in the fired list and didn't receive a reset
-             order at state s, then looks at the state of its dynamic
-             interval. *)
-          | Some false =>
-            match dyn_itval with
-            (* If the interval is active, then decrements the interval. *)
-            | active itval =>
-              let new_itval := dec_itval itval in
-              update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active new_itval)])
-            (* If dyn_itval is blocked, then it stays blocked. *)
-            | blocked =>
-              update_time_intervals sitpn s tl (new_d_itvals ++ [(t, blocked)])
+          (* Else looks at the reset orders given to t at state s. *)
+          else
+            match get_value eq_nat_dec t s.(reset) with
+            (* If t received a reset order at state s, then resets t's
+               itval and goes on. *)
+            | Some true =>
+              let reset_itval := dec_itval stc_itval in
+              update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active reset_itval)])
+            (* If t is not in the fired list and didn't receive a reset
+               order at state s, then looks at the state of its dynamic
+               interval. *)
+            | Some false =>
+              match dyn_itval with
+              (* If the interval is active, then decrements the interval. *)
+              | active itval =>
+                let new_itval := dec_itval itval in
+                update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active new_itval)])
+              (* If dyn_itval is blocked, then it stays blocked. *)
+              | blocked =>
+                update_time_intervals sitpn s tl (new_d_itvals ++ [(t, blocked)])
+              end
+            (* Error: t is not in the reset list of state s. *)
+            | None => None
             end
-          (* Error: t is not in the reset list of state s. *)
-          | None => None
-          end
-      (* If t is not sensitized by the current marking 
+        (* If t is not sensitized by the current marking 
          then resets t's itval and goes on. *)
-      | Some false =>
-        let reset_itval := dec_itval stc_itval in
-        update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active reset_itval)])
-      (* Error: is_sensitized raised an error. *)
+        | Some false =>
+          let reset_itval := dec_itval stc_itval in
+          update_time_intervals sitpn s tl (new_d_itvals ++ [(t, active reset_itval)])
+        (* Error: is_sensitized raised an error. *)
+        | None => None
+        end
+      (* Error: t is associated with a dynamic itval in d_itvals, 
+         but with no static itval in sitpn. *)
       | None => None
       end
-    (* Error: t is associated with a dynamic itval in d_itvals, 
-              but with no static itval in sitpn. *)
-    | None => None
-    end
-  | [] => Some new_d_itvals
-  end.
+    | [] => Some new_d_itvals
+    end.
 
   Functional Scheme update_time_intervals_ind :=
     Induction for update_time_intervals Sort Prop.
@@ -475,47 +475,47 @@ Section TimeFunctions.
            (new_d_itvals : list (Trans * DynamicTimeInterval))
            {struct d_itvals} :
     option ((list (Trans * bool)) * (list (Trans * DynamicTimeInterval))) :=
-  match d_itvals with
-  | (t, dyn_itval) :: tl =>
-    (* Retrieves neighbour places of t. *)
-    let neighbours_of_t := lneighbours sitpn t in
-    (* If t is sensitized by the transient marking, then 
+    match d_itvals with
+    | (t, dyn_itval) :: tl =>
+      (* Retrieves neighbour places of t. *)
+      let neighbours_of_t := lneighbours sitpn t in
+      (* If t is sensitized by the transient marking, then 
        no reset order is given. *)
-    match is_sensitized sitpn transient_marking neighbours_of_t t with
-    | Some true =>
-      let reset_orders' := reset_orders ++ [(t, false)] in
-      (* If t is not a fired transition at state s, and its dynamic
+      match is_sensitized sitpn transient_marking neighbours_of_t t with
+      | Some true =>
+        let reset_orders' := reset_orders ++ [(t, false)] in
+        (* If t is not a fired transition at state s, and its dynamic
          interval has reached is upper bound, then t is associated with 
          a blocked time interval in new_d_itvals'. *)
-      if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
-        let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
-        (* Recursive call. *)
-        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
-      (* Else copies current dynamic interval. *)
-      else
-        let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
-        (* Recursive call. *)
-        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
-    (* Else gives a reset order to t. *)
-    | Some false =>
-      let reset_orders' := reset_orders ++ [(t, true)] in
-      (* If t is not a fired transition at state s, and its dynamic
+        if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
+          let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
+          (* Recursive call. *)
+          get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+                                              (* Else copies current dynamic interval. *)
+        else
+          let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
+          (* Recursive call. *)
+          get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+      (* Else gives a reset order to t. *)
+      | Some false =>
+        let reset_orders' := reset_orders ++ [(t, true)] in
+        (* If t is not a fired transition at state s, and its dynamic
          interval has reached is upper bound, then t is associated with 
          a blocked time interval in new_d_itvals'. *)
-      if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
-        let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
-        (* Recursive call. *)
-        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
-      (* Else copies current dynamic interval. *)
-      else
-        let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
-        (* Recursive call. *)
-        get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
-    (* Error: is_sensitized raised an error. *)
-    | None => None
-    end
-  | [] => Some (reset_orders, new_d_itvals)
-  end.
+        if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
+          let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
+          (* Recursive call. *)
+          get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+                                              (* Else copies current dynamic interval. *)
+        else
+          let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
+          (* Recursive call. *)
+          get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+      (* Error: is_sensitized raised an error. *)
+      | None => None
+      end
+    | [] => Some (reset_orders, new_d_itvals)
+    end.
   
 End TimeFunctions.
 

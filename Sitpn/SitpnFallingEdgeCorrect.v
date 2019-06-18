@@ -12,6 +12,10 @@ Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
 
+(* Import lemmas about time-related semantics rules. *)
+
+Require Import Hilecop.Sitpn.SitpnFallingEdgeTime.
+
 
 (** * Correctness of sitpn_falling_edge function. *)
 
@@ -50,16 +54,13 @@ Proof.
   (* CASE ∀a ∈ A, ∀p ∈ P, ... ⇒ ex'(a) = 0. *)
   - apply (sitpn_falling_edge_deactivate_actions sitpn s time_value env s' Hfun).
 
-  (* CASE reset(t) = 1 ∨ t ∈ Fired ⇒ I'(t) = Is(t) - 1 *)
-  - admit.
+  (* CASE t ∉ sens(M) ∨ (reset(t) = 1 ∨ t ∈ Fired) ⇒ I'(t) = Is(t) - 1 *)
+  - apply (sitpn_falling_edge_reset_ditvals sitpn s time_value env s' Hfun).
 
   (* CASE reset(t) = 0 ∧ t ∉ Fired ∧ I(t) ≠ ψ ⇒ I'(t) = I(t) - 1 *)
   - admit.
 
   (* CASE reset(t) = 0 ∧ t ∉ Fired ∧ I(t) = ψ ⇒ I'(t) = I(t) *)
-  - admit.
-
-  (* CASE t ∉ sens(M) ⇒ I'(t) = Is(t) - 1 *)
   - admit.
 
   (* CASE reset s = reset s' *)
