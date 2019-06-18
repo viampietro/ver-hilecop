@@ -225,7 +225,65 @@ Section SitpnFallingEdgeResetDItvals.
         -- specialize (in_fst_split t' d tl Hin_tl) as Hin_fs_tl.
            apply (IHo d_itvals' Hwell_def_s Hfun t' sitval Hin_fs_tl Hnotsens_or_sens Hsome_itval). 
 
+    (* CASE (is_sens t M = Some true) 
+            ∧ (in_list t fired) = Some false
+            ∧ get_value t reset = Some true *)
+    - specialize (in_fst_split_in_pair t' ((t, dyn_itval) :: tl) Hin_fs_ditvals) as Hex_in_ditvals.
+      inversion_clear Hex_in_ditvals as (d & Hin_ditvals).
+
+      (* Two cases, (t', d) = (t, dyn_itval) ∨ (t', d) ∈ tl *)
+      + inversion_clear Hin_ditvals as [Heq_tt'_dditval | Hin_tl].
+
+        (* Case (t, dyn_itval) = (t', d) *)
+        -- injection Heq_tt'_dditval as Heq_tt' Heq_dditval.
+
+           (* Builds (t, active (dec_itval stc_itval)) ∈ 
+              (new_d_itvals ++ [(t, active (dec_itval stc_itval))]),
+              necessary to specialize update_time_intervals_in_newditvals. *)
+           assert (Hin_newditvals_app :
+                     In (t, active (dec_itval stc_itval))
+                        (new_d_itvals ++ [(t, active (dec_itval stc_itval))]))
+             by (apply in_or_app; right; apply in_eq).
            
+           (* Specializes update_time_intervals_in_newditvals. *)
+           specialize (update_time_intervals_in_newditvals
+                         sitpn s tl (new_d_itvals ++ [(t, active (dec_itval stc_itval))])
+                         d_itvals' t (active (dec_itval stc_itval)) Hin_newditvals_app Hfun)
+             as Hin_ditvals'.
+
+           (* Rewrites sitval \w stc_itval and t \w t'. *)
+           rewrite Heq_tt' in e1.
+           assert (Heq_some_sitval : Some sitval = Some stc_itval)
+             by (transitivity (s_intervals sitpn t'); [assumption | assumption]).
+           injection Heq_some_sitval as Heq_sitval.
+           rewrite Heq_tt' in Hin_ditvals'.
+           rewrite Heq_sitval.
+           assumption.
+
+        (* Case (t', d) ∈ tl, apply IH. *)
+        -- specialize (in_fst_split t' d tl Hin_tl) as Hin_fs_tl.
+           apply (IHo d_itvals' Hwell_def_s Hfun t' sitval Hin_fs_tl Hnotsens_or_sens Hsome_itval).
+
+    (* CASE is_sens t M = Some true
+            ∧  in_list t fired = Some false  
+            ∧  get_value t reset = Some false
+            ∧  dyn_itval = active itval. *)
+    - specialize (in_fst_split_in_pair t' ((t, active itval) :: tl) Hin_fs_ditvals) as Hex_in_ditvals.
+      inversion_clear Hex_in_ditvals as (d & Hin_ditvals).
+
+      (* Two cases, (t', d) = (t, dyn_itval) ∨ (t', d) ∈ tl *)
+      + inversion_clear Hin_ditvals as [Heq_tt'_dditval | Hin_tl].
+        
+        (* Case (t, active itval) = (t', d) *)
+        -- injection Heq_tt'_dditval as Heq_tt' Heq_dditval.
+
+           (* 2 subcases: 
+              - t' ∉ sens(M) 
+              - t' ∈ sens(M) ∧ (reset(t') ∨ t' ∈ fired *)
+           inversion_clear Hnotsens_or_sens as [Hnot_sens_t' | Hsens_t'_w].
+
+           (* Subcase t' ∉ sens(M) *)
+           ++ 
            
   (** All transitions that are not sensitized by the marking at state
       [s], or that are sensitized and either received a reset order or
