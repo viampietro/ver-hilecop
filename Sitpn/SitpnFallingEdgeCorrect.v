@@ -54,8 +54,8 @@ Proof.
   (* CASE ∀a ∈ A, ∀p ∈ P, ... ⇒ ex'(a) = 0. *)
   - apply (sitpn_falling_edge_deactivate_actions sitpn s time_value env s' Hfun).
 
-  (* CASE t ∉ sens(M) ∨ (reset(t) = 1 ∨ t ∈ Fired) ⇒ I'(t) = Is(t) - 1 *)
-  - apply (sitpn_falling_edge_reset_ditvals sitpn s time_value env s' Hfun).
+  (* CASE t ∉ sens(M) ∨ (t ∈ sens(M) ∧ (reset(t) = 1 ∨ t ∈ Fired)) ⇒ I'(t) = Is(t) - 1 *)
+  - apply (sitpn_falling_edge_reset_ditvals sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE reset(t) = 0 ∧ t ∉ Fired ∧ I(t) ≠ ψ ⇒ I'(t) = I(t) - 1 *)
   - admit.

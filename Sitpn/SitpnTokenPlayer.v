@@ -50,6 +50,8 @@ Section SitpnHelperFunctions.
       else in_list eq_dec tl a
     | [] => false
     end.
+
+  Functional Scheme in_list_ind := Induction for in_list Sort Prop.
   
 End SitpnHelperFunctions.
 

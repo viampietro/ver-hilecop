@@ -338,7 +338,6 @@ Definition AreWellDefinedTestEdges (sitpn : Sitpn) :=
 
 Definition AreWellDefinedInhibEdges (sitpn : Sitpn) :=
   forall (t : Trans)
-         (neighbours_of_t : Neighbours)
          (p : Place),
     In t sitpn.(transs) ->
     (In p (inhib_pl (lneighbours sitpn t)) -> (inhib sitpn t p) >= 1) /\
