@@ -7,6 +7,7 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 (* Import sitpn falling edge well-defined state. *)
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
+Require Import Hilecop.Sitpn.SitpnWellDefTime.
 
 (* Import lemmas about interpretation-related semantics rules. *)
 
@@ -58,16 +59,17 @@ Proof.
   - apply (sitpn_falling_edge_reset_ditvals sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE reset(t) = 0 ∧ t ∉ Fired ∧ I(t) ≠ ψ ⇒ I'(t) = I(t) - 1 *)
-  - admit.
+  - apply (sitpn_falling_edge_inc_ditvals sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE reset(t) = 0 ∧ t ∉ Fired ∧ I(t) = ψ ⇒ I'(t) = I(t) *)
-  - admit.
+  - apply (sitpn_falling_edge_same_blocked sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE reset s = reset s' *)
-  - admit.
+  - apply (sitpn_falling_edge_same_reset sitpn s s' time_value env Hfun).
 
   (* CASE t ∉ firable(s') ⇒ t ∉ Fired' *)
   - admit.
+  (* apply (sitpn_falling_edge_not_firable_not_fired sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun). *)
 
   (* CASE t ∈ firable(s') ∧ t ∈ sens(M -∑pre) ⇒ t ∈ Fired' *)
   - admit.

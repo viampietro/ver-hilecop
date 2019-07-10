@@ -1596,3 +1596,25 @@ Section InList.
   Qed.
       
 End InList.
+
+(** * Lemmas about [sitpn_is_firable] and its spec. *)
+
+Section SitpnIsFirable.
+
+  (** A transition t is firable at state s' if it is
+      firable at state s and if s and s' have same
+      marking, dynamic intervals, and condition values,
+      and conversely. *)
+
+  Lemma sitpn_is_firable_iff_eq :
+    forall (sitpn : Sitpn)
+           (s s' : SitpnState)
+           (t : Trans),
+      (marking s) = (marking s') ->
+      (d_intervals s) = (d_intervals s') ->
+      (cond_values s) = (cond_values s') ->
+      SitpnIsFirable sitpn s t <-> SitpnIsFirable sitpn s' t.
+  Proof.
+  Admitted.
+  
+End SitpnIsFirable.

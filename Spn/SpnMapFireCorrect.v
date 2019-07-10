@@ -287,8 +287,10 @@ Section SpnMapFireWellDefinedState.
     intros spn s;
       functional induction (spn_map_fire spn s) using spn_map_fire_ind;
       intros s' Hwell_def_spn Hwell_def_s Hfun.
+
     (* GENERAL CASE *)
     - unfold IsWellDefinedSpnState; split.
+
       (* Proves MarkingHaveSameStruct (initial_marking spn) (marking s'). 
          Easy because marking is not updated between s and s'. *)
       + explode_well_defined_spn_state Hwell_def_s.
@@ -321,7 +323,7 @@ End SpnMapFireWellDefinedState.
 
     spn_map_fire = Some s' ⇒ ∀ t ∉ firable(s') ⇒ t ∉ Fired'  
 
-    All un-firable transitions are not fired. *)
+    All transitions that are not firable are not fired. *)
 
 Section SpnNotFirableNotFired.
 
@@ -345,22 +347,30 @@ Section SpnNotFirableNotFired.
       functional induction (spn_fire_aux spn state residual_marking fired pgroup)
                  using spn_fire_aux_ind;
       intros final_fired t' Hin_t_fired Hfun.
+
     (* BASE CASE *)
     - injection Hfun; intro Heq; rewrite <- Heq; assumption.
+
     (* GENERAL CASE *)
     - apply or_introl with (B := In t' [t]) in Hin_t_fired.
       apply in_or_app in Hin_t_fired.
       apply (IHo final_fired t' Hin_t_fired Hfun).
+
     (* ERROR CASE, update_residual_marking = None. *)
     - inversion Hfun.
+
     (* CASE is_sensitized = Some false. *)
     - apply (IHo final_fired t' Hin_t_fired Hfun).
+
     (* ERROR CASE, is_sensitized = None. *)
     - inversion Hfun.
+
     (* CASE spn_is_firable = Some false. *)
     - apply (IHo final_fired t' Hin_t_fired Hfun).
+
     (* ERROR CASE, spn_is_firable = None. *)
     - inversion Hfun.
+
     (* ERROR CASE, get_neighbours = None. *)
     - inversion Hfun.
   Qed.
@@ -386,9 +396,11 @@ Section SpnNotFirableNotFired.
       functional induction (spn_fire_aux spn state residual_marking fired pgroup)
                  using spn_fire_aux_ind;
       intros final_fired t' Hnot_in_fired Hnot_in_pg Hfun.
-    (* Base case, pgroup = []. *)
+
+    (* BASE CASE, pgroup = []. *)
     - injection Hfun; intro Heq; rewrite <- Heq; assumption.
-    (* General case, all went well. *)
+
+    (* GENERAL CASE, all went well. *)
     - apply not_in_cons in Hnot_in_pg.
       elim Hnot_in_pg; intros Hneq_t Hnot_in_tail.
       assert (Hnot_in_tt: ~In t' [t])
@@ -397,11 +409,13 @@ Section SpnNotFirableNotFired.
         by (apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tt))).
       apply (IHo final_fired t' Hnot_in_app Hnot_in_tail Hfun).
     - inversion Hfun.
-    (* Case is_sensitized = Some false, apply induction hypothesis. *)
+
+    (* CASE is_sensitized = Some false, apply induction hypothesis. *)
     - apply not_in_cons in Hnot_in_pg; elim Hnot_in_pg; intros Hdiff_tt Hnot_in_tail.
       apply (IHo final_fired t' Hnot_in_fired Hnot_in_tail Hfun).
     - inversion Hfun.
-    (* Case spn_is_firable = Some false, apply induction hypothesis. *)
+
+    (* CASE spn_is_firable = Some false, apply induction hypothesis. *)
     - apply not_in_cons in Hnot_in_pg; elim Hnot_in_pg; intros Hdiff_tt Hnot_in_tail.
       apply (IHo final_fired t' Hnot_in_fired Hnot_in_tail Hfun).
     - inversion Hfun.
@@ -553,8 +567,10 @@ Section SpnNotFirableNotFired.
     unfold spn_fire.
     intros spn state pgroup fired Hwell_def_spn Hwell_def_state
            Hin_pgroups Hfun t Hin_pgroup Hnot_firable.
+
     (* Builds (incl pgroup pgroup). *)
     assert (Hincl_pgroup : incl pgroup pgroup) by (apply incl_refl).
+
     (* Builds NoDup pgroup. *)
     unfold IsWellDefinedSpn in Hwell_def_spn;
       decompose [and] Hwell_def_spn; intros; rename_well_defined_spn.
@@ -563,6 +579,7 @@ Section SpnNotFirableNotFired.
     rewrite Hno_unk_pgroups in Hnodup_transs.
     generalize (nodup_concat_gen spn.(priority_groups) Hnodup_transs pgroup Hin_pgroups)
       as Hnodup_pgroup; intro.              
+
     (* Applies spn_fire_aux_not_firable_not_fired. *)
     generalize (spn_fire_aux_not_firable_not_fired
                   spn state (marking state)
@@ -653,9 +670,10 @@ Section SpnNotFirableNotFired.
       IsWellDefinedSpn spn ->
       IsWellDefinedSpnState spn state ->
       NoDup (concat pgroups) ->
-      incl pgroups spn.(priority_groups) ->
+      incl pgroups (priority_groups spn) ->
       spn_map_fire_aux spn state fired pgroups = Some final_fired ->
-      (forall (pgroup : list Trans) (t : Trans),
+      (forall (pgroup : list Trans)
+              (t : Trans),
           In pgroup pgroups ->
           In t pgroup ->
           ~In t fired ->
@@ -667,12 +685,16 @@ Section SpnNotFirableNotFired.
                  using spn_map_fire_aux_ind;
       intros final_fired Hwell_def_spn Hwell_def_state Hnodup_concat Hincl_pgs Hfun pgroup' t
              Hin_pgs Hin_pg Hnot_in_fired Hnot_firable.
+
     (* BASE CASE, pgroups = []. *)
     - inversion Hin_pgs.
+
     (* GENERAL CASE *)
     - apply in_inv in Hin_pgs; elim Hin_pgs.
+
       (* CASE pgroup = pgroup' *)
       + intro Heq_pg.
+
         (* Builds ~In t (concat pgroups_tail) to apply 
            spn_map_fire_aux_not_in_not_fired *)
         rewrite concat_cons in Hnodup_concat.
@@ -680,33 +702,41 @@ Section SpnNotFirableNotFired.
         generalize (nodup_app_not_in
                       pgroup' (concat pgroups_tail) Hnodup_concat
                       t Hin_pg) as Hnot_in_concat; intro.
+        
         (* Builds In pgroup spn.(priority_groups) to apply 
            spn_fire_not_firable_not_fired *)
         assert (Hin_pgs' : In pgroup (pgroup :: pgroups_tail)) by apply in_eq.
         generalize (Hincl_pgs pgroup Hin_pgs') as Hin_spn_pgs; intro.
+        
         (* Builds (~In t fired_trs) by applying spn_fire_not_firable_not_fired. *)
         rewrite <- Heq_pg in Hin_pg.
         generalize (spn_fire_not_firable_not_fired
                       spn state pgroup fired_trs Hwell_def_spn Hwell_def_state
                       Hin_spn_pgs e0 t Hin_pg Hnot_firable) as Hnot_in_fired'; intro.
+        
         (* Builds (~In t (fired_transitions ++ fired_trs)) *)
         generalize (not_in_app t fired_transitions fired_trs
                                (conj Hnot_in_fired Hnot_in_fired')) as Hnot_in_fired_app; intro.
+        
         (* Applies spn_map_fire_aux_not_in_not_fired *)
         apply (spn_map_fire_aux_not_in_not_fired
                  spn state (fired_transitions ++ fired_trs) pgroups_tail final_fired Hfun
                  t Hnot_in_fired_app Hnot_in_concat).
+        
       (* CASE In pgroup' pgroups_tail, then apply IHo. *)
       + intro Hin_pgs_tail.
+
         (* Builds NoDup (concat pgroups_tail). *)
         rewrite concat_cons in Hnodup_concat.
         generalize (nodup_app pgroup (concat pgroups_tail) Hnodup_concat)
           as Hnodup_concat_wedge; intro.
         elim Hnodup_concat_wedge; intros Hnodup_pg Hnodup_concat_tail.
+        
         (* Builds (incl pgroups_tail (priority_groups spn)). *)
         generalize (incl_cons_inv
                       pgroup pgroups_tail
                       spn.(priority_groups) Hincl_pgs) as Hincl_pgs'; intro.
+        
         (* Builds ~In t (fired_transitions ++ fired_trs). 
 
            First, we need (~In t pgroup) to apply spn_fire_aux_not_in_not_fired. *)
@@ -716,6 +746,7 @@ Section SpnNotFirableNotFired.
           as Hfall_not_in_pg.
         specialize (in_concat t pgroup' pgroups_tail Hin_pg Hin_pgs_tail) as Hin_concat.
         specialize (Hfall_not_in_pg t Hin_concat) as Hnot_in_pg.
+        
         (* Second, we need to build (~In t fired_trs) by 
            applying spn_fire_aux_not_in_not_fired. *)
         unfold spn_fire in e0.
@@ -723,13 +754,16 @@ Section SpnNotFirableNotFired.
         specialize (spn_fire_aux_not_in_not_fired
                       spn state (marking state) [] pgroup fired_trs t
                       Hnot_in_nil Hnot_in_pg e0) as Hnot_in_fired'.
+        
         (* Finally, builds (~In t (fired_transitions ++ fired_trs)) *)
         specialize (not_in_app t fired_transitions fired_trs (conj Hnot_in_fired Hnot_in_fired'))
           as Hnot_in_fired_app.
+        
         (* Applies IHo. *)
         apply (IHo final_fired Hwell_def_spn Hwell_def_state
                    Hnodup_concat_tail Hincl_pgs' Hfun pgroup' t Hin_pgs_tail
                    Hin_pg  Hnot_in_fired_app Hnot_firable).
+        
     (* CASE spn_fire returns None. *)
     - inversion Hfun.
   Qed.
@@ -750,21 +784,27 @@ Section SpnNotFirableNotFired.
         ~In t s'.(fired).
   Proof.
     intros spn s s' Hwell_def_spn Hwell_def_s Hfun.
+
     (* Builds IsWellDefined spn s', needed to apply spn_map_fire_aux_not_firable_not_fired *)
     specialize (spn_map_fire_well_defined_state spn s s' Hwell_def_spn Hwell_def_s Hfun)
       as Hwell_def_s'.
     functional induction (spn_map_fire spn s) using spn_map_fire_ind;
       intros pgroup' t Hin_spn_pgs Hin_pg Hnot_firable.
+
     (* GENERAL CASE: the strategy is to apply spn_map_fire_aux_not_firable_not_fired. 
                      First, we need to build a few hypotheses. *)
     - explode_well_defined_spn.
+
       (* Builds NoDup (concat spn.(priority_groups)). *)
       unfold NoIntersectInPriorityGroups in Hno_inter.
+
       (* Builds (incl spn.(pgs) spn.(pgs)) *)
       assert (Hincl_spn_pgs : incl spn.(priority_groups) spn.(priority_groups))
         by apply incl_refl.
+
       (* Builds ~In t [] *)
       assert (Hnot_in_nil : ~In t []) by apply in_nil.
+
       (* Builds (~SpnIsFirable spn s t) *)
       assert (Heq_marking : s.(marking) = s'.(marking))
         by (injection Hfun; intro Heq; rewrite <- Heq; reflexivity). 
@@ -772,12 +812,15 @@ Section SpnNotFirableNotFired.
                     spn s s' Hwell_def_spn Hwell_def_s Hwell_def_s' Heq_marking t)
         as Hnot_firable_iff.
       rewrite <- Hnot_firable_iff in Hnot_firable.
+
       (* Rewrites the goal. *)
       injection Hfun; intro Heq_s'; rewrite <- Heq_s'; simpl.
+
       (* Applies spn_map_fire_aux_not_firable_not_fired. *)
       apply (spn_map_fire_aux_not_firable_not_fired
                spn s [] (priority_groups spn) fired Hwell_def_spn Hwell_def_s
                Hno_inter Hincl_spn_pgs e pgroup' t Hin_spn_pgs Hin_pg Hnot_in_nil Hnot_firable).
+
     (* ERROR CASE, spn_map_fire_aux returns None. *)
     - inversion Hfun.
   Qed.

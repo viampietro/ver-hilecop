@@ -4,21 +4,15 @@ Require Import Hilecop.Sitpn.Sitpn.
 Require Import Hilecop.Sitpn.SitpnTokenPlayer.
 Require Import Hilecop.Sitpn.SitpnSemantics.
 
-(* Import lemmas on synchronous execution rules. *)
+(* Import lemmas on well-definition. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeFired.
-
+Require Import Hilecop.Sitpn.SitpnWellDefFired.
+Require Import Hilecop.Sitpn.SitpnWellDefTime.
+Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
+        
 (* Import Sitpn tactics. *)
 
 Require Import Hilecop.Sitpn.SitpnTactics.
-
-(* Import lemmas on time rules. *)
-
-Require Import Hilecop.Sitpn.SitpnFallingEdgeTime.
-
-(* Import lemmas on interpretation rules. *)
-
-Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
 
 (** * sitpn_falling_edge and well-definedness of states. *)
 
@@ -124,3 +118,42 @@ Proof.
   specialize (sitpn_falling_edge_same_functions sitpn s time_value env s' Hfun) as Heq_execf.
   rewrite <- Heq_execf; assumption.
 Qed.
+
+
+(** If s and s' differ only on their fired field and
+    s' has an empty fired field and
+    s is well-defined then s' is well-defined. *)
+
+Lemma is_well_def_tmp_state :
+  forall (sitpn : Sitpn)
+         (s s' : SitpnState),
+    (fired s') = [] ->
+    (marking s) = (marking s') ->
+    (d_intervals s) = (d_intervals s') ->
+    (reset s) = (reset s') ->
+    (cond_values s) = (cond_values s') ->
+    (exec_a s) = (exec_a s') ->
+    (exec_f s) = (exec_f s') ->
+    IsWellDefinedSitpnState sitpn s ->
+    IsWellDefinedSitpnState sitpn s'.
+Proof.
+  intros sitpn s s' Hfired_nil Heq_m Heq_ditvals Heq_reset Heq_condv
+         Heq_execa Heq_execf Hwell_def_s.
+
+  (* Unfolds definition in goal and rewrites (fired s') with []. *)
+  unfold IsWellDefinedSitpnState.
+  rewrite Hfired_nil.
+
+  (* Deals with incl [] (transs sitpn) and NoDup []. *)
+  split.
+
+  intros a Hin_nil; inversion Hin_nil.
+  split. apply NoDup_nil.
+
+  (* Rewrites the goal, unfolds IsWellDefinedSitpnState in the context 
+       and complete the subgoal. *)
+  unfold IsWellDefinedSitpnState in Hwell_def_s;
+    do 2 (apply proj2 in Hwell_def_s).
+  rewrite <- Heq_m, <- Heq_ditvals, <- Heq_reset, <- Heq_condv, <- Heq_execa, <- Heq_execf.
+  assumption.
+Qed.    

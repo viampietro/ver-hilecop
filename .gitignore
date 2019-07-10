@@ -5,6 +5,9 @@
 *~
 CoqMakefile*
 Makefile*
+**/*.dot
+**/*.svg
+scripts/
 
 # Compiled source #
 ###################
