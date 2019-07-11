@@ -374,7 +374,7 @@ Definition HasEnteredTimeWindow
            (d_intervals : list (Trans * DynamicTimeInterval))
            (t : Trans) :=
   s_intervals sitpn t = None \/
-  forall (upper_bound : PositiveIntervalBound),
+  exists (upper_bound : PositiveIntervalBound),
     In (t, active {| min_t := 0; max_t := upper_bound |}) d_intervals.
 
 (** Tests if the upper bound of a time interval equals 0. 

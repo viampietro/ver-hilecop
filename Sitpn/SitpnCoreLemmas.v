@@ -1597,6 +1597,197 @@ Section InList.
       
 End InList.
 
+(** * Lemmas about [has_entered_time_window] and its spec. *)
+
+Section HasEnteredTimeWindow.
+
+  (** Correctness lemma for [has_entered_time_window]. *)
+  Lemma has_entered_time_window_correct :
+    forall (sitpn : Sitpn)
+           (d_intervals : list (Trans * DynamicTimeInterval))
+           (t : Trans),
+      has_entered_time_window sitpn d_intervals t = Some true ->
+      HasEnteredTimeWindow sitpn d_intervals t.
+  Proof.
+    intros sitpn d_intervals t;
+      functional induction (has_entered_time_window sitpn d_intervals t)
+                 using has_entered_time_window_ind;
+      intro Hfun;
+      unfold HasEnteredTimeWindow.
+
+    (* CASE s_intervals = Some itval ∧ get_value t d_intervals = Some active min = 0. *)
+    - right; exists _x0; apply (get_value_correct Nat.eq_dec t d_intervals e0). 
+
+    (* CASE s_intervals = Some itval ∧ get_value t d_intervals = Some active min <> 0. *)
+    - injection Hfun as Hfun; inversion Hfun.
+
+    (* CASE s_intervals = Some itval ∧ get_value t d_intervals = blocked *)
+    - injection Hfun as Hfun; inversion Hfun.
+
+    (* ERROR CASE, get_value = None. *)
+    - inversion Hfun.
+
+    (* CASE s_intervals = None *)
+    - left; assumption.
+  Qed.
+
+  (** Correctness lemma for has_entered_time_window = Some false. *)
+
+  Lemma not_has_entered_time_window_correct :
+    forall (sitpn : Sitpn)
+           (d_intervals : list (Trans * DynamicTimeInterval))
+           (t : Trans),
+      NoDup (fst (split d_intervals)) ->
+      has_entered_time_window sitpn d_intervals t = Some false ->
+      ~HasEnteredTimeWindow sitpn d_intervals t.
+  Proof.
+    intros sitpn d_intervals t;
+      functional induction (has_entered_time_window sitpn d_intervals t)
+                 using has_entered_time_window_ind;
+      intros Hnodup_fs_ditvals Hfun;
+      unfold HasEnteredTimeWindow.
+
+    (* CASE s_intervals = Some itval ∧ get_value t d_intervals = Some active min = 0. *)
+    - injection Hfun as Heq_true_false; inversion Heq_true_false.
+
+    (* CASE s_intervals = Some itval ∧ get_value t d_intervals = Some active min <> 0. *)
+    - intro Hhas_entered_vee.
+      inversion_clear Hhas_entered_vee as [Hs_itvals_none | Hex_active_0].
+
+      (* Case s_intervals = None then contradiction. *)
+      + rewrite e in Hs_itvals_none; inversion Hs_itvals_none.
+
+      (* Case (t, active 0) ∈ ditvals, impossible as NoDup (fs ditvals) *)
+      + specialize (get_value_correct Nat.eq_dec t d_intervals e0) as Hin_t_actS_ditvals.
+        inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).
+        
+        (* Specializes nodup_same_pair to prove a contradiction. *)
+        assert (Heq_fs_pair:
+                  fst (t, active {| min_t := S _x1; max_t := _x0 |}) =
+                  fst (t, active {| min_t := 0; max_t := up_bound |})) by auto.
+        specialize (nodup_same_pair d_intervals
+                                    Hnodup_fs_ditvals
+                                    (t, active {| min_t := S _x1; max_t := _x0 |})
+                                    (t, active {| min_t := 0; max_t := up_bound |})
+                                    Hin_t_actS_ditvals Hin_t_act0_ditvals Heq_fs_pair)
+          as Heq_0_S.
+        injection Heq_0_S as Heq_0_S Heq_max.
+        inversion Heq_0_S.
+        
+    (* CASE s_intervals = Some itval ∧ get_value t d_intervals = blocked *)
+    - intro Hhas_entered_vee.
+      inversion_clear Hhas_entered_vee as [Hs_itvals_none | Hex_active_0].
+
+      (* Case s_intervals = None then contradiction. *)
+      + rewrite e in Hs_itvals_none; inversion Hs_itvals_none.
+
+      (* Case (t, active 0) ∈ ditvals, impossible as NoDup (fs ditvals) *)
+      + specialize (get_value_correct Nat.eq_dec t d_intervals e0) as Hin_t_actS_ditvals.
+        inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).
+        
+        (* Specializes nodup_same_pair to prove a contradiction. *)
+        assert (Heq_fs_pair:
+                  fst (t, blocked) =
+                  fst (t, active {| min_t := 0; max_t := up_bound |})) by auto.
+        specialize (nodup_same_pair d_intervals
+                                    Hnodup_fs_ditvals
+                                    (t, blocked)
+                                    (t, active {| min_t := 0; max_t := up_bound |})
+                                    Hin_t_actS_ditvals Hin_t_act0_ditvals Heq_fs_pair)
+          as Heq_act_blocked.
+        injection Heq_act_blocked as Heq_act_blocked; inversion Heq_act_blocked.
+        
+    (* ERROR CASE, get_value = None. *)
+    - inversion Hfun.
+
+    (* CASE s_intervals = None *)
+    - injection Hfun as Hfun; inversion Hfun.
+  Qed.
+    
+End HasEnteredTimeWindow.
+
+(** * Lemmas about [are_all_conditions_true] and its spec. *)
+
+Section AreAllConditionsTrue.
+
+  Lemma are_all_conditions_true_correct :
+    forall (sitpn : Sitpn)
+           (cond_values : list (Condition * bool))
+           (t : Trans),
+      are_all_conditions_true sitpn cond_values t = true ->
+      forall c : Condition,
+        In c (fst (split cond_values)) ->
+        has_condition sitpn t c = true ->
+        In (c, true) cond_values.
+  Proof.
+    intros sitpn cond_values t;
+      functional induction (are_all_conditions_true sitpn cond_values t)
+                 using are_all_conditions_true_ind;
+      intros Hfun c' Hin_fs_condv Hhas_cond.
+
+    (* BASE CASE, cond_values = []. *)
+    - inversion Hin_fs_condv.
+
+    (* CASE has_condition = true and b = true. *)
+    - rewrite fst_split_cons_app in Hin_fs_condv; simpl in Hin_fs_condv.
+      inversion_clear Hin_fs_condv as [Heq_cc' | Hin_c'_tl].
+
+      (* Case c = c'. *)
+      + rewrite <- Heq_cc'; apply in_eq.
+
+      (* Case c' ∈ tl *)
+      + apply in_cons; apply (IHb Hfun c' Hin_c'_tl Hhas_cond).
+
+    (* CASE has_condition = true and b = false *)
+    - inversion Hfun.
+
+    (* CASE has_condition = false *)
+    - rewrite fst_split_cons_app in Hin_fs_condv; simpl in Hin_fs_condv.
+      inversion_clear Hin_fs_condv as [Heq_cc' | Hin_c'_tl].
+
+      (* Case c = c'. *)
+      + rewrite <- Heq_cc' in Hhas_cond; rewrite e1 in Hhas_cond; inversion Hhas_cond.
+
+      (* Case c' ∈ tl *)
+      + apply in_cons; apply (IHb Hfun c' Hin_c'_tl Hhas_cond).
+  Qed.
+
+  (** Correctness lemma for are_all_conditions_true = false. *)
+  
+  Lemma not_are_all_conditions_true_correct :
+    forall (sitpn : Sitpn)
+           (cond_values : list (Condition * bool))
+           (t : Trans),
+      are_all_conditions_true sitpn cond_values t = false ->
+      exists c : Condition,
+        In c (fst (split cond_values)) /\
+        has_condition sitpn t c = true /\
+        In (c, false) cond_values.
+  Proof.
+    intros sitpn cond_values t;
+      functional induction (are_all_conditions_true sitpn cond_values t)
+                 using are_all_conditions_true_ind;
+      intro Hfun;
+      
+      (* CASE b = true or has_cond c = false. *)
+      (specialize (IHb Hfun) as Hex_cond;
+       inversion_clear Hex_cond as (cond & Hw_cond);
+       
+       (* Instantiates c and prove each part of the conjunction. *)
+       exists cond;
+       repeat split; [apply proj1 in Hw_cond; rewrite fst_split_cons_app; apply in_cons; auto |
+                      apply proj2 in Hw_cond; apply proj1 in Hw_cond; auto |
+                      do 2 (apply proj2 in Hw_cond); apply in_cons; auto ])
+
+       (* CASE has_cond c = true ∧ b = false *)
+      || (exists c; repeat split; [rewrite fst_split_cons_app; apply in_eq | auto | apply in_eq ])
+
+      (* BASE CASE *)
+      || inversion Hfun.
+  Qed.
+  
+End AreAllConditionsTrue.
+
 (** * Lemmas about [sitpn_is_firable] and its spec. *)
 
 Section SitpnIsFirable.
@@ -1615,6 +1806,126 @@ Section SitpnIsFirable.
       (cond_values s) = (cond_values s') ->
       SitpnIsFirable sitpn s t <-> SitpnIsFirable sitpn s' t.
   Proof.
-  Admitted.
+    intros sitpn s s' t Heq_m Heq_ditvals Heq_condv;
+      split;
+      intro His_fira;
+      unfold SitpnIsFirable in *;
+      rewrite <- Heq_ditvals, <- Heq_condv, <- Heq_m
+      || rewrite Heq_ditvals, Heq_condv, Heq_m;                                      
+      assumption.
+  Qed.
+
+  (** Correctness lemma for sitpn_is_firable. *)
   
+  Lemma sitpn_is_firable_correct :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      IsWellDefinedSitpnState sitpn s ->
+      In t (transs sitpn) ->
+      sitpn_is_firable sitpn s (lneighbours sitpn t) t = Some true ->
+      SitpnIsFirable sitpn s t.
+  Proof.
+    intros sitpn s t Hwell_def_sitpn Hwell_def_s
+           Hin_t_transs Hfun;
+      functional induction (sitpn_is_firable sitpn s (lneighbours sitpn t) t)
+                 using sitpn_is_firable_ind;
+      unfold SitpnIsFirable;
+
+    (* GENERAL CASE, all went well. 
+
+       We need to apply correctness lemmas is_sensitized,
+       has_entered_time_window and are_all_conditions_true. *)
+      (
+        (* Builds premises and specializes is_sensitized_correct
+         to get IsSensitized. *)
+        explode_well_defined_sitpn_state Hwell_def_s;
+        specialize (is_sensitized_correct (marking s) t Hwell_def_sitpn
+                                          Hwf_state_marking Hin_t_transs e)
+          as His_sens;
+
+        (* Builds premises and specializes has_entered_time_window
+         to get HasEnteredTimeWindow. *)
+        specialize (has_entered_time_window_correct sitpn (d_intervals s) t e1)
+          as Hhas_entered_time;
+
+        (* Builds premises and specializes are_all_conditions_true 
+         to get HasReachedAllConditions. *)
+        injection Hfun as Hare_all_cond;
+        specialize (are_all_conditions_true_correct sitpn (cond_values s) t Hare_all_cond)
+          as Hhas_reached_all_cond;
+        rewrite <- Hwf_state_condv in Hhas_reached_all_cond;
+
+        (* Applies conjunctions of lemmas. *)
+        apply (conj His_sens (conj Hhas_entered_time Hhas_reached_all_cond))
+      )
+        
+      (* CASES true = false *)
+      || (injection Hfun as Hfun; inversion Hfun) 
+
+      (* ERROR CASES *)
+      || inversion Hfun.      
+  Qed.
+
+  Lemma not_sitpn_is_firable_correct :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      IsWellDefinedSitpnState sitpn s ->
+      In t (transs sitpn) ->
+      sitpn_is_firable sitpn s (lneighbours sitpn t) t = Some false ->
+      ~SitpnIsFirable sitpn s t.
+  Proof.
+    intros sitpn s t Hwell_def_sitpn Hwell_def_s Hin_t_transs;
+      functional induction (sitpn_is_firable sitpn s (lneighbours sitpn t) t)
+                 using sitpn_is_firable_ind;
+      intros Hfun His_firable.
+
+    (* CASE are_all_conditions_true = false. 
+       
+       Show that it is in contradiction with HasReacheAllConditions
+       in SitpnIsFirable. *)
+    
+    - injection Hfun as Hare_all_cond_false.
+      
+      (* Gets ~HasReachedAllConditions, i.e: 
+         ∃c, c ∈ conditions ∧ C(t, c) ∧ (c, false) ∈ cond_values. *)
+      specialize (not_are_all_conditions_true_correct sitpn (cond_values s) t Hare_all_cond_false)
+        as Hex_cond_false.
+
+      (* Creates (c, false) ∈ cond_values has an independent hyp. in
+         the context. *)
+      inversion_clear Hex_cond_false as (c & Hcond_false).
+      explode_well_defined_sitpn_state Hwell_def_s.
+      rewrite <- Hwf_state_condv in Hcond_false.
+      inversion_clear Hcond_false as (Hin_c_conds & Hw_cond_false);
+        inversion_clear Hw_cond_false as (Hhas_cond_true & Hcond_false).
+
+      (* Specializes HasReacheAllConditions in SitpnIsFirable to get
+         (c, true) ∈ cond_values in the context. *)
+      unfold SitpnIsFirable in His_firable.
+      do 2 (apply proj2 in His_firable).
+      unfold HasReachedAllConditions in His_firable.
+      specialize (His_firable c Hin_c_conds Hhas_cond_true) as Hcond_true.
+
+      (* Shows contradiction with (c, true) ∈ cond_values and
+         (c, false) ∈ cond_values and NoDup (fs cond_values). *)
+      explode_well_defined_sitpn.
+      assert (Hnodup_condv := Hnodup_cond).
+      unfold NoDupConditions in Hnodup_condv.
+      rewrite Hwf_state_condv in Hnodup_condv.
+      assert (Heq_fs_c : fst (c, true) = fst (c, false)) by auto.
+      specialize (nodup_same_pair (cond_values s) Hnodup_condv (c, true) (c, false)
+                                  Hcond_true Hcond_false Heq_fs_c)
+        as Heq_pair_c.
+      injection Heq_pair_c as Heq_true_false; inversion Heq_true_false.
+      
+    (* CASE has_entered_window = false. 
+       
+       Show that it is in contradiction with HasEnteredTimeWindow
+       in SitpnIsFirable. *)
+    - 
+      
 End SitpnIsFirable.

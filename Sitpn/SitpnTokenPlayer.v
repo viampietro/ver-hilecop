@@ -88,11 +88,15 @@ Section InterpretationFunctions.
     match cond_values with
     | (c, b) :: tl =>
       if has_condition sitpn t c then
-        b && are_all_conditions_true sitpn tl t
-      else
-        are_all_conditions_true sitpn tl t
+        if b then
+          are_all_conditions_true sitpn tl t
+        else false
+      else are_all_conditions_true sitpn tl t
     | [] => true
     end.
+
+  Functional Scheme are_all_conditions_true_ind :=
+    Induction for are_all_conditions_true Sort Prop.
   
   (** Returns true if there exists a place p in marking 
       with at least one token that is associated to action a
@@ -391,6 +395,9 @@ Section TimeFunctions.
        firability is not restricted to a time window. *)
     | None => Some true
     end.
+
+  Functional Scheme has_entered_time_window_ind :=
+    Induction for has_entered_time_window Sort Prop.
   
   (** Builds a new list of couples (Trans, DynamicTimeInterval) based 
       on the state of dynamic intervals in the [d_itvals] list, and
@@ -552,6 +559,8 @@ Section Firability.
     (* Error: is_sensitized raised an error. *)
     | None => None
     end.
+
+  Functional Scheme sitpn_is_firable_ind := Induction for sitpn_is_firable Sort Prop.
   
 End Firability.
 
