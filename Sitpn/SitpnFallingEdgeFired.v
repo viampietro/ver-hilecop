@@ -137,7 +137,7 @@ Section SitpnFallingEdgeNotFirableNotFired.
     intros sitpn state residual_marking fired pg;
       functional induction (sitpn_fire_aux sitpn state residual_marking fired pg)
                  using sitpn_fire_aux_ind;
-      intros pgroup final_fired Hwell_def_sitpn Hwell_def_state Hin_pgroups
+      intros pgroup final_fired Hwell_def_sitpn Hwell_def_s Hin_pgroups
              His_dec Hfun t' Hin_pg Hnot_in_fired Hnot_firable.
     
     (* Base case, pg = []. *)
@@ -150,12 +150,11 @@ Section SitpnFallingEdgeNotFirableNotFired.
          
          We have to show ~SitpnIsFirable -> sitpn_is_firable = Some
          false, then contradiction. *)
-      + elimtype False; apply Hnot_firable.
-                
+      + (* Builds premises for sitpn_is_firable_correct. *)
+        
         (* Specializes sitpn_is_firable_correct. *)
-        generalize (sitpn_is_firable_correct
-                      sitpn state neighbours_of_t t Hwell_def_sitpn Hwell_def_state
-                      Hin_lneigh e1) as Hfirable; intro.
+        specialize (sitpn_is_firable_correct
+                      sitpn s t Hwell_def_sitpn Hwell_def_s e1) as Hfirable.
         
         
       (* INDUCTION CASE. *)

@@ -8,6 +8,7 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 
 Require Import Hilecop.Sitpn.SitpnTactics.
 Require Import Hilecop.Utils.HilecopLemmas.
+Require Import Hilecop.Utils.HilecopTactics.
 
 (* Import tertium non datur axiom. *)
 
@@ -1660,20 +1661,13 @@ Section HasEnteredTimeWindow.
       (* Case (t, active 0) ∈ ditvals, impossible as NoDup (fs ditvals) *)
       + specialize (get_value_correct Nat.eq_dec t d_intervals e0) as Hin_t_actS_ditvals.
         inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).
-        
-        (* Specializes nodup_same_pair to prove a contradiction. *)
-        assert (Heq_fs_pair:
-                  fst (t, active {| min_t := S _x1; max_t := _x0 |}) =
-                  fst (t, active {| min_t := 0; max_t := up_bound |})) by auto.
-        specialize (nodup_same_pair d_intervals
-                                    Hnodup_fs_ditvals
-                                    (t, active {| min_t := S _x1; max_t := _x0 |})
-                                    (t, active {| min_t := 0; max_t := up_bound |})
-                                    Hin_t_actS_ditvals Hin_t_act0_ditvals Heq_fs_pair)
-          as Heq_0_S.
-        injection Heq_0_S as Heq_0_S Heq_max.
-        inversion Heq_0_S.
-        
+
+        contradiction_with_nodup_same_pair d_intervals
+                                           (t, active {| min_t := S _x1; max_t := _x0 |})
+                                           (t, active {| min_t := 0; max_t := up_bound |})
+                                           Hin_t_actS_ditvals
+                                           Hin_t_act0_ditvals.
+                
     (* CASE s_intervals = Some itval ∧ get_value t d_intervals = blocked *)
     - intro Hhas_entered_vee.
       inversion_clear Hhas_entered_vee as [Hs_itvals_none | Hex_active_0].
@@ -1685,18 +1679,12 @@ Section HasEnteredTimeWindow.
       + specialize (get_value_correct Nat.eq_dec t d_intervals e0) as Hin_t_actS_ditvals.
         inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).
         
-        (* Specializes nodup_same_pair to prove a contradiction. *)
-        assert (Heq_fs_pair:
-                  fst (t, blocked) =
-                  fst (t, active {| min_t := 0; max_t := up_bound |})) by auto.
-        specialize (nodup_same_pair d_intervals
-                                    Hnodup_fs_ditvals
-                                    (t, blocked)
-                                    (t, active {| min_t := 0; max_t := up_bound |})
-                                    Hin_t_actS_ditvals Hin_t_act0_ditvals Heq_fs_pair)
-          as Heq_act_blocked.
-        injection Heq_act_blocked as Heq_act_blocked; inversion Heq_act_blocked.
-        
+        contradiction_with_nodup_same_pair d_intervals
+                                           (t, blocked)
+                                           (t, active {| min_t := 0; max_t := up_bound |})
+                                           Hin_t_actS_ditvals
+                                           Hin_t_act0_ditvals.
+                
     (* ERROR CASE, get_value = None. *)
     - inversion Hfun.
 
@@ -1881,7 +1869,8 @@ Section SitpnIsFirable.
     intros sitpn s t Hwell_def_sitpn Hwell_def_s Hin_t_transs;
       functional induction (sitpn_is_firable sitpn s (lneighbours sitpn t) t)
                  using sitpn_is_firable_ind;
-      intros Hfun His_firable.
+      intros Hfun His_firable;
+      unfold SitpnIsFirable in His_firable.
 
     (* CASE are_all_conditions_true = false. 
        
@@ -1905,7 +1894,6 @@ Section SitpnIsFirable.
 
       (* Specializes HasReacheAllConditions in SitpnIsFirable to get
          (c, true) ∈ cond_values in the context. *)
-      unfold SitpnIsFirable in His_firable.
       do 2 (apply proj2 in His_firable).
       unfold HasReachedAllConditions in His_firable.
       specialize (His_firable c Hin_c_conds Hhas_cond_true) as Hcond_true.
@@ -1926,6 +1914,28 @@ Section SitpnIsFirable.
        
        Show that it is in contradiction with HasEnteredTimeWindow
        in SitpnIsFirable. *)
-    - 
-      
+    - explode_well_defined_sitpn_state Hwell_def_s.
+      specialize (not_has_entered_time_window_correct Hnodup_state_ditvals e1)
+        as Hnot_has_entered.
+      apply proj2 in His_firable; apply proj1 in His_firable.
+      contradiction.
+
+    (* ERROR CASE, has_entered_time_window = None *)
+    - inversion Hfun.
+
+    (* CASE is_sensitized = false. *)
+    - (* Builds premises and specializes is_sensitized_correct
+         to get IsSensitized. *)
+        explode_well_defined_sitpn_state Hwell_def_s;
+        specialize (not_is_sensitized_iff (marking s) t Hwell_def_sitpn
+                                          Hwf_state_marking Hin_t_transs)
+          as His_sens_eq.
+        rewrite His_sens_eq in e.
+        apply proj1 in His_firable.
+        contradiction.
+
+    (* ERROR CASE, is_sensitized = None *)
+    - inversion Hfun.
+  Qed.
+
 End SitpnIsFirable.
