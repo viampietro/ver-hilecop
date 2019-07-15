@@ -17,6 +17,9 @@ Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeTime.
 
+(* Import lemmas about firing semantics rules. *)
+
+Require Import Hilecop.Sitpn.SitpnFallingEdgeFired.
 
 (** * Correctness of sitpn_falling_edge function. *)
 
@@ -68,9 +71,8 @@ Proof.
   - apply (sitpn_falling_edge_same_reset sitpn s s' time_value env Hfun).
 
   (* CASE t ∉ firable(s') ⇒ t ∉ Fired' *)
-  - admit.
-  (* apply (sitpn_falling_edge_not_firable_not_fired sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun). *)
-
+  - apply (sitpn_falling_edge_not_firable_not_fired sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
+    
   (* CASE t ∈ firable(s') ∧ t ∈ sens(M -∑pre) ⇒ t ∈ Fired' *)
   - admit.
 

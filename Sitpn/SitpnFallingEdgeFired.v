@@ -9,6 +9,7 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 Require Import Hilecop.Sitpn.SitpnCoreLemmas.
 Require Import Hilecop.Utils.HilecopLemmas.
 Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import Hilecop.Utils.HilecopTactics.
 
 (* Import lemmas on well-definition. *)
 
@@ -110,7 +111,7 @@ Section SitpnFallingEdgeNotFirableNotFired.
       apply (IHo final_fired t' Hnot_in_fired Hnot_in_tail Hfun).
     - inversion Hfun.
   Qed.
-
+  
   (** ∀ t ∈ pgroup, t ∉ fired, t ∉ firable(state),
       sitpn_fire_aux sitpn state residual_marking fired group = Some final_fired ⇒ 
       t ∉ final_fired *)
@@ -151,93 +152,114 @@ Section SitpnFallingEdgeNotFirableNotFired.
          We have to show ~SitpnIsFirable -> sitpn_is_firable = Some
          false, then contradiction. *)
       + (* Builds premises for sitpn_is_firable_correct. *)
+        deduce_in_transs.
         
-        (* Specializes sitpn_is_firable_correct. *)
+        (* Specializes sitpn_is_firable_correct, then contradiction. *)
         specialize (sitpn_is_firable_correct
-                      sitpn s t Hwell_def_sitpn Hwell_def_s e1) as Hfirable.
+                      t Hwell_def_sitpn Hwell_def_s Hin_t_transs e0) as Hfirable.
+        rewrite Heq_t in Hfirable; contradiction.
         
-        
-      (* INDUCTION CASE. *)
-      + intro Hin_tail.
-        apply IHo with (pgroup := pgroup).
-        -- assumption.
-        -- assumption.
-        -- assumption.
-        -- apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; auto.
-        -- unfold incl; intros t'' Hin_tail'; apply in_cons with (a := t) in Hin_tail'.
-           apply (Hincl_pg t'' Hin_tail').
-        -- assumption.
-        -- assumption.
-        -- intro Hin_fired_app; apply in_app_or in Hin_fired_app; elim Hin_fired_app.
-           { intro Hin_fired; apply (Hnot_in_fired Hin_fired). }
-           { intro Hin_tt; apply in_inv in Hin_tt; elim Hin_tt.
-             ++ intro Heq_tt.
-                apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg.
-                intros Hnot_in_tail Hnodup_tail.
-                rewrite Heq_tt in Hnot_in_tail; apply (Hnot_in_tail Hin_tail).
-             ++ auto.
-           }
-        -- assumption.
+      (* Case t' ∈ tail, then apply IH. *)
+      + (* Builds premises for IH. *)
+
+        (* Premise t' ∉ (fired ++ [t]) *)
+        assert (Hnot_in_fired_app : ~In t' (fired ++ [t])).
+        {
+          deduce_nodup_in_dec_pgroup.
+          deduce_nodup_hd_not_in.
+          specialize (not_in_in_diff t t' tail (conj Hnot_in_tl Hin_tail)) as Hneq_tt'.
+          assert (Hnot_in_tlist : ~In t' [t]) by (apply not_in_cons; auto).
+          apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tlist)).            
+        }
+
+        (* Premise IsDecListCons tail pgroup *)
+        apply is_dec_list_cons_cons in His_dec.
+
+        (* Applies IH with premises. *)
+        apply (IHo pgroup final_fired Hwell_def_sitpn Hwell_def_s Hin_pgroups
+                   His_dec Hfun t' Hin_tail Hnot_in_fired_app Hnot_firable).
            
     (* Case update_residual_marking returns None. *)
     - inversion Hfun.
       
     (* Case is_sensitized returns Some false. *)
-    - apply IHo with (pgroup := pgroup).
-      + assumption.
-      + assumption.
-      + assumption.
-      + apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; auto.
-      + unfold incl; intros t'' Hin_tail'; apply in_cons with (a := t) in Hin_tail'.
-        apply (Hincl_pg t'' Hin_tail').
-      + assumption.
-      + apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg.
-        intros Hnot_in_tail Hnodup_tail.
-        apply in_inv in Hin_pg; elim Hin_pg.
-        -- intro Heq_t.
-           elimtype False; apply Hnot_firable.
-           (* Builds In (t, neighbours_of_t) sitpn.(lneighbours), 
-              necessary to apply sitpn_is_firable_correct. *)
-           generalize (get_neighbours_correct sitpn.(lneighbours) t neighbours_of_t e0)
-             as Hin_lneigh; intro.
-           (* Generalizes sitpn_is_firable_correct. *)
-           generalize (sitpn_is_firable_correct
-                         sitpn state neighbours_of_t t Hwell_def_sitpn Hwell_def_state
-                         Hin_lneigh e1) as Hfirable; intro.
-           rewrite <- Heq_t; assumption.
-        -- auto.
-      + assumption.
-      + assumption.
+    - inversion_clear Hin_pg as [Heq_tt' | Hin_t'_tail].
+
+      (* Case t = t' *)
+      +
+        (* Premise to apply sitpn_fire_aux_not_in_not_fired *)
+        deduce_nodup_in_dec_pgroup;
+          rewrite NoDup_cons_iff in Hnodup_ttail;
+          apply proj1 in Hnodup_ttail as Hnot_in_tail;
+          rewrite Heq_tt' in Hnot_in_tail.
+
+        (* Applies sitpn_fire_aux_not_in_not_fired. *)
+        apply (sitpn_fire_aux_not_in_not_fired
+                 sitpn state residual_marking fired tail final_fired t'
+                 Hnot_in_fired Hnot_in_tail Hfun).
+
+      (* Case t' ∈ tail, then apply IH. *)
+      + (* Builds premises for IH. *)
+
+        (* Premise t' ∉ (fired ++ [t]) *)
+        assert (Hnot_in_fired_app : ~In t' (fired ++ [t])).
+        {
+          deduce_nodup_in_dec_pgroup.
+          deduce_nodup_hd_not_in.
+          specialize (not_in_in_diff t t' tail (conj Hnot_in_tl Hin_t'_tail)) as Hneq_tt'.
+          assert (Hnot_in_tlist : ~In t' [t]) by (apply not_in_cons; auto).
+          apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tlist)).            
+        }
+
+        (* Premise IsDecListCons tail pgroup *)
+        apply is_dec_list_cons_cons in His_dec.
+
+        (* Applies IH with premises. *)
+        apply (IHo pgroup final_fired Hwell_def_sitpn Hwell_def_s Hin_pgroups
+                   His_dec Hfun t' Hin_t'_tail Hnot_in_fired Hnot_firable).
         
     (* ERROR CASE is_sensitized returns None. *)
     - inversion Hfun.
       
     (* CASE sitpn_is_firable returns Some false. *)
-    - apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; intros Hnot_in_tail Hnodup_tail.
-      apply in_inv in Hin_pg; elim Hin_pg.
-      (* When t = t', then t ∉ fired and t ∉ tail ⇒ t ∉ final_fired 
-         thanks to lemma sitpn_fire_aux_not_in_not_fired. *)
-      + intro Heq_tt. rewrite Heq_tt in Hnot_in_tail.
+    - inversion_clear Hin_pg as [Heq_tt' | Hin_t'_tail].
+
+      (* Case t = t' *)
+      +
+        (* Premise to apply sitpn_fire_aux_not_in_not_fired *)
+        deduce_nodup_in_dec_pgroup;
+          rewrite NoDup_cons_iff in Hnodup_ttail;
+          apply proj1 in Hnodup_ttail as Hnot_in_tail;
+          rewrite Heq_tt' in Hnot_in_tail.
+
+        (* Applies sitpn_fire_aux_not_in_not_fired. *)
         apply (sitpn_fire_aux_not_in_not_fired
                  sitpn state residual_marking fired tail final_fired t'
                  Hnot_in_fired Hnot_in_tail Hfun).
-      + intro Hin_tail; apply IHo with (pgroup := pgroup).
-        -- assumption.
-        -- assumption.
-        -- assumption.
-        -- apply NoDup_cons_iff in Hnodup_pg; elim Hnodup_pg; auto.
-        -- unfold incl; intros t'' Hin_tail'; apply in_cons with (a := t) in Hin_tail'.
-           apply (Hincl_pg t'' Hin_tail').
-        -- assumption.
-        -- assumption.
-        -- assumption.
-        -- assumption.
+
+      (* Case t' ∈ tail, then apply IH. *)
+      + (* Builds premises for IH. *)
+
+        (* Premise t' ∉ (fired ++ [t]) *)
+        assert (Hnot_in_fired_app : ~In t' (fired ++ [t])).
+        {
+          deduce_nodup_in_dec_pgroup.
+          deduce_nodup_hd_not_in.
+          specialize (not_in_in_diff t t' tail (conj Hnot_in_tl Hin_t'_tail)) as Hneq_tt'.
+          assert (Hnot_in_tlist : ~In t' [t]) by (apply not_in_cons; auto).
+          apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tlist)).            
+        }
+
+        (* Premise IsDecListCons tail pgroup *)
+        apply is_dec_list_cons_cons in His_dec.
+
+        (* Applies IH with premises. *)
+        apply (IHo pgroup final_fired Hwell_def_sitpn Hwell_def_s Hin_pgroups
+                   His_dec Hfun t' Hin_t'_tail Hnot_in_fired Hnot_firable).
            
     (* ERROR CASE sitpn_is_firable = None *)
     - inversion Hfun.
       
-    (* ERROR CASE get_neighbours = None *)
-    - inversion Hfun.
   Qed.
 
   (** ∀ pgroup ∈ sitpn.(priority_groups),
@@ -261,26 +283,12 @@ Section SitpnFallingEdgeNotFirableNotFired.
     unfold sitpn_fire.
     intros sitpn state pgroup fired Hwell_def_sitpn Hwell_def_state
            Hin_pgroups Hfun t Hin_pgroup Hnot_firable.
-
-    (* Builds (incl pgroup pgroup). *)
-    assert (Hincl_pgroup : incl pgroup pgroup) by (apply incl_refl).
-
-    (* Builds NoDup pgroup. *)
-    unfold IsWellDefinedSitpn in Hwell_def_sitpn;
-      decompose [and] Hwell_def_sitpn; intros; rename_well_defined_sitpn.
-    unfold NoDupTranss in *.
-    unfold NoUnknownInPriorityGroups in *.
-    rewrite Hno_unk_pgroups in Hnodup_transs.
-    generalize (nodup_concat_gen sitpn.(priority_groups) Hnodup_transs pgroup Hin_pgroups)
-      as Hnodup_pgroup; intro.              
-
+    
     (* Applies sitpn_fire_aux_not_firable_not_fired. *)
-    generalize (sitpn_fire_aux_not_firable_not_fired
-                  sitpn state (marking state)
-                  [] pgroup pgroup fired Hwell_def_sitpn
-                  Hwell_def_state Hin_pgroups Hnodup_pgroup Hincl_pgroup Hfun) as Hspec; intro.
-    assert (Hnot_in : ~In t []) by (apply in_nil).
-    apply (Hspec t Hin_pgroup Hnot_in Hnot_firable). 
+    apply (sitpn_fire_aux_not_firable_not_fired
+             sitpn state (marking state) [] pgroup pgroup fired
+             Hwell_def_sitpn Hwell_def_state Hin_pgroups (IsDecListCons_refl pgroup) Hfun
+             t Hin_pgroup (@in_nil Trans t) Hnot_firable).
   Qed.
 
   (** sitpn_map_fire_aux sitpn state fired pgroups = Some final_fired ⇒ 
@@ -385,34 +393,43 @@ Section SitpnFallingEdgeNotFirableNotFired.
     (* BASE CASE, pgroups = []. *)
     - inversion Hin_pgs.
 
-    (* GENERAL CASE *)
-    - apply in_inv in Hin_pgs; elim Hin_pgs.
+    (* INDUCTION CASE *)
 
-      (* CASE pgroup = pgroup' *)
-      + intro Heq_pg.
+    (* CASE sitpn_fire = Some fired_trs. *)
+    - inversion_clear Hin_pgs as [Heq_pg | Hin_pgs_tail].
 
+      (* CASE pgroup = pgroup'. 
+         
+         - If t ∉ firable then t ∉ fired_trs (sitpn_fire_not_firable_not_in).
+         - If t ∉ fired_trs ∧ t ∉ fired_transitions ∧ t ∉ (concat pgroups_tail)
+           then t ∉ final_fired (sitpn_map_fire_aux_not_in_not_fired)
+       *)
+      + (* First specializes, sitpn_fire_not_firable_not_fired to get 
+           ~In t fired_trs. *)
+        specialize (is_dec_list_cons_incl His_dec) as Hincl_pg_pgs.
+        specialize (in_eq pgroup pgroups_tail) as Hin_pgs_tl.
+        apply_incl Hin_sitpn_pgs.
+        rewrite <- Heq_pg in Hin_pg.
+        specialize (sitpn_fire_not_firable_not_fired
+                      sitpn state pgroup fired_trs Hwell_def_sitpn Hwell_def_s
+                      Hin_sitpn_pgs e0 t Hin_pg Hnot_firable) as Hnot_in_ftrs.
+
+        (* Second, builds (~In t (fired_transitions ++ fired_trs)) 
+           from ~In t fired_transitions and ~In t fired_trs. *)
+        specialize (not_in_app t fired_transitions fired_trs
+                               (conj Hnot_in_fired Hnot_in_ftrs))
+          as Hnot_in_fired_app.
+        
         (* Builds ~In t (concat pgroups_tail) to apply 
            sitpn_map_fire_aux_not_in_not_fired *)
-        rewrite concat_cons in Hnodup_concat.
-        rewrite Heq_pg in Hnodup_concat.
-        generalize (nodup_app_not_in
-                      pgroup' (concat pgroups_tail) Hnodup_concat
-                      t Hin_pg) as Hnot_in_concat; intro.
-        
-        (* Builds In pgroup sitpn.(priority_groups) to apply 
-           sitpn_fire_not_firable_not_fired *)
-        assert (Hin_pgs' : In pgroup (pgroup :: pgroups_tail)) by apply in_eq.
-        generalize (Hincl_pgs pgroup Hin_pgs') as Hin_sitpn_pgs; intro.
-        
-        (* Builds (~In t fired_trs) by applying sitpn_fire_not_firable_not_fired. *)
-        rewrite <- Heq_pg in Hin_pg.
-        generalize (sitpn_fire_not_firable_not_fired
-                      sitpn state pgroup fired_trs Hwell_def_sitpn Hwell_def_state
-                      Hin_sitpn_pgs e0 t Hin_pg Hnot_firable) as Hnot_in_fired'; intro.
-        
-        (* Builds (~In t (fired_transitions ++ fired_trs)) *)
-        generalize (not_in_app t fired_transitions fired_trs
-                               (conj Hnot_in_fired Hnot_in_fired')) as Hnot_in_fired_app; intro.
+        explode_well_defined_sitpn.
+        unfold NoIntersectInPriorityGroups in Hno_inter.
+        specialize (is_dec_list_cons_concat His_dec) as His_dec_concat.
+        specialize (nodup_is_dec_list_cons Hno_inter His_dec_concat)
+          as Hnodup_concat_pgs_cons.
+        rewrite concat_cons in Hnodup_concat_pgs_cons.
+        specialize (nodup_app_not_in pgroup (concat pgroups_tail) Hnodup_concat_pgs_cons t Hin_pg)
+          as Hnot_in_concat.        
         
         (* Applies sitpn_map_fire_aux_not_in_not_fired *)
         apply (sitpn_map_fire_aux_not_in_not_fired
@@ -420,44 +437,42 @@ Section SitpnFallingEdgeNotFirableNotFired.
                  t Hnot_in_fired_app Hnot_in_concat).
         
       (* CASE In pgroup' pgroups_tail, then apply IHo. *)
-      + intro Hin_pgs_tail.
-
-        (* Builds NoDup (concat pgroups_tail). *)
-        rewrite concat_cons in Hnodup_concat.
-        generalize (nodup_app pgroup (concat pgroups_tail) Hnodup_concat)
-          as Hnodup_concat_wedge; intro.
-        elim Hnodup_concat_wedge; intros Hnodup_pg Hnodup_concat_tail.
-        
-        (* Builds (incl pgroups_tail (priority_groups sitpn)). *)
-        generalize (incl_cons_inv
-                      pgroup pgroups_tail
-                      sitpn.(priority_groups) Hincl_pgs) as Hincl_pgs'; intro.
-        
+      + 
         (* Builds ~In t (fired_transitions ++ fired_trs). 
 
            First, we need (~In t pgroup) to apply sitpn_fire_aux_not_in_not_fired. *)
-        specialize (NoDup_app_comm pgroup (concat pgroups_tail) Hnodup_concat)
-          as Hnodup_concat_inv.
-        specialize (nodup_app_not_in (concat pgroups_tail) pgroup Hnodup_concat_inv)
-          as Hfall_not_in_pg.
-        specialize (in_concat t pgroup' pgroups_tail Hin_pg Hin_pgs_tail) as Hin_concat.
-        specialize (Hfall_not_in_pg t Hin_concat) as Hnot_in_pg.
+
+        assert (Hnot_in_t_pg : ~In t pgroup).
+        {
+          explode_well_defined_sitpn.
+          unfold NoIntersectInPriorityGroups in Hno_inter.
+          specialize (is_dec_list_cons_concat His_dec) as His_dec_concat.
+          specialize (nodup_is_dec_list_cons Hno_inter His_dec_concat)
+            as Hnodup_concat_pgs_cons.
+          rewrite concat_cons in Hnodup_concat_pgs_cons.
+          specialize (NoDup_app_comm pgroup (concat pgroups_tail) Hnodup_concat_pgs_cons)
+            as Hnodup_concat_inv.
+          specialize (nodup_app_not_in (concat pgroups_tail) pgroup Hnodup_concat_inv)
+            as Hfall_not_in_pg.
+          specialize (in_concat t pgroup' pgroups_tail Hin_pg Hin_pgs_tail) as Hin_concat.
+          specialize (Hfall_not_in_pg t Hin_concat) as Hnot_in_pg.
+          assumption.
+        }
         
-        (* Second, we need to build (~In t fired_trs) by 
-           applying sitpn_fire_aux_not_in_not_fired. *)
+        (* Second, we apply sitpn_fire_aux_not_in_not_fired
+           to obtain ~In t fired_trs. *)
         unfold sitpn_fire in e0.
-        assert (Hnot_in_nil : ~In t []) by apply in_nil.
         specialize (sitpn_fire_aux_not_in_not_fired
                       sitpn state (marking state) [] pgroup fired_trs t
-                      Hnot_in_nil Hnot_in_pg e0) as Hnot_in_fired'.
+                      (@in_nil Trans t) Hnot_in_t_pg e0) as Hnot_in_fired'.
         
         (* Finally, builds (~In t (fired_transitions ++ fired_trs)) *)
         specialize (not_in_app t fired_transitions fired_trs (conj Hnot_in_fired Hnot_in_fired'))
           as Hnot_in_fired_app.
         
         (* Applies IHo. *)
-        apply (IHo final_fired Hwell_def_sitpn Hwell_def_state
-                   Hnodup_concat_tail Hincl_pgs' Hfun pgroup' t Hin_pgs_tail
+        apply (IHo final_fired Hwell_def_sitpn Hwell_def_s
+                   (is_dec_list_cons_cons His_dec) Hfun pgroup' t Hin_pgs_tail
                    Hin_pg  Hnot_in_fired_app Hnot_firable).
         
     (* CASE sitpn_fire returns None. *)
@@ -481,10 +496,16 @@ Section SitpnFallingEdgeNotFirableNotFired.
         ~ SitpnIsFirable sitpn s t ->
         ~ In t to_be_fired.
   Proof.
-    intros sitpn s to_be_fired Hfun.
-    unfold sitpn_map_fire in Hfun.
-    
-  Admitted.
+    intros sitpn s to_be_fired Hwell_def_sitpn Hwell_def_s Hfun
+           pgroup t Hin_pg_pgs Hin_t_pg Hnot_firable;
+      unfold sitpn_map_fire in Hfun.
+
+    (* Applies sitpn_map_fire_aux_not_firable_not_fired. *)
+    apply (sitpn_map_fire_aux_not_firable_not_fired
+             sitpn s [] (priority_groups sitpn) to_be_fired
+             Hwell_def_sitpn Hwell_def_s (IsDecListCons_refl (priority_groups sitpn))
+             Hfun pgroup t Hin_pg_pgs Hin_t_pg (@in_nil Trans t) Hnot_firable).    
+  Qed.
            
   (** All transitions that are not firable at state [s'] 
       are not in [(fired s')] where [s'] is the state
@@ -580,7 +601,6 @@ Section SitpnFallingEdgeNotFirableNotFired.
     - inversion Hfun.
     - inversion Hfun.
   Qed.
-
   
 End SitpnFallingEdgeNotFirableNotFired.
 

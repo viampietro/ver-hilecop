@@ -17,14 +17,12 @@ Require Import Hilecop.Sitpn.Sitpn.
 
 Section DecreasedList.
 
-  Variable A : Type.
-  
   (** List l is a decreased or equal version of list l'. 
       l' is built from l by adding elements in the front (cons).
        
       Useful for proof involving recursion on lists.  *)
   
-  Inductive IsDecListCons : list A -> list A -> Prop :=
+  Inductive IsDecListCons {A: Type} : list A -> list A -> Prop :=
   | IsDecListCons_refl : forall l : list A, IsDecListCons l l
   | IsDecListCons_eq : forall (a : A) (l : list A), IsDecListCons l (a :: l)
   | IsDecListCons_cons :
@@ -34,15 +32,30 @@ Section DecreasedList.
 
   (** Facts about IsDecListCons. *)
   
-  Lemma is_dec_list_cons_nil :
+  Lemma is_dec_list_cons_nil {A : Type} :
     forall (l : list A), IsDecListCons [] l.
   Proof.
     induction l.
     - apply IsDecListCons_refl.
     - apply IsDecListCons_cons; assumption.
   Qed.
+
+  Lemma is_dec_list_cons_app_eq {A : Type} :
+    forall (l l' : list A),
+      IsDecListCons l (l' ++ l).
+  Proof.
+    induction l'.
+
+    (* BASE CASE *)
+    - simpl; apply IsDecListCons_refl.
+
+    (* INDUCTION CASE *)
+    - rewrite <- app_comm_cons;
+        apply IsDecListCons_cons;
+        assumption.
+  Qed.
   
-  Lemma is_dec_list_cons_incl :
+  Lemma is_dec_list_cons_incl {A : Type} :
     forall l' l : list A, IsDecListCons l l' -> incl l l'.
   Proof.
     induction l'.
@@ -60,7 +73,7 @@ Section DecreasedList.
         assumption.      
   Qed.
 
-  Lemma is_dec_list_cons_cons :
+  Lemma is_dec_list_cons_cons {A : Type} :
     forall (a : A) (l' l : list A), IsDecListCons (a :: l) l' -> IsDecListCons l l'.
   Proof.
     intros a l'.
@@ -72,12 +85,81 @@ Section DecreasedList.
       + apply IsDecListCons_cons; apply (IHl' l H1).
   Qed.
 
+  (** If l' has no duplicates and l is a decreased version of l' then
+      l has no duplicates. *)
+  
+  Lemma nodup_is_dec_list_cons {A : Type} :
+    forall (l' l : list A),
+      NoDup l' ->
+      IsDecListCons l l' ->
+      NoDup l.
+  Proof.
+    induction l'; intros l Hnodup_l' His_dec.
+    
+    (* BASE CASE *)
+    - inversion His_dec; apply NoDup_nil.
+
+    (* INDUCTION CASE *)
+    - inversion His_dec.
+      
+      (* Case IsDecListCons_refl *)
+      + assumption.
+
+      (* Case IsDecListCons_eq *)
+      + rewrite NoDup_cons_iff in Hnodup_l';
+          apply proj2 in Hnodup_l';
+          assumption.
+
+      (* Case IsDecListCons_cons *)
+      + rewrite NoDup_cons_iff in Hnodup_l';
+          apply proj2 in Hnodup_l';
+          apply (IHl' l Hnodup_l' H1).
+  Qed.
+
+  (** If IsDecListCons l l' then it's possible to
+      decompose l' in (m ++ l). *)
+  
+  Lemma is_dec_list_cons_exists_app {A : Type} :
+    forall (l' l : list A),
+      IsDecListCons l l' -> exists l'' : list A, l' = l'' ++ l.
+  Proof.
+    induction l'; intros l His_dec.
+
+    (* BASE CASE *)
+    - inversion His_dec.
+      exists []; rewrite app_nil_r; auto.
+
+    (* INDUCTION CASE *)
+    - inversion His_dec.
+      + exists []. simpl. reflexivity.
+      + exists [a]. simpl. reflexivity.
+      + specialize (IHl' l H1) as Hex.
+        inversion_clear Hex as (m & Heq_l'_ml).
+        rewrite Heq_l'_ml.
+        exists (a :: m).
+        auto.
+  Qed.
+
+  (** concat is a morphism for IsDecListCons. *)
+  
+  Lemma is_dec_list_cons_concat {A : Type} :
+    forall (ll ll' : list (list A)),
+      IsDecListCons ll ll' -> IsDecListCons (concat ll) (concat ll').
+  Proof.
+    intros ll ll' His_dec.
+    specialize (is_dec_list_cons_exists_app His_dec) as Hex_l''.
+    inversion_clear Hex_l'' as (l'' & Heq_l'_ll'').
+    rewrite Heq_l'_ll''.
+    rewrite concat_app.
+    apply is_dec_list_cons_app_eq.
+  Qed.
+  
   (** List l is a decreased or equal version of list l'. 
       l' is built from l by adding elements in the front (cons).
        
       Useful for proof involving recursion on lists.  *)
 
-  Inductive IsDecListApp : list A -> list A -> Prop :=
+  Inductive IsDecListApp {A : Type} : list A -> list A -> Prop :=
   | IsDecListApp_refl : forall l : list A, IsDecListApp l l
   | IsDecListApp_eq : forall (a : A) (l : list A), IsDecListApp l (l ++ [a])
   | IsDecListApp_cons :

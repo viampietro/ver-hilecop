@@ -1,4 +1,6 @@
 Require Import Hilecop.Sitpn.Sitpn.
+Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Hilecop.Utils.HilecopLemmas.
 
 (** Renames all hypotheses resulting of the decomposition 
     of the IsWelldefinedSitpn predicate. *)
@@ -89,53 +91,69 @@ Ltac rename_well_defined_sitpn :=
     of the IsWelldefinedSitpn predicate. *)
 
 Ltac clear_well_defined_sitpn :=
-  try match goal with
-      | [ H: NoDupPlaces ?sitpn |- _ ] => clear H
-      end;
+  match goal with
+  | [ H: NoDupPlaces ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDupPlaces ?sitpn"
+  end;
   match goal with
   | [ H: NoDupTranss ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDupTranss ?sitpn"
   end;
   match goal with
   | [ H: NoUnknownInPriorityGroups ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoUnknownInPriorityGroups ?sitpn"
   end;
   match goal with
   | [ H: NoIntersectInPriorityGroups ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoIntersectInPriorityGroups ?sitpn"
   end;
   match goal with
   | [ H: AreWellFormedTimeIntervals ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form AreWellFormedTimeIntervals ?sitpn"
   end;
   match goal with
   | [ H: NoDupConditions ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDupConditions ?sitpn"
   end;
   match goal with
   | [ H: NoDupActions ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDupActions ?sitpn"
   end;
   match goal with
   | [ H: NoDupFunctions ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDupFunctions ?sitpn"
   end;
   match goal with
   | [ H: NoDupInNeighbours ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDupInNeighbours ?sitpn"
   end;
   match goal with
   | [ H: NoIsolatedPlace ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoIsolatedPlace ?sitpn"
   end;
   match goal with
   | [ H: NoUnknownPlaceInNeighbours ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoUnknownPlaceInNeighbours ?sitpn"
   end;
   match goal with
   | [ H: NoIsolatedTrans ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoIsolatedTrans ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedPreEdges ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form AreWellDefinedPreEdges ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedTestEdges ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form AreWellDefinedTestEdges ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedInhibEdges ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form AreWellDefinedInhibEdges ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedPostEdges ?sitpn |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form AreWellDefinedPostEdges ?sitpn"
   end.
 
 Ltac explode_well_defined_sitpn :=
@@ -225,4 +243,73 @@ Ltac explode_well_defined_sitpn_state Hwell_def_state :=
     clear H;
     rename H' into Hwell_def_state
   | _ => fail "Hwell_def_state is not of the form IsWellDefinedSitpnState"
+  end.
+
+(** Deduces In t (transs sitpn) from the context:
+    
+    - IsDecListCons (t :: tl) pgroup
+    - In pgroup (priority_groups sitpn) 
+    - IsWellDefinedSitpn sitpn
+
+    Produces a hypothesis Hin_t_transs: In t (transs sitpn) in the context. *)
+
+Ltac deduce_in_transs :=
+  lazymatch goal with
+  | [H: IsDecListCons (?t :: ?tl) ?pgroup |- _ ] =>
+    assert (Hin_t_pgroup := H);
+    apply is_dec_list_cons_incl in Hin_t_pgroup;
+    specialize (Hin_t_pgroup t (in_eq t tl));
+    lazymatch goal with
+    | [Hin_pg_pgs: In pgroup (priority_groups ?sitpn) |- _ ] =>
+      specialize (in_concat t pgroup (priority_groups sitpn) Hin_t_pgroup Hin_pg_pgs);
+      intros Hin_t_transs;
+      lazymatch goal with
+      | [Hwd_sitpn: IsWellDefinedSitpn sitpn |- _] =>
+        explode_well_defined_sitpn;
+        unfold NoUnknownInPriorityGroups in *;
+        lazymatch goal with
+        | [Hno_unk_pgroups: Permutation _ _ |- _] =>
+          rewrite <- Hno_unk_pgroups in Hin_t_transs;
+          clear_well_defined_sitpn;
+          clear Hno_unk_pgroups
+        | _ => fail "No hypothesis of the form 'Permutation _ _' found"
+        end
+      | _ => fail "No hypothesis of the form IsWellDefinedSitpn ?sitpn found"
+      end
+    | _ => fail "No hypothesis of the form 'In ?pgroup  (priority_groups ?sitpn)' found"
+    end
+  | _ => fail "No hypothesis of the form 'IsDecListCons (?t :: ?tl) ?pgroup' found" 
+  end.
+
+(** Deduces NoDup (t :: tl) from the context:
+    
+    - IsDecListCons (t :: tl) pgroup
+    - In pgroup (priority_groups sitpn) 
+    - IsWellDefinedSitpn sitpn
+
+    Produces a hypothesis Hnodup_ttail: NoDup (t :: tl) in the context. *)
+
+Ltac deduce_nodup_in_dec_pgroup :=          
+  lazymatch goal with
+  |  [ Hwd: IsWellDefinedSitpn ?sitpn,
+            His_dec: IsDecListCons (?t :: ?tail) ?pgroup,
+                     Hin_pg_pgs: In ?pgroup (priority_groups ?sitpn)               
+       |- _ ] =>
+     assert (Hnodup_pg := Hin_pg_pgs);
+     assert (Hnodup_ttail' := His_dec);
+     explode_well_defined_sitpn;
+     lazymatch goal with
+     | [ Hno_inter: NoIntersectInPriorityGroups sitpn |- _ ] =>
+       apply (nodup_concat_gen (priority_groups sitpn) Hno_inter pgroup) in Hnodup_pg;
+       apply (nodup_is_dec_list_cons Hnodup_pg) in Hnodup_ttail';
+       assert (Hnodup_ttail := Hnodup_ttail');
+
+       clear_well_defined_sitpn;
+       clear Hno_inter;
+       clear Hnodup_pg;
+       clear Hnodup_ttail'
+     | _ => fail "No hypothesis of the form 'NoIntersectInPriorityGroups ?sitpn' found"
+     end
+  | _ => fail "Mandatory hypotheses are missing in the context:
+               IsWellDefinedSitpn ?sitpn or IsDecListCons (?t :: ?tl) ?pgroup or In ?pgroup (priority_groups ?sitpn)"
   end.
