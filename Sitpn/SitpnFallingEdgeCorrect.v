@@ -74,10 +74,10 @@ Proof.
   - apply (sitpn_falling_edge_not_firable_not_fired sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
     
   (* CASE t ∈ firable(s') ∧ t ∈ sens(M -∑pre) ⇒ t ∈ Fired' *)
-  - admit.
+  - apply (sitpn_falling_edge_sens_by_residual sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE t ∈ firable(s') ∧ t ∉ sens(M -∑pre) ⇒ t ∉ Fired' *)
-  - admit.
+  - apply (sitpn_falling_edge_not_sens_by_residual sitpn s time_value env s' Hwell_def_sitpn Hwell_def_s Hfun).
     
-Admitted.
+Qed.
 

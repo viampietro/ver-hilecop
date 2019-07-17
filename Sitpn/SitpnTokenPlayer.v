@@ -567,13 +567,6 @@ End Firability.
 (** * Marking update. *)
 
 Section Updatemarking.
-
-  (** Defines the two operations that can be applied to a marking, i.e
-      addition or subtraction of tokens. *)
-  
-  Inductive MarkingOp : Set :=
-  | madd : MarkingOp
-  | msub : MarkingOp.
   
   (** Adds/subtracts (according to [op]) [nboftokens] tokens from place [p] in
       marking [m], and returns an resulting marking [m']. 
@@ -583,7 +576,7 @@ Section Updatemarking.
   Fixpoint modify_m
            (marking : list (Place * nat))
            (p : Place)
-           (op : MarkingOp)
+           (op : nat -> nat -> nat)
            (nboftokens : nat) {struct marking} :
     option (list (Place * nat)) :=
     match marking with
@@ -591,10 +584,7 @@ Section Updatemarking.
       (* If p is a key in the head couple of marking then 
          either adds or substracts tokens according to op. *)
       if p' =? p then
-        match op with
-        | madd => Some ((p, Nat.add n nboftokens) :: tl)
-        | msub => Some ((p, Nat.sub n nboftokens) :: tl)
-        end
+        Some ((p, op n nboftokens) :: tl)
       (* Recursive call otherwise. *)
       else 
         match modify_m tl p op nboftokens with
@@ -603,7 +593,9 @@ Section Updatemarking.
         end
     | [] => None
     end.
-    
+
+  Functional Scheme modify_m_ind := Induction for modify_m Sort Prop.
+  
   (** Removes some tokens from [pre_places], result  
       of the firing of t. 
                  
@@ -616,7 +608,7 @@ Section Updatemarking.
            (pre_places : list Place) : option (list (Place * nat)) :=
     match pre_places with
     | p :: tail =>
-      match modify_m marking p msub (pre sitpn t p) with
+      match modify_m marking p Nat.sub (pre sitpn t p) with
       | Some m' => update_marking_pre_aux sitpn m' t tail
       (* Error: p is not referenced in sitpn.(marking). *)
       | None => None
@@ -675,7 +667,7 @@ Section Updatemarking.
            (post_places : list Place) : option (list (Place * nat)) :=
     match post_places with
     | p :: tail =>
-      match modify_m marking p madd (post sitpn t p) with
+      match modify_m marking p Nat.add (post sitpn t p) with
       | Some m' => update_marking_post_aux sitpn m' t tail
       (* Error: p is not referenced in sitpn.(marking). *)
       | None => None

@@ -655,6 +655,7 @@ Inductive SitpnSemantics
         In pgroup sitpn.(priority_groups) ->
         In t pgroup ->
         SitpnIsFirable sitpn s' t ->
+        (places sitpn) = (fst (split residual_marking)) ->
         (forall (pr : list Trans),
             IsPrioritySet s'.(fired) pgroup t pr ->
             (forall (p : Place)
@@ -676,11 +677,12 @@ Inductive SitpnSemantics
         In pgroup sitpn.(priority_groups) ->
         In t pgroup ->
         SitpnIsFirable sitpn s' t ->
+        (places sitpn) = (fst (split residual_marking)) ->
         (forall (pr : list Trans),
             IsPrioritySet s'.(fired) pgroup t pr ->
             (forall (p : Place)
                     (n : nat),
-                In (p, n) s'.(marking) ->
+                In (p, n) s.(marking) ->
                 In (p, n - pre_sum sitpn p pr) residual_marking)) ->
         ~IsSensitized sitpn residual_marking t ->
         ~In t s'.(fired)) ->
