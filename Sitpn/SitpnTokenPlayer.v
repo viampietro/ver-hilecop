@@ -168,6 +168,9 @@ Section InterpretationFunctions.
     get_function_states sitpn s tl (f_states ++ [(f, is_executed sitpn s.(fired) f)])
   | [] => f_states
   end.
+
+  Functional Scheme get_function_states_ind :=
+    Induction for get_function_states Sort Prop.
   
 End InterpretationFunctions.
 
@@ -486,31 +489,35 @@ Section TimeFunctions.
     option ((list (Trans * bool)) * (list (Trans * DynamicTimeInterval))) :=
     match d_itvals with
     | (t, dyn_itval) :: tl =>
+
       (* Retrieves neighbour places of t. *)
       let neighbours_of_t := lneighbours sitpn t in
+
       (* If t is sensitized by the transient marking, then 
        no reset order is given. *)
       match is_sensitized sitpn transient_marking neighbours_of_t t with
       | Some true =>
         let reset_orders' := reset_orders ++ [(t, false)] in
+
         (* If t is not a fired transition at state s, and its dynamic
-         interval has reached is upper bound, then t is associated with 
-         a blocked time interval in new_d_itvals'. *)
+           interval has reached its upper bound, then t is associated with 
+           a blocked time interval in new_d_itvals'. *)
         if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
           let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
           (* Recursive call. *)
           get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
-                                              (* Else copies current dynamic interval. *)
-        else
+        else (* Else copies current dynamic interval. *)
           let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
           (* Recursive call. *)
           get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+                                              
       (* Else gives a reset order to t. *)
       | Some false =>
         let reset_orders' := reset_orders ++ [(t, true)] in
+        
         (* If t is not a fired transition at state s, and its dynamic
-         interval has reached is upper bound, then t is associated with 
-         a blocked time interval in new_d_itvals'. *)
+           interval has reached its upper bound, then t is associated with 
+           a blocked time interval in new_d_itvals'. *)
         if has_reached_upper_bound dyn_itval && negb (in_list eq_nat_dec s.(fired) t) then
           let new_d_itvals' := new_d_itvals ++ [(t, blocked)] in
           (* Recursive call. *)
@@ -520,11 +527,15 @@ Section TimeFunctions.
           let new_d_itvals' := new_d_itvals ++ [(t, dyn_itval)] in
           (* Recursive call. *)
           get_blocked_itvals_and_reset_orders sitpn s tl transient_marking reset_orders' new_d_itvals'
+                                              
       (* Error: is_sensitized raised an error. *)
       | None => None
       end
     | [] => Some (reset_orders, new_d_itvals)
     end.
+
+  Functional Scheme get_blocked_itvals_and_reset_orders_ind :=
+    Induction for get_blocked_itvals_and_reset_orders Sort Prop.
   
 End TimeFunctions.
 

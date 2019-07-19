@@ -9,38 +9,14 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 Require Import Hilecop.Sitpn.SitpnWellDefFired.
 Require Import Hilecop.Sitpn.SitpnWellDefTime.
 Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
-        
+Require Import Hilecop.Sitpn.SitpnWellDefMarking.
+
 (* Import Sitpn tactics. *)
 
 Require Import Hilecop.Sitpn.SitpnTactics.
 
 (** * sitpn_falling_edge and well-definedness of states. *)
 
-(** [sitpn_falling_edge] returns a SitpnState with the same marking 
-    as the starting state. *)
-
-Lemma sitpn_falling_edge_same_marking :
-  forall (sitpn : Sitpn)
-         (s s' : SitpnState)
-         (time_value : nat)
-         (env : Condition -> nat -> bool),
-    sitpn_falling_edge sitpn s time_value env = Some s' ->
-    (marking s) = (marking s').
-Proof.
-  intros sitpn s s' time_value env Hfun.
-  functional induction (sitpn_falling_edge sitpn s time_value env)
-             using sitpn_falling_edge_ind.
-
-  (* GENERAL CASE, all went well. *)
-  - simpl in Hfun; injection Hfun as Heq_s'; rewrite <- Heq_s'.
-    simpl; reflexivity.
-
-  (* ERROR CASE *)
-  - inversion Hfun.
-
-  (* ERROR CASE *)
-  - inversion Hfun.
-Qed.
   
 (** [sitpn_falling_edge] returns a SitpnState that is well-defined. *)
 
@@ -118,7 +94,6 @@ Proof.
   specialize (sitpn_falling_edge_same_functions sitpn s time_value env s' Hfun) as Heq_execf.
   rewrite <- Heq_execf; assumption.
 Qed.
-
 
 (** If s and s' differ only on their fired field and
     s' has an empty fired field and

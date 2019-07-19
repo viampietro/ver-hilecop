@@ -66,6 +66,17 @@ Ltac incl_rm_hd_fs Hincl_fs :=
   | _ => fail "Argument is not of the form (incl (fst (split (?a, ?b) :: _)) _)"
   end.
 
+Ltac apply_nodup_same_pair :=
+
+  lazymatch goal with
+  | [ Hin_p_l: In (?x, ?y) ?l, Hin_p'_l: In (?x, ?z) ?l, Hnodup_l: NoDup (fst (split ?l)) |- _ ] =>
+    assert (Heq_fs_pair : fst (x, y) = fst (x, z)) by (simpl; auto);
+    specialize (nodup_same_pair l Hnodup_l (x, y) (x, z) Hin_p_l Hin_p'_l Heq_fs_pair);
+    intros Heq_pairs;
+    clear Heq_fs_pair
+  | _ => fail "Missing hypotheses: In ?p ?l or In ?p' ?l or NoDup (fst (split ?l))"
+  end.
+  
 (**  *)
 
 Ltac contradiction_with_nodup_same_pair l p p' Hin_p_l Hin_p'_l :=

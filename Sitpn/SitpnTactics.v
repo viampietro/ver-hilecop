@@ -233,6 +233,60 @@ Ltac rename_well_defined_sitpn_state :=
   | _ => idtac "No hypothesis of the form 'A = (fst (split (exec_f s)))' found"
   end.
 
+(** Clears all hypotheses resulting of the decomposition
+    of IsWellDefinedSitpnState. *)
+
+Ltac clear_well_defined_sitpn_state :=
+  match goal with
+  | [ H: incl ?s.(Sitpn.fired) (transs ?sitpn) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form incl (fired ?s) (transs ?sitpn) found"
+  end;
+  match goal with
+  | [ H: NoDup ?s.(Sitpn.fired) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form NoDup (fired ?s) found"
+  end;
+  match goal with
+  | [ H: ?sitpn.(Sitpn.places) = fst (split (Sitpn.marking ?s))
+      |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form (places ?sitpn) = fst (split (marking ?s)) found"
+  end;
+  match goal with
+  | [ H: (forall (t : Trans),
+             In t ?sitpn.(Sitpn.transs) /\
+             (Sitpn.s_intervals ?sitpn t) <> None <->
+             In t (fst (split ?s.(Sitpn.d_intervals))))
+      |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 't ∈ Ti ⇔ I(t) ≠ ∅' found"
+  end;
+  match goal with
+  | [ H: NoDup (fst (split (Sitpn.d_intervals ?s))) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 'NoDup (fst (split (d_intervals s)))' found"
+  end;
+  match goal with
+  | [ H: (forall (t : Trans),
+             In t ?sitpn.(Sitpn.transs) /\
+             (Sitpn.s_intervals ?sitpn t) <> None <->
+             In t (fst (split ?s.(Sitpn.reset))))
+      |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 't ∈ Ti ⇔ t ∈ reset' found"
+  end;
+  match goal with
+  | [ H: NoDup (fst (split (Sitpn.reset ?s))) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 'NoDup (fst (split (reset s)))' found"
+  end;
+  match goal with
+  | [ H: (Sitpn.conditions ?sitpn) = fst (split (Sitpn.cond_values ?s)) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 'C = (fst (split (cond_values s)))' found"
+  end;
+  match goal with
+  | [ H: (Sitpn.actions ?sitpn) = fst (split (Sitpn.exec_a ?s)) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 'A = (fst (split (exec_a s)))' found"
+  end;
+  match goal with
+  | [ H: (Sitpn.functions ?sitpn) = fst (split (Sitpn.exec_f ?s)) |- _ ] => clear H
+  | _ => idtac "No hypothesis of the form 'A = (fst (split (exec_f s)))' found"
+  end.
+
 Ltac explode_well_defined_sitpn_state Hwell_def_state :=
   lazymatch Hwell_def_state with
   | ?H : IsWellDefinedSitpnState _ _  =>
@@ -293,7 +347,7 @@ Ltac deduce_nodup_in_dec_pgroup :=
   lazymatch goal with
   |  [ Hwd: IsWellDefinedSitpn ?sitpn,
             His_dec: IsDecListCons (?t :: ?tail) ?pgroup,
-                     Hin_pg_pgs: In ?pgroup (priority_groups ?sitpn)               
+            Hin_pg_pgs: In ?pgroup (priority_groups ?sitpn)               
        |- _ ] =>
      assert (Hnodup_pg := Hin_pg_pgs);
      assert (Hnodup_ttail' := His_dec);
@@ -312,4 +366,32 @@ Ltac deduce_nodup_in_dec_pgroup :=
      end
   | _ => fail "Mandatory hypotheses are missing in the context:
                IsWellDefinedSitpn ?sitpn or IsDecListCons (?t :: ?tl) ?pgroup or In ?pgroup (priority_groups ?sitpn)"
+  end.
+
+(** Deduces NoDup (fst (split (marking s))) from context: 
+
+    - IsWellDefinedSitpn sitpn
+    - IsWellDefinedSitpnState sitpn s
+
+ *)
+
+Ltac deduce_nodup_state_marking :=
+  lazymatch goal with
+  |  [ Hwd: IsWellDefinedSitpn ?sitpn,
+       Hwd_state: IsWellDefinedSitpnState ?sitpn ?s
+       |- _ ] =>
+     explode_well_defined_sitpn;
+     explode_well_defined_sitpn_state Hwd_state;
+     
+     lazymatch goal with
+     | [ Hnodup_places: NoDupPlaces _, Hwf_state_marking: (places _) = fst (split (marking _)) |- _ ] =>
+       unfold NoDupPlaces in Hnodup_places;
+       rewrite Hwf_state_marking in Hnodup_places;
+       assert (Hnodup_fs_ms := Hnodup_places);
+       clear_well_defined_sitpn;
+       clear_well_defined_sitpn_state;
+       clear Hnodup_places
+     | _ => fail "No Hypotheses of the form 'NoDupPlaces' or '(places _) = fst (split _)'"
+     end
+  | _ => fail "No Hypotheses of the form 'IsWellDefinedSitpn' or 'IsWellDefinedSitpnState'"
   end.

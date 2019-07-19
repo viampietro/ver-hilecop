@@ -168,3 +168,125 @@ Section SitpnFallingEdgeSameFunctions.
   Qed.
   
 End SitpnFallingEdgeSameFunctions.
+
+(** Condition values are unchanged by [sitpn_rising_edge]. *)
+
+Section SitpnRisingEdgeSameCondv.
+
+  (** [sitpn_rising_edge] returns a SitpnState with the same condition
+      values list [cond_v] as in the starting state. *)
+
+  Lemma sitpn_rising_edge_same_condv :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (s' : SitpnState),
+      sitpn_rising_edge sitpn s = Some s' ->
+      (cond_values s) = (cond_values s').
+  Proof.
+    intros sitpn s s' Hfun.
+    functional induction (sitpn_rising_edge sitpn s)
+               using sitpn_rising_edge_ind;
+
+      (* GENERAL CASE, all went well. *)
+      (simpl in Hfun;
+       injection Hfun as Heq_s';
+       rewrite <- Heq_s';
+       simpl;
+       reflexivity)
+        
+      (* ERROR CASE *)
+      || inversion Hfun.
+  Qed.
+  
+End SitpnRisingEdgeSameCondv.
+
+(** Action states are unchanged by [sitpn_rising_edge]. *)
+
+Section SitpnRisingEdgeSameActions.
+
+  (** [sitpn_rising_edge] returns a SitpnState with the same condition
+      values list [cond_v] as in the starting state. *)
+
+  Lemma sitpn_rising_edge_same_actions :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (s' : SitpnState),
+      sitpn_rising_edge sitpn s = Some s' ->
+      (exec_a s) = (exec_a s').
+  Proof.
+    intros sitpn s s' Hfun.
+    functional induction (sitpn_rising_edge sitpn s)
+               using sitpn_rising_edge_ind;
+
+      (* GENERAL CASE, all went well. *)
+      (simpl in Hfun;
+       injection Hfun as Heq_s';
+       rewrite <- Heq_s';
+       simpl;
+       reflexivity)
+        
+      (* ERROR CASE *)
+      || inversion Hfun.
+  Qed.
+  
+End SitpnRisingEdgeSameActions.
+
+(** ** All functions are referenced in the function states list. *)
+
+Section SitpnRisingEdgeSameStructFunctions.
+
+  (** [get_function_states] returns a list of couples (function, state)
+      referencing all functions defined in [functions]. *)
+
+  Lemma get_function_states_same_struct_functions :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (functions : list IFunction)
+           (f_states : list (IFunction * bool)),
+      (fst (split f_states)) ++ functions =
+      (fst (split (get_function_states sitpn s functions f_states))).
+  Proof.
+    intros sitpn s functions f_states;
+      functional induction (get_function_states sitpn s functions f_states)
+                 using get_function_states_ind.
+
+    (* BASE CASE. *)
+    - rewrite app_nil_r; reflexivity.
+
+    (* INDUCTION CASE. *)
+    - rewrite <- IHl;
+        rewrite fst_split_app;
+        simpl;
+        rewrite <- app_assoc;
+        reflexivity.
+  Qed.
+  
+  (** All functions defined in [sitpn] are referenced in the
+      function states list [s'.(exec_f)], where [s'] is the
+      SitpnState returned by [sitpn_rising_edge] *)
+
+  Lemma sitpn_rising_edge_same_struct_functions :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (s' : SitpnState),
+      sitpn_rising_edge sitpn s = Some s' ->
+      (functions sitpn) = (fst (split (exec_f s'))).
+  Proof.
+    intros sitpn s s' Hfun.
+    functional induction (sitpn_rising_edge sitpn s)
+               using sitpn_rising_edge_ind;
+
+      (* GENERAL CASE, all went well. *)
+      (simpl in Hfun;
+       injection Hfun as Heq_s';
+       rewrite <- Heq_s';
+       simpl;
+       rewrite <- (get_function_states_same_struct_functions sitpn s (functions sitpn) []);
+       simpl;
+       reflexivity)
+        
+      (* ERROR CASE *)
+      || inversion Hfun.
+  Qed.
+  
+End SitpnRisingEdgeSameStructFunctions.

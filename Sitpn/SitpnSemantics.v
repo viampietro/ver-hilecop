@@ -711,28 +711,32 @@ Inductive SitpnSemantics
        the withdrawal of tokens in the input places of the fired
        transitions, receive a reset order, i.e: 
      
-       ∀ t ∉ sens(m - ∑ pre(ti), ∀ ti ∈ Fired) ⇒ reset'(t) = 1 *)
+       ∀ t ∈ Ti, t ∉ sens(m - ∑ pre(ti), ∀ ti ∈ Fired) ⇒ reset'(t) = 1 *)
 
     (forall (t : Trans)
             (transient_marking : list (Place * nat)),
+        places sitpn = fst (split transient_marking) ->
         (forall (p : Place) (n : nat),
             In (p, n) s.(marking) ->
             In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
         In t sitpn.(transs) ->
+        s_intervals sitpn t <> None ->
         ~IsSensitized sitpn transient_marking t ->
         In (t, true) s'.(reset)) ->
 
     (* All transitions enabled by the transient marking receive no
        reset order, i.e: 
 
-       ∀ t ∈ sens(m - ∑ pre(ti), ∀ ti ∈ Fired) ⇒ reset'(t) = 0 *)
+       ∀ t ∈ Ti, t ∈ sens(m - ∑ pre(ti), ∀ ti ∈ Fired) ⇒ reset'(t) = 0 *)
 
     (forall (t : Trans)
             (transient_marking : list (Place * nat)),
+        places sitpn = fst (split transient_marking) ->
         (forall (p : Place) (n : nat),
             In (p, n) s.(marking) ->
             In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
         In t sitpn.(transs) ->
+        s_intervals sitpn t <> None ->
         IsSensitized sitpn transient_marking t ->
         In (t, false) s'.(reset)) ->
 
@@ -740,7 +744,7 @@ Inductive SitpnSemantics
        reached the upper bound of their time intervals and were not
        fired at this clock cycle, i.e:  
      
-       ∀ t ∈ T, ↑I(t) = 0 ∧ t ∉ Fired ⇒ I'(t) = ψ *)
+       ∀ t ∈ Ti, ↑I(t) = 0 ∧ t ∉ Fired ⇒ I'(t) = ψ *)
     
     (forall (t : Trans)
             (dyn_itval : DynamicTimeInterval),
@@ -753,7 +757,7 @@ Inductive SitpnSemantics
        reached the upper bound of their time intervals or were
        fired at this clock cycle, i.e:  
      
-       ∀ t ∈ T, ↑I(t) ≠ 0 ∨ t ∈ Fired ⇒ I'(t) = I(t) *)
+       ∀ t ∈ Ti, ↑I(t) ≠ 0 ∨ t ∈ Fired ⇒ I'(t) = I(t) *)
     
     (forall (t : Trans)
             (dyn_itval : DynamicTimeInterval),
@@ -775,19 +779,18 @@ Inductive SitpnSemantics
 
     (forall (f : IFunction),
         In f sitpn.(functions) ->
-        exists (t : Trans),
-          In t s.(fired) /\ (has_function sitpn t f) = true ->
-          In (f, true) s'.(exec_f)) ->
+        (exists (t : Trans),
+            In t s.(fired) /\ (has_function sitpn t f) = true) ->
+        In (f, true) s'.(exec_f)) ->
 
     (* All functions not associated with fired transitions not are
        executed, i.e:
 
        ∀ f ∈ functions, ∀ t ∈ Fired | F(t, f) = 0 ⇒ ex'(f) = 0. *)
 
-    (forall (f : IFunction)
-            (t : Trans),
+    (forall (f : IFunction),
         In f sitpn.(functions) ->
-        In t s.(fired) /\ (has_function sitpn t f) = false ->
+        (forall t : Trans, ~In t s.(fired) \/ (has_function sitpn t f) = false) ->
         In (f, false) s'.(exec_f)) ->
     
     SitpnSemantics sitpn s s' time_value env rising_edge.

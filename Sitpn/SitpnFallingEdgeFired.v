@@ -14,11 +14,16 @@ Require Import Hilecop.Utils.HilecopTactics.
 (* Import lemmas on well-definition. *)
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
+Require Import Hilecop.Sitpn.SitpnWellDefMarking.
 Require Import Hilecop.Sitpn.SitpnWellDefFired.
 
 (* Import classic logic. *)
 
 Require Import Classical_Prop.
+
+(* Import lemmas on marking. *)
+
+Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
 
 (** * Falling edge lemmas about synchronous execution rules. *)
 
@@ -776,8 +781,8 @@ Section SitpnFallingEdgeSensByResidual.
            update_marking_pre_correct.
          *)
         deduce_in_transs.
-        specialize (update_marking_pre_correct
-                      residual_marking t Hwell_def_sitpn
+        specialize (@update_marking_pre_correct
+                      sitpn residual_marking t residual_marking' Hwell_def_sitpn
                       Hnodup_fs_resm Hin_t_transs e4) as Hin_res_in_fin.
 
         (* Then we need pre_sum_app_add *)

@@ -419,3 +419,27 @@ Section SitpnFallingEdgeNoDupFired.
   Qed.
   
 End SitpnFallingEdgeNoDupFired.
+
+(** * sitpn_rising_edge preserves the list of fired transitions. *)
+
+Section SitpnRisingEdgeSameFired.
+
+  Lemma sitpn_rising_edge_same_fired :
+    forall (sitpn : Sitpn)
+           (s s' : SitpnState),
+      sitpn_rising_edge sitpn s = Some s' ->
+      (fired s) = (fired s').
+  Proof.
+    intros sitpn s;
+      functional induction (sitpn_rising_edge sitpn s)
+                 using sitpn_rising_edge_ind;
+      intros s' Hfun;
+
+      (* GENERAL CASE, all went well. *)
+      (injection Hfun as Hfun; rewrite <- Hfun; simpl; reflexivity)
+
+      (* ERROR CASES. *)
+      || inversion Hfun.
+  Qed.
+  
+End SitpnRisingEdgeSameFired.
