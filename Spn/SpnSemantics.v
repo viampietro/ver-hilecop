@@ -372,6 +372,7 @@ Inductive SpnSemantics (spn : Spn) (s s' : SpnState) : Clock -> Prop :=
     IsWellDefinedSpnState spn s' ->
     (* Marking stays the same between state s and s'. *)
     s.(marking) = s'.(marking) ->
+
     (* ∀ t ∉ firable(s') ⇒ t ∉ Fired'  
        All un-firable transitions are not fired. *)
     (forall (pgroup : list Trans) (t : Trans),

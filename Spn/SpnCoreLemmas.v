@@ -1169,6 +1169,8 @@ Section IsSensitized.
       IsWellDefinedSpn spn ->
       MarkingHaveSameStruct spn.(initial_marking) marking ->
       In (t, neighbours_of_t) spn.(lneighbours) ->
+
+      
       is_sensitized spn marking neighbours_of_t t = Some true ->
       IsSensitized spn marking t.
   Proof.

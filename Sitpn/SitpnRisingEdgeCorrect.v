@@ -14,6 +14,10 @@ Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
 
 Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
 
+(* Import lemmas about time *)
+
+Require Import Hilecop.Sitpn.SitpnRisingEdgeTime.
+
 (** * Correctness of sitpn_rising_edge function. *)
 
 Lemma sitpn_rising_edge_correct :
@@ -46,16 +50,16 @@ Proof.
   - apply (sitpn_rising_edge_sub_pre_add_post sitpn s s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE not sens by transient ⇒ reset' = true *)
-  - admit.
+  - apply (sitpn_rising_edge_decide_reset sitpn s s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE sens by transient ⇒ reset' = false *)
-  - admit.
+  - apply (sitpn_rising_edge_decide_no_reset sitpn s s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE 0 ∈ I(t) ∧ t ∉ fired ⇒ I'(t) = ψ *)
-  - admit.
+  - apply (sitpn_rising_edge_decide_blocked sitpn s s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE 0 ∉ I(t) ∨ t ∈ fired ⇒ I'(t) = I(t) *)
-  - admit.
+  - apply (sitpn_rising_edge_decide_not_blocked sitpn s s' Hwell_def_sitpn Hwell_def_s Hfun).
 
   (* CASE cond_values s = cond_values s' *)
   - apply (sitpn_rising_edge_same_condv sitpn s s' Hfun).
