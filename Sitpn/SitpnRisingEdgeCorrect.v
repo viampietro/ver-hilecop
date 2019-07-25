@@ -10,13 +10,11 @@ Require Import Hilecop.Sitpn.SitpnRisingEdgeWellDef.
 Require Import Hilecop.Sitpn.SitpnWellDefFired.
 Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
 
-(* Import lemmas about marking *)
+(* Import lemmas about marking, time and interpretation. *)
 
 Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
-
-(* Import lemmas about time *)
-
 Require Import Hilecop.Sitpn.SitpnRisingEdgeTime.
+Require Import Hilecop.Sitpn.SitpnRisingEdgeInterpretation.
 
 (** * Correctness of sitpn_rising_edge function. *)
 
@@ -68,9 +66,8 @@ Proof.
   - apply (sitpn_rising_edge_same_actions sitpn s s' Hfun).
 
   (* CASE ∀f, ∃t ∈ T, F(t, f) = true ∧ t ∈ fired ⇒ ex'(f) = true *)
-  - admit.
+  - apply (sitpn_rising_edge_exec_fun sitpn s s' Hfun).
 
   (* CASE ∀f, ∀t ∈ T, F(t, f) = false ∨ t ∉ fired ⇒ ex'(f) = true *)
-  - admit.
-    
-Admitted.
+  - apply (sitpn_rising_edge_not_exec_fun sitpn s s' Hfun). 
+Qed.

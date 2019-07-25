@@ -153,6 +153,9 @@ Section InterpretationFunctions.
   | [] => false
   end.
 
+  Functional Scheme is_executed_ind :=
+    Induction for is_executed Sort Prop.
+  
   (** Returns a list (function, executed?)--where executed? is a
       boolean-- denoting the execution state of all functions of the
       [functions] list at state s of sitpn. *)

@@ -2,6 +2,7 @@
 
 Utils/HilecopLemmas.v
 Utils/HilecopTactics.v
+Utils/HilecopExtraLemmas.v
 
 Sitpn/Sitpn.v
 Sitpn/SitpnSemantics.v
@@ -9,16 +10,21 @@ Sitpn/SitpnTokenPlayer.v
 
 Sitpn/SitpnTactics.v
 Sitpn/SitpnCoreLemmas.v
+Sitpn/SitpnWellDefMarking.v
 Sitpn/SitpnWellDefFired.v
 Sitpn/SitpnWellDefInterpretation.v
 Sitpn/SitpnWellDefTime.v
 
+Sitpn/SitpnRisingEdgeMarking.v
 Sitpn/SitpnFallingEdgeWellDef.v
 Sitpn/SitpnFallingEdgeFired.v
 Sitpn/SitpnFallingEdgeInterpretation.v
 Sitpn/SitpnFallingEdgeTime.v
 Sitpn/SitpnFallingEdgeCorrect.v
 
+Sitpn/SitpnRisingEdgeWellDef.v
+Sitpn/SitpnRisingEdgeTime.v
+Sitpn/SitpnRisingEdgeInterpretation.v
 Sitpn/SitpnRisingEdgeCorrect.v
 
 Sitpn/SitpnCorrect.v

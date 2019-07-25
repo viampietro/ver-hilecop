@@ -8,6 +8,7 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 
 Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
 Require Import Hilecop.Sitpn.SitpnWellDefTime.
+Require Import Hilecop.Sitpn.SitpnWellDefMarking.
 
 (* Import lemmas about interpretation-related semantics rules. *)
 
