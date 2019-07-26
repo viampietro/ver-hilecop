@@ -9,35 +9,6 @@ Import ListNotations.
 (*!                                                        !*)
 (*! ====================================================== !*)
 
-Ltac decide_not_in :=
-  match goal with
-  | |- ~In ?a [] => apply in_nil
-  | |- ~In ?a ?l =>
-    apply not_in_cons;
-    split; [((injection;
-              intros Hinv;
-              inversion Hinv)
-             || auto)
-           | decide_not_in]
-  end.
-
-Ltac decide_nodup :=
-  match goal with
-  | |- NoDup [] => apply NoDup_nil
-  | |- NoDup ?l => apply NoDup_cons; [ decide_not_in | decide_nodup ]
-  end.
-
-Ltac decide_incl :=
-  match goal with
-  | |- incl ?l ?l' =>
-    unfold incl;
-    intros a H;
-    simpl;
-    simpl in H;
-    decompose [or] H;
-    repeat (auto || right)
-  end.
-
 (** Search for a hypothesis H of the form (incl l l') 
     and a hypothesis H' of the form (In a l).
     If H and H' in the context then apply H a H'
@@ -117,3 +88,4 @@ Ltac deduce_nodup_hd_not_in :=
     apply proj1 in Hnot_in
   | _ => fail "No hypothesis of the form 'NoDup (?a :: ?l)'"
   end.
+

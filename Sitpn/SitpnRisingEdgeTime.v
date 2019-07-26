@@ -218,7 +218,7 @@ Section SitpnRisingEdgeDecideReset.
          as Hin_ttrue_reset';
 
        (* Deduces that t ∈ (fs (d_intervals s)) to specialize
-         Hin_ttrue_reset' *)
+          Hin_ttrue_reset' *)
        assert (Hin_t_ditvals := conj Hin_t_transs Hhas_itval_t);
        explode_well_defined_sitpn_state Hwell_def_s;
        rewrite (Hwf_state_ditvals t) in Hin_t_ditvals;

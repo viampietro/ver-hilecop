@@ -8,81 +8,97 @@ Require Import Hilecop.Utils.HilecopLemmas.
 Ltac rename_well_defined_sitpn :=
   match goal with
   | [ H: NoDupPlaces ?sitpn |- _ ] =>
+    let Hnodup_places := fresh "Hnodup_places" in
     rename H into Hnodup_places
   | _ => idtac "No hypothesis of the form NoDupPlaces ?sitpn"
   end;
   match goal with
   | [ H: NoDupTranss ?sitpn |- _ ] =>
+    let Hnodup_transs := fresh "Hnodup_transs" in
     rename H into Hnodup_transs
   | _ => idtac "No hypothesis of the form NoDupTranss ?sitpn"
   end;
   match goal with
   | [ H: NoUnknownInPriorityGroups ?sitpn |- _ ] =>
+    let Hno_unk_pgroups := fresh "Hno_unk_pgroups" in
     rename H into Hno_unk_pgroups
   | _ => idtac "No hypothesis of the form NoUnknownInPriorityGroups ?sitpn"
   end;
   match goal with
   | [ H: NoIntersectInPriorityGroups ?sitpn |- _ ] =>
+    let Hno_inter := fresh "Hno_inter" in
     rename H into Hno_inter
   | _ => idtac "No hypothesis of the form NoIntersectInPriorityGroups ?sitpn"
   end;
   match goal with
   | [ H: AreWellFormedTimeIntervals ?sitpn |- _ ] =>
+    let Hwell_formed_itvals := fresh "Hwell_formed_itvals" in
     rename H into Hwell_formed_itvals
   | _ => idtac "No hypothesis of the form AreWellFormedTimeIntervals ?sitpn"
   end;
   match goal with
   | [ H: NoDupConditions ?sitpn |- _ ] =>
+    let Hnodup_cond := fresh "Hnodup_cond" in
     rename H into Hnodup_cond
   | _ => idtac "No hypothesis of the form NoDupConditions ?sitpn"
   end;
   match goal with
   | [ H: NoDupActions ?sitpn |- _ ] =>
+    let Hnodup_ac := fresh "Hnodup_ac" in
     rename H into Hnodup_ac
   | _ => idtac "No hypothesis of the form NoDupActions ?sitpn"
   end;
   match goal with
   | [ H: NoDupFunctions ?sitpn |- _ ] =>
+    let Hnodup_fun := fresh "Hnodup_fun" in
     rename H into Hnodup_fun
   | _ => idtac "No hypothesis of the form NoDupFunctions ?sitpn"
   end;
   match goal with
   | [ H: NoDupInNeighbours ?sitpn |- _ ] =>
+    let Hnodup_neigh := fresh "Hnodup_neigh" in
     rename H into Hnodup_neigh
   | _ => idtac "No hypothesis of the form NoDupInNeighbours ?sitpn"
   end;
   match goal with
   | [ H: NoIsolatedPlace ?sitpn |- _ ] =>
+    let Hiso_place := fresh "Hiso_place" in
     rename H into Hiso_place
   | _ => idtac "No hypothesis of the form NoIsolatedPlace ?sitpn"
   end;
   match goal with
   | [ H: NoUnknownPlaceInNeighbours ?sitpn |- _ ] =>
+    let Hunk_pl_neigh := fresh "Hunk_pl_neigh" in
     rename H into Hunk_pl_neigh
   | _ => idtac "No hypothesis of the form NoUnknownPlaceInNeighbours ?sitpn"
   end;
   match goal with
   | [ H: NoIsolatedTrans ?sitpn |- _ ] =>
+    let Hiso_trans := fresh "Hiso_trans" in
     rename H into Hiso_trans
   | _ => idtac "No hypothesis of the form NoIsolatedTrans ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedPreEdges ?sitpn |- _ ] =>
+    let Hwell_def_pre := fresh "Hwell_def_pre" in
     rename H into Hwell_def_pre
   | _ => idtac "No hypothesis of the form AreWellDefinedPreEdges ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedTestEdges ?sitpn |- _ ] =>
+    let Hwell_def_test := fresh "Hwell_def_test" in
     rename H into Hwell_def_test
   | _ => idtac "No hypothesis of the form AreWellDefinedTestEdges ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedInhibEdges ?sitpn |- _ ] =>
+    let Hwell_def_inhib := fresh "Hwell_def_inhib" in
     rename H into Hwell_def_inhib
   | _ => idtac "No hypothesis of the form AreWellDefinedInhibEdges ?sitpn"
   end;
   match goal with
   | [ H: AreWellDefinedPostEdges ?sitpn |- _ ] =>
+    let Hwell_def_post := fresh "Hwell_def_post" in
     rename H into Hwell_def_post
   | _ => idtac "No hypothesis of the form AreWellDefinedPostEdges ?sitpn"
   end.
@@ -166,7 +182,7 @@ Ltac explode_well_defined_sitpn :=
     rename_well_defined_sitpn;
     clear H;
     rename H' into Hwell_def_sitpn
-  | _ => fail "No hypothesis of the form IsWellDefinedSitpn found"
+  | _ => fail "No hypothesis matching the form IsWellDefinedSitpn ?sitpn"
   end.
 
 (** Renames all hypotheses resulting of the decomposition
@@ -175,17 +191,20 @@ Ltac explode_well_defined_sitpn :=
 Ltac rename_well_defined_sitpn_state :=
   match goal with
   | [ H: incl ?s.(Sitpn.fired) (transs ?sitpn) |- _ ] =>
+    let Hincl_state_fired_transs := fresh "Hincl_state_fired_transs" in
     rename H into Hincl_state_fired_transs
   | _ => idtac "No hypothesis of the form incl (fired ?s) (transs ?sitpn) found"
   end;
   match goal with
   | [ H: NoDup ?s.(Sitpn.fired) |- _ ] =>
+    let Hnodup_state_fired := fresh "Hnodup_state_fired" in
     rename H into Hnodup_state_fired
   | _ => idtac "No hypothesis of the form NoDup (fired ?s) found"
   end;
   match goal with
   | [ H: ?sitpn.(Sitpn.places) = fst (split (Sitpn.marking ?s))
       |- _ ] =>
+    let Hwf_state_marking := fresh "Hwf_state_marking" in
     rename H into Hwf_state_marking
   | _ => idtac "No hypothesis of the form (places ?sitpn) = fst (split (marking ?s)) found"
   end;
@@ -195,11 +214,13 @@ Ltac rename_well_defined_sitpn_state :=
              (Sitpn.s_intervals ?sitpn t) <> None <->
              In t (fst (split ?s.(Sitpn.d_intervals))))
       |- _ ] =>
+    let Hwf_state_ditvals := fresh "Hwf_state_ditvals" in
     rename H into Hwf_state_ditvals
   | _ => idtac "No hypothesis of the form 't ∈ Ti ⇔ I(t) ≠ ∅' found"
   end;
   match goal with
   | [ H: NoDup (fst (split (Sitpn.d_intervals ?s))) |- _ ] =>
+    let Hnodup_state_ditvals := fresh "Hnodup_state_ditvals" in
     rename H into Hnodup_state_ditvals
   | _ => idtac "No hypothesis of the form 'NoDup (fst (split (d_intervals s)))' found"
   end;
@@ -209,26 +230,31 @@ Ltac rename_well_defined_sitpn_state :=
              (Sitpn.s_intervals ?sitpn t) <> None <->
              In t (fst (split ?s.(Sitpn.reset))))
       |- _ ] =>
+    let Hwf_state_reset := fresh "Hwf_state_reset" in
     rename H into Hwf_state_reset
   | _ => idtac "No hypothesis of the form 't ∈ Ti ⇔ t ∈ reset' found"
   end;
   match goal with
   | [ H: NoDup (fst (split (Sitpn.reset ?s))) |- _ ] =>
+    let Hnodup_state_reset := fresh "Hnodup_state_reset" in
     rename H into Hnodup_state_reset
   | _ => idtac "No hypothesis of the form 'NoDup (fst (split (reset s)))' found"
   end;
   match goal with
   | [ H: (Sitpn.conditions ?sitpn) = fst (split (Sitpn.cond_values ?s)) |- _ ] =>
+    let Hwf_state_condv := fresh "Hwf_state_condv" in
     rename H into Hwf_state_condv
   | _ => idtac "No hypothesis of the form 'C = (fst (split (cond_values s)))' found"
   end;
   match goal with
   | [ H: (Sitpn.actions ?sitpn) = fst (split (Sitpn.exec_a ?s)) |- _ ] =>
+    let Hwf_state_execa := fresh "Hwf_state_execa" in
     rename H into Hwf_state_execa
   | _ => idtac "No hypothesis of the form 'A = (fst (split (exec_a s)))' found"
   end;
   match goal with
   | [ H: (Sitpn.functions ?sitpn) = fst (split (Sitpn.exec_f ?s)) |- _ ] =>
+    let Hwf_state_execf := fresh "Hwf_state_execf" in
     rename H into Hwf_state_execf
   | _ => idtac "No hypothesis of the form 'A = (fst (split (exec_f s)))' found"
   end.
@@ -394,4 +420,86 @@ Ltac deduce_nodup_state_marking :=
      | _ => fail "No Hypotheses of the form 'NoDupPlaces' or '(places _) = fst (split _)'"
      end
   | _ => fail "No Hypotheses of the form 'IsWellDefinedSitpn' or 'IsWellDefinedSitpnState'"
+  end.
+
+(** Variant of deduce_nodup_state_marking *)
+
+Ltac deduce_nodup_state_marking_for sitpn_state :=
+  lazymatch goal with
+  |  [ Hwd: IsWellDefinedSitpn ?sitpn,
+            Hwd_state: IsWellDefinedSitpnState ?sitpn sitpn_state
+       |- _ ] =>
+     explode_well_defined_sitpn;
+     explode_well_defined_sitpn_state Hwd_state;
+     
+     lazymatch goal with
+     | [ Hnodup_places: NoDupPlaces _, Hwf_state_marking: (places _) = fst (split (marking sitpn_state)) |- _ ] =>
+       unfold NoDupPlaces in Hnodup_places;
+       rewrite Hwf_state_marking in Hnodup_places;
+       let Hnodup_fs_ms := fresh "Hnodup_fs_ms" in
+       assert (Hnodup_fs_ms := Hnodup_places);
+       clear_well_defined_sitpn;
+       clear_well_defined_sitpn_state;
+       clear Hnodup_places
+     | _ => fail "No Hypotheses of the form 'NoDupPlaces' or '(places _) = fst (split _)'"
+     end
+  | _ => fail "No Hypotheses of the form 'IsWellDefinedSitpn' or 'IsWellDefinedSitpnState'"
+  end.
+
+Tactic Notation "deduce_nodup_state_marking" "for" ident(sitpn_state)  :=
+  deduce_nodup_state_marking_for sitpn_state.
+
+(** Deduces equality hypotheses between two SitpnState which
+    are well-defined regarding the same sitpn. *)
+
+Ltac deduce_eq_from_wd_states :=
+  lazymatch goal with
+  | [
+    Hwd_s: IsWellDefinedSitpnState ?sitpn ?s,
+           Hwd_state: IsWellDefinedSitpnState ?sitpn ?state
+    |- _
+  ] =>
+
+    (* Explodes IsWellDefinedSitpnState predicates. *)
+    explode_well_defined_sitpn_state Hwd_s;
+    explode_well_defined_sitpn_state Hwd_state;
+
+    (* Deduces equalities between the two states. *)
+    lazymatch goal with
+    | [ Hwf_marking_s: places ?sitpn = fst (split (marking ?s)),
+        Hwf_marking_state: places ?sitpn = fst (split (marking ?state)),
+        Hwf_condv_s: conditions ?sitpn = fst (split (cond_values ?s)),
+        Hwf_condv_state: conditions ?sitpn = fst (split (cond_values ?state)),
+        Hwf_actions_s: actions ?sitpn = fst (split (exec_a ?s)),
+        Hwf_actions_state: actions ?sitpn = fst (split (exec_a ?state)),
+        Hwf_functions_s: functions ?sitpn = fst (split (exec_f ?s)),
+        Hwf_functions_state: functions ?sitpn = fst (split (exec_f ?state))
+        |- _ ] =>
+
+      (* Deduces fst (split marking) = fst (split marking) *)
+      let Heq_state_marking := fresh "Heq_state_marking" in
+      assert (Heq_state_marking : fst (split (marking s)) = fst (split (marking state)))
+        by (rewrite <- Hwf_marking_s; rewrite <- Hwf_marking_state; reflexivity);
+
+      (* Deduces fst (split cond_values) = fst (split cond_values) *)
+      let Heq_state_condv := fresh "Heq_state_condv" in
+      assert (Heq_state_condv : fst (split (cond_values s)) = fst (split (cond_values state)))
+        by (rewrite <- Hwf_condv_s; rewrite <- Hwf_condv_state; reflexivity);
+
+      (* Deduces fst (split exec_a) = fst (split exec_a) *)
+      let Heq_state_actions := fresh "Heq_state_actions" in
+      assert (Heq_state_actions : fst (split (exec_a s)) = fst (split (exec_a state)))
+        by (rewrite <- Hwf_actions_s; rewrite <- Hwf_actions_state; reflexivity);
+
+      (* Deduces fst (split exec_f) = fst (split exec_f) *)
+      let Heq_state_functions := fresh "Heq_state_functions" in
+      assert (Heq_state_functions : fst (split (exec_f s)) = fst (split (exec_f state)))
+        by (rewrite <- Hwf_functions_s; rewrite <- Hwf_functions_state; reflexivity);
+
+      (* Clears the context. *)
+      do 2 clear_well_defined_sitpn_state
+         
+    | _ => fail "No hypotheses resulting in the explosion of IsWellDefinedSitpnState predicate"
+    end
+  | _ => fail "No hypotheses matching the form 'IsWellDefinedSitpnState ?sitpn _'"
   end.

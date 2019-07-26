@@ -222,8 +222,8 @@ Proof.
 
   (* CASE Permutation (fired s') (fired state') *)
   - inversion Hsteq_s_state as (Hperm_m & Hperm_fired).
-    (* Builds (fired s) = (fired s') and 
-       (fired state) = (fired state') *)
+    
+    (* Builds (fired s) = (fired s') and (fired state) = (fired state') *)
     specialize (spn_update_marking_same_fired
                   spn s s' Hup_mark_s)
       as Heq_fired_ss'.

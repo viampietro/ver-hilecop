@@ -473,3 +473,86 @@ Definition IsWellDefinedSitpnState (sitpn : Sitpn) (s : SitpnState) :=
   (* All functions in exec_f must be in sitpn.(functions), and
      conversely, i.e: *)
   sitpn.(functions) = fst (split s.(exec_f)).
+
+(** *** Equality between SitpnState. *)
+
+(** Equality relation between two SitpnState. *)
+
+Definition sitpn_state_eq (s s' : SitpnState) : Prop :=
+  Permutation (marking s) (marking s') /\
+  Permutation (fired s) (fired s') /\
+  Permutation (d_intervals s) (d_intervals s') /\
+  Permutation (reset s) (reset s') /\
+  Permutation (cond_values s) (cond_values s') /\
+  Permutation (exec_a s) (exec_a s') /\
+  Permutation (exec_f s) (exec_f s').
+
+(** Lemmas necessary to declare sitpn_state_eq as  
+    a parametric relation. *)
+
+Lemma sitpn_state_eq_refl :
+  forall (s : SitpnState), sitpn_state_eq s s.
+Proof.
+  intros s; unfold sitpn_state_eq; repeat (split; auto).
+Qed.
+
+Lemma sitpn_state_eq_sym :
+  forall (s s' : SitpnState),
+    sitpn_state_eq s s' -> sitpn_state_eq s' s.
+Proof.
+  intros s s' Heq_ss'.
+  unfold sitpn_state_eq in *.
+  decompose [and] Heq_ss'.
+  let rec decide_conj :=
+      (symmetry; assumption) || (split; [symmetry; assumption | decide_conj])
+  in decide_conj.
+Qed.
+
+Lemma sitpn_state_eq_trans :
+  forall (s s' s'' : SitpnState),
+    sitpn_state_eq s s' -> sitpn_state_eq s' s'' -> sitpn_state_eq s s''.
+Proof.
+  intros s s' s'' Heq_ss' Heq_sp_ss.
+  unfold sitpn_state_eq in *.
+
+  elim Heq_ss'; clear Heq_ss'; intros Hperm_m Heq_ss'.
+  elim Heq_ss'; clear Heq_ss'; intros Hperm_f Heq_ss'.
+  elim Heq_ss'; clear Heq_ss'; intros Hperm_ditval Heq_ss'.
+  elim Heq_ss'; clear Heq_ss'; intros Hperm_reset Heq_ss'.
+  elim Heq_ss'; clear Heq_ss'; intros Hperm_condv Heq_ss'.
+  elim Heq_ss'; clear Heq_ss'; intros Hperm_execa Heq_ss'.
+  rename Heq_ss' into Hperm_execf.
+
+  elim Heq_sp_ss; clear Heq_sp_ss; intros Hperm_m' Heq_sp_ss.
+  elim Heq_sp_ss; clear Heq_sp_ss; intros Hperm_f' Heq_sp_ss.
+  elim Heq_sp_ss; clear Heq_sp_ss; intros Hperm_ditval' Heq_sp_ss.
+  elim Heq_sp_ss; clear Heq_sp_ss; intros Hperm_reset' Heq_sp_ss.
+  elim Heq_sp_ss; clear Heq_sp_ss; intros Hperm_condv' Heq_sp_ss.
+  elim Heq_sp_ss; clear Heq_sp_ss; intros Hperm_execa' Heq_sp_ss.
+  rename Heq_sp_ss into Hperm_execf'.
+  repeat split;
+  
+  (
+    apply (Permutation_trans Hperm_m Hperm_m')
+    ||
+    apply (Permutation_trans Hperm_f Hperm_f')
+    ||
+    apply (Permutation_trans Hperm_ditval Hperm_ditval')
+    ||
+    apply (Permutation_trans Hperm_reset Hperm_reset')
+    ||
+    apply (Permutation_trans Hperm_condv Hperm_condv')
+    ||
+    apply (Permutation_trans Hperm_execa Hperm_execa')
+    ||
+    apply (Permutation_trans Hperm_execf Hperm_execf')
+  ).
+Qed.
+
+(** Declares sitpn_state_eq as a parametric relation. *)
+
+Add Parametric Relation : (SitpnState) (sitpn_state_eq)
+    reflexivity proved by (sitpn_state_eq_refl)
+    symmetry proved by (sitpn_state_eq_sym)
+    transitivity proved by (sitpn_state_eq_trans)
+      as sitpn_state_eq_rel.
