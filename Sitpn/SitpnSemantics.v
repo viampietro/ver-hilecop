@@ -756,7 +756,7 @@ Inductive SitpnSemantics
     (* Time intervals stay the same for all transitions that haven't
        reached the upper bound of their time intervals or were
        fired at this clock cycle, i.e:  
-     
+       
        ∀ t ∈ Ti, ↑I(t) ≠ 0 ∨ t ∈ Fired ⇒ I'(t) = I(t) *)
     
     (forall (t : Trans)

@@ -23,11 +23,182 @@ Require Import Hilecop.Sitpn.SitpnRisingEdgeWellDef.
 (* Import misc. tactics and lemmas. *)
 
 Require Import Hilecop.Utils.HilecopLemmas.
+Require Import Hilecop.Utils.HilecopExtraLemmas.
 Require Import Hilecop.Sitpn.SitpnTactics.
 
 (** * [sitpn_rising_edge] and [sitpn_state_eq] relation. *)
 
 (** ** [sitpn_state_eq], [sitpn_rising_edge] and marking. *)
+
+(** Lemmas on [pre_sum] and [post_sum] functions. *)
+
+(** ∀ t, ∀ l, t ∈ l ∧ NoDup l ⇒ pre_sum l = pre t + pre_sum (l - {t}) 
+ *  Needed to prove pre_sum_eq_iff_incl. *)
+
+Lemma pre_sum_add_rm : 
+  forall (sitpn : Sitpn)
+    (p : Place)
+    (l : list Trans)
+    (t : Trans),
+    In t l ->
+    NoDup l ->
+    pre_sum sitpn p l = pre sitpn t p + pre_sum sitpn p (remove eq_nat_dec t l).
+Proof.
+  intros sitpn p l;
+    functional induction (pre_sum sitpn p l) using pre_sum_ind;
+    intros a Hin_a_l Hnodup_l.
+  - inversion Hin_a_l.
+  - inversion_clear Hin_a_l as [Heq_at | Hin_a_tl].
+    + rewrite <- Heq_at.
+      simpl; case (Nat.eq_dec t t).
+      -- intro Heq_refl.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_remove_eq Nat.eq_dec t tail Hnodup_l) as Heq_rm.
+         rewrite Heq_rm; reflexivity.
+      -- intro Heq_diff; elim Heq_diff; reflexivity.
+    + simpl; case (Nat.eq_dec a t).
+      -- rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_in_diff t a tail (conj Hnodup_l Hin_a_tl)) as Hdiff_ta.
+         intro Heq_at; symmetry in Heq_at; contradiction.
+      -- intro Hdiff_at.
+         simpl; symmetry; rewrite Nat.add_comm.
+         rewrite <- Nat.add_assoc.
+         rewrite Nat.add_cancel_l; symmetry; rewrite Nat.add_comm.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+         apply (IHn a Hin_a_tl Hnodup_l).
+Qed.
+
+(** For all list of transitions l and l', if l is a permutation 
+ *  of l', then pre_sum l = pre_sum l'. *)
+
+Lemma pre_sum_eq_iff_incl :
+  forall (sitpn : Sitpn)
+         (p : Place)
+         (l l' : list Trans),
+    NoDup l ->
+    NoDup l' ->
+    (forall t : Trans, In t l <-> In t l') ->
+    pre_sum sitpn p l = pre_sum sitpn p l'.
+Proof.
+  intros sitpn p l;
+    functional induction (pre_sum sitpn p l) using pre_sum_ind;
+    intros l' Hnodup_l Hnodup_l' Hequiv.
+  (* BASE CASE *)
+  - functional induction (pre_sum sitpn p l') using pre_sum_ind.
+    + reflexivity.
+    + assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+      rewrite <- Hequiv in Hin_eq; inversion Hin_eq.
+  (* GENERAL CASE *)
+  - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+    rewrite Hequiv in Hin_eq.
+    specialize (pre_sum_add_rm sitpn p l' t Hin_eq Hnodup_l') as Heq_presum.
+    rewrite Heq_presum.
+    rewrite Nat.add_cancel_l.
+    assert (Hequiv_tl : forall t0 : Trans, In t0 tail <-> In t0 (remove Nat.eq_dec t l')).
+    {
+      intro t0; split.
+      - intro Hin_tl; specialize (in_cons t t0 tail Hin_tl) as Hin_t0_ctl.
+        rewrite NoDup_cons_iff in Hnodup_l.
+        apply proj1 in Hnodup_l.
+        specialize (not_in_in_diff t t0 tail (conj Hnodup_l Hin_tl)) as Hdiff_tt0.
+        apply not_eq_sym in Hdiff_tt0.
+        rewrite Hequiv in Hin_t0_ctl.
+        rewrite in_remove_iff; apply (conj Hin_t0_ctl Hdiff_tt0).
+      - intro Hin_rm.
+        rewrite in_remove_iff in Hin_rm.
+        elim Hin_rm; clear Hin_rm; intros Hin_t0_l' Hdiff_t0t.
+        rewrite <- Hequiv in Hin_t0_l'.
+        inversion_clear Hin_t0_l' as [Heq_t0t | Hin_t0_tl].
+        + symmetry in Heq_t0t; contradiction.
+        + assumption.
+    }
+    rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+    specialize (nodup_if_remove l' Hnodup_l' t Nat.eq_dec) as Hnodup_rm.
+    apply (IHn (remove Nat.eq_dec t l') Hnodup_l Hnodup_rm Hequiv_tl). 
+Qed.
+
+(** ∀ t, ∀ l, t ∈ l ∧ NoDup l ⇒ post_sum l = post t + post_sum (l - {t}) 
+ *  Needed to prove post_sum_eq_iff_incl. *)
+
+Lemma post_sum_add_rm : 
+  forall (sitpn : Sitpn)
+         (p : Place)
+         (l : list Trans)
+         (t : Trans),
+    In t l -> NoDup l -> post_sum sitpn p l = post sitpn t p + post_sum sitpn p (remove eq_nat_dec t l).
+Proof.
+  intros sitpn p l;
+    functional induction (post_sum sitpn p l) using post_sum_ind;
+    intros a Hin_a_l Hnodup_l.
+  - inversion Hin_a_l.
+  - inversion_clear Hin_a_l as [Heq_at | Hin_a_tl].
+    + rewrite <- Heq_at.
+      simpl; case (Nat.eq_dec t t).
+      -- intro Heq_refl.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_remove_eq Nat.eq_dec t tail Hnodup_l) as Heq_rm.
+         rewrite Heq_rm; reflexivity.
+      -- intro Heq_diff; elim Heq_diff; reflexivity.
+    + simpl; case (Nat.eq_dec a t).
+      -- rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
+         specialize (not_in_in_diff t a tail (conj Hnodup_l Hin_a_tl)) as Hdiff_ta.
+         intro Heq_at; symmetry in Heq_at; contradiction.
+      -- intro Hdiff_at.
+         simpl; symmetry; rewrite Nat.add_comm.
+         rewrite <- Nat.add_assoc.
+         rewrite Nat.add_cancel_l; symmetry; rewrite Nat.add_comm.
+         rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+         apply (IHn a Hin_a_tl Hnodup_l).
+Qed.
+
+(** For all list of transitions l and l', if l is a permutation 
+ *  of l', then post_sum l = post_sum l'. *)
+
+Lemma post_sum_eq_iff_incl :
+  forall (sitpn : Sitpn)
+         (p : Place)
+         (l l' : list Trans),
+    NoDup l ->
+    NoDup l' ->
+    (forall t : Trans, In t l <-> In t l') ->
+    post_sum sitpn p l = post_sum sitpn p l'.
+Proof.
+  intros sitpn p l;
+    functional induction (post_sum sitpn p l) using post_sum_ind;
+    intros l' Hnodup_l Hnodup_l' Hequiv.
+  (* BASE CASE *)
+  - functional induction (post_sum sitpn p l') using post_sum_ind.
+    + reflexivity.
+    + assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+      rewrite <- Hequiv in Hin_eq; inversion Hin_eq.
+  (* GENERAL CASE *)
+  - assert (Hin_eq : In t (t :: tail)) by apply in_eq.
+    rewrite Hequiv in Hin_eq.
+    specialize (post_sum_add_rm sitpn p l' t Hin_eq Hnodup_l') as Heq_postsum.
+    rewrite Heq_postsum.
+    rewrite Nat.add_cancel_l.
+    assert (Hequiv_tl : forall t0 : Trans, In t0 tail <-> In t0 (remove Nat.eq_dec t l')).
+    {
+      intro t0; split.
+      - intro Hin_tl; specialize (in_cons t t0 tail Hin_tl) as Hin_t0_ctl.
+        rewrite NoDup_cons_iff in Hnodup_l.
+        apply proj1 in Hnodup_l.
+        specialize (not_in_in_diff t t0 tail (conj Hnodup_l Hin_tl)) as Hdiff_tt0.
+        apply not_eq_sym in Hdiff_tt0.
+        rewrite Hequiv in Hin_t0_ctl.
+        rewrite in_remove_iff; apply (conj Hin_t0_ctl Hdiff_tt0).
+      - intro Hin_rm.
+        rewrite in_remove_iff in Hin_rm.
+        elim Hin_rm; clear Hin_rm; intros Hin_t0_l' Hdiff_t0t.
+        rewrite <- Hequiv in Hin_t0_l'.
+        inversion_clear Hin_t0_l' as [Heq_t0t | Hin_t0_tl].
+        + symmetry in Heq_t0t; contradiction.
+        + assumption.
+    }
+    rewrite NoDup_cons_iff in Hnodup_l; apply proj2 in Hnodup_l.
+    specialize (nodup_if_remove l' Hnodup_l' t Nat.eq_dec) as Hnodup_rm.
+    apply (IHn (remove Nat.eq_dec t l') Hnodup_l Hnodup_rm Hequiv_tl). 
+Qed.
 
 Lemma sitpn_rising_edge_state_eq_perm_marking :
   forall (sitpn : Sitpn)
@@ -49,6 +220,7 @@ Proof.
      - ∀(p, n) ∈ (marking s') ⇔ (p, n) (marking state'). *)
 
   (* Builds NoDup (marking s') and NoDup (marking state') *)
+  
   specialize (sitpn_rising_edge_well_def_state
                 sitpn s s' Hwell_def_sitpn Hwell_def_s Hrising_s)
     as Hwell_def_s'.  
@@ -59,11 +231,21 @@ Proof.
     as Hwell_def_state'.
   deduce_nodup_state_marking for state'.
 
-  rename Hnodup_fs_ms into Hnodup_ms.
-  rename Hnodup_fs_ms0 into Hnodup_mstate.
-
+  (* Saves the NoDup fs hypotheses for later. *)
+  assert (Hnodup_ms := Hnodup_fs_ms).
+  assert (Hnodup_mstate := Hnodup_fs_ms0).
+  rename Hnodup_fs_ms0 into Hnodup_fs_mstate'.
+  rename Hnodup_fs_ms into Hnodup_fs_ms'.
+  
   apply nodup_fst_split in Hnodup_ms.
   apply nodup_fst_split in Hnodup_mstate.
+
+  (* We must specialize eq_if_eq_fs to deduce
+     ∀(p, n) ∈ (marking s') ⇔ (p, n) (marking state') *)
+
+  (* First, we have to build:  
+     ∀(a, b) ∈ (marking s) ⇒ ∃b', (a, b') ∈ (marking s') ∧
+                                   (a, b') ∈ (marking state') *)
   
   (* Specializes sitpn_rising_edge_sub_pre_add_post for 
      Hrising_s and Hrising_state. *)
@@ -73,7 +255,80 @@ Proof.
   specialize (sitpn_rising_edge_sub_pre_add_post
                 sitpn state state' Hwell_def_sitpn Hwell_def_state Hrising_state)
     as Hdef_marking_state'.
-Admitted.
+
+  assert (Hin_ms_ex_in :
+            forall (a : Place) (b : nat),
+              In (a, b) (marking s) ->
+              exists b' : nat, In (a, b') (marking s') /\ In (a, b') (marking state')
+         ).
+  {
+    (* Builds Permutation (marking s) (marking state) *)
+    assert (Hperm_m := Hsteq_sstate).
+    unfold sitpn_state_eq in Hperm_m.
+    apply proj1 in Hperm_m.
+
+    (* Specializes Hdef_*. *)
+    intros a b Hin_ms.
+
+    specialize (Hdef_marking_s' a b Hin_ms).
+    rewrite Hperm_m in Hin_ms.
+    specialize (Hdef_marking_state' a b Hin_ms).
+
+    (* Builds pre_sum (fired s) = pre_sum (fired state). 
+     * Deduced from Permutation (fired s) (fired state). *)
+
+    assert (Hperm_fired := Hsteq_sstate).
+    unfold sitpn_state_eq in Hperm_fired.
+    apply proj2, proj1 in Hperm_fired.
+    
+    assert (Hequiv_fired: forall t : Trans, In t (fired s) <-> In t (fired state)) by
+        (intros t; rewrite Hperm_fired; reflexivity).
+
+    explode_well_defined_sitpn_state Hwell_def_s.
+    explode_well_defined_sitpn_state Hwell_def_state.
+
+    specialize (pre_sum_eq_iff_incl
+                  sitpn a (fired s) (fired state)
+                  Hnodup_state_fired Hnodup_state_fired0 Hequiv_fired)
+      as Heq_presum.
+
+    (* Builds post_sum (fired s) = post_sum (fired state). 
+     * Deduced from Permutation (fired s) (fired state). *)
+
+    specialize (post_sum_eq_iff_incl
+                  sitpn a (fired s) (fired state)
+                  Hnodup_state_fired Hnodup_state_fired0 Hequiv_fired)
+      as Heq_postsum.
+
+    do 2 clear_well_defined_sitpn_state.
+    rewrite Heq_presum in Hdef_marking_s'.
+    rewrite Heq_postsum in Hdef_marking_s'.
+    
+    (* Instantiates and deduces the goal. *)
+    exists (b - pre_sum sitpn a (fired state) + post_sum sitpn a (fired state)).
+    auto.
+  }
+
+  (* Second, we need: NoDup fs (marking s). *)
+  deduce_nodup_state_marking for s.
+
+  (* Third, we need: 
+     fs (marking s) = fs (marking s') ∧ 
+     fs (marking s) = fs (marking state') *)
+  deduce_eq_from_wd_states_for s s'.
+  deduce_eq_from_wd_states_for s state'.
+
+  (* Finally, deduces: ∀(p, n) ∈ (marking s') ⇔ (p, n) (marking state') *)
+  specialize (eq_if_eq_fs (marking s) (marking s') (marking state')
+                          Hin_ms_ex_in Heq_state_marking Heq_state_marking0
+                          Hnodup_fs_ms Hnodup_fs_ms' Hnodup_fs_mstate')
+    as Hequiv_ms'_mstate'.
+
+  (* Applies NoDup_Permutation, then QED. *)
+  assert (Hequiv_simpl : forall (z : Place * nat), In z (marking s') <-> In z (marking state')) by 
+      (intros z; destruct z; specialize (Hequiv_ms'_mstate' p n); assumption).
+  apply (NoDup_Permutation Hnodup_ms Hnodup_mstate Hequiv_simpl).
+Qed.
   
 (** ** [sitpn_state_eq], [sitpn_rising_edge] and action states. *)
 
@@ -172,6 +427,29 @@ Proof.
   (* Rewrites the goal and concludes. *)
   rewrite Heq_fired_s, Heq_fired_state in Hperm_fired; assumption.
 Qed.
+
+(** ** [sitpn_state_eq], [sitpn_rising_edge] and dynamic time intervals. *)
+
+Lemma sitpn_rising_edge_state_eq_perm_ditvals :
+  forall (sitpn : Sitpn)
+         (s s' state state' : SitpnState),
+    IsWellDefinedSitpn sitpn ->
+    IsWellDefinedSitpnState sitpn s ->
+    IsWellDefinedSitpnState sitpn state ->
+    sitpn_state_eq s state ->
+    sitpn_rising_edge sitpn s = Some s' ->
+    sitpn_rising_edge sitpn state = Some state' ->
+    Permutation (d_intervals s') (d_intervals state').
+Proof.
+  intros sitpn s s' state state' Hwell_def_sitpn Hwell_def_s
+         Hwell_def_state Hsteq_sstate Hrising_s Hrising_state.
+
+  (* Double functional induction, easier than applying no error lemmas. 
+     A lot of cases, but most of them are error cases, deal with them
+     easily with inversion. *)
+  functional induction (sitpn_rising_edge sitpn s) using sitpn_rising_edge_ind.
+  functional induction (sitpn_rising_edge sitpn state) using sitpn_rising_edge_ind.
+Admitted.
   
 (** ** [sitpn_rising_edge] and [sitpn_state_eq]. *)
 
@@ -192,7 +470,9 @@ Proof.
   repeat split.
 
   (* CASE Permutation (marking s') (marking state') *)
-  - admit.
+  - apply (sitpn_rising_edge_state_eq_perm_marking
+             sitpn s s' state state' Hwell_def_sitpn Hwell_def_s
+             Hwell_def_state Hsteq_sstate Hrising_s Hrising_state).
 
   (* CASE Permutation (fired s') (fired state') *)
   - apply (sitpn_rising_edge_state_eq_perm_fired

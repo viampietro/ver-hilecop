@@ -886,7 +886,7 @@ Section SitpnRisingEdgeSubPreAddPost.
                         Hnodup_fs_tm Hincl_state_fired_transs e2) as Hadd_post;
 
           (* Specializes Hsub_pre then Hadd_post, then rewrite the goal
-         to obtain an assumption. *)
+             to obtain an assumption. *)
           specialize (Hsub_pre p n Hin_ms) as Hin_tm;
           specialize (Hadd_post p (n - pre_sum sitpn p (fired s)) Hin_tm) as Hin_fm;
           injection Hfun as Hfun; rewrite <- Hfun; simpl; assumption

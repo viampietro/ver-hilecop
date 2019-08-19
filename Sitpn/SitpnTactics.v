@@ -503,3 +503,61 @@ Ltac deduce_eq_from_wd_states :=
     end
   | _ => fail "No hypotheses matching the form 'IsWellDefinedSitpnState ?sitpn _'"
   end.
+
+
+(** Variant of deduce_eq_from_wd_states. *)
+
+Ltac deduce_eq_from_wd_states_for s state :=
+  lazymatch goal with
+  | [
+    Hwd_s: IsWellDefinedSitpnState ?sitpn s,
+           Hwd_state: IsWellDefinedSitpnState ?sitpn state
+    |- _
+  ] =>
+
+    (* Explodes IsWellDefinedSitpnState predicates. *)
+    explode_well_defined_sitpn_state Hwd_s;
+    explode_well_defined_sitpn_state Hwd_state;
+
+    (* Deduces equalities between the two states. *)
+    lazymatch goal with
+    | [ Hwf_marking_s: places ?sitpn = fst (split (marking s)),
+        Hwf_marking_state: places ?sitpn = fst (split (marking state)),
+        Hwf_condv_s: conditions ?sitpn = fst (split (cond_values s)),
+        Hwf_condv_state: conditions ?sitpn = fst (split (cond_values state)),
+        Hwf_actions_s: actions ?sitpn = fst (split (exec_a s)),
+        Hwf_actions_state: actions ?sitpn = fst (split (exec_a state)),
+        Hwf_functions_s: functions ?sitpn = fst (split (exec_f s)),
+        Hwf_functions_state: functions ?sitpn = fst (split (exec_f state))
+        |- _ ] =>
+
+      (* Deduces fst (split marking) = fst (split marking) *)
+      let Heq_state_marking := fresh "Heq_state_marking" in
+      assert (Heq_state_marking : fst (split (marking s)) = fst (split (marking state)))
+        by (rewrite <- Hwf_marking_s; rewrite <- Hwf_marking_state; reflexivity);
+
+      (* Deduces fst (split cond_values) = fst (split cond_values) *)
+      let Heq_state_condv := fresh "Heq_state_condv" in
+      assert (Heq_state_condv : fst (split (cond_values s)) = fst (split (cond_values state)))
+        by (rewrite <- Hwf_condv_s; rewrite <- Hwf_condv_state; reflexivity);
+
+      (* Deduces fst (split exec_a) = fst (split exec_a) *)
+      let Heq_state_actions := fresh "Heq_state_actions" in
+      assert (Heq_state_actions : fst (split (exec_a s)) = fst (split (exec_a state)))
+        by (rewrite <- Hwf_actions_s; rewrite <- Hwf_actions_state; reflexivity);
+
+      (* Deduces fst (split exec_f) = fst (split exec_f) *)
+      let Heq_state_functions := fresh "Heq_state_functions" in
+      assert (Heq_state_functions : fst (split (exec_f s)) = fst (split (exec_f state)))
+        by (rewrite <- Hwf_functions_s; rewrite <- Hwf_functions_state; reflexivity);
+
+      (* Clears the context. *)
+      do 2 clear_well_defined_sitpn_state
+         
+    | _ => fail "No hypotheses resulting in the explosion of IsWellDefinedSitpnState predicate"
+    end
+  | _ => fail "No hypotheses matching the form 'IsWellDefinedSitpnState ?sitpn _'"
+  end.
+
+Tactic Notation "deduce_eq_from_wd_states" "for" ident(sitpn_state) ident(sitpn_s)  :=
+  deduce_nodup_state_marking_for sitpn_state sitpn_s.
