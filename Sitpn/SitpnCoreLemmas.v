@@ -50,6 +50,34 @@ Section SitpnLemmas.
       + apply in_or_app; right.
         apply (IHl0 t' p Hwell_def_sitpn Hin_t'_tl Hin_p_flatn).
   Qed.
+
+  (** Same as above, but more handy. *)
+
+  Lemma in_transs_incl_flatten :
+    forall (sitpn : Sitpn)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      In t (transs sitpn) ->
+      incl (flatten_neighbours (lneighbours sitpn t)) (flatten_lneighbours sitpn (transs sitpn)).
+  Proof.
+    intros sitpn;
+      functional induction (flatten_lneighbours sitpn (transs sitpn))
+                 using flatten_lneighbours_ind;
+      intros t' Hwell_def_sitpn Hin_t_transs p Hin_p_flatn.
+    
+    (* BASE CASE. *)
+    - inversion Hin_t_transs.
+
+    (* GENERAL CASE *)
+    - inversion_clear Hin_t_transs as [Heq_tt' | Hin_t'_tl].
+
+      (* Case t = t' *)
+      + rewrite Heq_tt'; apply in_or_app; left; assumption.
+
+      (* Case t' ∈ tl *)
+      + apply in_or_app; right.
+        apply (IHl0 t' Hwell_def_sitpn Hin_t'_tl p Hin_p_flatn).
+  Qed.
   
 End SitpnLemmas.
 

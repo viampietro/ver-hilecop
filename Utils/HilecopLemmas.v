@@ -11,6 +11,10 @@ Require Import Classical_Prop.
 Require Export List.
 Export ListNotations.
 
+(** To use Hilecop definitions. *)
+
+Require Import Hilecop.Utils.HilecopDefinitions.
+
 (** * Helper lemmas for the Hilecop program *)
 
 (*===================================================*  
@@ -588,6 +592,9 @@ Proof.
       apply (IHl0 Hnot_in_a_l).
 Qed.
 
+(** If list l has no duplicates then removing one element from list l
+    preserves this property. *)
+
 Lemma nodup_if_remove {A : Type} :
   forall (l : list A),
     NoDup l ->
@@ -608,4 +615,70 @@ Proof.
       apply (IHl0 Hnodup_l).
 Qed.
 
+(** 
+    Conditions: 
+    - l and m are lists of couples
+    - l and m have no duplicates in the first 
+      elements of their couples
+    - All couples of l are in m
+    - The list of first elements of l and m are equal   
+      modulo permutation
+      
+    Conclusion: l and m are equal modulo permutation
+    
+ *)
+
+Lemma permutation_fs_permutation {A B : Type} :
+  forall (l m : list (A * B)),
+    NoDup (fs l) ->
+    NoDup (fs m) ->
+    incl l m ->
+    Permutation (fs l) (fs m) ->
+    Permutation l m.
+Proof.
+  intros l m Hnodup_fs_l Hnodup_fs_m Hincl Hperm_fs.
+
+  (* Strategy: apply [NoDup_Permutation]. 
+     
+     Premises:
+     - NoDup l
+     - NoDup m
+     - ∀x, x ∈ l ⇔ x ∈ m 
+   *)
+
+  (* Builds ∀x, x ∈ l ⇔ x ∈ m *)
+  assert (Hequiv_lm : forall (x : A * B), In x l <-> In x m).
+  {
+    intros x; split.
+
+    (* x ∈ l ⇒ x ∈ m *)
+    - unfold incl in Hincl; apply (Hincl x).
+
+    (* x ∈ m ⇒ x ∈ l *)
+    - intros Hin_m.
+      destruct x.
+      specialize (in_fst_split a b m Hin_m) as Hin_fs_m.
+      apply Permutation_sym in Hperm_fs.
+      specialize (@Permutation_in A (fs m) (fs l) a Hperm_fs Hin_fs_m) as Hin_fs_l.
+      specialize (@in_fst_split_in_pair A B a l Hin_fs_l) as Hex_in_l.
+      inversion_clear Hex_in_l as (b' & Hin_ab'_l).
+      specialize (Hincl (a, b') Hin_ab'_l) as Hin_ab'_m.
+
+      (* Specializes nodup_same_pair. *)
+      assert (Heq_ab : fst (a, b) = fst (a, b')) by auto.
+      specialize (nodup_same_pair m Hnodup_fs_m (a, b) (a, b') Hin_m Hin_ab'_m Heq_ab)
+        as Heq_ab_ab'.
+      injection Heq_ab_ab' as Heq_bb'.
+
+      (* Rewrites b' with b, then QED. *)
+      rewrite <- Heq_bb' in Hin_ab'_l; assumption.
+  }
+
+  (* Builds NoDup l and NoDup m *)
+  apply nodup_fst_split in Hnodup_fs_l.
+  apply nodup_fst_split in Hnodup_fs_m.
+  
+  (* Applies  *)
+  apply (NoDup_Permutation Hnodup_fs_l Hnodup_fs_m Hequiv_lm).
+Qed.
 

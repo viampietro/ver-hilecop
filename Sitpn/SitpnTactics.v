@@ -561,3 +561,19 @@ Ltac deduce_eq_from_wd_states_for s state :=
 
 Tactic Notation "deduce_eq_from_wd_states" "for" ident(sitpn_state) ident(sitpn_s)  :=
   deduce_nodup_state_marking_for sitpn_state sitpn_s.
+
+(** Deduces [In a m] from [IsDecListCons (a :: l) m] *)
+
+Ltac deduce_in_from_is_dec_list_cons_as hyp_is_dec intro_pattern :=
+  lazymatch type of hyp_is_dec with
+  | IsDecListCons (?a :: ?l) ?m =>
+    specialize (is_dec_list_cons_incl hyp_is_dec);
+    intros Hincl;
+    assert (Hin_eq : In a (a :: l)) by (apply in_eq);
+    specialize (Hincl a Hin_eq) as intro_pattern
+  | _ => fail "Expected parameter of type IsDecListCons (?a :: ?l) ?m"
+  end.
+
+Tactic Notation "deduce_in_from_is_dec_list_cons" ident(hyp_is_dec) "as" simple_intropattern(intro_pattern) :=
+  deduce_in_from_is_dec_list_cons_as hyp_is_dec intro_pattern.
+

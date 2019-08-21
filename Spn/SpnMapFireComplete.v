@@ -500,21 +500,26 @@ Proof.
         
         (* We need ∀ (p, n) ∈ residual_marking ⇒ 
                      (p, n - pre_sum spn p [t]) ∈ residual_marking' *)
+        
         (* Builds (fs (marking s)) = (fs res_marking) *)
         unfold MarkingHaveSameStruct in *.
         assert (Hsame_residm_sm : fst (split residual_marking) = fst (split (marking s)))
           by (rewrite <- Hsame_marking_state_spn; rewrite <- Hsame_struct; reflexivity).
+        
         (* Builds NoDup (fs residual_marking) to apply nodup_same_pair. *)
         unfold NoUnmarkedPlace in Hunm_place; unfold NoDupPlaces in Hnodup_places.
         rewrite Hunm_place in Hnodup_places;
           rewrite Hsame_marking_state_spn in Hnodup_places;
           rewrite <- Hsame_residm_sm in Hnodup_places.
+        
         (* Builds In (t, neigh_of_t) (lneighbours spn) *)
         specialize (update_residual_marking_correct
                       spn residual_marking a neigh_of_a residual_marking'
                       Hwell_def_spn Hnodup_places Hin_lneigh Hupdate_res) as Hin_res_in_fin.
+        
         (* Then we need pre_sum_app_add *)
         specialize (pre_sum_app_add spn) as Heq_presum.
+        
         (* Finally, deduces the hypothesis. *)
         assert (
             Hresid'_m :

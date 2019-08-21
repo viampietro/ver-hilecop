@@ -233,7 +233,7 @@ Definition IsWellFormedTimeInterval (opt_itval : option TimeInterval) :=
     end
   end.
 
-(** All intervals in [Stpn.(s_intervals)] are well-formed. *)
+(** All intervals in [Sitpn.(s_intervals)] are well-formed. *)
 
 Definition AreWellFormedTimeIntervals (sitpn : Sitpn) :=
   forall (t : Trans),

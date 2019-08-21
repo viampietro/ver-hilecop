@@ -217,7 +217,7 @@ Proof.
   (* Stategy is to apply NoDup_Permutation, then we need: 
      - NoDup (marking s')
      - NoDup (marking state')
-     - ∀(p, n) ∈ (marking s') ⇔ (p, n) (marking state'). *)
+     - ∀(p, n) ∈ (marking s') ⇔ (p, n) ∈ (marking state'). *)
 
   (* Builds NoDup (marking s') and NoDup (marking state') *)
   
@@ -443,12 +443,6 @@ Lemma sitpn_rising_edge_state_eq_perm_ditvals :
 Proof.
   intros sitpn s s' state state' Hwell_def_sitpn Hwell_def_s
          Hwell_def_state Hsteq_sstate Hrising_s Hrising_state.
-
-  (* Double functional induction, easier than applying no error lemmas. 
-     A lot of cases, but most of them are error cases, deal with them
-     easily with inversion. *)
-  functional induction (sitpn_rising_edge sitpn s) using sitpn_rising_edge_ind.
-  functional induction (sitpn_rising_edge sitpn state) using sitpn_rising_edge_ind.
 Admitted.
   
 (** ** [sitpn_rising_edge] and [sitpn_state_eq]. *)

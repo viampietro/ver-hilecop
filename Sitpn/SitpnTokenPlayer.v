@@ -478,7 +478,7 @@ Section TimeFunctions.
       
       - A list of reset orders, computed for all transitions based
         on the sensitization by the transient marking.
-      - A dynamic time interval list with newly blocked
+      - A list of dynamic time intervals with newly blocked
         intervals. *)
 
   Fixpoint get_blocked_itvals_and_reset_orders
@@ -497,7 +497,7 @@ Section TimeFunctions.
       let neighbours_of_t := lneighbours sitpn t in
 
       (* If t is sensitized by the transient marking, then 
-       no reset order is given. *)
+         no reset order is given. *)
       match is_sensitized sitpn transient_marking neighbours_of_t t with
       | Some true =>
         let reset_orders' := reset_orders ++ [(t, false)] in
