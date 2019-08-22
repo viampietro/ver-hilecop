@@ -32,7 +32,7 @@ Section SitpnMapFireComplete.
       IsWellDefinedSitpnState sitpn tmp_state ->
       (marking tmp_state) = (marking s) ->
       Permutation (d_intervals tmp_state) (d_intervals s') ->
-      Permutation (cond_v tmp_state) (cond_v s') ->
+      Permutation (cond_values tmp_state) (cond_values s') ->
       
       exists final_fired : list Trans,
         sitpn_map_fire sitpn tmp_state = Some final_fired

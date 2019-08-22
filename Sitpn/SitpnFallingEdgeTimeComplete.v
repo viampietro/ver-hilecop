@@ -92,28 +92,460 @@ Section UpdateTimeIntervalsComplete.
 
                 (* Strategy: apply IHditvals, then we need premises. *)
 
-                (* Builds IsDecListCons ditvals (d_intervals s) *)
-                apply is_dec_list_cons_cons in His_dec_list.
-
-
                 (* Builds incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s') 
                    To do that, we need to show (t, active (dec_itval sitval)) ∈ (d_intervals s') using
                    Hspec.
                  *)
                 assert (Hin_t_ditvalss' : In (t, active (dec_itval sitval)) (d_intervals s')).
-                { admit. }
+                {
+                  
+                  (* Strategy: get the right Sitpn semantics rule from
+                               Hspec and specialize it. *)
+                  inversion Hspec.
+                  clear H H0 H1 H2 H3 H4 H5 H7 H8 H9 H10 H11 H12.
+                  rename H6 into Hsens_and_fired_reset.
 
+                  (* Gets In t (fs (d_intervals s)) *)
+                  deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_ditvals.
+                  apply in_fst_split in Hin_t_fs_ditvals.
+
+                  (* Gets In (t, true) (reset s) \/ In t (fired s) *)
+                  specialize (in_list_correct Nat.eq_dec (fired s) t Hin_list) as Hin_fired.
+                  specialize (or_intror (In (t, true) (reset s)) Hin_fired) as Hreset_or_fired.
+
+                  (* Gets IsSensitized /\ (In (t, true) (reset s) \/ In t (fired s)) 
+                     by specializing is_sensitized_correct. *)
+
+                  assert (Hin_t_transs := Hin_t_fs_ditvals).
+                  explode_well_defined_sitpn_state Hwell_def_s.
+                  rewrite <- (Hwf_state_ditvals t) in Hin_t_transs.
+                  apply proj1 in Hin_t_transs.
+
+                  specialize (is_sensitized_correct
+                                (marking s) t Hwell_def_sitpn
+                                Hwf_state_marking Hin_t_transs His_sens)
+                    as His_sens_spec.
+
+                  clear_well_defined_sitpn_state.
+                  specialize (conj His_sens_spec Hreset_or_fired) as Hw_sens_fired.
+
+                  (* Gets ~IsSensitized \/ ... *)
+                  specialize (or_intror (~ IsSensitized sitpn (marking s) t) Hw_sens_fired)
+                    as Hv_notsens_sens.
+
+                  symmetry in Heq_some_sitval.
+                  apply (Hsens_and_fired_reset t sitval Hin_t_fs_ditvals Hv_notsens_sens
+                                               Heq_some_sitval).
+                }
+                
                 (* Then, we can deduce incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s') *)
                 assert (Hincl_newd_app : incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s')).
-                { admit. }
+                {
+                  intros x Hin_app.
+                  apply in_app_or in Hin_app.
+                  inversion_clear Hin_app as [Hin_x_newd | Heq_x_t];
+                    [ apply (Hincl_newd x Hin_x_newd) |
+                      inversion_clear Heq_x_t as [Heq | Hin_nil];
+                      [ rewrite <- Heq; assumption |
+                        inversion Hin_nil
+                      ]
+                    ].
+                }
 
+                (* Builds IsDecListCons ditvals (d_intervals s) *)
+                apply is_dec_list_cons_cons in His_dec_list.
+                
                 (* Builds Permutation and NoDup hyps by rewriting IH. *) 
+
+                unfold fs in Hperm_app.
+                rewrite fst_split_app in Hperm_app.
+                rewrite fst_split_cons_app in Hperm_app.
+                simpl in Hperm_app.
+
+                unfold fs in Hnodup_fs_newd.
+                rewrite fst_split_app in Hnodup_fs_newd.
+                rewrite fst_split_cons_app in Hnodup_fs_newd.
+                simpl in Hnodup_fs_newd.
                 
                 unfold fs in IHditvals.
                 rewrite fst_split_app in IHditvals.
                 rewrite fst_split_app in IHditvals.
                 simpl in IHditvals.
-                
+
+                rewrite <- app_assoc in IHditvals.
+
+                (* Applies IHditvals *)
+                apply (IHditvals Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                                 His_dec_list Hperm_app Hincl_newd_app Hnodup_fs_newd).
+
+             (* CASE in_list Nat.eq_dec (fired s) t = false *)
+             ++ case_eq (get_value Nat.eq_dec t (reset s)).
+
+                (* CASE (get_value Nat.eq_dec t (reset s)) = Some b *)
+                ** intros b Hget_v_some; destruct b.
+
+                   (* CASE (get_value Nat.eq_dec t (reset s)) = Some true *)
+                   --- specialize (IHditvals (new_ditvals ++ [(t, active (dec_itval sitval))])).
+
+                       (* Strategy: apply IHditvals, then we need premises. *)
+
+                       (* Builds incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s') 
+                          To do that, we need to show (t, active (dec_itval sitval)) ∈ (d_intervals s') using
+                          Hspec.
+                        *)
+                       assert (Hin_t_ditvalss' : In (t, active (dec_itval sitval)) (d_intervals s')).
+                       {
+                         
+                         (* Strategy: get the right Sitpn semantics rule from
+                               Hspec and specialize it. *)
+                         inversion Hspec.
+                         clear H H0 H1 H2 H3 H4 H5 H7 H8 H9 H10 H11 H12.
+                         rename H6 into Hsens_and_fired_reset.
+
+                         (* Gets In t (fs (d_intervals s)) *)
+                         deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_ditvals.
+                         apply in_fst_split in Hin_t_fs_ditvals.
+
+                         (* Gets In (t, true) (reset s) \/ In t (fired s) *)
+                         specialize (get_value_correct Nat.eq_dec t (reset s) Hget_v_some) as Hin_ttrue_reset.
+                         specialize (or_introl (In t (fired s)) Hin_ttrue_reset) as Hreset_or_fired.
+
+                         (* Gets IsSensitized /\ (In (t, true) (reset s) \/ In t (fired s)) 
+                            by specializing is_sensitized_correct. *)
+
+                         assert (Hin_t_transs := Hin_t_fs_ditvals).
+                         explode_well_defined_sitpn_state Hwell_def_s.
+                         rewrite <- (Hwf_state_ditvals t) in Hin_t_transs.
+                         apply proj1 in Hin_t_transs.
+
+                         specialize (is_sensitized_correct
+                                       (marking s) t Hwell_def_sitpn
+                                       Hwf_state_marking Hin_t_transs His_sens)
+                           as His_sens_spec.
+
+                         clear_well_defined_sitpn_state.
+                         specialize (conj His_sens_spec Hreset_or_fired) as Hw_sens_fired.
+
+                         (* Gets ~IsSensitized \/ ... *)
+                         specialize (or_intror (~ IsSensitized sitpn (marking s) t) Hw_sens_fired)
+                           as Hv_notsens_sens.
+
+                         symmetry in Heq_some_sitval.
+                         apply (Hsens_and_fired_reset t sitval Hin_t_fs_ditvals Hv_notsens_sens
+                                                      Heq_some_sitval).
+                       }
+                       
+                       (* Then, we can deduce incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s') *)
+                       assert (Hincl_newd_app : incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s')).
+                       {
+                         intros x Hin_app.
+                         apply in_app_or in Hin_app.
+                         inversion_clear Hin_app as [Hin_x_newd | Heq_x_t];
+                           [ apply (Hincl_newd x Hin_x_newd) |
+                             inversion_clear Heq_x_t as [Heq | Hin_nil];
+                             [ rewrite <- Heq; assumption |
+                               inversion Hin_nil
+                             ]
+                           ].
+                       }
+
+                       (* Builds IsDecListCons ditvals (d_intervals s) *)
+                       apply is_dec_list_cons_cons in His_dec_list.
+                       
+                       (* Builds Permutation and NoDup hyps by rewriting IH. *) 
+
+                       unfold fs in Hperm_app.
+                       rewrite fst_split_app in Hperm_app.
+                       rewrite fst_split_cons_app in Hperm_app.
+                       simpl in Hperm_app.
+
+                       unfold fs in Hnodup_fs_newd.
+                       rewrite fst_split_app in Hnodup_fs_newd.
+                       rewrite fst_split_cons_app in Hnodup_fs_newd.
+                       simpl in Hnodup_fs_newd.
+                       
+                       unfold fs in IHditvals.
+                       rewrite fst_split_app in IHditvals.
+                       rewrite fst_split_app in IHditvals.
+                       simpl in IHditvals.
+
+                       rewrite <- app_assoc in IHditvals.
+
+                       (* Applies IHditvals *)
+                       apply (IHditvals Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                                        His_dec_list Hperm_app Hincl_newd_app Hnodup_fs_newd).
+                       
+                   (* CASE (get_value Nat.eq_dec t (reset s)) = Some false *)
+                   --- destruct d.
+
+                       (* CASE d = active t0 *)
+                       +++ specialize (IHditvals (new_ditvals ++ [(t, active (dec_itval t0))])).
+
+                           (* Strategy: apply IHditvals, then we need premises. *)
+
+                           (* Builds incl (new_ditvals ++ [(t, active (dec_itval t0))]) (d_intervals s') 
+                              To do that, we need to show (t, active (dec_itval t0)) ∈ (d_intervals s') using
+                              Hspec.
+                            *)
+                           assert (Hin_t_ditvalss' : In (t, active (dec_itval t0)) (d_intervals s')).
+                           {
+                             
+                             (* Strategy: get the right Sitpn semantics rule from
+                                          Hspec and specialize it. *)
+                             inversion Hspec.
+                             clear H H0 H1 H2 H3 H4 H5 H6 H8 H9 H10 H11 H12.
+                             rename H7 into Hsens_and_notfired_reset.
+
+                             (* Gets In t (fs (d_intervals s)) *)
+                             deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_ditvals.
+
+                             (* Gets IsSensitized by specializing is_sensitized_correct. *)
+                             assert (Hin_t_transs := Hin_t_ditvals).
+                             apply in_fst_split in Hin_t_transs.
+                             explode_well_defined_sitpn_state Hwell_def_s.
+                             rewrite <- (Hwf_state_ditvals t) in Hin_t_transs.
+                             apply proj1 in Hin_t_transs.
+
+                             specialize (is_sensitized_correct
+                                           (marking s) t Hwell_def_sitpn
+                                           Hwf_state_marking Hin_t_transs His_sens)
+                               as His_sens_spec.
+                             clear_well_defined_sitpn_state.
+                             
+                             (* Gets In (t, false) (reset s) *)
+                             specialize (get_value_correct Nat.eq_dec t (reset s) Hget_v_some) as Hin_tfalse_reset.
+
+                             (* Gets ~In t (fired s) *)
+                             specialize (not_in_list_correct Nat.eq_dec (fired s) t Hin_list) as Hnot_in_t_fired.
+
+                             apply (Hsens_and_notfired_reset t t0 Hin_t_ditvals His_sens_spec
+                                                             Hin_tfalse_reset Hnot_in_t_fired).
+                           }
+                           
+                           (* Then, we can deduce incl (new_ditvals ++ [(t, active (dec_itval t0))]) (d_intervals s') *)
+                           assert (Hincl_newd_app : incl (new_ditvals ++ [(t, active (dec_itval t0))]) (d_intervals s')).
+                           {
+                             intros x Hin_app.
+                             apply in_app_or in Hin_app.
+                             inversion_clear Hin_app as [Hin_x_newd | Heq_x_t];
+                               [ apply (Hincl_newd x Hin_x_newd) |
+                                 inversion_clear Heq_x_t as [Heq | Hin_nil];
+                                 [ rewrite <- Heq; assumption |
+                                   inversion Hin_nil
+                                 ]
+                               ].
+                           }
+
+                           (* Builds IsDecListCons ditvals (d_intervals s) *)
+                           apply is_dec_list_cons_cons in His_dec_list.
+                           
+                           (* Builds Permutation and NoDup hyps by rewriting IH. *) 
+
+                           unfold fs in Hperm_app.
+                           rewrite fst_split_app in Hperm_app.
+                           rewrite fst_split_cons_app in Hperm_app.
+                           simpl in Hperm_app.
+
+                           unfold fs in Hnodup_fs_newd.
+                           rewrite fst_split_app in Hnodup_fs_newd.
+                           rewrite fst_split_cons_app in Hnodup_fs_newd.
+                           simpl in Hnodup_fs_newd.
+                           
+                           unfold fs in IHditvals.
+                           rewrite fst_split_app in IHditvals.
+                           rewrite fst_split_app in IHditvals.
+                           simpl in IHditvals.
+
+                           rewrite <- app_assoc in IHditvals.
+
+                           (* Applies IHditvals *)
+                           apply (IHditvals Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                                            His_dec_list Hperm_app Hincl_newd_app Hnodup_fs_newd).
+
+                       (* CASE d = blocked *)
+                       +++ specialize (IHditvals (new_ditvals ++ [(t, blocked)])).
+
+                           (* Strategy: apply IHditvals, then we need premises. *)
+
+                           (* Builds incl (new_ditvals ++ [(t, blocked)]) (d_intervals s') 
+                              To do that, we need to show (t, blocked) ∈ (d_intervals s') using
+                              Hspec.
+                            *)
+                           assert (Hin_t_ditvalss' : In (t, blocked) (d_intervals s')).
+                           {
+                             
+                             (* Strategy: get the right Sitpn semantics rule from
+                                          Hspec and specialize it. *)
+                             inversion Hspec.
+                             clear H H0 H1 H2 H3 H4 H5 H6 H7 H9 H10 H11 H12.
+                             rename H8 into Hsens_and_notfired_reset.
+
+                             (* Gets In t (fs (d_intervals s)) *)
+                             deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_ditvals.
+
+                             (* Gets IsSensitized by specializing is_sensitized_correct. *)
+                             assert (Hin_t_transs := Hin_t_ditvals).
+                             apply in_fst_split in Hin_t_transs.
+                             explode_well_defined_sitpn_state Hwell_def_s.
+                             rewrite <- (Hwf_state_ditvals t) in Hin_t_transs.
+                             apply proj1 in Hin_t_transs.
+
+                             specialize (is_sensitized_correct
+                                           (marking s) t Hwell_def_sitpn
+                                           Hwf_state_marking Hin_t_transs His_sens)
+                               as His_sens_spec.
+                             clear_well_defined_sitpn_state.
+                             
+                             (* Gets In (t, false) (reset s) *)
+                             specialize (get_value_correct Nat.eq_dec t (reset s) Hget_v_some) as Hin_tfalse_reset.
+
+                             (* Gets ~In t (fired s) *)
+                             specialize (not_in_list_correct Nat.eq_dec (fired s) t Hin_list) as Hnot_in_t_fired.
+
+                             apply (Hsens_and_notfired_reset t Hin_t_ditvals His_sens_spec
+                                                             Hin_tfalse_reset Hnot_in_t_fired).
+                           }
+                           
+                           (* Then, we can deduce incl (new_ditvals ++ [(t, blocked)]) (d_intervals s') *)
+                           assert (Hincl_newd_app : incl (new_ditvals ++ [(t, blocked)]) (d_intervals s')).
+                           {
+                             intros x Hin_app.
+                             apply in_app_or in Hin_app.
+                             inversion_clear Hin_app as [Hin_x_newd | Heq_x_t];
+                               [ apply (Hincl_newd x Hin_x_newd) |
+                                 inversion_clear Heq_x_t as [Heq | Hin_nil];
+                                 [ rewrite <- Heq; assumption |
+                                   inversion Hin_nil
+                                 ]
+                               ].
+                           }
+
+                           (* Builds IsDecListCons ditvals (d_intervals s) *)
+                           apply is_dec_list_cons_cons in His_dec_list.
+                           
+                           (* Builds Permutation and NoDup hyps by rewriting IH. *) 
+
+                           unfold fs in Hperm_app.
+                           rewrite fst_split_app in Hperm_app.
+                           rewrite fst_split_cons_app in Hperm_app.
+                           simpl in Hperm_app.
+
+                           unfold fs in Hnodup_fs_newd.
+                           rewrite fst_split_app in Hnodup_fs_newd.
+                           rewrite fst_split_cons_app in Hnodup_fs_newd.
+                           simpl in Hnodup_fs_newd.
+                           
+                           unfold fs in IHditvals.
+                           rewrite fst_split_app in IHditvals.
+                           rewrite fst_split_app in IHditvals.
+                           simpl in IHditvals.
+
+                           rewrite <- app_assoc in IHditvals.
+
+                           (* Applies IHditvals *)
+                           apply (IHditvals Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                                            His_dec_list Hperm_app Hincl_newd_app Hnodup_fs_newd).
+                         
+                (* CASE (get_value Nat.eq_dec t (reset s)) = None *)
+                ** intros Hget_v_reset.
+
+                   deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_reset.
+                   apply in_fst_split in Hin_t_fs_reset.
+                   explode_well_defined_sitpn_state Hwell_def_s.
+                   rewrite <- (Hwf_state_ditvals t) in Hin_t_fs_reset.
+                   rewrite (Hwf_state_reset t) in Hin_t_fs_reset.
+                   clear_well_defined_sitpn_state.
+
+                   specialize (get_value_no_error Nat.eq_dec t (reset s) Hin_t_fs_reset)
+                     as Hex_get_v.
+                   inversion_clear Hex_get_v as (value & Hget_v_some).
+                   rewrite Hget_v_reset in Hget_v_some.
+                   inversion Hget_v_some.
+
+          (* CASE (is_sensitized sitpn (marking s) (lneighbours sitpn t) t) = Some false *)
+          -- specialize (IHditvals (new_ditvals ++ [(t, active (dec_itval sitval))])).
+
+             (* Strategy: apply IHditvals, then we need premises. *)
+
+             (* Builds incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s') 
+                   To do that, we need to show (t, active (dec_itval sitval)) ∈ (d_intervals s') using
+                   Hspec.
+              *)
+             assert (Hin_t_ditvalss' : In (t, active (dec_itval sitval)) (d_intervals s')).
+             {
+               
+               (* Strategy: get the right Sitpn semantics rule from
+                               Hspec and specialize it. *)
+               inversion Hspec.
+               clear H H0 H1 H2 H3 H4 H5 H7 H8 H9 H10 H11 H12.
+               rename H6 into Hsens_and_fired_reset.
+
+               (* Gets In t (fs (d_intervals s)) *)
+               deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_ditvals.
+               apply in_fst_split in Hin_t_fs_ditvals.
+
+               (* Gets ~IsSensitized \/ ... *)
+               assert (Hin_t_transs := Hin_t_fs_ditvals).
+               explode_well_defined_sitpn_state Hwell_def_s.
+               rewrite <- (Hwf_state_ditvals t) in Hin_t_transs.
+               apply proj1 in Hin_t_transs.
+
+               assert (Hnot_sens := His_sens).
+               rewrite (not_is_sensitized_iff (marking s) t Hwell_def_sitpn
+                                              Hwf_state_marking Hin_t_transs)
+                 in Hnot_sens.
+               clear_well_defined_sitpn_state.
+               specialize (or_introl
+                             (IsSensitized sitpn (marking s) t
+                              /\ (In (t, true) (reset s) \/ In t (fired s)))
+                             Hnot_sens)
+                 as Hv_notsens_sens.
+               
+               symmetry in Heq_some_sitval.
+               apply (Hsens_and_fired_reset t sitval Hin_t_fs_ditvals Hv_notsens_sens
+                                            Heq_some_sitval).
+             }
+             
+             (* Then, we can deduce incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s') *)
+             assert (Hincl_newd_app : incl (new_ditvals ++ [(t, active (dec_itval sitval))]) (d_intervals s')).
+             {
+               intros x Hin_app.
+               apply in_app_or in Hin_app.
+               inversion_clear Hin_app as [Hin_x_newd | Heq_x_t];
+                 [ apply (Hincl_newd x Hin_x_newd) |
+                   inversion_clear Heq_x_t as [Heq | Hin_nil];
+                   [ rewrite <- Heq; assumption |
+                     inversion Hin_nil
+                   ]
+                 ].
+             }
+
+             (* Builds IsDecListCons ditvals (d_intervals s) *)
+             apply is_dec_list_cons_cons in His_dec_list.
+             
+             (* Builds Permutation and NoDup hyps by rewriting IH. *) 
+
+             unfold fs in Hperm_app.
+             rewrite fst_split_app in Hperm_app.
+             rewrite fst_split_cons_app in Hperm_app.
+             simpl in Hperm_app.
+
+             unfold fs in Hnodup_fs_newd.
+             rewrite fst_split_app in Hnodup_fs_newd.
+             rewrite fst_split_cons_app in Hnodup_fs_newd.
+             simpl in Hnodup_fs_newd.
+             
+             unfold fs in IHditvals.
+             rewrite fst_split_app in IHditvals.
+             rewrite fst_split_app in IHditvals.
+             simpl in IHditvals.
+
+             rewrite <- app_assoc in IHditvals.
+
+             (* Applies IHditvals *)
+             apply (IHditvals Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                              His_dec_list Hperm_app Hincl_newd_app Hnodup_fs_newd).
+            
         (* CASE (is_sensitized sitpn (marking s) (lneighbours sitpn t) t) = None, 
            impossible regarding the hypotheses.
          *)
@@ -164,7 +596,6 @@ Section UpdateTimeIntervalsComplete.
         rewrite <- (Hwf_state_ditvals t) in Hin_fs_sditvals.
         apply proj2 in Hin_fs_sditvals.
         contradiction.
-  Admitted.
-           
+  Qed.
            
 End UpdateTimeIntervalsComplete.

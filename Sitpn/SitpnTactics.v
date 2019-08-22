@@ -570,7 +570,8 @@ Ltac deduce_in_from_is_dec_list_cons_as hyp_is_dec intro_pattern :=
     specialize (is_dec_list_cons_incl hyp_is_dec);
     intros Hincl;
     assert (Hin_eq : In a (a :: l)) by (apply in_eq);
-    specialize (Hincl a Hin_eq) as intro_pattern
+    specialize (Hincl a Hin_eq) as intro_pattern;
+    clear Hin_eq
   | _ => fail "Expected parameter of type IsDecListCons (?a :: ?l) ?m"
   end.
 
