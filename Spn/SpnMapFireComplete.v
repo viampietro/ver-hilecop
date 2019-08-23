@@ -829,16 +829,19 @@ Proof.
     + simpl in Hincl_sf; rewrite app_nil_r in Hincl_sf.
       simpl in Hnodup_app; rewrite app_nil_r in Hnodup_app.
       explode_well_defined_spn_state Hwell_def_s'.
+
       (* NoDup l ∧ NoDup l' ∧ incl l l' ∧ incl l' l ⇒ Permutation l l' *)
       assert (Hincl_iff : forall a : Trans, In a fired_transitions <-> In a (fired s'))
-             by (intros a; split; [ specialize (Hincl_f a); assumption |
-                                    specialize (Hincl_sf a); assumption ]).               
+        by (intros a; split; [ specialize (Hincl_f a); assumption |
+                               specialize (Hincl_sf a); assumption ]).               
       apply (NoDup_Permutation Hnodup_app Hnodup_state_fired Hincl_iff).
       
   (* INDUCTION CASE, pgroups = a :: pgroups *)
   - simpl; unfold spn_fire.
-    (* We need to specialize spn_fire_aux_complete to rewrite spn_fire_aux
-       in the goal. Then, we'll apply IHpgroups. *)
+    
+    (* We need to specialize spn_fire_aux_complete to rewrite
+       spn_fire_aux in the goal. Then, we'll be able to build premises
+       necessary to apply IHpgroups. *)
 
     (* To specialize spn_fire_aux_complete, we need a few hypotheses: *)
     
@@ -887,7 +890,7 @@ Proof.
                 In t a /\ In t (fired s') ->
                 In t ([] ++ a)) by (intros t Hin_t_a; apply proj1 in Hin_t_a; auto).
 
-    (* Then, specialize spn_fire_aux *)
+    (* Then, specializes spn_fire_aux *)
     specialize (spn_fire_aux_complete
                   spn s s' Hwell_def_spn Hwell_def_state Hwell_def_s' Hspec
                   a a [] (marking s) Hin_a_pgs Hin_fpg_app His_dec_refl Hnodup_a Hincl_nil
@@ -905,13 +908,15 @@ Proof.
     (* 4 subgoals, 3 trivials, 1 difficult. *)
     + apply (is_dec_list_cons_cons His_dec).
     + rewrite concat_cons in Hnodup_app.
-      specialize (spn_fire_aux_nodup_fired spn s (marking s) [] a fired_trs
-                                           Hwell_def_spn Hwell_def_state Hnodup_a
-                                           Hspn_fire_aux) as Hnodup_incl_w.
+      specialize (spn_fire_aux_nodup_fired
+                    spn s (marking s) [] a fired_trs
+                    Hwell_def_spn Hwell_def_state Hnodup_a
+                    Hspn_fire_aux) as Hnodup_incl_w.
       inversion_clear Hnodup_incl_w as (Hnodup_ftrs & Hincl_ftrs_a).
       rewrite <- app_assoc.
-      apply (nodup_app_incl fired_transitions a (concat pgroups) fired_trs
-                            Hnodup_app Hnodup_ftrs Hincl_ftrs_a).
+      apply (nodup_app_incl
+               fired_transitions a (concat pgroups) fired_trs
+               Hnodup_app Hnodup_ftrs Hincl_ftrs_a).
     + intros x Hin_x_fsp.
       rewrite <- app_assoc.
       specialize (Hincl_sf x Hin_x_fsp).

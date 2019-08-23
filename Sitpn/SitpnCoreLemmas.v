@@ -9,6 +9,7 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 Require Import Hilecop.Sitpn.SitpnTactics.
 Require Import Hilecop.Utils.HilecopLemmas.
 Require Import Hilecop.Utils.HilecopTactics.
+Require Import Hilecop.Utils.HilecopDefinitions.
 
 (* Import tertium non datur axiom. *)
 
@@ -1631,6 +1632,7 @@ End InList.
 Section HasEnteredTimeWindow.
 
   (** Correctness lemma for [has_entered_time_window]. *)
+
   Lemma has_entered_time_window_correct :
     forall (sitpn : Sitpn)
            (d_intervals : list (Trans * DynamicTimeInterval))
@@ -1719,7 +1721,47 @@ Section HasEnteredTimeWindow.
     (* CASE s_intervals = None *)
     - injection Hfun as Hfun; inversion Hfun.
   Qed.
-    
+
+  (** No error lemma for [has_entered_time_window]. *)
+
+  Lemma has_entered_time_window_no_error :
+    forall (sitpn : Sitpn)
+           (d_intervals : list (Trans * DynamicTimeInterval))
+           (t : Trans),
+      s_intervals sitpn t = None \/ In t (fs d_intervals) ->
+      exists b : bool,
+        has_entered_time_window sitpn d_intervals t = Some b.
+  Proof.
+    intros sitpn d_intervals t Hv_sitvals_ditvals.
+    inversion_clear Hv_sitvals_ditvals as [Heq_none_sitvals | Hin_t_fs_ditvals].
+
+    (* CASE s_intervals sitpn t = None *)
+    - unfold has_entered_time_window.
+      rewrite Heq_none_sitvals; exists true; reflexivity.
+      
+    (* CASE In t (fs (d_intervals)) *)
+    - unfold has_entered_time_window.
+      destruct (s_intervals sitpn t).
+
+      (* CASE s_intervals = Some _ *)
+      +
+        
+        (* Specializes get_value_no_error and rewrites the goal. *)
+        specialize (get_value_no_error Nat.eq_dec t d_intervals Hin_t_fs_ditvals) as Hex_gv.
+        inversion_clear Hex_gv as (value & Hgv).
+        rewrite Hgv.
+        destruct value.
+
+        (* CASE value = active {| min_t := 0 |} *)
+        -- destruct t1; destruct min_t; [exists true; auto | exists false; auto].
+
+        (* CASE value = _ *)
+        -- exists false; reflexivity.
+           
+      (* CASE s_intervals = None *)
+      + exists true; reflexivity.      
+  Qed.
+  
 End HasEnteredTimeWindow.
 
 (** * Lemmas about [are_all_conditions_true] and its spec. *)
@@ -1966,5 +2008,48 @@ Section SitpnIsFirable.
     - inversion Hfun.
   Qed.
 
+  (** No error lemma for [sitpn_is_firable]. *)
+
+  Lemma sitpn_is_firable_no_error :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (t : Trans),
+      incl (flatten_neighbours (lneighbours sitpn t)) (fst (split (marking s))) ->
+      s_intervals sitpn t = None \/ In t (fs (d_intervals s)) ->
+      exists b : bool,
+        sitpn_is_firable sitpn s (lneighbours sitpn t) t = Some b.
+  Proof.
+    intros sitpn s t Hincl_fn_ms Hin_t_fs_ditvals.
+
+    unfold sitpn_is_firable.
+
+    (* Specializes is_sensitized_no_error, then rewrites the goal. *)
+    
+    specialize (is_sensitized_no_error sitpn (marking s) t Hincl_fn_ms)
+      as Hex_is_sens.
+    inversion_clear Hex_is_sens as (is_sens_res & His_sens).
+    rewrite His_sens.
+    destruct is_sens_res.
+
+    (* CASE is_sensitized = Some true. *)
+    -
+      
+      (* Specializes has_entered_time_window_no_error, then rewrites the goal. *)
+      specialize (has_entered_time_window_no_error sitpn (d_intervals s) t Hin_t_fs_ditvals)
+        as Hex_ent_time.
+      inversion_clear Hex_ent_time as (ent_time_res & Hent_time).
+      rewrite Hent_time.
+      destruct ent_time_res.
+
+      (* CASE has_entered_time_window = Some true *)
+      + exists (are_all_conditions_true sitpn (cond_values s) t); reflexivity.
+
+      (* CASE has_entered_time_window = Some false *)
+      + exists false; reflexivity.
+        
+    (* CASE is_sensitized = Some false. *)
+    - exists false; reflexivity.    
+  Qed.
+  
 End SitpnIsFirable.
 

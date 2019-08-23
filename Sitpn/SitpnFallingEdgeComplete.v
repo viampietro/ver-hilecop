@@ -119,5 +119,7 @@ Proof.
                 sitpn s s' time_value env (conditions sitpn) []
                 Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
                 His_dec_conds Hperm_conds_cs' Hincl_nil_condv Hnodup_app_nil_conds)
-    as Hperm_condv.  
+    as Hperm_condv.
+  
+  
 Admitted.
