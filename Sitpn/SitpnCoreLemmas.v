@@ -1873,6 +1873,63 @@ Section SitpnIsFirable.
       assumption.
   Qed.
 
+  (** A transition t is firable at state s' if it is
+      firable at state s and if s and s' have same
+      marking, dynamic intervals, and condition values modulo
+      permutation, and conversely. *)
+
+  Lemma sitpn_is_firable_iff_perm :
+    forall (sitpn : Sitpn)
+           (s s' : SitpnState)
+           (t : Trans),
+      (marking s) = (marking s') ->
+      Permutation (d_intervals s) (d_intervals s') ->
+      Permutation (cond_values s) (cond_values s') ->
+      SitpnIsFirable sitpn s t <-> SitpnIsFirable sitpn s' t.
+  Proof.
+    intros sitpn s s' t Heq_m Hperm_ditvals Hperm_condv; split;
+
+    let deduce_goal state :=
+        (
+          intros His_firable;
+          unfold SitpnIsFirable in His_firable;
+
+          (* Builds hypotheses composing SitpnIsFirable state *)
+         
+          assert (Hhas_ent : HasEnteredTimeWindow sitpn (d_intervals state) t)
+            by 
+              (
+                apply proj2, proj1 in His_firable;
+                unfold HasEnteredTimeWindow in *;
+                inversion_clear His_firable as [Heq_sitvals_none | Hin_ditvals];
+                [
+                  left; auto
+                |
+                inversion_clear Hin_ditvals as (up_bound & Hin_upb_ditvals);
+                (rewrite Hperm_ditvals in Hin_upb_ditvals || rewrite <- Hperm_ditvals in Hin_upb_ditvals);
+                right; exists up_bound; auto
+                ]
+              );
+
+          assert (Hhas_reached : HasReachedAllConditions sitpn (cond_values state) t)
+            by
+              (
+                do 2 (apply proj2 in His_firable);
+                unfold HasReachedAllConditions in *;
+                intros c; (rewrite <- Hperm_condv || rewrite Hperm_condv);
+                apply (His_firable c)
+              );
+
+         (* Gets IsSensitized (marking s') then concludes. *)
+         
+         apply proj1 in His_firable;
+         (rewrite Heq_m in His_firable || rewrite <- Heq_m in His_firable);
+
+         apply (conj His_firable (conj Hhas_ent Hhas_reached))
+        )
+    in deduce_goal s || deduce_goal s'.
+  Qed.
+  
   (** Correctness lemma for sitpn_is_firable. *)
   
   Lemma sitpn_is_firable_correct :
@@ -1909,7 +1966,7 @@ Section SitpnIsFirable.
           as Hhas_entered_time;
 
         (* Builds premises and specializes are_all_conditions_true 
-         to get HasReachedAllConditions. *)
+           to get HasReachedAllConditions. *)
         injection Hfun as Hare_all_cond;
         specialize (are_all_conditions_true_correct sitpn (cond_values s) t Hare_all_cond)
           as Hhas_reached_all_cond;
@@ -1926,6 +1983,66 @@ Section SitpnIsFirable.
       || inversion Hfun.      
   Qed.
 
+  (** Correctness lemma for sitpn_is_firable,
+      with a state [s] that is not well-defined. *)
+  
+  Lemma sitpn_is_firable_correct_no_wd :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      places sitpn = (fs (marking s)) ->
+      Permutation (conditions sitpn) (fs (cond_values s)) ->
+      In t (transs sitpn) ->
+      sitpn_is_firable sitpn s (lneighbours sitpn t) t = Some true ->
+      SitpnIsFirable sitpn s t.
+  Proof.
+    intros sitpn s t Hwell_def_sitpn Heq_ms Hperm_conds
+           Hin_t_transs Hfun;
+      functional induction (sitpn_is_firable sitpn s (lneighbours sitpn t) t)
+                 using sitpn_is_firable_ind;
+      unfold SitpnIsFirable;
+
+      (* GENERAL CASE, all went well. 
+      
+       We need to apply correctness lemmas is_sensitized,
+       has_entered_time_window and are_all_conditions_true. *)
+      (
+        (* Builds premises and specializes is_sensitized_correct
+         to get IsSensitized. *)
+        specialize (is_sensitized_correct (marking s) t Hwell_def_sitpn
+                                          Heq_ms Hin_t_transs e)
+        as His_sens;
+
+        (* Builds premises and specializes has_entered_time_window
+         to get HasEnteredTimeWindow. *)
+        specialize (has_entered_time_window_correct sitpn (d_intervals s) t e1)
+          as Hhas_entered_time;
+
+        (* Builds premises and specializes are_all_conditions_true 
+         to get HasReachedAllConditions. *)
+        assert (Hhas_reached_all_cond : HasReachedAllConditions sitpn (cond_values s) t)
+          by
+            (injection Hfun as Hare_all_cond;
+             specialize (are_all_conditions_true_correct sitpn (cond_values s) t Hare_all_cond)
+               as Hhas_reached_all_cond;
+             unfold HasReachedAllConditions;
+             unfold fs in Hperm_conds;
+             intros c; rewrite Hperm_conds;
+             apply (Hhas_reached_all_cond c));
+          
+          (* Applies conjunctions of lemmas. *)
+          apply (conj His_sens (conj Hhas_entered_time Hhas_reached_all_cond))
+        
+      )
+        
+      (* CASES true = false *)
+      || (injection Hfun as Hfun; inversion Hfun) 
+
+      (* ERROR CASES *)
+      || inversion Hfun.      
+  Qed.
+  
   Lemma not_sitpn_is_firable_correct :
     forall (sitpn : Sitpn)
            (s : SitpnState)
@@ -2008,6 +2125,87 @@ Section SitpnIsFirable.
     - inversion Hfun.
   Qed.
 
+  Lemma not_sitpn_is_firable_correct_no_wd :
+    forall (sitpn : Sitpn)
+           (s : SitpnState)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      places sitpn = (fs (marking s)) ->
+      Permutation (conditions sitpn) (fs (cond_values s)) ->
+      NoDup (fs (d_intervals s)) ->
+      In t (transs sitpn) ->
+      sitpn_is_firable sitpn s (lneighbours sitpn t) t = Some false ->
+      ~SitpnIsFirable sitpn s t.
+  Proof.
+    intros sitpn s t Hwell_def_sitpn Heq_ms Hperm_conds Hnodup_ditvals Hin_t_transs;
+      functional induction (sitpn_is_firable sitpn s (lneighbours sitpn t) t)
+                 using sitpn_is_firable_ind;
+      intros Hfun His_firable;
+      unfold SitpnIsFirable in His_firable.
+
+    (* CASE are_all_conditions_true = false. 
+       
+       Show that it is in contradiction with HasReacheAllConditions
+       in SitpnIsFirable. *)
+    
+    - injection Hfun as Hare_all_cond_false.
+      
+      (* Gets ~HasReachedAllConditions, i.e: 
+         ∃c, c ∈ conditions ∧ C(t, c) ∧ (c, false) ∈ cond_values. *)
+      specialize (not_are_all_conditions_true_correct sitpn (cond_values s) t Hare_all_cond_false)
+        as Hex_cond_false.
+
+      (* Creates (c, false) ∈ cond_values has an independent hyp. in
+         the context. *)
+      inversion_clear Hex_cond_false as (c & Hcond_false).
+      rewrite <- Hperm_conds in Hcond_false.
+      inversion_clear Hcond_false as (Hin_c_conds & Hw_cond_false);
+        inversion_clear Hw_cond_false as (Hhas_cond_true & Hcond_false).
+
+      (* Specializes HasReacheAllConditions in SitpnIsFirable to get
+         (c, true) ∈ cond_values in the context. *)
+      do 2 (apply proj2 in His_firable).
+      unfold HasReachedAllConditions in His_firable.
+      specialize (His_firable c Hin_c_conds Hhas_cond_true) as Hcond_true.
+      
+      (* Shows contradiction with (c, true) ∈ cond_values and
+         (c, false) ∈ cond_values and NoDup (fs cond_values). *)
+      explode_well_defined_sitpn.
+      assert (Hnodup_condv := Hnodup_cond).
+      unfold NoDupConditions in Hnodup_condv.
+      rewrite Hperm_conds in Hnodup_condv.
+      assert (Heq_fs_c : fst (c, true) = fst (c, false)) by auto.
+      specialize (nodup_same_pair (cond_values s) Hnodup_condv (c, true) (c, false)
+                                  Hcond_true Hcond_false Heq_fs_c)
+        as Heq_pair_c.
+      injection Heq_pair_c as Heq_true_false; inversion Heq_true_false.
+      
+    (* CASE has_entered_window = false. 
+       
+       Show that it is in contradiction with HasEnteredTimeWindow
+       in SitpnIsFirable. *)
+    - specialize (not_has_entered_time_window_correct Hnodup_ditvals e1)
+        as Hnot_has_entered.
+      apply proj2 in His_firable; apply proj1 in His_firable.
+      contradiction.
+
+    (* ERROR CASE, has_entered_time_window = None *)
+    - inversion Hfun.
+
+    (* CASE is_sensitized = false. *)
+    - (* Builds premises and specializes is_sensitized_correct
+         to get IsSensitized. *)
+      specialize (not_is_sensitized_iff (marking s) t Hwell_def_sitpn
+                                        Heq_ms Hin_t_transs)
+        as His_sens_eq.
+      rewrite His_sens_eq in e.
+      apply proj1 in His_firable.
+      contradiction.
+
+    (* ERROR CASE, is_sensitized = None *)
+    - inversion Hfun.
+  Qed.
+  
   (** No error lemma for [sitpn_is_firable]. *)
 
   Lemma sitpn_is_firable_no_error :

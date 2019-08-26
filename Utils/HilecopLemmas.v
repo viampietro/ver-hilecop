@@ -15,6 +15,10 @@ Export ListNotations.
 
 Require Import Hilecop.Utils.HilecopDefinitions.
 
+(** Import Setoid library, needed to define parametric relation. *)
+
+Require Import Coq.Setoids.Setoid.
+
 (** * Helper lemmas for the Hilecop program *)
 
 (*===================================================*  
@@ -682,3 +686,37 @@ Proof.
   apply (NoDup_Permutation Hnodup_fs_l Hnodup_fs_m Hequiv_lm).
 Qed.
 
+(** Equality between [map fst] and [fst (split)]
+    applied to some list l.
+ *)
+
+Lemma map_fst_split_eq {A B : Type} :
+  forall (l : list (A * B)),
+    map fst l = fst (split l).
+Proof.
+  induction l.
+
+  (* l = [] *)
+  - simpl; reflexivity.
+
+  (* a::l *)
+  - destruct a.
+    rewrite fst_split_cons_app.
+    simpl.
+    rewrite IHl; reflexivity.
+Qed.
+
+
+(** Declares [fst (split)] as a morphism of the Permutation
+    relation. *)
+
+Add Parametric Morphism A B : (@fs A B)
+    with signature (@Permutation (A * B)) ==> (@Permutation A)
+      as fst_split_morphism.
+Proof.
+  intros x y Hperm.
+  apply (Permutation_map fst) in Hperm.
+  rewrite (map_fst_split_eq x) in Hperm.
+  rewrite (map_fst_split_eq y) in Hperm.
+  assumption.
+Qed.
