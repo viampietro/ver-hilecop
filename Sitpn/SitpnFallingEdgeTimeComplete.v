@@ -102,8 +102,8 @@ Section UpdateTimeIntervalsComplete.
                   (* Strategy: get the right Sitpn semantics rule from
                                Hspec and specialize it. *)
                   inversion Hspec.
-                  clear H H0 H1 H2 H3 H4 H5 H7 H8 H9 H10 H11 H12.
-                  rename H6 into Hsens_and_fired_reset.
+                  clear H H0 H1 H2 H3 H4 H5 H6 H8 H9 H10 H11 H12 H13.
+                  rename H7 into Hsens_and_fired_reset.
 
                   (* Gets In t (fs (d_intervals s)) *)
                   deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_ditvals.
@@ -199,8 +199,8 @@ Section UpdateTimeIntervalsComplete.
                          (* Strategy: get the right Sitpn semantics rule from
                                Hspec and specialize it. *)
                          inversion Hspec.
-                         clear H H0 H1 H2 H3 H4 H5 H7 H8 H9 H10 H11 H12.
-                         rename H6 into Hsens_and_fired_reset.
+                         clear H H0 H1 H2 H3 H4 H5 H6 H8 H9 H10 H11 H12 H13.
+                         rename H7 into Hsens_and_fired_reset.
 
                          (* Gets In t (fs (d_intervals s)) *)
                          deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_ditvals.
@@ -293,8 +293,8 @@ Section UpdateTimeIntervalsComplete.
                              (* Strategy: get the right Sitpn semantics rule from
                                           Hspec and specialize it. *)
                              inversion Hspec.
-                             clear H H0 H1 H2 H3 H4 H5 H6 H8 H9 H10 H11 H12.
-                             rename H7 into Hsens_and_notfired_reset.
+                             clear H H0 H1 H2 H3 H4 H5 H6 H7 H9 H10 H11 H12.
+                             rename H8 into Hsens_and_notfired_reset.
 
                              (* Gets In t (fs (d_intervals s)) *)
                              deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_ditvals.
@@ -377,8 +377,8 @@ Section UpdateTimeIntervalsComplete.
                              (* Strategy: get the right Sitpn semantics rule from
                                           Hspec and specialize it. *)
                              inversion Hspec.
-                             clear H H0 H1 H2 H3 H4 H5 H6 H7 H9 H10 H11 H12.
-                             rename H8 into Hsens_and_notfired_reset.
+                             clear H H0 H1 H2 H3 H4 H5 H6 H7 H8 H10 H11 H12 H13.
+                             rename H9 into Hsens_and_notfired_reset.
 
                              (* Gets In t (fs (d_intervals s)) *)
                              deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_ditvals.
@@ -477,8 +477,8 @@ Section UpdateTimeIntervalsComplete.
                (* Strategy: get the right Sitpn semantics rule from
                                Hspec and specialize it. *)
                inversion Hspec.
-               clear H H0 H1 H2 H3 H4 H5 H7 H8 H9 H10 H11 H12.
-               rename H6 into Hsens_and_fired_reset.
+               clear H H0 H1 H2 H3 H4 H5 H6 H8 H9 H10 H11 H12 H13.
+               rename H7 into Hsens_and_fired_reset.
 
                (* Gets In t (fs (d_intervals s)) *)
                deduce_in_from_is_dec_list_cons His_dec_list as Hin_t_fs_ditvals.

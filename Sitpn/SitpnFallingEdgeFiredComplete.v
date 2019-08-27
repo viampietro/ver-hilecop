@@ -289,8 +289,8 @@ Section SitpnMapFireComplete.
           (* Then, inversion Hspec and specialization of one of the spec rule, 
              to obtain In a (fired s'). *)
           inversion Hspec.
-          clear H H0 H1 H3 H4 H5 H6 H7 H8 H9 H10 H12;
-            rename H2 into Heq_marking, H11 into Hsens_by_res.
+          clear H H0 H1 H3 H4 H5 H6 H7 H8 H9 H10 H11 H13;
+            rename H2 into Heq_marking, H12 into Hsens_by_res.
 
           (* Builds SitpnIsfirable sitpn s' a *)
 
@@ -592,8 +592,8 @@ Section SitpnMapFireComplete.
           (* Then, inversion Hspec and specialization of one of the spec rule, 
              to obtain In a (fired s'). *)
           inversion Hspec.
-          clear H H0 H1 H3 H4 H5 H6 H7 H8 H9 H10 H11;
-            rename H2 into Heq_marking, H12 into Hnot_sens_by_res.
+          clear H H0 H1 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12;
+            rename H2 into Heq_marking, H13 into Hnot_sens_by_res.
 
           (* Builds SitpnIsfirable sitpn s' a *)
 
@@ -802,8 +802,8 @@ Section SitpnMapFireComplete.
            that a ∉ (fired s'). Very useful in the following proof. *)
 
         inversion Hspec.
-        clear H H0 H1 H3 H4 H5 H6 H7 H8 H9 H11 H12.
-        rename H10 into Hnot_firable, H2 into Heq_marking.
+        clear H H0 H1 H3 H4 H5 H6 H7 H8 H9 H10 H12 H13.
+        rename H11 into Hnot_firable, H2 into Heq_marking.
 
         (* We need to specialize not_sitpn_is_firable_correct_no_wd 
            to get SitpnIsFirable sitpn tmp_state t. *)

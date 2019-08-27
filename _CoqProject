@@ -29,4 +29,12 @@ Sitpn/SitpnRisingEdgeCorrect.v
 
 Sitpn/SitpnCorrect.v
 
+Sitpn/SitpnFallingEdgeInterpretationComplete.v
+Sitpn/SitpnFallingEdgeFiredComplete.v
+Sitpn/SitpnFallingEdgeTimeComplete.v
+Sitpn/SitpnFallingEdgeComplete.v
+
+Sitpn/SitpnRisingEdgeComplete.v
+
+Sitpn/SitpnComplete.v
 

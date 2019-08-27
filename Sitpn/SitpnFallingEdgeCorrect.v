@@ -9,6 +9,7 @@ Require Import Hilecop.Sitpn.SitpnSemantics.
 Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
 Require Import Hilecop.Sitpn.SitpnWellDefTime.
 Require Import Hilecop.Sitpn.SitpnWellDefMarking.
+Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
 
 (* Import lemmas about interpretation-related semantics rules. *)
 
@@ -50,6 +51,9 @@ Proof.
   (* CASE marking s = marking s' *)
   - apply (sitpn_falling_edge_same_marking sitpn s s' time_value env Hfun).
 
+  (* CASE exec_f s = exec_f s' *)
+  - apply (sitpn_falling_edge_same_functions sitpn s time_value env s' Hfun).
+    
   (* CASE ∀ c ∈ C, cond'(c) = env(c) *)
   - apply (sitpn_falling_edge_get_condv sitpn s time_value env s' Hfun).
 

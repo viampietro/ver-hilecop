@@ -552,6 +552,9 @@ Inductive SitpnSemantics
     (* Marking stays the same between state s and s'. *)
     s.(marking) = s'.(marking) ->
 
+    (* Function execution orders stay the same between s and s'. *)
+    s.(exec_f) = s'.(exec_f) ->
+    
     (* Conditions values in s' receive new values from the
        environment, i.e: 
 

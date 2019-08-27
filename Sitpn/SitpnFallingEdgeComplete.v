@@ -120,6 +120,84 @@ Proof.
                 Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
                 His_dec_conds Hperm_conds_cs' Hincl_nil_condv Hnodup_app_nil_conds)
     as Hperm_condv.
+
+  (* Specializes sitpn_map_fire_complete (and builds hypotheses to do so). *)
   
-  
-Admitted.
+  assert (Heq_m_tmp : marking tmp_state = marking s)
+    by (simpl; reflexivity).
+
+  specialize (@sitpn_map_fire_complete sitpn s s' time_value env tmp_state
+                                       Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                                       Heq_m_tmp Hperm_ditvals Hperm_condv)
+    as Hex_sitpn_map_fire.
+
+  (* Explodes the sitpn_map_fire hypothesis, and rewrites the goal. *)
+  inversion_clear Hex_sitpn_map_fire as (final_fired & Hsitpn_map_fire_w).
+  inversion_clear Hsitpn_map_fire_w as (Hsitpn_map_fire & Hperm_ff).
+  rewrite Hsitpn_map_fire.
+
+  (* Instantiates istate. *)
+  exists ({|
+             fired := final_fired;
+             marking := marking tmp_state;
+             d_intervals := d_intervals tmp_state;
+             reset := reset tmp_state;
+             cond_values := cond_values tmp_state;
+             exec_a := exec_a tmp_state;
+             exec_f := exec_f tmp_state |}).
+
+  (* Proves equality and relation sitpn_state_eq. *)
+  split.
+
+  (* Proves trivial equality. *)
+  - reflexivity.
+
+  (* Proves that sitpn_state_eq relation holds between s' and
+     istate. *)
+  - unfold sitpn_state_eq; repeat split; simpl.
+
+    (* Permutation (marking s') (marking s)  *)
+    + inversion Hspec; rewrite H2; reflexivity.
+
+    (* Permutation (fired s') (fired istate) *)
+    + symmetry; assumption.
+
+    (* Permutation (d_intervals s') (d_intervals istate) *)
+    + symmetry; assumption.
+      
+    (* Permutation (reset s') (reset istate) *)
+    + inversion Hspec; rewrite H10; reflexivity.
+
+    (* Permutation (cond_values s') (cond_values istate) *)
+    + symmetry; assumption.
+
+    (* Permutation (exec_a s') (exec_a istate) *)
+    + symmetry.
+      
+      (* Specializes get_action_states_complete to solve the goal: 
+         Permutation (get_action_states ...) (exec_a s'). *)
+      
+      assert (His_dec_acts : IsDecListCons (actions sitpn) (actions sitpn)) by (apply IsDecListCons_refl).
+      assert (Hperm_acts_as' : Permutation ((@fs Action bool []) ++ (actions sitpn)) (fs (exec_a s'))).
+      {
+        rewrite app_nil_l.
+        explode_well_defined_sitpn_state Hwell_def_s'.
+        rewrite Hwf_state_execa.
+        auto.
+      }
+      assert (Hincl_nil_acts : incl [] (exec_a s')) by (intros a Hin_nil; inversion Hin_nil).
+      assert (Hnodup_app_nil_acts : NoDup ((@fs Action bool []) ++ (actions sitpn))).
+      {
+        rewrite app_nil_l.
+        explode_well_defined_sitpn.
+        assumption.
+      }
+
+      apply (get_action_states_complete
+               sitpn s s' time_value env (actions sitpn) []
+               Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+               His_dec_acts Hperm_acts_as' Hincl_nil_acts Hnodup_app_nil_acts).
+
+    (* Permutation (exec_f s') (exec_f istate) *)
+    + inversion Hspec; rewrite H3; reflexivity.
+Qed.
