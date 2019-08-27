@@ -39,6 +39,7 @@ Proof.
   unfold sitpn_cycle.
 
   (* Specializes sitpn_falling_edge_complete then rewrites the goal *)
+
   specialize (sitpn_falling_edge_complete
                 sitpn s s' t env Hwell_def_sitpn
                 Hwell_def_s Hwell_def_s' Hfall_spec)
@@ -47,37 +48,17 @@ Proof.
   inversion_clear Hw_fall_fun as (Hfall_fun & Hsteq_s'_istate).
   rewrite Hfall_fun.
   
-  (* Specializes sitpn_rising_no_error, then rewrites the goal. 
-     Cannot directly rewrite the goal by specializing sitpn_rising_edge_complete. *)
-
-  (* Builds premise IsWellDefinedSitpnState sitpn inter_state 
-     to specialize sitpn_rising_edge_no_error. *)
-  specialize (sitpn_falling_edge_well_def_state
-                sitpn s istate t env Hwell_def_sitpn Hwell_def_s Hfall_fun)
-    as Hwell_def_istate.
-  specialize (sitpn_rising_edge_no_error sitpn istate Hwell_def_sitpn Hwell_def_istate)
-    as Hex_rising_fun_noerr.
-  inversion_clear Hex_rising_fun_noerr as (fstate & Hrising_fun_noerr).
-  rewrite Hrising_fun_noerr.
-  
-  (* Specializes sitpn_rising_edge_complete, then shows
-     that the fstate and fs verify the sitpn_state_eq relation. *)
+  (* Specializes sitpn_rising_edge_complete then rewrites the goal. *)
 
   specialize (sitpn_rising_edge_complete
-                sitpn s' s'' t env Hwell_def_sitpn Hwell_def_s'
-                Hwell_def_s'' Hrising_spec)
+                sitpn s' s'' t env istate
+                Hwell_def_sitpn Hwell_def_s' Hwell_def_s'' Hrising_spec Hsteq_s'_istate)
     as Hex_rising_fun.
-  inversion_clear Hex_rising_fun as (fs & Hw_rising_fun).
+  inversion_clear Hex_rising_fun as (fstate & Hw_rising_fun).
   inversion_clear Hw_rising_fun as (Hrising_fun & Hsteq_s''_fs).
-
-  specialize (sitpn_rising_edge_state_eq
-                sitpn s' fs istate fstate Hsteq_s'_istate
-                Hrising_fun Hrising_fun_noerr)
-    as Hsteq_fs_fstate.
   
-  (* Instantiates states, and proves the goal. *)
+  (* Instantiates states and completes the proof. *)
+  rewrite Hrising_fun.
   exists istate, fstate.
-  split; [reflexivity |
-          split; [ assumption | rewrite <- Hsteq_fs_fstate; assumption]
-         ].  
+  apply (conj (eq_refl (Some (istate, fstate))) (conj Hsteq_s'_istate Hsteq_s''_fs)).
 Qed.

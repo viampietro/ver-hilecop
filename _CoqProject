@@ -34,6 +34,7 @@ Sitpn/SitpnFallingEdgeFiredComplete.v
 Sitpn/SitpnFallingEdgeTimeComplete.v
 Sitpn/SitpnFallingEdgeComplete.v
 
+Sitpn/SitpnRisingEdgeMarkingComplete.v
 Sitpn/SitpnRisingEdgeComplete.v
 
 Sitpn/SitpnComplete.v

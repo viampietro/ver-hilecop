@@ -181,7 +181,6 @@ Section ModifyM.
     (* CASE p = hd *)
     - exists ((p, op n nboftokens) :: tl); reflexivity.
 
-
     (* CASE p <> hd ∧ rec = Some m' *)
     - exists ((p', n) :: m'); reflexivity.
 
