@@ -218,6 +218,43 @@ Section MapCheckFunctions.
     - inversion Hfun.
   Qed.
 
+  Lemma check_pre_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans)
+           (n : nat),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In (p, n) marking ->
+      check_pre sitpn marking p t = Some true ->
+      (pre sitpn t p) <= n.
+  Proof.
+    intros sitpn marking p t;
+      functional induction (check_pre sitpn marking p t) using check_pre_ind;
+      intros n Hwel_def_sitpn Heq_pls_fsm Hin_m Hfun.
+    
+    (* GENERAL CASE, all went well. *)
+    - apply get_value_correct in e.
+      
+      (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
+      explode_well_defined_sitpn.
+      unfold NoDupPlaces in Hnodup_places.
+      assert (Hnodup_fs_m := Hnodup_places).
+      rewrite Heq_pls_fsm in Hnodup_fs_m.
+      assert (Heq_pp : fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
+
+      specialize (nodup_same_pair
+                    marking Hnodup_fs_m (p, n) (p, nboftokens)
+                    Hin_m e Heq_pp) as Heq_nnb.
+      injection Heq_nnb as Heq_nnb.
+      rewrite <- Heq_nnb in Hfun; injection Hfun as Hfun.
+      apply (leb_complete (pre sitpn t p) n Hfun).
+
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
   (** Completeness proof for [check_pre]. *)
 
   Lemma check_pre_complete :
@@ -228,6 +265,34 @@ Section MapCheckFunctions.
            (n : nat),
       IsWellDefinedSitpn sitpn ->
       (places sitpn) = fst (split marking) ->
+      In (p, n) marking ->
+      (pre sitpn t p) <= n ->
+      check_pre sitpn marking p t = Some true.
+  Proof.
+    intros sitpn marking p t n Hwell_def_sitpn Heq_pls_fsm Hin_m Hspec.
+    unfold check_pre.
+    
+    (* Builds the condition NoDup (fst (split marking)). 
+       Necessary to apply get_value_complete. *)
+    explode_well_defined_sitpn.
+    unfold NoDupPlaces in Hnodup_places.
+    assert (Hnodup_fs_m := Hnodup_places).
+    rewrite Heq_pls_fsm in Hnodup_fs_m.
+
+    (* Specializes get_value_complete. *)
+    specialize (get_value_complete Nat.eq_dec p marking n Hnodup_fs_m Hin_m) as Hget_m.
+    rewrite Hget_m.
+    apply leb_correct in Hspec; rewrite Hspec; reflexivity.
+  Qed.
+
+  Lemma check_pre_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans)
+           (n : nat),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
       In (p, n) marking ->
       (pre sitpn t p) <= n ->
       check_pre sitpn marking p t = Some true.
@@ -329,6 +394,44 @@ Section MapCheckFunctions.
     - inversion Hfun.
   Qed.
 
+  Lemma map_check_pre_aux_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (pre_places : list Place)
+           (t : Trans)
+           (b : bool),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      incl pre_places (pre_pl (lneighbours sitpn t)) ->
+      map_check_pre_aux sitpn marking pre_places t b = Some true ->
+      forall (p : Place) (n : nat),
+        In p pre_places -> In (p, n) marking -> (pre sitpn t p) <= n.
+  Proof.
+    intros sitpn marking pre_places t b;
+      functional induction (map_check_pre_aux sitpn marking pre_places t b)
+                 using map_check_pre_aux_ind;
+      intros Hwell_def_sitpn Heq_pls_fsm Hincl_pre_pl
+             Hfun p' n Hin_pre_pl Hin_m.
+    
+    (* BASE CASE *)
+    - inversion Hin_pre_pl.
+
+    (* INDUCTION CASE *)
+    - inversion Hin_pre_pl as [Heq_pp' | Hin_p'_tail].
+      + apply map_check_pre_aux_true_if_true in Hfun.
+        apply andb_prop in Hfun; apply proj1 in Hfun.
+        rewrite Heq_pp' in e0; rewrite Hfun in e0.
+        apply (check_pre_correct_perm
+                 marking p' t n
+                 Hwell_def_sitpn Heq_pls_fsm Hin_m e0).
+      + apply incl_cons_inv in Hincl_pre_pl.
+        apply (IHo Hwell_def_sitpn Heq_pls_fsm Hincl_pre_pl
+                   Hfun p' n Hin_p'_tail Hin_m).
+
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
   (** Completeness proof for map_check_pre_aux. *)
 
   Lemma map_check_pre_aux_complete :
@@ -420,6 +523,95 @@ Section MapCheckFunctions.
       rewrite e0 in Hcheck_pre_some; inversion Hcheck_pre_some.
   Qed.
 
+  Lemma map_check_pre_aux_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (pre_places : list Place)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      In t (transs sitpn) ->
+      Permutation (places sitpn) (fs marking) ->
+      incl pre_places (pre_pl (lneighbours sitpn t)) ->
+      (forall (p : Place) (n : nat),
+          In p pre_places -> In (p, n) marking -> (pre sitpn t p) <= n) ->
+      map_check_pre_aux sitpn marking pre_places t true = Some true.
+  Proof.
+    intros sitpn marking pre_places t;
+      functional induction (map_check_pre_aux sitpn marking pre_places t true)
+                 using map_check_pre_aux_ind;
+      intros Hwell_def_sitpn Hin_t_transs Heq_pls_fsm Hincl_pre_pl Hspec.
+
+    (* BASE CASE *)
+    - reflexivity.
+
+    (* GENERAL CASE *)
+    - (* Strategy: build ∃ x, (p, x) ∈ marking to apply check_pre_complete. *)
+
+      (* Builds p ∈ (flatten_neighbours (lneighbours sitpn t)) 
+         to specialize in_neigh_in_flatten. *)
+      assert (Hin_pre_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_pre_pl p Hin_pre_pl) as Hin_pre_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours (lneighbours sitpn t)))
+        by (unfold flatten_neighbours; apply in_or_app; left; assumption).
+
+      (* Specializes in_neigh_in_flatten. *)
+      specialize (in_neigh_in_flatten t p
+                                      Hwell_def_sitpn Hin_t_transs Hin_flat) as Hin_flat_lneigh.
+
+      (* Builds (p, x) ∈ marking *)
+      explode_well_defined_sitpn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      rewrite Heq_pls_fsm in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m').
+
+      (* Builds pre sitpn t p <= x *)
+      specialize (Hspec p x Hin_pre_pl Hin_m') as Hpre_le.
+      
+      (* Applies check_pre_complete, then the induction hypothesis. *)
+      specialize (check_pre_complete_perm marking p t
+                                     Hwell_def_sitpn Heq_pls_fsm Hin_m' Hpre_le) as Hcheck_pre.
+      
+      (* Use b = true to rewrite the goal and apply the induction hypothesis. *)
+      rewrite Hcheck_pre in e0; injection e0 as Heq_btrue.
+      rewrite <- Heq_btrue in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
+      rewrite <- Heq_btrue; rewrite andb_comm; rewrite andb_true_r.
+      
+      (* Builds hypotheses and then applies IHo. *)
+      apply incl_cons_inv in Hincl_pre_pl.
+      assert (Hspec' : forall (p : Place) (n : nat),
+                 In p tail -> In (p, n) marking -> pre sitpn t p <= n)
+        by (intros p0 n Hin_tail;
+            apply in_cons with (a := p) in Hin_tail;
+            apply (Hspec p0 n Hin_tail)).
+      apply (IHo Hwell_def_sitpn Hin_t_transs Heq_pls_fsm Hincl_pre_pl Hspec').
+      
+    (* ERROR CASE, then contradiction. *)
+    - assert (Hin_pre_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_pre_pl p Hin_pre_pl) as Hin_pre_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours (lneighbours sitpn t)))
+        by (unfold flatten_neighbours; apply in_or_app; left; assumption).
+
+      (* Builds p ∈ fst (split marking) to specialize check_pre_no_error. *)
+      specialize (in_neigh_in_flatten t p Hwell_def_sitpn Hin_t_transs Hin_flat)
+        as Hin_flat_lneigh.      
+      explode_well_defined_sitpn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      specialize (Hunk_pl_neigh p Hin_flat_lneigh) as Hin_p_fsm.
+      rewrite Heq_pls_fsm in Hin_p_fsm.
+      
+      (* Applies check_pre_no_error. *)
+      specialize (check_pre_no_error sitpn marking p t Hin_p_fsm)
+        as Hcheck_pre_noerr.
+      inversion_clear Hcheck_pre_noerr as (b & Hcheck_pre_some).
+
+      (* Then, shows a contradiction. *)
+      rewrite e0 in Hcheck_pre_some; inversion Hcheck_pre_some.
+  Qed.
+  
   (** No error lemma for map_check_pre_aux. *)
 
   Lemma map_check_pre_aux_no_error :
@@ -484,6 +676,41 @@ Section MapCheckFunctions.
       apply proj2 in Hw_pre.
       specialize (Hw_pre Hnotin_pre_pl) as Hw_pre; rewrite Hw_pre; apply Peano.le_0_n.
   Qed.
+
+  Lemma map_check_pre_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      map_check_pre sitpn marking (pre_pl (lneighbours sitpn t)) t = Some true ->
+      forall (p : Place) (n : nat), In (p, n) marking -> (pre sitpn t p) <= n.
+  Proof.
+    intros sitpn marking t;
+      functional induction (map_check_pre sitpn marking (pre_pl (lneighbours sitpn t)) t)
+                 using map_check_pre_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hfun p n Hin_m.
+
+    assert (Hincl_refl : incl (pre_pl (lneighbours sitpn t)) (pre_pl (lneighbours sitpn t)))
+      by apply incl_refl.
+
+    (* Proof in two stages. *)
+    assert (Hvee_in_pre_pl := classic (In p (pre_pl (lneighbours sitpn t)))).
+    inversion Hvee_in_pre_pl as [Hin_pre_pl | Hnotin_pre_pl]; clear Hvee_in_pre_pl.
+    
+    (* First stage, p ∈ pre_places, then we apply map_check_pre_aux_correct. *)
+    - apply (map_check_pre_aux_correct_perm
+               marking t true Hwell_def_sitpn Heq_pl_fsm
+               Hincl_refl Hfun p n Hin_pre_pl Hin_m).
+      
+    (* Second stage, p ∉ pre_places, then (pre sitpn t p) = 0 *)
+    - explode_well_defined_sitpn.
+      unfold AreWellDefinedPreEdges in Hwell_def_pre.
+      specialize (Hwell_def_pre t p Hin_t_transs) as Hw_pre.
+      apply proj2 in Hw_pre.
+      specialize (Hw_pre Hnotin_pre_pl) as Hw_pre; rewrite Hw_pre; apply Peano.le_0_n.
+  Qed.
   
   (** Completeness proof for map_check_pre. *)
 
@@ -520,6 +747,39 @@ Section MapCheckFunctions.
              Heq_pl_fsm Hincl_refl Hspec_check_pre).    
   Qed.
 
+  Lemma map_check_pre_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      (forall (p : Place) (n : nat), In (p, n) marking -> (pre sitpn t p) <= n) ->
+      map_check_pre sitpn marking (pre_pl (lneighbours sitpn t)) t = Some true.
+  Proof.
+    intros sitpn marking t;
+      functional induction (map_check_pre sitpn marking (pre_pl (lneighbours sitpn t)) t)
+                 using map_check_pre_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hspec.
+    
+    (* Hypothesis : incl (pre_pl neighbours_of_t) (pre_pl neighbours_of_t) 
+       for map_check_pre_aux_complete. *)
+    assert (Hincl_refl: incl (pre_pl (lneighbours sitpn t)) (pre_pl (lneighbours sitpn t)))
+      by apply incl_refl.
+
+    (* Builds ∀ p,n, p ∈ pre_places -> (p, n) ∈ marking -> pre sitpn t p <= n 
+       to apply map_check_pre_aux_complete. *)
+    assert (Hspec_check_pre :
+              forall (p : Place) (n : nat),
+                In p (pre_pl (lneighbours sitpn t)) -> In (p, n) marking -> pre sitpn t p <= n) 
+      by (intros p n Hin_pre_pl Hin_m; apply (Hspec p n Hin_m)).
+      
+    (* Apply map_check_pre_aux_complete. *)
+    apply (map_check_pre_aux_complete_perm
+             marking t Hwell_def_sitpn Hin_t_transs
+             Heq_pl_fsm Hincl_refl Hspec_check_pre).    
+  Qed.
+  
   (** No error lemma for map_check_pre. *)
 
   Lemma map_check_pre_no_error :
@@ -577,6 +837,43 @@ Section MapCheckFunctions.
     - inversion Hfun.
   Qed.
 
+  Lemma check_test_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans)
+           (n : nat),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In (p, n) marking ->
+      check_test sitpn marking p t = Some true ->
+      (test sitpn t p) <= n.
+  Proof.
+    intros sitpn marking p t;
+      functional induction (check_test sitpn marking p t) using check_test_ind;
+      intros n Hwel_def_sitpn Heq_pls_fsm Hin_m Hfun.
+    
+    (* GENERAL CASE, all went well. *)
+    - apply get_value_correct in e.
+      
+      (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
+      explode_well_defined_sitpn.
+      unfold NoDupPlaces in Hnodup_places.
+      assert (Hnodup_fs_m := Hnodup_places).
+      rewrite Heq_pls_fsm in Hnodup_fs_m.
+      assert (Heq_pp : fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
+
+      specialize (nodup_same_pair
+                    marking Hnodup_fs_m (p, n) (p, nboftokens)
+                    Hin_m e Heq_pp) as Heq_nnb.
+      injection Heq_nnb as Heq_nnb.
+      rewrite <- Heq_nnb in Hfun; injection Hfun as Hfun.
+      apply (leb_complete (test sitpn t p) n Hfun).
+
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
   (** Completeness proof for [check_test]. *)
 
   Lemma check_test_complete :
@@ -587,6 +884,34 @@ Section MapCheckFunctions.
            (n : nat),
       IsWellDefinedSitpn sitpn ->
       (places sitpn) = fst (split marking) ->
+      In (p, n) marking ->
+      (test sitpn t p) <= n ->
+      check_test sitpn marking p t = Some true.
+  Proof.
+    intros sitpn marking p t n Hwell_def_sitpn Heq_pls_fsm Hin_m Hspec.
+    unfold check_test.
+    
+    (* Builds the condition NoDup (fst (split marking)). 
+       Necessary to apply get_value_complete. *)
+    explode_well_defined_sitpn.
+    unfold NoDupPlaces in Hnodup_places.
+    assert (Hnodup_fs_m := Hnodup_places).
+    rewrite Heq_pls_fsm in Hnodup_fs_m.
+
+    (* Specializes get_value_complete. *)
+    specialize (get_value_complete Nat.eq_dec p marking n Hnodup_fs_m Hin_m) as Hget_m.
+    rewrite Hget_m.
+    apply leb_correct in Hspec; rewrite Hspec; reflexivity.
+  Qed.
+
+  Lemma check_test_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans)
+           (n : nat),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
       In (p, n) marking ->
       (test sitpn t p) <= n ->
       check_test sitpn marking p t = Some true.
@@ -678,6 +1003,44 @@ Section MapCheckFunctions.
         apply andb_prop in Hfun; apply proj1 in Hfun.
         rewrite Heq_pp' in e0; rewrite Hfun in e0.
         apply (check_test_correct
+                 marking p' t n
+                 Hwell_def_sitpn Heq_pls_fsm Hin_m e0).
+      + apply incl_cons_inv in Hincl_test_pl.
+        apply (IHo Hwell_def_sitpn Heq_pls_fsm Hincl_test_pl
+                   Hfun p' n Hin_p'_tail Hin_m).
+
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
+  Lemma map_check_test_aux_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (test_places : list Place)
+           (t : Trans)
+           (b : bool),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      incl test_places (test_pl (lneighbours sitpn t)) ->
+      map_check_test_aux sitpn marking test_places t b = Some true ->
+      forall (p : Place) (n : nat),
+        In p test_places -> In (p, n) marking -> (test sitpn t p) <= n.
+  Proof.
+    intros sitpn marking test_places t b;
+      functional induction (map_check_test_aux sitpn marking test_places t b)
+                 using map_check_test_aux_ind;
+      intros Hwell_def_sitpn Heq_pls_fsm Hincl_test_pl
+             Hfun p' n Hin_test_pl Hin_m.
+    
+    (* BASE CASE *)
+    - inversion Hin_test_pl.
+
+    (* INDUCTION CASE *)
+    - inversion Hin_test_pl as [Heq_pp' | Hin_p'_tail].
+      + apply map_check_test_aux_true_if_true in Hfun.
+        apply andb_prop in Hfun; apply proj1 in Hfun.
+        rewrite Heq_pp' in e0; rewrite Hfun in e0.
+        apply (check_test_correct_perm
                  marking p' t n
                  Hwell_def_sitpn Heq_pls_fsm Hin_m e0).
       + apply incl_cons_inv in Hincl_test_pl.
@@ -783,6 +1146,99 @@ Section MapCheckFunctions.
       rewrite e0 in Hcheck_test_some; inversion Hcheck_test_some.
   Qed.
 
+  Lemma map_check_test_aux_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (test_places : list Place)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      In t (transs sitpn) ->
+      Permutation (places sitpn) (fs marking) ->
+      incl test_places (test_pl (lneighbours sitpn t)) ->
+      (forall (p : Place) (n : nat),
+          In p test_places -> In (p, n) marking -> (test sitpn t p) <= n) ->
+      map_check_test_aux sitpn marking test_places t true = Some true.
+  Proof.
+    intros sitpn marking test_places t;
+      functional induction (map_check_test_aux sitpn marking test_places t true)
+                 using map_check_test_aux_ind;
+      intros Hwell_def_sitpn Hin_t_transs Heq_pls_fsm Hincl_test_pl Hspec.
+
+    (* BASE CASE *)
+    - reflexivity.
+
+    (* GENERAL CASE *)
+    - (* Strategy: build ∃ x, (p, x) ∈ marking to apply check_test_complete. *)
+
+      (* Builds p ∈ (flatten_neighbours (lneighbours sitpn t)) 
+         to specialize in_neigh_in_flatten. *)
+      assert (Hin_test_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_test_pl p Hin_test_pl) as Hin_test_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours (lneighbours sitpn t)))
+        by (unfold flatten_neighbours;
+            apply in_or_app; right;
+            apply in_or_app; left; assumption).
+
+      (* Specializes in_neigh_in_flatten. *)
+      specialize (in_neigh_in_flatten t p
+                    Hwell_def_sitpn Hin_t_transs Hin_flat) as Hin_flat_lneigh.
+
+      (* Builds (p, x) ∈ marking *)
+      explode_well_defined_sitpn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      rewrite Heq_pls_fsm in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m').
+
+      (* Builds test sitpn t p <= x *)
+      specialize (Hspec p x Hin_test_pl Hin_m') as Htest_le.
+      
+      (* Applies check_test_complete, then the induction hypothesis. *)
+      specialize (check_test_complete_perm marking p t
+                    Hwell_def_sitpn Heq_pls_fsm Hin_m' Htest_le) as Hcheck_test.
+      
+      (* Use b = true to rewrite the goal and apply the induction hypothesis. *)
+      rewrite Hcheck_test in e0; injection e0 as Heq_btrue.
+      rewrite <- Heq_btrue in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
+      rewrite <- Heq_btrue; rewrite andb_comm; rewrite andb_true_r.
+      
+      (* Builds hypotheses and then applies IHo. *)
+      apply incl_cons_inv in Hincl_test_pl.
+      assert (Hspec' : forall (p : Place) (n : nat),
+                 In p tail -> In (p, n) marking -> test sitpn t p <= n)
+        by (intros p0 n Hin_tail;
+            apply in_cons with (a := p) in Hin_tail;
+            apply (Hspec p0 n Hin_tail)).
+      apply (IHo Hwell_def_sitpn Hin_t_transs Heq_pls_fsm Hincl_test_pl Hspec').
+      
+    (* ERROR CASE, then contradiction. *)
+    - assert (Hin_test_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_test_pl p Hin_test_pl) as Hin_test_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours (lneighbours sitpn t)))
+        by (unfold flatten_neighbours;
+            apply in_or_app; right;
+            apply in_or_app; left; assumption).
+
+      (* Builds p ∈ fst (split marking) to specialize check_test_no_error. *)
+      specialize (in_neigh_in_flatten t p Hwell_def_sitpn Hin_t_transs Hin_flat)
+        as Hin_flat_lneigh.      
+      explode_well_defined_sitpn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      specialize (Hunk_pl_neigh p Hin_flat_lneigh) as Hin_p_fsm.
+      rewrite Heq_pls_fsm in Hin_p_fsm.
+      
+      (* Applies check_test_no_error. *)
+      specialize (check_test_no_error sitpn marking p t Hin_p_fsm)
+        as Hcheck_test_noerr.
+      inversion_clear Hcheck_test_noerr as (b & Hcheck_test_some).
+
+      (* Then, shows a contradiction. *)
+      rewrite e0 in Hcheck_test_some; inversion Hcheck_test_some.
+  Qed.
+
   (** No error lemma for map_check_test_aux. *)
 
   Lemma map_check_test_aux_no_error :
@@ -818,7 +1274,7 @@ Section MapCheckFunctions.
            (marking : list (Place * nat))
            (t : Trans),
       IsWellDefinedSitpn sitpn ->
-      (places sitpn) =  fst (split marking) ->
+      (places sitpn) = (fs marking) ->
       In t (transs sitpn) ->
       map_check_test sitpn marking (test_pl (lneighbours sitpn t)) t = Some true ->
       forall (p : Place) (n : nat), In (p, n) marking -> (test sitpn t p) <= n.
@@ -837,6 +1293,41 @@ Section MapCheckFunctions.
     
     (* First stage, p ∈ test_places, then we apply map_check_test_aux_correct. *)
     - apply (map_check_test_aux_correct
+               marking t true Hwell_def_sitpn Heq_pl_fsm
+               Hincl_refl Hfun p n Hin_test_pl Hin_m).
+      
+    (* Second stage, p ∉ test_places, then (test sitpn t p) = 0 *)
+    - explode_well_defined_sitpn.
+      unfold AreWellDefinedTestEdges in Hwell_def_test.
+      specialize (Hwell_def_test t p Hin_t_transs) as Hw_test.
+      apply proj2 in Hw_test.
+      specialize (Hw_test Hnotin_test_pl) as Hw_test; rewrite Hw_test; apply Peano.le_0_n.
+  Qed.
+  
+  Lemma map_check_test_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      map_check_test sitpn marking (test_pl (lneighbours sitpn t)) t = Some true ->
+      forall (p : Place) (n : nat), In (p, n) marking -> (test sitpn t p) <= n.
+  Proof.
+    intros sitpn marking t;
+      functional induction (map_check_test sitpn marking (test_pl (lneighbours sitpn t)) t)
+                 using map_check_test_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hfun p n Hin_m.
+
+    assert (Hincl_refl : incl (test_pl (lneighbours sitpn t)) (test_pl (lneighbours sitpn t)))
+      by apply incl_refl.
+
+    (* Proof in two stages. *)
+    assert (Hvee_in_test_pl := classic (In p (test_pl (lneighbours sitpn t)))).
+    inversion Hvee_in_test_pl as [Hin_test_pl | Hnotin_test_pl]; clear Hvee_in_test_pl.
+    
+    (* First stage, p ∈ test_places, then we apply map_check_test_aux_correct. *)
+    - apply (map_check_test_aux_correct_perm
                marking t true Hwell_def_sitpn Heq_pl_fsm
                Hincl_refl Hfun p n Hin_test_pl Hin_m).
       
@@ -883,6 +1374,39 @@ Section MapCheckFunctions.
              Heq_pl_fsm Hincl_refl Hspec_check_test).    
   Qed.
 
+  Lemma map_check_test_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      (forall (p : Place) (n : nat), In (p, n) marking -> (test sitpn t p) <= n) ->
+      map_check_test sitpn marking (test_pl (lneighbours sitpn t)) t = Some true.
+  Proof.
+    intros sitpn marking t;
+      functional induction (map_check_test sitpn marking (test_pl (lneighbours sitpn t)) t)
+                 using map_check_test_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hspec.
+    
+    (* Hypothesis : incl (test_pl neighbours_of_t) (test_pl neighbours_of_t) 
+       for map_check_test_aux_complete. *)
+    assert (Hincl_refl: incl (test_pl (lneighbours sitpn t)) (test_pl (lneighbours sitpn t)))
+      by apply incl_refl.
+
+    (* Builds ∀ p,n, p ∈ test_places -> (p, n) ∈ marking -> test sitpn t p <= n 
+       to apply map_check_test_aux_complete. *)
+    assert (Hspec_check_test :
+              forall (p : Place) (n : nat),
+                In p (test_pl (lneighbours sitpn t)) -> In (p, n) marking -> test sitpn t p <= n) 
+      by (intros p n Hin_test_pl Hin_m; apply (Hspec p n Hin_m)).
+      
+    (* Apply map_check_test_aux_complete. *)
+    apply (map_check_test_aux_complete_perm
+             marking t Hwell_def_sitpn Hin_t_transs
+             Heq_pl_fsm Hincl_refl Hspec_check_test).    
+  Qed.
+
   (** No error lemma for map_check_test. *)
 
   Lemma map_check_test_no_error :
@@ -902,6 +1426,48 @@ Section MapCheckFunctions.
   (*! Map Check Inhib functions. !*)
   
   (** Correctness proof for [check_inhib]. *)
+
+  Lemma check_inhib_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans)
+           (n : nat),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In (p, n) marking ->
+      check_inhib sitpn marking p t = Some true ->
+      (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0.
+  Proof.
+    intros sitpn marking p t;
+      functional induction (check_inhib sitpn marking p t) using check_inhib_ind;
+      intros n Hwel_def_sitpn Heq_pls_fsm Hin_m Hfun.
+    
+    (* GENERAL CASE, all went well. *)
+    - apply get_value_correct in e.
+      
+      (* Proves that ∀ (p, n), (p, nboftokens) ∈ marking ⇒ n = nboftokens. *)
+      explode_well_defined_sitpn.
+      unfold NoDupPlaces in Hnodup_places.
+      assert (Hnodup_fs_m := Hnodup_places).
+      rewrite Heq_pls_fsm in Hnodup_fs_m.
+      assert (Heq_pp : fst (p, n) = fst (p, nboftokens)) by (simpl; reflexivity).
+
+      specialize (nodup_same_pair
+                    marking Hnodup_fs_m (p, n) (p, nboftokens)
+                    Hin_m e Heq_pp) as Heq_nnb.
+      injection Heq_nnb as Heq_nnb.
+      rewrite <- Heq_nnb in Hfun; injection Hfun as Hfun.
+      apply orb_prop in Hfun.
+      
+      (* First case: n < (inhib spn t p), second case: (inhib spn t p) = 0 *)
+      inversion Hfun as [Hinhib_lt | Hinhib_eq_0].
+      + left; apply Nat.ltb_lt; assumption.
+      + right; apply Nat.eqb_eq; assumption.
+      
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
 
   Lemma check_inhib_correct :
     forall (sitpn : Sitpn)
@@ -940,7 +1506,7 @@ Section MapCheckFunctions.
       inversion Hfun as [Hinhib_lt | Hinhib_eq_0].
       + left; apply Nat.ltb_lt; assumption.
       + right; apply Nat.eqb_eq; assumption.
-      
+        
     (* ERROR CASE *)
     - inversion Hfun.
   Qed.
@@ -955,6 +1521,37 @@ Section MapCheckFunctions.
            (n : nat),
       IsWellDefinedSitpn sitpn ->
       (places sitpn) = fst (split marking) ->
+      In (p, n) marking ->
+      (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0 ->
+      check_inhib sitpn marking p t = Some true.
+  Proof.
+    intros sitpn marking p t n Hwell_def_sitpn Heq_pls_fsm Hin_m Hspec.
+    unfold check_inhib.
+    
+    (* Builds the condition NoDup (fst (split marking)). 
+       Necessary to apply get_value_complete. *)
+    explode_well_defined_sitpn.
+    unfold NoDupPlaces in Hnodup_places.
+    assert (Hnodup_fs_m := Hnodup_places).
+    rewrite Heq_pls_fsm in Hnodup_fs_m.
+
+    (* Specializes get_value_complete. *)
+    specialize (get_value_complete Nat.eq_dec p marking n Hnodup_fs_m Hin_m) as Hget_m.
+    rewrite Hget_m; inversion Hspec as [Hinhib_lt | Hinhib_eq_0].
+    - apply Nat.ltb_lt in Hinhib_lt; rewrite Hinhib_lt.
+      rewrite orb_true_l; reflexivity.
+    - apply Nat.eqb_eq in Hinhib_eq_0; rewrite Hinhib_eq_0.
+      rewrite orb_comm; rewrite orb_true_l; reflexivity.
+  Qed.
+
+  Lemma check_inhib_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (p : Place)
+           (t : Trans)
+           (n : nat),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
       In (p, n) marking ->
       (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0 ->
       check_inhib sitpn marking p t = Some true.
@@ -1051,6 +1648,46 @@ Section MapCheckFunctions.
         apply andb_prop in Hfun; apply proj1 in Hfun.
         rewrite Heq_pp' in e0; rewrite Hfun in e0.
         apply (check_inhib_correct
+                 marking p' t n
+                 Hwell_def_sitpn Heq_pls_fsm Hin_m e0).
+      + apply incl_cons_inv in Hincl_inhib_pl.
+        apply (IHo Hwell_def_sitpn Heq_pls_fsm Hincl_inhib_pl
+                   Hfun p' n Hin_p'_tail Hin_m).
+
+    (* ERROR CASE *)
+    - inversion Hfun.
+  Qed.
+
+  Lemma map_check_inhib_aux_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (inhib_places : list Place)
+           (t : Trans)
+           (b : bool),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      incl inhib_places (inhib_pl (lneighbours sitpn t)) ->
+      map_check_inhib_aux sitpn marking inhib_places t b = Some true ->
+      forall (p : Place) (n : nat),
+        In p inhib_places ->
+        In (p, n) marking ->
+        (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0.
+  Proof.
+    intros sitpn marking inhib_places t b;
+      functional induction (map_check_inhib_aux sitpn marking inhib_places t b)
+                 using map_check_inhib_aux_ind;
+      intros Hwell_def_sitpn Heq_pls_fsm Hincl_inhib_pl
+             Hfun p' n Hin_inhib_pl Hin_m.
+    
+    (* BASE CASE *)
+    - inversion Hin_inhib_pl.
+
+    (* INDUCTION CASE *)
+    - inversion Hin_inhib_pl as [Heq_pp' | Hin_p'_tail].
+      + apply map_check_inhib_aux_true_if_true in Hfun.
+        apply andb_prop in Hfun; apply proj1 in Hfun.
+        rewrite Heq_pp' in e0; rewrite Hfun in e0.
+        apply (check_inhib_correct_perm
                  marking p' t n
                  Hwell_def_sitpn Heq_pls_fsm Hin_m e0).
       + apply incl_cons_inv in Hincl_inhib_pl.
@@ -1160,6 +1797,103 @@ Section MapCheckFunctions.
       rewrite e0 in Hcheck_inhib_some; inversion Hcheck_inhib_some.
   Qed.
 
+  Lemma map_check_inhib_aux_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (inhib_places : list Place)
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      In t (transs sitpn) ->
+      Permutation (places sitpn) (fs marking) ->
+      incl inhib_places (inhib_pl (lneighbours sitpn t)) ->
+      (forall (p : Place) (n : nat),
+          In p inhib_places ->
+          In (p, n) marking ->
+          (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0) ->
+      map_check_inhib_aux sitpn marking inhib_places t true = Some true.
+  Proof.
+    intros sitpn marking inhib_places t;
+      functional induction (map_check_inhib_aux sitpn marking inhib_places t true)
+                 using map_check_inhib_aux_ind;
+      intros Hwell_def_sitpn Hin_t_transs Heq_pls_fsm Hincl_inhib_pl Hspec.
+
+    (* BASE CASE *)
+    - reflexivity.
+
+    (* GENERAL CASE *)
+    - (* Strategy: build ∃ x, (p, x) ∈ marking to apply check_inhib_complete. *)
+
+      (* Builds p ∈ (flatten_neighbours (lneighbours sitpn t)) 
+         to specialize in_neigh_in_flatten. *)
+      assert (Hin_inhib_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_inhib_pl p Hin_inhib_pl) as Hin_inhib_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours (lneighbours sitpn t)))
+        by (unfold flatten_neighbours;
+            do 2 (apply in_or_app; right);
+            apply in_or_app; left; assumption).
+
+      (* Specializes in_neigh_in_flatten. *)
+      specialize (in_neigh_in_flatten t p
+                                      Hwell_def_sitpn Hin_t_transs Hin_flat) as Hin_flat_lneigh.
+
+      (* Builds (p, x) ∈ marking *)
+      explode_well_defined_sitpn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      apply (Hunk_pl_neigh p) in Hin_flat_lneigh.
+      rewrite Heq_pls_fsm in Hin_flat_lneigh.
+      specialize (in_fst_split_in_pair p marking Hin_flat_lneigh) as Hin_m.
+      inversion Hin_m as (x & Hin_m').
+
+      (* Builds inhib sitpn t p <= x *)
+      specialize (Hspec p x Hin_inhib_pl Hin_m') as Hinhib_le.
+      
+      (* Applies check_inhib_complete, then the induction hypothesis. *)
+      specialize (check_inhib_complete_perm
+                    marking p t Hwell_def_sitpn Heq_pls_fsm Hin_m' Hinhib_le) as Hcheck_inhib.
+      
+      (* Use b = true to rewrite the goal and apply the induction hypothesis. *)
+      rewrite Hcheck_inhib in e0; injection e0 as Heq_btrue.
+      rewrite <- Heq_btrue in IHo; rewrite andb_comm in IHo; rewrite andb_true_r in IHo.
+      rewrite <- Heq_btrue; rewrite andb_comm; rewrite andb_true_r.
+      
+      (* Builds hypotheses and then applies IHo. *)
+      apply incl_cons_inv in Hincl_inhib_pl.
+      assert (Hspec' : forall (p : Place) (n : nat),
+                 In p tail ->
+                 In (p, n) marking ->
+                 inhib sitpn t p > n \/ inhib sitpn t p = 0)
+        by (intros p0 n Hin_tail;
+            apply in_cons with (a := p) in Hin_tail;
+            apply (Hspec p0 n Hin_tail)).
+      apply (IHo Hwell_def_sitpn Hin_t_transs Heq_pls_fsm Hincl_inhib_pl Hspec').
+      
+    (* ERROR CASE, then contradiction. *)
+    - assert (Hin_inhib_pl : In p (p :: tail)) by apply in_eq.
+      specialize (Hincl_inhib_pl p Hin_inhib_pl) as Hin_inhib_pl_t.
+      assert (Hin_flat : In p (flatten_neighbours (lneighbours sitpn t)))
+        by (unfold flatten_neighbours;
+            do 2 (apply in_or_app; right);
+            apply in_or_app; left; assumption).
+
+      (* Builds p ∈ fst (split marking) to specialize check_inhib_no_error. *)
+      specialize (in_neigh_in_flatten t p Hwell_def_sitpn Hin_t_transs Hin_flat)
+        as Hin_flat_lneigh.      
+      explode_well_defined_sitpn.
+      unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+      unfold incl in Hunk_pl_neigh.
+      specialize (Hunk_pl_neigh p Hin_flat_lneigh) as Hin_p_fsm.
+      rewrite Heq_pls_fsm in Hin_p_fsm.
+      
+      (* Applies check_inhib_no_error. *)
+      specialize (check_inhib_no_error sitpn marking p t Hin_p_fsm)
+        as Hcheck_inhib_noerr.
+      inversion_clear Hcheck_inhib_noerr as (b & Hcheck_inhib_some).
+
+      (* Then, shows a contradiction. *)
+      rewrite e0 in Hcheck_inhib_some; inversion Hcheck_inhib_some.
+  Qed.
+
   (** No error lemma for map_check_inhib_aux. *)
 
   Lemma map_check_inhib_aux_no_error :
@@ -1226,6 +1960,43 @@ Section MapCheckFunctions.
       specialize (Hw_inhib Hnotin_inhib_pl) as Hw_inhib;
         rewrite Hw_inhib; right; reflexivity.
   Qed.
+
+  Lemma map_check_inhib_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      map_check_inhib sitpn marking (inhib_pl (lneighbours sitpn t)) t = Some true ->
+      forall (p : Place) (n : nat),
+        In (p, n) marking -> (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0.
+  Proof.
+    intros sitpn marking t;
+      functional induction (map_check_inhib sitpn marking (inhib_pl (lneighbours sitpn t)) t)
+                 using map_check_inhib_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hfun p n Hin_m.
+
+    assert (Hincl_refl : incl (inhib_pl (lneighbours sitpn t)) (inhib_pl (lneighbours sitpn t)))
+      by apply incl_refl.
+
+    (* Proof in two stages. *)
+    assert (Hvee_in_inhib_pl := classic (In p (inhib_pl (lneighbours sitpn t)))).
+    inversion Hvee_in_inhib_pl as [Hin_inhib_pl | Hnotin_inhib_pl]; clear Hvee_in_inhib_pl.
+    
+    (* First stage, p ∈ inhib_places, then we apply map_check_inhib_aux_correct. *)
+    - apply (map_check_inhib_aux_correct_perm
+               marking t true Hwell_def_sitpn Heq_pl_fsm
+               Hincl_refl Hfun p n Hin_inhib_pl Hin_m).
+      
+    (* Second stage, p ∉ inhib_places, then (inhib sitpn t p) = 0 *)
+    - explode_well_defined_sitpn.
+      unfold AreWellDefinedInhibEdges in Hwell_def_inhib.
+      specialize (Hwell_def_inhib t p Hin_t_transs) as Hw_inhib.
+      apply proj2 in Hw_inhib.
+      specialize (Hw_inhib Hnotin_inhib_pl) as Hw_inhib;
+        rewrite Hw_inhib; right; reflexivity.
+  Qed.
   
   (** Completeness proof for map_check_inhib. *)
 
@@ -1265,6 +2036,42 @@ Section MapCheckFunctions.
              Heq_pl_fsm Hincl_refl Hspec_check_inhib).    
   Qed.
 
+  Lemma map_check_inhib_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      (forall (p : Place) (n : nat),
+          In (p, n) marking -> (inhib sitpn t p) > n \/ (inhib sitpn t p) = 0) ->
+      map_check_inhib sitpn marking (inhib_pl (lneighbours sitpn t)) t = Some true.
+  Proof.
+    intros sitpn marking t;
+      functional induction (map_check_inhib sitpn marking (inhib_pl (lneighbours sitpn t)) t)
+                 using map_check_inhib_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hspec.
+    
+    (* Hypothesis : incl (inhib_pl neighbours_of_t) (inhib_pl neighbours_of_t) 
+       for map_check_inhib_aux_complete. *)
+    assert (Hincl_refl: incl (inhib_pl (lneighbours sitpn t)) (inhib_pl (lneighbours sitpn t)))
+      by apply incl_refl.
+
+    (* Builds ∀ p,n, p ∈ inhib_places -> (p, n) ∈ marking -> inhib sitpn t p <= n 
+       to apply map_check_inhib_aux_complete. *)
+    assert (Hspec_check_inhib :
+              forall (p : Place) (n : nat),
+                In p (inhib_pl (lneighbours sitpn t)) ->
+                In (p, n) marking ->
+                inhib sitpn t p > n \/ inhib sitpn t p = 0) 
+      by (intros p n Hin_inhib_pl Hin_m; apply (Hspec p n Hin_m)).
+    
+    (* Apply map_check_inhib_aux_complete. *)
+    apply (map_check_inhib_aux_complete_perm
+             marking t Hwell_def_sitpn Hin_t_transs
+             Heq_pl_fsm Hincl_refl Hspec_check_inhib).    
+  Qed.
+
   (** No error lemma for map_check_inhib. *)
 
   Lemma map_check_inhib_no_error :
@@ -1286,7 +2093,7 @@ End MapCheckFunctions.
 (** ** Lemmas on [is_sensitized] function and its spec. *)
 
 Section IsSensitized.
-
+  
   (** Correctness proof for is_sensitized and IsSensitized *)
 
   Theorem is_sensitized_correct :
@@ -1294,7 +2101,7 @@ Section IsSensitized.
            (marking : list (Place * nat))
            (t : Trans),
       IsWellDefinedSitpn sitpn ->
-      (places sitpn) = fst (split marking) ->
+      (places sitpn) = (fs marking) ->
       In t (transs sitpn) -> 
       is_sensitized sitpn marking (lneighbours sitpn t) t = Some true ->
       IsSensitized sitpn marking t.
@@ -1343,6 +2150,60 @@ Section IsSensitized.
     - inversion Hfun.
   Qed.
 
+  Theorem is_sensitized_correct_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) -> 
+      is_sensitized sitpn marking (lneighbours sitpn t) t = Some true ->
+      IsSensitized sitpn marking t.
+  Proof.
+    intros sitpn marking t;
+      functional induction (is_sensitized sitpn marking (lneighbours sitpn t) t)
+                 using is_sensitized_ind;
+      intros Hwell_def_sitpn Heq_pl_fsm Hin_t_transs Hfun.
+    
+    (* GENERAL CASE *)
+    - injection Hfun; intro Heq_check.
+      apply andb_prop in Heq_check; elim Heq_check; intros Heq_check' Heq_inhib.
+      apply andb_prop in Heq_check'; elim Heq_check'; intros Heq_pre Heq_test.
+
+      (* Determines ∀ (p, n) ∈ marking, (pre sitpn t p) <= n *)
+      rewrite Heq_pre in e.
+      specialize (map_check_pre_correct_perm
+                    marking t 
+                    Hwell_def_sitpn Heq_pl_fsm Hin_t_transs e)
+        as Hmap_pre.
+
+      (* Determines ∀ (p, n) ∈ marking, (test sitpn t p) <= n *)
+      rewrite Heq_test in e0.
+      specialize (map_check_test_correct_perm
+                    marking t
+                    Hwell_def_sitpn Heq_pl_fsm Hin_t_transs e0)
+        as Hmap_test.
+      
+      (* Determines ∀ (p, n) ∈ marking, n < (inhib sitpn t p) ∨ (inhib sitpn t p) = 0 *)
+      rewrite Heq_inhib in e1.
+      specialize (map_check_inhib_correct_perm
+                    marking t
+                    Hwell_def_sitpn Heq_pl_fsm Hin_t_transs e1)
+        as Hmap_inhib.
+
+      (* Unfolds IsSensitized and applies all previous lemmas. *)
+      unfold IsSensitized; intros p n Hin_m.
+      split;
+        [apply (Hmap_pre p n Hin_m)
+        | split; [ apply (Hmap_test p n Hin_m) |
+                   apply (Hmap_inhib p n Hin_m) ]].
+
+    (* ERROR CASES *)
+    - inversion Hfun.
+    - inversion Hfun.
+    - inversion Hfun.
+  Qed.    
+    
   (** Completeness proof for is_sensitized and IsSensitized *)
 
   Theorem is_sensitized_complete :
@@ -1401,6 +2262,89 @@ Section IsSensitized.
                                            Heq_pl_fsm
                                            Hin_t_transs
                                            Hmap_check_inhib) as Hmap_check_inhib';
+      intro.
+
+    (* General case, all went well. 
+       Using IsSensitized to prove that all the map_check functions
+       return true. *)
+    (* Rewrites the results of map_check functions, then reflexivity. *)
+    - rewrite Hmap_check_pre' in e;
+        rewrite Hmap_check_test' in e0;
+        rewrite Hmap_check_inhib' in e1.
+      injection e as e_check_pre_value;
+        injection e0 as e_check_test_value;
+        injection e1 as e_check_inhib_value.
+      rewrite <- e_check_inhib_value;
+        rewrite <- e_check_pre_value;
+        rewrite <- e_check_test_value.
+      do 2 rewrite andb_true_r; reflexivity.
+      
+    (* CASE map_check_inhib returns None, impossible regarding the hypotheses. *)
+    - rewrite Hmap_check_inhib' in e1; inversion e1.
+      
+    (* CASE map_check_test returns None, impossible regarding the hypotheses. *)
+    - rewrite Hmap_check_test' in e0; inversion e0.
+      
+    (* CASE map_check_pre returns None, impossible regarding the hypotheses. *)
+    - rewrite Hmap_check_pre' in e; inversion e.
+  Qed.
+
+  Theorem is_sensitized_complete_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) ->
+      In t (transs sitpn) ->
+      IsSensitized sitpn marking t ->
+      is_sensitized sitpn marking (lneighbours sitpn t) t = Some true.
+  Proof.
+    intros sitpn marking t;
+      functional induction (is_sensitized sitpn marking (lneighbours sitpn t) t)
+                 using is_sensitized_ind;
+      intros Hwell_defined_sitpn Heq_pl_fsm Hin_t_transs Hspec;
+      unfold IsSensitized in Hspec;
+      
+      (* Builds ∀ (p,n) ∈ marking, (pre sitpn t p) ≤ n, 
+         then applies map_check_pre_complete.
+       *)
+      assert (Hmap_check_pre :
+                forall (p : Place) (n : nat), In (p, n) marking -> pre sitpn t p <= n) by
+          (intros p n Hin_m; generalize (Hspec p n Hin_m) as Hend; intro; elim Hend; auto);
+      generalize (map_check_pre_complete_perm marking t
+                                              Hwell_defined_sitpn
+                                              Heq_pl_fsm
+                                              Hin_t_transs
+                                              Hmap_check_pre) as Hmap_check_pre';
+      intro;
+      (* Builds ∀ (p,n) ∈ marking, (test sitpn t p) ≤ n, 
+         then applies map_check_test_complete.
+       *)
+      assert (Hmap_check_test :
+                forall (p : Place) (n : nat), In (p, n) marking -> test sitpn t p <= n)
+        by (intros p n Hin_m;
+            generalize (Hspec p n Hin_m) as Hend;
+            intro; decompose [and] Hend; auto);
+      generalize (map_check_test_complete_perm marking t
+                                               Hwell_defined_sitpn
+                                               Heq_pl_fsm
+                                               Hin_t_transs
+                                               Hmap_check_test) as Hmap_check_test';
+      intro;
+      (* Builds ∀ (p,n) ∈ marking, (inhib sitpn t p) ≤ n, 
+         then applies map_check_inhib_complete.
+       *)
+      assert (Hmap_check_inhib :
+                forall (p : Place) (n : nat),
+                  In (p, n) marking -> (n < (inhib sitpn t p) \/ (inhib sitpn t p) = 0))
+        by (intros p n Hin_m;
+            generalize (Hspec p n Hin_m) as Hend;
+            intro; decompose [and] Hend; auto);
+      generalize (map_check_inhib_complete_perm marking t
+                                                Hwell_defined_sitpn
+                                                Heq_pl_fsm
+                                                Hin_t_transs
+                                                Hmap_check_inhib) as Hmap_check_inhib';
       intro.
 
     (* General case, all went well. 
@@ -1500,7 +2444,6 @@ Section IsSensitized.
     rewrite Hmap_check_pre, Hmap_check_test, Hmap_check_inhib.
 
     exists (check_pre_result && check_test_result && check_inhib_result); reflexivity.
-
   Qed.
 
   (** Conjunction of correction and completeness for is_sensitized. *)
@@ -1524,6 +2467,27 @@ Section IsSensitized.
       | intro Hspec;
         apply (is_sensitized_complete Hwell_def_sitpn Heq_pl_fsm
                                       Hin_t_transs Hspec) ].
+  Qed.
+
+  Theorem is_sensitized_iff_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) -> 
+      In t (transs sitpn) ->
+      is_sensitized sitpn marking (lneighbours sitpn t) t = Some true <->
+      IsSensitized sitpn marking t.
+  Proof.
+    intros sitpn marking t Hwell_def_sitpn Heq_pl_fsm Hin_t_transs.
+    split;
+      [ intro Hfun;
+        apply (is_sensitized_correct_perm marking t
+                                          Hwell_def_sitpn Heq_pl_fsm
+                                          Hin_t_transs Hfun)
+      | intro Hspec;
+        apply (is_sensitized_complete_perm Hwell_def_sitpn Heq_pl_fsm
+                                           Hin_t_transs Hspec) ].
   Qed.
 
   (** Conjunction of correction and completeness for ~is_sensitized. *)
@@ -1569,6 +2533,62 @@ Section IsSensitized.
         specialize (incl_tran Hincl_flat_lneigh Hunk_pl_neigh) as Hincl_fl_m.
         rewrite Heq_pl_fsm in Hincl_fl_m.
 
+        specialize (is_sensitized_no_error sitpn marking t Hincl_fl_m)
+          as Hsens_ex.
+        inversion_clear Hsens_ex as (b & Hsens).
+        rewrite Hsens_fun in Hsens; inversion Hsens.
+  Qed.
+
+  Theorem not_is_sensitized_iff_perm :
+    forall (sitpn : Sitpn)
+           (marking : list (Place * nat))
+           (t : Trans),
+      IsWellDefinedSitpn sitpn ->
+      Permutation (places sitpn) (fs marking) -> 
+      In t (transs sitpn) ->
+      is_sensitized sitpn marking (lneighbours sitpn t) t = Some false <->
+      ~IsSensitized sitpn marking t.
+  Proof.
+    intros sitpn marking t Hwell_def_sitpn Heq_pl_fsm Hin_t_transs.
+    split.
+    
+    - intros Hfun Hspec;
+        rewrite <- (is_sensitized_iff_perm marking t
+                                           Hwell_def_sitpn Heq_pl_fsm Hin_t_transs)
+        in Hspec.
+      rewrite Hfun in Hspec; inversion Hspec.
+
+    - intro Hspec; case_eq (is_sensitized sitpn marking (lneighbours sitpn t) t).
+      + dependent induction b.
+        -- intros His_sens_fun.
+           rewrite <- (is_sensitized_iff_perm marking t
+                                              Hwell_def_sitpn Heq_pl_fsm Hin_t_transs)
+             in Hspec.
+           contradiction.
+        -- intros; reflexivity.
+      + intros Hsens_fun.
+        
+        (* Specializes is_sensitized_no_error to solve the subgoal. *)
+
+        assert (Hincl_flat_lneigh : incl (flatten_neighbours (lneighbours sitpn t))
+                                         (flatten_lneighbours sitpn (transs sitpn))).
+        {
+          explode_well_defined_sitpn.
+          unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+          intros p Hin_p_flat;
+            apply (in_neigh_in_flatten t p Hwell_def_sitpn Hin_t_transs Hin_p_flat).
+        }
+        
+        assert (Hincl_fl_m : incl (flatten_neighbours (lneighbours sitpn t)) (fs marking)).
+        {
+          explode_well_defined_sitpn.
+          unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+          specialize (incl_tran Hincl_flat_lneigh Hunk_pl_neigh) as Hincl_fl_m.
+          intros p Hin_p_fl.
+          rewrite <- Heq_pl_fsm.
+          apply (Hincl_fl_m p Hin_p_fl).
+        }
+        
         specialize (is_sensitized_no_error sitpn marking t Hincl_fl_m)
           as Hsens_ex.
         inversion_clear Hsens_ex as (b & Hsens).

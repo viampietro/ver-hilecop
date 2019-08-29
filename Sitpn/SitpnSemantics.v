@@ -11,6 +11,10 @@ Set Implicit Arguments.
 
 Require Import Hilecop.Sitpn.Sitpn.
 
+(** Import misc. definitions. *)
+
+Require Import Hilecop.Utils.HilecopDefinitions.
+
 (** * General preliminary definitions.  *)
 
 (** ** Predicates IsDecListCons, IsDecListApp and facts. *)
@@ -718,7 +722,7 @@ Inductive SitpnSemantics
 
     (forall (t : Trans)
             (transient_marking : list (Place * nat)),
-        places sitpn = fst (split transient_marking) ->
+        Permutation (places sitpn) (fs transient_marking) ->
         (forall (p : Place) (n : nat),
             In (p, n) s.(marking) ->
             In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
@@ -734,7 +738,7 @@ Inductive SitpnSemantics
 
     (forall (t : Trans)
             (transient_marking : list (Place * nat)),
-        places sitpn = fst (split transient_marking) ->
+        Permutation (places sitpn) (fs transient_marking) ->
         (forall (p : Place) (n : nat),
             In (p, n) s.(marking) ->
             In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->

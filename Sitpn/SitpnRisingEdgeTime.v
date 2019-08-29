@@ -3,6 +3,8 @@
 Require Import Hilecop.Sitpn.Sitpn.
 Require Import Hilecop.Sitpn.SitpnTokenPlayer.
 Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import Hilecop.Sitpn.SitpnCoreLemmas.
 
 (* Import lemmas about well-definition. *)
 
@@ -10,10 +12,9 @@ Require Import Hilecop.Sitpn.SitpnWellDefMarking.
 
 (* Import misc. lemmas and tactics. *)
 
-Require Import Hilecop.Sitpn.SitpnTactics.
 Require Import Hilecop.Utils.HilecopExtraLemmas.
 Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Sitpn.SitpnCoreLemmas.
+Require Import Hilecop.Utils.HilecopDefinitions.
 
 (* Import lemmas about marking. *)
 
@@ -183,7 +184,7 @@ Section SitpnRisingEdgeDecideReset.
       sitpn_rising_edge sitpn s = Some s' ->
       forall (t : Trans)
              (transient_marking : list (Place * nat)),
-        places sitpn = fst (split transient_marking) ->
+        Permutation (places sitpn) (fs transient_marking) ->
         (forall (p : Place) (n : nat),
             In (p, n) s.(marking) ->
             In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
@@ -212,13 +213,15 @@ Section SitpnRisingEdgeDecideReset.
              assumption);
 
        (* Specializes get_blocked_and_reset_decide_reset *)
+       
        specialize (get_blocked_and_reset_decide_reset
                      sitpn s (d_intervals s) transient_marking [] [] reset' d_intervals'
                      Hwell_def_sitpn Hwell_def_s Heq_places_fs_tm (IsDecListCons_refl (d_intervals s)) e0)
          as Hin_ttrue_reset';
 
        (* Deduces that t ∈ (fs (d_intervals s)) to specialize
-          Hin_ttrue_reset' *)
+           Hin_ttrue_reset' *)
+       
        assert (Hin_t_ditvals := conj Hin_t_transs Hhas_itval_t);
        explode_well_defined_sitpn_state Hwell_def_s;
        rewrite (Hwf_state_ditvals t) in Hin_t_ditvals;
@@ -227,13 +230,13 @@ Section SitpnRisingEdgeDecideReset.
        specialize (Hin_ttrue_reset' t Hin_t_ditvals);
 
        (* We want to show that transient_marking and transient_marking'
-         are equivalent using the lemma eq_if_eq_fs.  
+           are equivalent using the lemma eq_if_eq_fs.  
          
          But first, we need some hypotheses. *)
 
        (* Builds: 
-         ∀(a, b) ∈ (marking s) -> 
-         ∃b', (a, b') ∈ transient_marking /\ (a, b') ∈ transient_marking' *)
+           ∀(a, b) ∈ (marking s) -> 
+           ∃b', (a, b') ∈ transient_marking /\ (a, b') ∈ transient_marking' *)
        explode_well_defined_sitpn_state Hwell_def_s;
        deduce_nodup_state_marking;
        specialize (map_update_marking_pre_sub_pre
@@ -254,25 +257,29 @@ Section SitpnRisingEdgeDecideReset.
              exists (n - pre_sum sitpn p (fired s));
              split; [assumption | assumption]);
        
-
-       (* Then builds: fs (marking s) = fs transient = fs transient' *)
+       (* Then builds: 
+           Permutation (fs (marking s)) (fs transient) and  
+           Permutation (fs (marking s)) (fs transient') *)
        explode_well_defined_sitpn_state Hwell_def_s;
-       assert (Heq_fs_ms_tm' : fst (split (marking s)) = fst (split transient_marking'))
-         by (rewrite <- Hwf_state_marking; rewrite <- Heq_places_tm'; reflexivity);
-       
 
+       assert (Hperm_fs_ms_tm : Permutation (fs (marking s)) (fs transient_marking))
+         by (unfold fs; rewrite Heq_fs_ms_tm; reflexivity);
+
+       assert (Hperm_fs_ms_tm' : Permutation (fs (marking s)) (fs transient_marking'))
+         by (unfold fs; rewrite <- Hwf_state_marking; rewrite <- Heq_places_tm'; reflexivity);
+       
        (* Then builds, NoDup fs (marking s) ∧ NoDup fs transient ∧ NoDup fs transient' *)
        clear_well_defined_sitpn_state;
-       assert (Hnodup_fs_tm : NoDup (fst (split transient_marking)))
-         by (rewrite <- Heq_fs_ms_tm; assumption);
-       assert (Hnodup_fs_tm' : NoDup (fst (split transient_marking')))
-         by (rewrite <- Heq_fs_ms_tm'; assumption);
+       assert (Hnodup_fs_tm : NoDup (fs transient_marking))
+         by (unfold fs; rewrite <- Hperm_fs_ms_tm; assumption);
+       assert (Hnodup_fs_tm' : NoDup (fs transient_marking'))
+         by (unfold fs; rewrite <- Hperm_fs_ms_tm'; assumption);
 
        (* Then, specializes eq_if_eq_fs to add the equivalence
-         hypothesis between transient and transient' in the context. *)
-       specialize (eq_if_eq_fs (marking s) transient_marking transient_marking'
-                               Hin_ms_ex_in_tm Heq_fs_ms_tm Heq_fs_ms_tm'
-                               Hnodup_fs_ms Hnodup_fs_tm Hnodup_fs_tm') as
+           hypothesis between transient and transient' in the context. *)
+       specialize (equiv_if_perm_and_nodup_fs (marking s) transient_marking transient_marking'
+                                              Hin_ms_ex_in_tm Hperm_fs_ms_tm Hperm_fs_ms_tm'
+                                              Hnodup_fs_ms Hnodup_fs_tm Hnodup_fs_tm') as
            Heq_tm_tm';
        
        (* Now, we need to show that for all transition t, if t is
@@ -414,7 +421,7 @@ Section SitpnRisingEdgeDecideNoReset.
       sitpn_rising_edge sitpn s = Some s' ->
       forall (t : Trans)
              (transient_marking : list (Place * nat)),
-        places sitpn = fst (split transient_marking) ->
+        Permutation (places sitpn) (fs transient_marking) ->
         (forall (p : Place) (n : nat),
             In (p, n) s.(marking) ->
             In (p, n - pre_sum sitpn p s.(fired)) transient_marking) ->
@@ -486,24 +493,29 @@ Section SitpnRisingEdgeDecideNoReset.
              split; [assumption | assumption]);
        
 
-       (* Then builds: fs (marking s) = fs transient = fs transient' *)
+       (* Then builds: 
+           Permutation (fs (marking s)) (fs transient) and  
+           Permutation (fs (marking s)) (fs transient') *)
        explode_well_defined_sitpn_state Hwell_def_s;
-       assert (Heq_fs_ms_tm' : fst (split (marking s)) = fst (split transient_marking'))
-         by (rewrite <- Hwf_state_marking; rewrite <- Heq_places_tm'; reflexivity);
-       
 
+       assert (Hperm_fs_ms_tm : Permutation (fs (marking s)) (fs transient_marking))
+         by (unfold fs; rewrite Heq_fs_ms_tm; reflexivity);
+
+       assert (Hperm_fs_ms_tm' : Permutation (fs (marking s)) (fs transient_marking'))
+         by (unfold fs; rewrite <- Hwf_state_marking; rewrite <- Heq_places_tm'; reflexivity);
+       
        (* Then builds, NoDup fs (marking s) ∧ NoDup fs transient ∧ NoDup fs transient' *)
        clear_well_defined_sitpn_state;
-       assert (Hnodup_fs_tm : NoDup (fst (split transient_marking)))
-         by (rewrite <- Heq_fs_ms_tm; assumption);
-       assert (Hnodup_fs_tm' : NoDup (fst (split transient_marking')))
-         by (rewrite <- Heq_fs_ms_tm'; assumption);
+       assert (Hnodup_fs_tm : NoDup (fs transient_marking))
+         by (unfold fs; rewrite <- Hperm_fs_ms_tm; assumption);
+       assert (Hnodup_fs_tm' : NoDup (fs transient_marking'))
+         by (unfold fs; rewrite <- Hperm_fs_ms_tm'; assumption);
 
        (* Then, specializes eq_if_eq_fs to add the equivalence
-         hypothesis between transient and transient' in the context. *)
-       specialize (eq_if_eq_fs (marking s) transient_marking transient_marking'
-                               Hin_ms_ex_in_tm Heq_fs_ms_tm Heq_fs_ms_tm'
-                               Hnodup_fs_ms Hnodup_fs_tm Hnodup_fs_tm') as
+           hypothesis between transient and transient' in the context. *)
+       specialize (equiv_if_perm_and_nodup_fs (marking s) transient_marking transient_marking'
+                                              Hin_ms_ex_in_tm Hperm_fs_ms_tm Hperm_fs_ms_tm'
+                                              Hnodup_fs_ms Hnodup_fs_tm Hnodup_fs_tm') as
            Heq_tm_tm';
        
        (* Now, we need to show that for all transition t, if t is
@@ -516,7 +528,6 @@ Section SitpnRisingEdgeDecideNoReset.
               intros Hsens_tm p n Hin_tm';
               (rewrite <- (Heq_tm_tm' p n) in Hin_tm' || rewrite (Heq_tm_tm' p n) in Hin_tm');
               apply (Hsens_tm p n Hin_tm')));
-       
 
        (* Then rewrite Hin_tfalse_reset', specializes it 
               the deduces the goal. *)                  
@@ -525,8 +536,7 @@ Section SitpnRisingEdgeDecideNoReset.
        assumption)
 
       (* ERROR CASES *)
-      || inversion Hfun.
-    
+      || inversion Hfun.    
   Qed.
       
 End SitpnRisingEdgeDecideNoReset.

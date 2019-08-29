@@ -210,12 +210,12 @@ Section SitpnMapFireComplete.
 
       assert (Hincl_fl_m : incl (flatten_neighbours (lneighbours sitpn a)) (fs (marking tmp_state))).
       {
-        explode_well_defined_sitpn;
-          unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+        explode_well_defined_sitpn; unfold NoUnknownPlaceInNeighbours in Hunk_pl_neigh.
+        
         assert (Hincl_flat_lneigh : incl (flatten_neighbours (lneighbours sitpn a))
                                          (flatten_lneighbours sitpn (transs sitpn))).
         {
-            deduce_in_transs; apply (in_transs_incl_flatten a Hwell_def_sitpn Hin_t_transs).
+          deduce_in_transs; apply (in_transs_incl_flatten a Hwell_def_sitpn Hin_t_transs).
         }
         
         specialize (incl_tran Hincl_flat_lneigh Hunk_pl_neigh) as Hincl_fl_m.

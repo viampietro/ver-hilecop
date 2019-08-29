@@ -31,19 +31,23 @@ Proof.
   (* GENERAL CASE, all went well. *)
   - injection Hfun as Heq_s' Heq_s''.
     split.
+    
     (* CASE falling edge correct. *)
     + rewrite <- Heq_s'.
       apply (sitpn_falling_edge_correct sitpn s s'0 time_value env
                                         Hwell_def_sitpn Hwell_def_s e).
+      
     (* CASE rising edge correct. *)
     + specialize (sitpn_falling_edge_well_def_state
                     sitpn s s'0 time_value env Hwell_def_sitpn Hwell_def_s e)
         as Hwell_def_s'.
       rewrite <- Heq_s', <- Heq_s''.
       apply (sitpn_rising_edge_correct
-               sitpn s'0 s''0 time_value env Hwell_def_sitpn Hwell_def_s' e0). 
-  (* Error case. *)
+               sitpn s'0 s''0 time_value env Hwell_def_sitpn Hwell_def_s' e0).
+      
+  (* ERROR CASE. *)
   - inversion Hfun.
-  (* Error case. *)
+    
+  (* ERROR CASE. *)
   - inversion Hfun.
 Qed.

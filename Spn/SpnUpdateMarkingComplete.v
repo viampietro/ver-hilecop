@@ -107,7 +107,7 @@ Proof.
       (* Builds hyps. to apply NoDup_Permutation. *)
 
       (* Hyp. NoDup (marking s'). *)
-      (* Explodes and renames IsWelldefinedspnstate predicates. *)
+      (* Explodes and renames IsWellDefinedSpnState predicates. *)
       
       rename Hsame_marking_state_spn into Hsame_marking_s_spn,
              Hincl_state_fired_transs into Hincl_s_fired_transs,

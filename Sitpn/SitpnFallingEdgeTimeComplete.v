@@ -58,18 +58,22 @@ Section UpdateTimeIntervalsComplete.
         (* Builds premises to apply [permutation_fs_permutation] *)
 
         (* Builds NoDup (fs new_ditvals) *)
+
         rewrite app_nil_r in Hnodup_fs_newd.
 
         (* Builds NoDup (fs (d_intervals s')) *)
+
         explode_well_defined_sitpn_state Hwell_def_s'.
         assert (H := Hnodup_state_ditvals).
         clear_well_defined_sitpn_state.
         rename Hnodup_state_ditvals into Hnodup_fs_ditvals_s'.
 
         (* Builds Permutation (fs new_ditvals) (fs (d_intervals s')) *)
+
         rewrite app_nil_r in Hperm_app.
 
         (* Applies [permutation_fs_permutation]. *)
+
         apply (permutation_fs_permutation
                  new_ditvals (d_intervals s') Hnodup_fs_newd Hnodup_fs_ditvals_s'
                  Hincl_newd Hperm_app).
