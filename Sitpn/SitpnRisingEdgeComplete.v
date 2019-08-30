@@ -19,6 +19,10 @@ Require Import Hilecop.Sitpn.SitpnRisingEdgeMarkingComplete.
 
 Require Import Hilecop.Sitpn.SitpnRisingEdgeTimeComplete.
 
+(* Import lemmas about interpretation. *)
+
+Require Import Hilecop.Sitpn.SitpnRisingEdgeInterpretationComplete.
+
 (** * Completeness of [sitpn_rising_edge]. *)
 
 Lemma sitpn_rising_edge_complete :
@@ -283,5 +287,64 @@ Proof.
     (* Then applies to the goal. *)
     symmetry.
     apply (Hmap_up_mark Hperm_marking Hperm_fired Heq_fsfm_fsmis Hnodup_fm).
-Admitted.
+
+  (* Case Permutation (fired s') (fired istate) *)
+    
+  - inversion Hspec; rename H2 into Heq_fired.
+    rewrite <- Heq_fired.
+    apply (proj1 (proj2 Hsteq_s_istate)).
+
+  (* Case Permutation (d_intervals s') (d_intervals istate) *)
+    
+  - symmetry; assumption.
+
+  (* Case Permutation (reset s') (reset istate) *)
+    
+  - symmetry; assumption.
+
+  (* Case Permutation (cond_values s') (cond_values istate) *)
+    
+  - inversion Hspec; rename H8 into Heq_condv.
+    rewrite <- Heq_condv.
+    do 4 (apply proj2 in Hsteq_s_istate).
+    apply (proj1 Hsteq_s_istate).
+
+  (* Case Permutation (exec_a s') (exec_a istate) *)
+    
+  - inversion Hspec; rename H9 into Heq_execa.
+    rewrite <- Heq_execa.
+    do 5 (apply proj2 in Hsteq_s_istate).
+    apply (proj1 Hsteq_s_istate).
+
+  (* Case Permutation (exec_f s') (get_function_states ...) *)
+
+  - symmetry.
+    
+    (* Strategy: apply get_function_states_complete. *)
+
+    specialize (get_function_states_complete
+                  sitpn s s' time_value env
+                  Hwell_def_sitpn Hwell_def_s Hwell_def_s' Hspec
+                  istate (functions sitpn) [] Hsteq_s_istate)
+      as Hget_fun_states.
+
+    (* Builds premises to apply get_function_states_complete. *)
+
+    simpl in Hget_fun_states.
+
+    assert (Hperm_funs : Permutation (functions sitpn) (fs (exec_f s'))).
+    {
+      explode_well_defined_sitpn_state Hwell_def_s'.
+      rewrite Hwf_state_execf; reflexivity.
+    }
+
+    assert (Hincl_nil_execf : incl [] (exec_f s'))
+      by (intros x Hin_nil; inversion Hin_nil).
+
+    assert (Hnodup_funs : NoDup (functions sitpn))
+      by (explode_well_defined_sitpn; assumption).    
+
+    apply (Hget_fun_states (IsDecListCons_refl (functions sitpn))
+                           Hperm_funs Hincl_nil_execf Hnodup_funs).
+Qed.
 
