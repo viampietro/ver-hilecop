@@ -64,7 +64,6 @@ Structure Neighbours : Set := mk_neighbours {
                                   post_pl : list Place
                                 }.
 
-
 (** * Types for Time Petri Nets *)
 
 (** Defines the inductive type to express positive or (positively)
@@ -390,7 +389,7 @@ Definition IsWellDefinedSitpn (sitpn : Sitpn) :=
 
       Depending on how a given Sitpn state is reached, i.e either
       after the occurence of falling edge or a rising edge of a clock
-      signal, the meaning of its fields changes. *)
+      signal, the meaning some of its fields changes. *)
 
 Structure SitpnState :=
   mk_SitpnState {
