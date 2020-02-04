@@ -1,8 +1,6 @@
--Q . Hilecop 
+-R utils hilecop.utils -R spn hilecop.spn -R sitpn hilecop.sitpn 
 
-Utils/HilecopLemmas.v
-Utils/HilecopTactics.v
-Utils/HilecopExtraLemmas.v
+utils/HilecopLemmas.v utils/HilecopTactics.v utils/HilecopExtraLemmas.v
 
 Sitpn/Sitpn.v
 Sitpn/SitpnSemantics.v

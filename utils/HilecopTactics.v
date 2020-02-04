@@ -1,4 +1,4 @@
-Require Import Hilecop.Utils.HilecopLemmas.
+Require Import HilecopLemmas.
 Require Import Arith List Bool.
 
 Import ListNotations.

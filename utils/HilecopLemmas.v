@@ -13,7 +13,7 @@ Export ListNotations.
 
 (** To use Hilecop definitions. *)
 
-Require Import Hilecop.Utils.HilecopDefinitions.
+Require Import HilecopDefinitions.
 
 (** Import Setoid library, needed to define parametric relation. *)
 

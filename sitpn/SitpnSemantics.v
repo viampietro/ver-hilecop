@@ -9,11 +9,11 @@ Set Implicit Arguments.
 
 (** Import Sitpn and SitpnState structures. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
+Require Import Sitpn.
 
 (** Import misc. definitions. *)
 
-Require Import Hilecop.Utils.HilecopDefinitions.
+Require Import HilecopDefinitions.
 
 (** * General preliminary definitions.  *)
 
