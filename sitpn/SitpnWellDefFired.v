@@ -1,14 +1,14 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import misc. lemmas and tactics. *)
 
-Require Import Hilecop.Sitpn.SitpnCoreLemmas.
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import SitpnCoreLemmas.
+Require Import HilecopLemmas.
+Require Import SitpnTactics.
 
 (** * Lemmas about [sitpn_map_fire] and well-definition.  *)
 

@@ -1,27 +1,27 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import sitpn falling edge well-defined state. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
-Require Import Hilecop.Sitpn.SitpnWellDefTime.
-Require Import Hilecop.Sitpn.SitpnWellDefMarking.
-Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
+Require Import SitpnFallingEdgeWellDef.
+Require Import SitpnWellDefTime.
+Require Import SitpnWellDefMarking.
+Require Import SitpnWellDefInterpretation.
 
 (* Import lemmas about interpretation-related semantics rules. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
+Require Import SitpnFallingEdgeInterpretation.
 
 (* Import lemmas about time-related semantics rules. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeTime.
+Require Import SitpnFallingEdgeTime.
 
 (* Import lemmas about firing semantics rules. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeFired.
+Require Import SitpnFallingEdgeFired.
 
 (** * Correctness of sitpn_falling_edge function. *)
 

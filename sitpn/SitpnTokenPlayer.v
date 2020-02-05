@@ -4,11 +4,11 @@
 
 (* Import Sitpn and Sitpn state structures. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
+Require Import Sitpn.
 
 (* Import Sitpn semantics. *)
 
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import SitpnSemantics.
 
 Set Implicit Arguments.
 

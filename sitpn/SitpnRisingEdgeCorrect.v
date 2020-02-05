@@ -1,20 +1,20 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import lemmas about well-definition. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeWellDef.
-Require Import Hilecop.Sitpn.SitpnWellDefFired.
-Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
+Require Import SitpnRisingEdgeWellDef.
+Require Import SitpnWellDefFired.
+Require Import SitpnWellDefInterpretation.
 
 (* Import lemmas about marking, time and interpretation. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
-Require Import Hilecop.Sitpn.SitpnRisingEdgeTime.
-Require Import Hilecop.Sitpn.SitpnRisingEdgeInterpretation.
+Require Import SitpnRisingEdgeMarking.
+Require Import SitpnRisingEdgeTime.
+Require Import SitpnRisingEdgeInterpretation.
 
 (** * Correctness of sitpn_rising_edge function. *)
 

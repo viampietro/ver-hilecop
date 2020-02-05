@@ -1,20 +1,20 @@
 (* Import Sitpn core material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
-Require Import Hilecop.Sitpn.SitpnTactics.
-Require Import Hilecop.Sitpn.SitpnCoreLemmas.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
+Require Import SitpnTactics.
+Require Import SitpnCoreLemmas.
 
 (* Import Hilecop utils. *)
 
-Require Import Hilecop.Utils.HilecopDefinitions.
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Utils.HilecopTactics.
+Require Import HilecopDefinitions.
+Require Import HilecopLemmas.
+Require Import HilecopTactics.
 
 (* Import lemmas about interpretation. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretation.
+Require Import SitpnFallingEdgeInterpretation.
 
 (* Import classical prop. *)
 

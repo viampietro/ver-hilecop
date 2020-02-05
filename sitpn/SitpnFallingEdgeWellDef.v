@@ -1,19 +1,19 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import lemmas on well-definition. *)
 
-Require Import Hilecop.Sitpn.SitpnWellDefFired.
-Require Import Hilecop.Sitpn.SitpnWellDefTime.
-Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
-Require Import Hilecop.Sitpn.SitpnWellDefMarking.
+Require Import SitpnWellDefFired.
+Require Import SitpnWellDefTime.
+Require Import SitpnWellDefInterpretation.
+Require Import SitpnWellDefMarking.
 
 (* Import Sitpn tactics. *)
 
-Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import SitpnTactics.
 
 (** * sitpn_falling_edge and well-definedness of states. *)
 

@@ -1,27 +1,27 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
-Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
+Require Import SitpnTactics.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Utils.HilecopDefinitions.
+Require Import HilecopLemmas.
+Require Import HilecopDefinitions.
 
 (* Import lemmas about marking. *)
 
-Require Import Hilecop.Sitpn.SitpnWellDefMarking.
-Require Import Hilecop.Sitpn.SitpnRisingEdgeMarkingComplete.
+Require Import SitpnWellDefMarking.
+Require Import SitpnRisingEdgeMarkingComplete.
 
 (* Import lemmas about time. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeTimeComplete.
+Require Import SitpnRisingEdgeTimeComplete.
 
 (* Import lemmas about interpretation. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeInterpretationComplete.
+Require Import SitpnRisingEdgeInterpretationComplete.
 
 (** * Completeness of [sitpn_rising_edge]. *)
 

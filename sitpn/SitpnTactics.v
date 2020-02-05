@@ -1,6 +1,6 @@
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnSemantics.
-Require Import Hilecop.Utils.HilecopLemmas.
+Require Import Sitpn.
+Require Import SitpnSemantics.
+Require Import HilecopLemmas.
 
 (** Renames all hypotheses resulting of the decomposition 
     of the IsWelldefinedSitpn predicate. *)

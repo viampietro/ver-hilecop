@@ -1,17 +1,17 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import falling edge correctness lemmas. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeCorrect.
-Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
+Require Import SitpnFallingEdgeCorrect.
+Require Import SitpnFallingEdgeWellDef.
 
 (* Import rising edge correctness lemmas. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeCorrect.
+Require Import SitpnRisingEdgeCorrect.
 
 (** * Correctness theorem for SITPN token player program. *)
 

@@ -1,18 +1,18 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import Sitpn tactics, and misc. lemmas. *)
 
-Require Import Hilecop.Sitpn.SitpnTactics.
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Utils.HilecopTactics.
+Require Import SitpnTactics.
+Require Import HilecopLemmas.
+Require Import HilecopTactics.
 
 (* Import Sitpn core lemmas. *)
 
-Require Import Hilecop.Sitpn.SitpnCoreLemmas.
+Require Import SitpnCoreLemmas.
 
 (** * Falling Edge Lemmas about Time-Related Semantics Rules. *)
 

@@ -1,30 +1,30 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import lemmas on fired transitions. *)
 
-Require Import Hilecop.Sitpn.SitpnWellDefFired.
+Require Import SitpnWellDefFired.
 
 (* Import lemmas on interpretation. *)
 
-Require Import Hilecop.Sitpn.SitpnWellDefInterpretation.
+Require Import SitpnWellDefInterpretation.
 
 (* Import lemmas on marking. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
+Require Import SitpnRisingEdgeMarking.
 
 (* Import lemmas on well-definition. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeWellDef.
+Require Import SitpnRisingEdgeWellDef.
 
 (* Import misc. tactics and lemmas. *)
 
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Utils.HilecopExtraLemmas.
-Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import HilecopLemmas.
+Require Import HilecopExtraLemmas.
+Require Import SitpnTactics.
 
 (** * [sitpn_rising_edge] and [sitpn_state_eq] relation. *)
 

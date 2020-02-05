@@ -1,24 +1,24 @@
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
-Require Import Hilecop.Sitpn.SitpnTactics.
-Require Import Hilecop.Sitpn.SitpnCoreLemmas.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
+Require Import SitpnTactics.
+Require Import SitpnCoreLemmas.
 
 (* Import lemmas about well-definition. *)
 
-Require Import Hilecop.Sitpn.SitpnWellDefMarking.
+Require Import SitpnWellDefMarking.
 
 (* Import misc. lemmas and tactics. *)
 
-Require Import Hilecop.Utils.HilecopExtraLemmas.
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Utils.HilecopDefinitions.
+Require Import HilecopExtraLemmas.
+Require Import HilecopLemmas.
+Require Import HilecopDefinitions.
 
 (* Import lemmas about marking. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
+Require Import SitpnRisingEdgeMarking.
 
 (** * Lemmas about reset orders on rising edge.  *)
 

@@ -1,22 +1,22 @@
 
 (* Import Sitpn material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
 
 (* Import misc. lemmas and tactics. *)
 
-Require Import Hilecop.Sitpn.SitpnCoreLemmas.
-Require Import Hilecop.Utils.HilecopLemmas.
-Require Import Hilecop.Sitpn.SitpnTactics.
-Require Import Hilecop.Utils.HilecopTactics.
+Require Import SitpnCoreLemmas.
+Require Import HilecopLemmas.
+Require Import SitpnTactics.
+Require Import HilecopTactics.
 
 (* Import lemmas on well-definition. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeWellDef.
-Require Import Hilecop.Sitpn.SitpnWellDefMarking.
-Require Import Hilecop.Sitpn.SitpnWellDefFired.
+Require Import SitpnFallingEdgeWellDef.
+Require Import SitpnWellDefMarking.
+Require Import SitpnWellDefFired.
 
 (* Import classic logic. *)
 
@@ -24,7 +24,7 @@ Require Import Classical_Prop.
 
 (* Import lemmas on marking. *)
 
-Require Import Hilecop.Sitpn.SitpnRisingEdgeMarking.
+Require Import SitpnRisingEdgeMarking.
 
 (** * Falling edge lemmas about synchronous execution rules. *)
 

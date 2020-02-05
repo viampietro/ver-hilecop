@@ -1,19 +1,19 @@
 (* Import Sitpn core material. *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
-Require Import Hilecop.Sitpn.SitpnTactics.
+Require Import Sitpn.
+Require Import SitpnTokenPlayer.
+Require Import SitpnSemantics.
+Require Import SitpnTactics.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
-Require Import Hilecop.Utils.HilecopDefinitions.
+Require Import HilecopDefinitions.
 
 (* Import lemmas about time, fired and interpretation. *)
 
-Require Import Hilecop.Sitpn.SitpnFallingEdgeTimeComplete.
-Require Import Hilecop.Sitpn.SitpnFallingEdgeFiredComplete.
-Require Import Hilecop.Sitpn.SitpnFallingEdgeInterpretationComplete.
+Require Import SitpnFallingEdgeTimeComplete.
+Require Import SitpnFallingEdgeFiredComplete.
+Require Import SitpnFallingEdgeInterpretationComplete.
 
 (** * Completeness of [sitpn_falling_edge]. *)
 
