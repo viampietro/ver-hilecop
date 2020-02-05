@@ -3,8 +3,6 @@
 
 \#*
 *~
-CoqMakefile*
-Makefile*
 **/*.dot
 **/*.svg
 scripts/
