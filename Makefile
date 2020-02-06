@@ -9,7 +9,7 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 # General-purpose utilities (in utils/)
 
-UTILSFILES=HilecopDefinitions.v HilecopLemmas.v \
+UTILSFILES=Coqlib.v HilecopDefinitions.v HilecopLemmas.v \
 	  HilecopTactics.v HilecopExtraLemmas.v
 
 # Sitpn structures, semantics and token player (in spn/)

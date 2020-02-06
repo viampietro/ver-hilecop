@@ -1,4 +1,4 @@
-Require Import Lists.List.
+Require Import Coqlib.
 
 (** Macro for fst and split composition. *)
 

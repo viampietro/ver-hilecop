@@ -1,12 +1,11 @@
 (** Module defining the type of identifiers and values that are common
     to the syntax and the semantics of H-VHDL.  *)
 
-Require Import String.
+Require Export Arith.
 
-(** Type of identifiers, defined as non-empty strings. *)
+(** Type of identifiers, defined as natural. *)
 
-Record ident : Type :=
-  mk_ident { str : string; nempty : str <> EmptyString }.
+Definition ident := nat.
 
 (** A value is either:
     - a boolean

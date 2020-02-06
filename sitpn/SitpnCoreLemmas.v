@@ -1,3 +1,5 @@
+Require Import Coqlib.
+
 (* Import Sitpn material. *)
 
 Require Import Sitpn.

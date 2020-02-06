@@ -1,13 +1,11 @@
-Require Import HilecopLemmas.
-Require Import Arith List Bool.
-
-Import ListNotations.
-
 (*! ====================================================== !*)  
 (*!                                                        !*)
 (*!         TACTIC FUNCTIONS FOR THE HILECOP PROGRAM       !*)
 (*!                                                        !*)
 (*! ====================================================== !*)
+
+Require Import Coqlib.
+Require Import HilecopLemmas.
 
 (** Search for a hypothesis H of the form (incl l l') 
     and a hypothesis H' of the form (In a l).

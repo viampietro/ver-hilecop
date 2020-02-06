@@ -5,10 +5,10 @@
     'HilecopLemmas' and 'HilecopTactics'. 
  *)
 
+Require Import Coqlib.
 Require Import HilecopLemmas.
 Require Import HilecopTactics.
 Require Import HilecopDefinitions.
-Require Import Permutation.
 
 (** Proves the equivalence between to list 
     of couples l' and l'', with some hypotheses

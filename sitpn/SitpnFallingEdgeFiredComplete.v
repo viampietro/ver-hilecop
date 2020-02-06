@@ -1,3 +1,5 @@
+Require Import Coqlib.
+
 (* Import Sitpn material. *)
 
 Require Import Sitpn.
@@ -23,7 +25,6 @@ Require Import SitpnWellDefFired.
 
 (* Misc. imports. *)
 
-Require Import Omega.
 Require Import Classical_Prop.
 
 (** * Completeness of [sitpn_map_fire]. *)
