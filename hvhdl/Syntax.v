@@ -41,21 +41,29 @@ Inductive tind : Type :=
 | Tcid (id : ident) (constr : expr * expr). (** Subtype indication with constraint. *)
 
 Inductive tdef : Type :=
+
+(** Unconstrained array definition. *)
 | Tarray (eltt : tind)
+         
+(** Constrained array definition. *)
 | Tcarray (eltt : tind) (constr : expr * expr)
-| Tenum (enum : list ident).
+          
+(** Type definition as an enumeration of idents with at least one element. 
+    [lme] is the left-most element.
+ *)
+| Tenum (lme : ident) (enum : list ident).    
 
 (** ** Sequential statements. *)
 
 Inductive ss : Type :=
-| Ssig (signame : name) (e : expr) (** Signal assignment statement. *)
-| Svar (varname : name) (e : expr) (** Variable assignment statement. *)
-| Sif (e : expr) (stmt : ss) (** If statement. *)
-| Sifelse (e : expr) (stmt : ss) (stmt' : ss) (** If then else statement. *)
+| Ssig (signame : name) (e : expr)                      (** Signal assignment statement. *)
+| Svar (varname : name) (e : expr)                      (** Variable assignment statement. *)
+| Sif (e : expr) (stmt : ss)                            (** If statement. *)
+| Sifelse (e : expr) (stmt : ss) (stmt' : ss)           (** If then else statement. *)
 | Sloop (id : ident) (e : expr) (e' : expr) (stmt : ss) (** Loop statement. *)
-| Sfalling (stmt : ss) (** Falling edge block statement. *)
-| Srising (stmt : ss) (** Rising edge block statement. *)
-| Sseq (stmt : ss) (stmt' : ss). (** Composition of seq. statements. *)
+| Sfalling (stmt : ss)                                  (** Falling edge block statement. *)
+| Srising (stmt : ss)                                   (** Rising edge block statement. *)
+| Sseq (stmt : ss) (stmt' : ss).                        (** Composition of seq. statements. *)
 
 Notation "stmt ;; stmt'" := (Sseq stmt stmt') (at level 100).
 
