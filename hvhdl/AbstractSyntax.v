@@ -3,7 +3,7 @@
 (*!============================!*)
 
 Require Import Coqlib.
-Require Import Values.
+Require Import GlobalTypes.
 
 (** Set of binary operators. *)
 

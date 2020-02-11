@@ -9,8 +9,10 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 # General-purpose utilities (in utils/)
 
-UTILSFILES=Coqlib.v HilecopDefinitions.v HilecopLemmas.v \
-	  HilecopTactics.v HilecopExtraLemmas.v
+UTILSFILES=NatMap.v NatSet.v Coqlib.v \
+	HilecopDefinitions.v HilecopLemmas.v \
+	HilecopTactics.v HilecopExtraLemmas.v \
+
 
 # Sitpn structures, semantics and token player (in spn/)
 
@@ -30,7 +32,7 @@ SITPNFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 # H-VHDL syntax and semantics.
 
-HVHDLFILES=Values.v Syntax.v
+HVHDLFILES=GlobalTypes.v AbstractSyntax.v SemanticalDomains.v
 
 # Builds files with prefixes
 
@@ -53,3 +55,6 @@ proof: $(FILES:.v=.vo)
 clean:
 	rm -f $(patsubst %, %/*.vo, $(DIRS))
 	rm -f $(patsubst %, %/.*.aux, $(DIRS))
+	rm -f $(patsubst %, %/*.glob, $(DIRS))
+	rm -f $(patsubst %, %/*.vok, $(DIRS))
+	rm -f $(patsubst %, %/*.vos, $(DIRS))

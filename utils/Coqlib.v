@@ -13,3 +13,7 @@ Require Export Omega.
 Require Export FunInd.
 Require Export Permutation.
 
+(** To use NatMap and NatSet. *)
+
+Require Import NatMap.
+Require Import NatSet.
