@@ -2,6 +2,7 @@
     expressions. *)
 
 Require Import Coqlib.
+Require Import Arrays.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.
@@ -29,10 +30,14 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
 | VExprArcT (a : arc_t) : vexpr denv dstate lenv (e_arc a) (Some (Varc a))
 
 (** Evaluates arc_t constant. *)
-| VExprTransT (t : transition_t) : vexpr denv dstate lenv (e_trans t) (Some (Vtransition t)).
+| VExprTransT (t : transition_t) : vexpr denv dstate lenv (e_trans t) (Some (Vtransition t))
                                 
 (** Evaluates aggregate expression. *)
-| VExprAggreg (le : list expr) (lv : list value) :
-    (forall (e : expr), In e le -> vexpr denv dstate lenv e (Some v) /\ In v lv) ->
-    length le = length lv
+| VExprAggreg n (arre : array expr n) (arrv : array value n) :
+    (forall (i : nat) (e : expr) (v : value),
+        read arre i = Some e ->
+        read arrv i = Some v ->
+        vexpr denv dstate lenv e (Some v)) ->
+    vexpr denv dstate lenv (e_aggreg arre) (Some (Varray arrv)).
+
       

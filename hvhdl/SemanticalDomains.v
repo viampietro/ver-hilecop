@@ -1,6 +1,7 @@
 (** Module defining the semantics domains used in H-VHDL semantics. *)
 
 Require Import Coqlib.
+Require Import Arrays.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 
@@ -19,7 +20,7 @@ Inductive value : Type :=
 | Vnat : nat -> value
 | Varc : arc_t -> value
 | Vtransition : transition_t -> value
-| Vlist : list value -> value.
+| Varray : forall {n}, array value n -> value.
 
 (** Defines the type of types used in the
     semantical world. *)

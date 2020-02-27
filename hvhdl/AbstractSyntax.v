@@ -3,6 +3,7 @@
 (*!============================!*)
 
 Require Import Coqlib.
+Require Import Arrays.
 Require Import GlobalTypes.
 
 (** Set of binary operators. *)
@@ -15,10 +16,13 @@ and | or | eq | neq | lt | le | gt | ge | add | sub.
 (** An expression is either: 
     - a natural constant
     - a boolean constant
+    - an arc_t constant (basic, test or inhib)
+    - a transition_t constant (not_temporal, temporal_a_a, temporal_a_b, temporal_a_inf)
     - an identifier
     - an identifier with index (e.g "myvar(3)")
     - an aggregate, i.e list of expressions
     - e op e'    
+    - not e   
  *)
 
 Inductive expr : Type :=
@@ -27,7 +31,7 @@ Inductive expr : Type :=
 | e_name : name -> expr (** Name constant *)
 | e_arc : arc_t -> expr (** [arc_t] constant *)
 | e_trans : transition_t -> expr (** [transition_t] constant *)
-| e_aggreg : list expr -> expr (** Aggregate of expressions *)
+| e_aggreg : forall {n}, array expr n -> expr (** Aggregate of expressions *)
 | e_binop : binop -> expr -> expr -> expr (** Binary operator expression *)
 | e_not : expr -> expr (** Not expression *)
 
