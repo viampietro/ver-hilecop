@@ -11,7 +11,7 @@ Require Import SitpnFallingEdgeFired.
 (* Import Sitpn tactics, and misc. lemmas. *)
 
 Require Import SitpnTactics.
-Require Import HilecopLemmas.
+
 
 (** * Falling Edge Lemmas about Interpretation-Related Semantics Rules. *) 
 

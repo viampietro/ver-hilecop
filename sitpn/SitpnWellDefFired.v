@@ -7,7 +7,6 @@ Require Import SitpnSemantics.
 (* Import misc. lemmas and tactics. *)
 
 Require Import SitpnCoreLemmas.
-Require Import HilecopLemmas.
 Require Import SitpnTactics.
 
 (** * Lemmas about [sitpn_map_fire] and well-definition.  *)

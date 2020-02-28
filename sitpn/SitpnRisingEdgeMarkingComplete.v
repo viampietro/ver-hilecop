@@ -8,8 +8,8 @@ Require Import SitpnCoreLemmas.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
-Require Import HilecopDefinitions.
-Require Import HilecopLemmas.
+
+
 
 (* Import lemmas about marking. *)
 

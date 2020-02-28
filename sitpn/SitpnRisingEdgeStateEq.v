@@ -22,8 +22,8 @@ Require Import SitpnRisingEdgeWellDef.
 
 (* Import misc. tactics and lemmas. *)
 
-Require Import HilecopLemmas.
-Require Import HilecopExtraLemmas.
+
+
 Require Import SitpnTactics.
 
 (** * [sitpn_rising_edge] and [sitpn_state_eq] relation. *)

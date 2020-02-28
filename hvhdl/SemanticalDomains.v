@@ -20,7 +20,7 @@ Inductive value : Type :=
 | Vnat : nat -> value
 | Varc : arc_t -> value
 | Vtransition : transition_t -> value
-| Varray : forall {n}, array value n -> value.
+| Vlist : list value -> value.
 
 (** Defines the type of types used in the
     semantical world. *)

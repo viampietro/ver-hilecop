@@ -10,12 +10,6 @@ Require Import SitpnCoreLemmas.
 
 Require Import SitpnWellDefMarking.
 
-(* Import misc. lemmas and tactics. *)
-
-Require Import HilecopExtraLemmas.
-Require Import HilecopLemmas.
-Require Import HilecopDefinitions.
-
 (* Import lemmas about marking. *)
 
 Require Import SitpnRisingEdgeMarking.

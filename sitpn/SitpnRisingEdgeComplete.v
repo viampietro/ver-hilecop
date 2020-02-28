@@ -5,11 +5,6 @@ Require Import SitpnTokenPlayer.
 Require Import SitpnSemantics.
 Require Import SitpnTactics.
 
-(* Import misc. lemmas, tactics and definitions. *)
-
-Require Import HilecopLemmas.
-Require Import HilecopDefinitions.
-
 (* Import lemmas about marking. *)
 
 Require Import SitpnWellDefMarking.
@@ -48,13 +43,13 @@ Proof.
 
   (* Specializes map_update_marking_pre_complete, then rewrites the goal. *)
 
-  assert (Hperm_mistate : Permutation (places sitpn) (HilecopDefinitions.fs (marking istate))).
+  assert (Hperm_mistate : Permutation (places sitpn) (fs (marking istate))).
   {
     explode_well_defined_sitpn_state Hwell_def_s.
     apply proj1 in Hsteq_s_istate.
     rewrite Hwf_state_marking.
     rewrite <- Hsteq_s_istate.
-    unfold HilecopDefinitions.fs.
+    unfold fs.
     reflexivity. 
   }
   

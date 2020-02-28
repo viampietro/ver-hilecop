@@ -3,9 +3,6 @@
 
 Require Import Coqlib.
 
-Include NatMap.
-Include NatSet.
-
 (** Type of identifiers, defined as natural. *)
 
 Definition ident := nat.

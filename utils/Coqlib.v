@@ -6,14 +6,12 @@ Require Export List.
 
 Export ListNotations.
 
-(** To use [dependent induction] *)
-
 Require Export Coq.Program.Equality.
 Require Export Omega.
 Require Export FunInd.
 Require Export Permutation.
 
-(** To use NatMap and NatSet. *)
+(** User-defined libraries. *)
 
-Require Import NatMap.
-Require Import NatSet.
+Require Export NatMap.
+Require Export NatSet.

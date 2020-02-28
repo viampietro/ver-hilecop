@@ -10,9 +10,8 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 # General-purpose utilities (in utils/)
 
 UTILSFILES=NatMap.v NatSet.v Coqlib.v \
-	HilecopDefinitions.v HilecopLemmas.v \
-	HilecopTactics.v HilecopExtraLemmas.v \
-
+	FstSplit.v InAndNoDup.v ListsPlus.v \
+	Arrays.v \
 
 # Sitpn structures, semantics and token player (in spn/)
 
@@ -58,3 +57,4 @@ clean:
 	rm -f $(patsubst %, %/*.glob, $(DIRS))
 	rm -f $(patsubst %, %/*.vok, $(DIRS))
 	rm -f $(patsubst %, %/*.vos, $(DIRS))
+	rm -f $(patsubst %, %/*~, $(DIRS))	

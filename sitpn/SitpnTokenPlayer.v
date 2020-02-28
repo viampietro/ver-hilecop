@@ -2,12 +2,8 @@
 (*! ======= SITPN TOKEN PLAYER ======= !*)
 (*! ================================== !*)
 
-(* Import Sitpn and Sitpn state structures. *)
-
+Require Import Coqlib.
 Require Import Sitpn.
-
-(* Import Sitpn semantics. *)
-
 Require Import SitpnSemantics.
 
 Set Implicit Arguments.

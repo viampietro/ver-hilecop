@@ -1,9 +1,9 @@
 (** Module defining the components of the simulation environment.  *)
 
 Require Import Coqlib.
+Require Import ListsPlus.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
-Require Import HilecopDefinitions.
 Require Import SemanticalDomains.
 
 (** Defines the design environment describing H-VHDL design instances
@@ -43,7 +43,7 @@ Definition EmptyDEnv   := NatMap.empty SemanticalObject.
 
 (** Defines the structure of design state. *)
 
-Inductive DState : Type :=
+Inductive DState  : Type :=
   MkDState {
       denv      : DEnv;
       sigstore  : IdMap value;

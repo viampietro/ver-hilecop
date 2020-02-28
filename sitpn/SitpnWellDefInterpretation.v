@@ -1,3 +1,6 @@
+Require Import Coqlib.
+Require Import ListsPlus.
+
 (* Import Sitpn material. *)
 
 Require Import Sitpn.
@@ -7,7 +10,6 @@ Require Import SitpnSemantics.
 (* Import Sitpn tactics, and misc. lemmas. *)
 
 Require Import SitpnTactics.
-Require Import HilecopLemmas.
 
 (** * Lemmas about interpretation and well-definition. *)
 

@@ -8,9 +8,9 @@ Require Import SitpnSemantics.
 (* Import misc. lemmas and tactics. *)
 
 Require Import SitpnCoreLemmas.
-Require Import HilecopLemmas.
+
 Require Import SitpnTactics.
-Require Import HilecopTactics.
+
 
 (* Import lemmas on well-definition. *)
 

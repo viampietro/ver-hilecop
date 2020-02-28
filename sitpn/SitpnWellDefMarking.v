@@ -7,8 +7,6 @@ Require Import SitpnSemantics.
 (* Import Sitpn tactics, and misc. lemmas. *)
 
 Require Import SitpnTactics.
-Require Import HilecopLemmas.
-Require Import HilecopTactics.
 
 (** [sitpn_falling_edge] returns a SitpnState with the same marking 
     as the starting state. *)

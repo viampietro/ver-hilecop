@@ -1,5 +1,3 @@
-Require Import Coqlib.
-
 (* Import Sitpn material. *)
 
 Require Import Sitpn.
@@ -9,9 +7,6 @@ Require Import SitpnSemantics.
 (* Import Sitpn tactics, and misc. lemmas. *)
 
 Require Import SitpnTactics.
-Require Import HilecopLemmas.
-Require Import HilecopTactics.
-Require Import HilecopDefinitions.
 
 (* Import tertium non datur axiom. *)
 

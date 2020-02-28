@@ -7,7 +7,7 @@ Require Import SitpnTactics.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
-Require Import HilecopDefinitions.
+
 
 (* Import lemmas about time, fired and interpretation. *)
 

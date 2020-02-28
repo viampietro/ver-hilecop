@@ -8,9 +8,9 @@ Require Import SitpnCoreLemmas.
 
 (* Import Hilecop utils. *)
 
-Require Import HilecopDefinitions.
-Require Import HilecopLemmas.
-Require Import HilecopTactics.
+
+
+
 
 (* Import lemmas about time. *)
 

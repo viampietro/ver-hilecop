@@ -17,17 +17,8 @@
  *  
  *)
 
-(* Import standard libray modules. *)
-
-Require Export Arith List Lists.ListDec Bool Bool.Sumbool Bool.Bool FunInd.
-Require Export Sorting.Sorting.
-
-Export ListNotations.
-Export Permutation.
-
-(* Import Setoid library, needed to define parametric relation. *)
-
-Require Import Coq.Setoids.Setoid.
+Require Export Coqlib.
+Require Import Setoid.
 
 (*! ================================= !*)
 (*! TYPES AND STRUCTURES DEFINITIONS. !*)

@@ -31,7 +31,7 @@ Inductive expr : Type :=
 | e_name : name -> expr (** Name constant *)
 | e_arc : arc_t -> expr (** [arc_t] constant *)
 | e_trans : transition_t -> expr (** [transition_t] constant *)
-| e_aggreg : forall {n}, array expr n -> expr (** Aggregate of expressions *)
+| e_aggreg : list expr -> expr (** Aggregate of expressions *)
 | e_binop : binop -> expr -> expr -> expr (** Binary operator expression *)
 | e_not : expr -> expr (** Not expression *)
 
