@@ -21,9 +21,21 @@ Inductive is_of_type : value -> type -> Prop :=
 (** All elements of the value list [lv] must be of type [t],
     and the length of [lv] must satisfy the index constraint.
  *)
-| IsArrayOfT :
-    forall (lv : list value) (t : type) (l u : nat),
-      (forall (v : value), In v lv -> is_of_type v t) ->
-      length lv = u - l + 1 ->
-      is_of_type (Vlist lv) (Tarray t l u).
+| IsListOfT :
+    forall (lofv : lofvalues) (t : type) (l u : nat),
+      lis_of_type lofv ((u - l) + 1) t ->
+      is_of_type (Vlist lofv) (Tarray t l u)
+                 
+(** Defines the typing relation over list of values. 
+    
+    By construction, checks that the list length
+    is equal to the second argument (of type [nat]). *)
+                 
+with lis_of_type : lofvalues -> nat -> type -> Prop :=
+| LIsOfTypeNil : forall {t}, lis_of_type Vnil 0 t
+| LIsOfTypeCons :
+    forall {lofv size t v},
+      is_of_type v t ->
+      lis_of_type lofv size t ->
+      lis_of_type (Vcons v lofv) (S size) t.
       

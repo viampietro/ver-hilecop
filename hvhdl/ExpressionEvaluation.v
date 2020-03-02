@@ -3,7 +3,6 @@
 
 Require Import Coqlib.
 Require Import ListsPlus.
-Require Import Arrays.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.
@@ -40,9 +39,9 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
     
     The list of expressions [lofexprs] and the list of values
     [lofvalues] in parameter must be of the same length. *)
-| VExprAggreg (lofexprs : list expr) (lofvalues : list value) :
-    vlofexprs denv dstate lenv lofexprs (Some lofvalues) ->
-    vexpr denv dstate lenv (e_aggreg lofexprs) (Some (Vlist lofvalues))
+| VExprAggreg (lofe : list expr) (lofv : lofvalues) :
+    vlofexprs denv dstate lenv lofe (Some lofv) ->
+    vexpr denv dstate lenv (e_aggreg lofe) (Some (Vlist lofv))
 
 (** Evaluates a declared signal identifier . *)
           
@@ -81,7 +80,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
 (** Evaluates an indexed declared signal identifier. *)
           
 | VExprIdxSig (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
+    forall (t : type) (i l u : nat) (v : value) (lofv : lofvalues),
 
       (* Premises *)
       vexpr denv dstate lenv ei (Some (Vnat i)) -> (* index expression [ei] evaluates to [i] *)
@@ -89,16 +88,16 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
       
       (* Side conditions *)
       MapsTo id (Declared (Tarray t l u)) denv ->      (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
-      MapsTo id (Vlist lofvalues) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofvalues *)
+      MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofvalues *)
       
       (* Conclusion *)
       
-      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
+      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofv)
 
 (** Evaluates an indexed input signal identifier. *)
             
 | VExprIdxIn (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
+    forall (t : type) (i l u : nat) (v : value) (lofv : lofvalues),
 
       (* Premises *)
       vexpr denv dstate lenv ei (Some (Vnat i)) -> (* index expression [ei] evaluates to [i] *)
@@ -106,41 +105,41 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
       
       (* Side conditions *)
       MapsTo id (Input (Tarray t l u)) denv ->         (* id ∈ Ins(Δ) and Δ(id) = array(t, l, u) *)
-      MapsTo id (Vlist lofvalues) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofvalues *)
+      MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofvalues *)
       
       (* Conclusion *)
       
-      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
+      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofv)
 
 (** Evaluates an indexed variable identifier. *)
 
 | VExprIdxVar (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
+    forall (t : type) (i l u : nat) (v : value) (lofv : lofvalues),
 
       (* Premises *)
       vexpr denv dstate lenv ei (Some (Vnat i)) ->  (* index expression [ei] evaluates to [i] *)
       is_of_type (Vnat i) (Tnat l u) ->             (* index value is in array bounds. *)
       
       (* Side conditions *)
-      MapsTo id ((Tarray t l u), (Vlist lofvalues)) lenv -> (* id ∈ Λ(Δ) and Λ(id) = (array(t, l, u), lofvalues) *)
+      MapsTo id ((Tarray t l u), (Vlist lofv)) lenv -> (* id ∈ Λ(Δ) and Λ(id) = (array(t, l, u), lofvalues) *)
       
       (* Conclusion *)      
-      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
+      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofv)
 
 (** Evaluates an indexed constant identifier. *)
 
 | VExprIdxConst (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
+    forall (t : type) (i l u : nat) (v : value) (lofv : lofvalues),
 
       (* Premises *)
       vexpr denv dstate lenv ei (Some (Vnat i)) ->  (* index expression [ei] evaluates to [i] *)
       is_of_type (Vnat i) (Tnat l u) ->             (* index value is in array bounds. *)
       
       (* Side conditions *)
-      MapsTo id (Constant (Tarray t l u) (Vlist lofvalues)) denv -> (* id ∈ Consts(Δ) and Δ(id) = (array(t, l, u), lofvalues) *)
+      MapsTo id (Constant (Tarray t l u) (Vlist lofv)) denv -> (* id ∈ Consts(Δ) and Δ(id) = (array(t, l, u), lofvalues) *)
       
       (* Conclusion *)      
-      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
+      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofv)
 
 (** Evaluates expression with addition operator. 
     
@@ -236,7 +235,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
 
 (** Evaluates expression with the or operator. *)
 
-| VExprAnd (e e' : expr):
+| VExprOr (e e' : expr):
     forall (v v' : value),
 
       (* Premises *)
@@ -245,15 +244,49 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
       
       (* Conclusion *)      
       vexpr denv dstate lenv (e_binop bo_or e e') (vor v v')
+
+(** Evaluates expression with the not operator. *)
+
+| VExprNot (e : expr):
+    forall (v : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) ->
+
+      (* Conclusion. *)
+      vexpr denv dstate lenv (e_not e) (vnot v)
             
+(** Evaluates expression with the equality operator. *)
+            
+| VExprEq (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) ->
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_eq e e') (veq v v')
+
+(** Evaluates expression with difference operator. *)
+
+| VExprNEq (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv (e_binop bo_eq e e') (Some v) ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_neq e e') (vnot v)            
+    
 (** Defines the evaluation relation for lists of expressions.  *)
             
 with vlofexprs (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
-  list expr -> option (list value) -> Prop :=
-| VLOfExprsNil : vlofexprs denv dstate lenv [] (Some [])
+  list expr -> option (lofvalues) -> Prop :=
+| VLOfExprsNil : vlofexprs denv dstate lenv [] (Some Vnil)
 | VLOfExprsCons :
     forall {lofexprs lofvalues e v},
       vlofexprs denv dstate lenv lofexprs (Some lofvalues) ->
       vexpr denv dstate lenv e (Some v) ->
-      vlofexprs denv dstate lenv (e :: lofexprs) (Some (v :: lofvalues)).
+      vlofexprs denv dstate lenv (e :: lofexprs) (Some (Vcons v lofvalues)).
                           
