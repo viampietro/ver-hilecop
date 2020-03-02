@@ -9,7 +9,9 @@ Require Import GlobalTypes.
 (** Set of binary operators. *)
 
 Inductive binop : Set :=
-and | or | eq | neq | lt | le | gt | ge | add | sub.
+  bo_and | bo_or | bo_eq | bo_neq |
+  bo_lt | bo_le | bo_gt | bo_ge |
+  bo_add | bo_sub.
 
 (** ** Expressions: *)
 

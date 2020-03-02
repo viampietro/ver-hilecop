@@ -78,8 +78,10 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
     MapsTo id (Generic t v) denv ->      (* id ∈ Gens(Δ) and Δ(id) = (t,v) *)
     vexpr denv dstate lenv (e_name (n_id id)) (Some v)
 
-| VExprIdxSig (id : ident) (ei : expr) (v : value):
-    forall (t : type) (i l u : nat) (lofvalues : list value),
+(** Evaluates an indexed declared signal identifier. *)
+          
+| VExprIdxSig (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
 
       (* Premises *)
       vexpr denv dstate lenv ei (Some (Vnat i)) -> (* index expression [ei] evaluates to [i] *)
@@ -93,8 +95,10 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
       
       vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
 
-| VExprIdxIn (id : ident) (ei : expr) (v : value):
-    forall (t : type) (i l u : nat) (lofvalues : list value),
+(** Evaluates an indexed input signal identifier. *)
+            
+| VExprIdxIn (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
 
       (* Premises *)
       vexpr denv dstate lenv ei (Some (Vnat i)) -> (* index expression [ei] evaluates to [i] *)
@@ -108,6 +112,140 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
       
       vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
 
+(** Evaluates an indexed variable identifier. *)
+
+| VExprIdxVar (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
+
+      (* Premises *)
+      vexpr denv dstate lenv ei (Some (Vnat i)) ->  (* index expression [ei] evaluates to [i] *)
+      is_of_type (Vnat i) (Tnat l u) ->             (* index value is in array bounds. *)
+      
+      (* Side conditions *)
+      MapsTo id ((Tarray t l u), (Vlist lofvalues)) lenv -> (* id ∈ Λ(Δ) and Λ(id) = (array(t, l, u), lofvalues) *)
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
+
+(** Evaluates an indexed constant identifier. *)
+
+| VExprIdxConst (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (lofvalues : list value),
+
+      (* Premises *)
+      vexpr denv dstate lenv ei (Some (Vnat i)) ->  (* index expression [ei] evaluates to [i] *)
+      is_of_type (Vnat i) (Tnat l u) ->             (* index value is in array bounds. *)
+      
+      (* Side conditions *)
+      MapsTo id (Constant (Tarray t l u) (Vlist lofvalues)) denv -> (* id ∈ Consts(Δ) and Δ(id) = (array(t, l, u), lofvalues) *)
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_name (n_xid id ei)) (get_at (i - l) lofvalues)
+
+(** Evaluates expression with addition operator. 
+    
+    The "nat overflow check" (i.e, v + v' <= NATMAX)
+    is done in the [vadd] function.
+ *)
+
+| VExprAdd (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) -> 
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_add e e') (vadd v v')
+
+(** Evaluates expression with substraction operator. 
+    
+    The "out of natural scope" check (i.e, v <= v') 
+    is done in the [vsub] function.
+ *)
+
+| VExprSub (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) ->
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_sub e e') (vsub v v')
+
+(** Evaluates expression with the "less or equal" operator. *)
+
+| VExprLE (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) -> 
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_le e e') (vle v v')
+
+(** Evaluates expression with the "strictly less" operator. *)
+
+| VExprLT (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) -> 
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_lt e e') (vlt v v')
+
+(** Evaluates expression with the "greater or equal" operator. *)
+
+| VExprGE (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) -> 
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_ge e e') (vge v v')
+
+(** Evaluates expression with the "strictly greater" operator. *)
+
+| VExprGT (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) -> 
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_gt e e') (vgt v v')
+
+(** Evaluates expression with the and operator. *)
+
+| VExprAnd (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) -> 
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_and e e') (vand v v')
+
+(** Evaluates expression with the or operator. *)
+
+| VExprAnd (e e' : expr):
+    forall (v v' : value),
+
+      (* Premises *)
+      vexpr denv dstate lenv e (Some v) ->
+      vexpr denv dstate lenv e (Some v') ->
+      
+      (* Conclusion *)      
+      vexpr denv dstate lenv (e_binop bo_or e e') (vor v v')
+            
 (** Defines the evaluation relation for lists of expressions.  *)
             
 with vlofexprs (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
