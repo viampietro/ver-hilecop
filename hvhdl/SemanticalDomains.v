@@ -39,6 +39,14 @@ Fixpoint get_at (i : nat) (lofv : lofvalues) {struct i} : option value :=
   | (S j), Vcons a l' => get_at j l'
   end.
 
+(** Creates a list of length [n] filled with value [v]. *)
+
+Fixpoint create_list (n : nat) (v : value) {struct n} : lofvalues :=
+  match n with
+  | 0 => Vnil
+  | S m => Vcons v (create_list m v)
+  end.
+
 (** Implements the addition between two values.
 
     Returns an error if: 

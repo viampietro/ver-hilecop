@@ -40,9 +40,11 @@ Inductive is_lstatic_expr : expr -> Prop :=
 Inductive is_gstatic_expr (env : DEnv) : expr -> Prop :=
 | IsGStaticLStatic (e : expr) : is_lstatic_expr e -> is_gstatic_expr env e
 | IsGStaticGeneric (id : ident) :
-    forall (t : type) (v : value), MapsTo id (Generic t v) env -> is_gstatic_expr env (e_name (n_id id))
+    forall (t : type) (v : value),
+      MapsTo id (Generic t v) env -> is_gstatic_expr env (e_name (n_id id))
 | IsGStaticConstant (id : ident) :
-    forall (t : type) (v : value), MapsTo id (Constant t v) env -> is_gstatic_expr env (e_name (n_id id))
+    forall (t : type) (v : value),
+      MapsTo id (Constant t v) env -> is_gstatic_expr env (e_name (n_id id))
 | IsGStaticAggreg (l : list expr) :
     (forall (e : expr), List.In e l -> is_gstatic_expr env e) ->
     is_gstatic_expr env (e_aggreg l).

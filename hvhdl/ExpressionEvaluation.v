@@ -20,7 +20,7 @@ Import NatMap.
     
  *)
 
-Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
+Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
   expr -> option value -> Prop :=
 
 (** Evaluates nat constant. *) 
@@ -281,7 +281,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
     
 (** Defines the evaluation relation for lists of expressions.  *)
             
-with vlofexprs (denv : DEnv) (dstate : DState) (lenv : IdMap (type * value)) :
+with vlofexprs (denv : DEnv) (dstate : DState) (lenv : LEnv) :
   list expr -> option (lofvalues) -> Prop :=
 | VLOfExprsNil : vlofexprs denv dstate lenv [] (Some Vnil)
 | VLOfExprsCons :

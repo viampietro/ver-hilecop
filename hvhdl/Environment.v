@@ -58,6 +58,16 @@ Definition EmptyDState := MkDState EmptyDEnv
                                    (NatMap.empty DState)
                                    (NatSet.empty).
 
+(** Defines a local environment of a process
+    as a map from id to couples (type * value).
+ *)
+
+Definition LEnv := IdMap (type * value).
+
+(** Defines an empty local environment. *)
+
+Definition EmptyLEnv := NatMap.empty (type * value).
+
 (** Definition of the [dom] function that yields a list of identifiers
     corresponding to the definition domain of an IdMap. *)
 
