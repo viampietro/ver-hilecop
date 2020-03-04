@@ -25,7 +25,7 @@ Qed.
 
 Lemma map_fst_split_eq {A B : Type} :
   forall (l : list (A * B)),
-    map fst l = fst (split l).
+    List.map fst l = fst (split l).
 Proof.
   induction l.
 

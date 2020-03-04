@@ -31,7 +31,10 @@ SITPNFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 # H-VHDL syntax and semantics.
 
-HVHDLFILES=GlobalTypes.v AbstractSyntax.v SemanticalDomains.v
+HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains.v \
+	Environment.v StaticExpressions.v IsOfType.v DefaultValue.v \
+	ExpressionEvaluation.v ConstraintElaboration.v TypeElaboration.v \
+	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
 
 # Builds files with prefixes
 

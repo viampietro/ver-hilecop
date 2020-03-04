@@ -11,7 +11,3 @@ Require Export Omega.
 Require Export FunInd.
 Require Export Permutation.
 
-(** User-defined libraries. *)
-
-Require Export NatMap.
-Require Export NatSet.

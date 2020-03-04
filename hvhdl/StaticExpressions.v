@@ -9,8 +9,6 @@ Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SemanticalDomains.
 
-Include NatMap.
-
 (** Defines the inductive predicate [is_lstatic_expr] stating that an
     expression is locally static, i.e it is:
     

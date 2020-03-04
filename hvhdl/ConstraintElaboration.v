@@ -21,6 +21,8 @@ Inductive econstr (denv : DEnv) (e e' : expr) (n n' : nat) : Prop :=
     is_gstatic_expr denv e ->   (* Expression e must be globally static. *)
     is_gstatic_expr denv e' ->  (* Expression e' must be globally static. *)
     
+    (* vexpr checks that the bounds are nat values comprised in the
+       interval [0, NATMAX]. *)
     vexpr denv EmptyDState EmptyLEnv e (Some (Vnat n)) -> (* e evaluates to (Vnat n) *)
     vexpr denv EmptyDState EmptyLEnv e' (Some (Vnat n')) -> (* e' evaluates to (Vnat n') *)
 

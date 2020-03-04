@@ -2,6 +2,8 @@
     syntactical and semantical part of H-VHDL. *)
 
 Require Import Coqlib.
+Require Export NatMap.
+Require Export NatSet.
 Require Export ArcT.
 Require Export TransitionT.
 

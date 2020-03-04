@@ -92,26 +92,29 @@ Notation "cstmt // cstmt'" := (cs_par cstmt cstmt') (at level 0).
 (** Generic constant declaration. *)
 
 Inductive gdecl : Type :=
-  gdecl_ (genid : ident) (t : tind) (e : expr).
-
-(** Architecture declarations. *)
-
-Inductive adecl : Type :=
-| adecl_sig (sigid : ident) (t : tind)                 (** Signal declaration. *)
-| adecl_const (constid : ident) (t : tind) (v : expr). (** Constant declaration. *)
-
+| gdecl_ (genid : ident) (t : tind) (e : expr)
+| gdecl_seq : gdecl -> gdecl -> gdecl.
+                                   
 (** Port declarations. *)
 
 Inductive pdecl : Type :=
-| pdecl_in (portid : ident) (t : tind)
-| pdecl_out (portid : ident) (t : tind).
+| pdecl_in (portid : ident) (t : tind)  (** Declaration of port in "in" mode. *)
+| pdecl_out (portid : ident) (t : tind) (** Declaration of port in "out" mode. *)
+| pdecl_seq : pdecl -> pdecl -> pdecl.  (** Sequence of port declaration. *)
+            
+(** Architecture declarations. *)
+
+Inductive adecl : Type :=
+| adecl_sig (sigid : ident) (t : tind)                (** Signal declaration. *)
+| adecl_const (constid : ident) (t : tind) (v : expr) (** Constant declaration. *)
+| adecl_seq : adecl -> adecl -> adecl.                (** Sequence of architecture declaration *)
 
 (** Design declaration. *)
 
 Inductive design : Type :=
-  design_ (entid    : ident)      (** Entity id *)
-          (archid   : ident)      (** Architecture id *)
-          (gens     : list gdecl) (** Generic constant list *)
-          (ports    : list pdecl) (** Port list *)
-          (adecls   : list adecl) (** Architecture declarative part *)
-          (behavior : cs).        (** Concurrent statement part *)
+  design_ (entid    : ident) (** Entity id *)
+          (archid   : ident) (** Architecture id *)
+          (gens     : gdecl) (** Generic constant list *)
+          (ports    : pdecl) (** Port list *)
+          (adecls   : adecl) (** Architecture declarative part *)
+          (behavior : cs).   (** Concurrent statement part *)

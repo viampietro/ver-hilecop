@@ -58,6 +58,22 @@ Definition EmptyDState := MkDState EmptyDEnv
                                    (NatMap.empty DState)
                                    (NatSet.empty).
 
+(** Macro to add a new mapping id => value in the
+    [sigstore] of od a design state [dstate].
+ *)
+
+Definition sigstore_add (id : ident) (v : value) (dstate : DState) : DState :=
+  MkDState (denv dstate) (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
+
+(** Defines the [InSigStore] predicate that states that
+    [id] is mapped in the [sigstore] of design state [dstate].
+
+    Wrapper around the [In] predicate.
+ *)
+
+Definition InSigStore (id : ident) (dstate : DState) :=
+  NatMap.In id (sigstore dstate).
+
 (** Defines a local environment of a process
     as a map from id to couples (type * value).
  *)
