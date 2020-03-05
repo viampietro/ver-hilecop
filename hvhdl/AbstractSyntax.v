@@ -67,20 +67,43 @@ Notation "stmt ;; stmt'" := (ss_seq stmt stmt') (at level 100).
 
 (** ** Concurrent statements. *)
 
+(** Process local environment declarations. *)
+
+Inductive vdecl : Type :=
+  vdecl_ (vid : ident) (t : tind).
+
+(** Generic map clause. *)
+
+Inductive assocg : Type :=
+  assocg_ (id : ident) (e : expr).
+
+(** Port map entry ("in" mode port). *)
+
+Inductive assocpi : Type :=
+  assocpi_ (n : name) (e : expr).
+
+(** Port map entry ("out" mode port). *)
+
+Inductive assocpo : Type :=
+  (** None for the "open" keyword. *)
+  assocpo_ (n : name) (n' : option name). 
+
+(** Concurrent statement. *)
+
 Inductive cs : Type :=
 
 (** Process statement. *)
-| cs_ps (pid : ident)                (** Process id *)
-        (sl : list ident)            (** Sensitivity list *)
-        (vars : list (ident * tind)) (** Variable declaration list *)
-        (stmt : ss)                  (** Sequential statement block *)
+| cs_ps (pid : ident)       (** Process id *)
+        (sl : IdSet)        (** Sensitivity list *)
+        (vars : list vdecl) (** Variable declaration list *)
+        (stmt : ss)         (** Sequential statement block *)
       
 (** Component instantiation statement. *)
-| cs_comp (compid : ident)                     (** Component id *)
-          (entid : ident)                      (** Entity label *)
-          (gmap : list (ident * expr))         (** Generic map *)
-          (ipmap : list (name * expr))         (** In port map *)
-          (opmap : list (name * option name))  (** Out port map, 'n => None' ≡ 'n => open' *)
+| cs_comp (compid : ident)       (** Component id *)
+          (entid : ident)        (** Entity label *)
+          (gmap : list assocg)   (** Generic map *)
+          (ipmap : list assocpi) (** In port map *)
+          (opmap : list assocpo) (** Out port map *)
 
 (** Composition of concurrent statements. *)
 | cs_par (cstmt : cs) (cstmt' : cs).
@@ -92,29 +115,26 @@ Notation "cstmt // cstmt'" := (cs_par cstmt cstmt') (at level 0).
 (** Generic constant declaration. *)
 
 Inductive gdecl : Type :=
-| gdecl_ (genid : ident) (t : tind) (e : expr)
-| gdecl_seq : gdecl -> gdecl -> gdecl.
+  gdecl_ (genid : ident) (t : tind) (e : expr).
                                    
 (** Port declarations. *)
 
 Inductive pdecl : Type :=
 | pdecl_in (portid : ident) (t : tind)  (** Declaration of port in "in" mode. *)
-| pdecl_out (portid : ident) (t : tind) (** Declaration of port in "out" mode. *)
-| pdecl_seq : pdecl -> pdecl -> pdecl.  (** Sequence of port declaration. *)
+| pdecl_out (portid : ident) (t : tind). (** Declaration of port in "out" mode. *)
             
 (** Architecture declarations. *)
 
 Inductive adecl : Type :=
 | adecl_sig (sigid : ident) (t : tind)                (** Signal declaration. *)
-| adecl_const (constid : ident) (t : tind) (v : expr) (** Constant declaration. *)
-| adecl_seq : adecl -> adecl -> adecl.                (** Sequence of architecture declaration *)
+| adecl_const (constid : ident) (t : tind) (v : expr). (** Constant declaration. *)
 
 (** Design declaration. *)
 
 Inductive design : Type :=
-  design_ (entid    : ident) (** Entity id *)
-          (archid   : ident) (** Architecture id *)
-          (gens     : gdecl) (** Generic constant list *)
-          (ports    : pdecl) (** Port list *)
-          (adecls   : adecl) (** Architecture declarative part *)
-          (behavior : cs).   (** Concurrent statement part *)
+  design_ (entid    : ident)      (** Entity id *)
+          (archid   : ident)      (** Architecture id *)
+          (gens     : list gdecl) (** Generic constant clause *)
+          (ports    : list pdecl) (** Port clause *)
+          (adecls   : list adecl) (** Architecture declarative part *)
+          (behavior : cs).        (** Concurrent statement part *)

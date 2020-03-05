@@ -6,6 +6,7 @@
     and the mapping from declared signal id to their default value in
     the design state [dstate] (σ).  *)
 
+Require Import Coqlib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.
@@ -19,11 +20,24 @@ Import NatMap.
 
 (** The architecture declarative part elaboration relation. *)
 
-Inductive edecls (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
+Inductive edecls (denv : DEnv) (dstate : DState)  : list adecl -> DEnv -> DState -> Prop :=
+
+(** Empty list of architecture declarations. *)
+| EDeclsNil : edecls denv dstate [] denv dstate
+  
+(** Sequence of architecture declaration. *)
+| EDeclsCons :
+    forall {ad lofadecls denv' dstate' denv'' dstate''},
+      edecl denv dstate ad denv' dstate' ->
+      edecls denv' dstate' lofadecls denv'' dstate'' ->
+      edecls denv dstate (ad :: lofadecls) denv'' dstate''
+
+(** Defines the elaboration relation for single architecture declaration. *)
+with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
   
 (** Signal declaration elaboration. *)
   
-| EDeclsSig :
+| EDeclSig :
     forall {tau t v id},
       
       (* Premises. *)
@@ -35,11 +49,11 @@ Inductive edecls (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> P
       ~InSigStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecls denv dstate (adecl_sig id tau) (add id (Declared t) denv) (sigstore_add id v dstate)
+      edecl denv dstate (adecl_sig id tau) (add id (Declared t) denv) (sigstore_add id v dstate)
 
 (** Constant declaration elaboration. *)
              
-| EDeclsConst :
+| EDeclConst :
     forall {id tau e t v},
       
       (* Premises. *)
@@ -51,11 +65,4 @@ Inductive edecls (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> P
       ~In id denv -> (* id ∉ Δ *)
 
       (* Conclusion *)
-      edecls denv dstate (adecl_const id tau e) (add id (Constant t v) denv) dstate
-
-(** Sequence of architecture declaration. *)
-| EDeclsSeq :
-    forall {ad ad' denv' dstate' denv'' dstate''},
-      edecls denv dstate ad denv' dstate' ->
-      edecls denv' dstate' ad' denv'' dstate'' ->
-      edecls denv dstate (adecl_seq ad ad') denv'' dstate''.
+      edecl denv dstate (adecl_const id tau e) (add id (Constant t v) denv) dstate.

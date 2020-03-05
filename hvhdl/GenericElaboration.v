@@ -21,10 +21,23 @@ Include NatMap.
     function yielding the values assigned to the generic constants
     being elaborated.  *)
 
-Inductive egens (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
+Inductive egens (denv : DEnv) (dimen : IdMap value) : list gdecl -> DEnv -> Prop :=
 
+(* Elaborates an empty list of generic constant declaration. *)
+| EGensNil: egens denv dimen [] denv
+
+(* Elaborates a non-empty list of generic constant declaration. *)
+| EGensCons:
+    forall {gd lofgdecls denv' denv''},
+      egen denv dimen gd denv' ->
+      egens denv' dimen lofgdecls denv'' ->
+      egens denv dimen (gd :: lofgdecls) denv''
+    
+(** Defines the elaboration relation for one generic constant declaration. *)
+with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
+  
 (* Elaboration with given a dimensioning value. *)
-| EGensDimen :
+| EGenDimen :
     forall {idg tau e t dv v},
       
       (* Premises *)
@@ -37,10 +50,10 @@ Inductive egens (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       MapsTo idg v dimen ->     (* idg ∈ M and M(idg) = v *)
       
       (* Conclusion *)
-      egens denv dimen (gdecl_ idg tau e) (add idg (Generic t v) denv)
+      egen denv dimen (gdecl_ idg tau e) (add idg (Generic t v) denv)
 
 (* Elaboration with default value. *)
-| EGensDefault :
+| EGenDefault :
     forall {idg tau e t dv},
       
       (* Premises *)
@@ -53,14 +66,7 @@ Inductive egens (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       ~In idg dimen ->     (* idg ∉ M *)
       
       (* Conclusion *)
-      egens denv dimen (gdecl_ idg tau e) (add idg (Generic t dv) denv)
-
-(* Elaboration of a sequence of generic constant declaration. *)
-| EGensSeq:
-    forall {gd gd' denv' denv''},
-      egens denv dimen gd denv' ->
-      egens denv' dimen gd' denv'' ->
-      egens denv dimen (gdecl_seq gd gd') denv''.
+      egen denv dimen (gdecl_ idg tau e) (add idg (Generic t dv) denv).
 
       
 
