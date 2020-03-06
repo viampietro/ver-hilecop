@@ -35,6 +35,7 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 	Environment.v StaticExpressions.v IsOfType.v DefaultValue.v \
 	ExpressionEvaluation.v ConstraintElaboration.v TypeElaboration.v \
 	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
+	ValidSS.v ValidPortMap.v DesignElaboration.v
 
 # Builds files with prefixes
 

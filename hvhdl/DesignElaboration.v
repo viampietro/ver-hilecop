@@ -13,6 +13,11 @@ Require Import DefaultValue.
 Require Import SemanticalDomains.
 Require Import StaticExpressions.
 Require Import ExpressionEvaluation.
+Require Import ValidSS.
+Require Import GenericElaboration.
+Require Import PortElaboration.
+Require Import ArchitectureElaboration.
+Require Import ValidPortMap.
 
 Import NatMap.
 
@@ -85,3 +90,63 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
       eassocg dimen (assocg_ id e) (add id v dimen).
       
 
+(** * Design elaboration relation. *)
+
+(** Defines the design elaboration relation. *)
+
+Inductive edesign (dstore : IdMap design) : IdMap value -> design -> DEnv -> DState -> Prop :=
+| EDesign :
+    forall {dimen entid archid gens ports adecls behavior
+                  denv denv' denv'' denv''' dstate dstate' dstate''},
+
+      (* Premises *)
+      egens EmptyDEnv dimen gens denv ->
+      eports denv EmptyDState ports denv' dstate ->
+      edecls denv' dstate adecls denv'' dstate' ->
+      ebeh dstore denv'' dstate' behavior denv''' dstate'' ->
+      
+      (* Conclusion *)
+      edesign dstore dimen (design_ entid archid gens ports adecls behavior) denv''' dstate''    
+
+(** Defines the relation that elaborates the concurrent statements
+    defining the behavior of a design.  *)
+
+with ebeh (dstore : IdMap design) : DEnv -> DState -> cs -> DEnv -> DState -> Prop :=
+
+(** Elaborates and type-checks a process statement. *)
+| EBehPs :
+    forall {id sl vars stmt lenv denv dstate},
+
+      (* Premises *)
+      evars denv EmptyLEnv vars lenv ->
+      validss denv dstate lenv stmt ->
+
+      (* Side conditions *)
+      ~In id denv ->
+      (* sl ⊆ Ins(Δ) ∪ Sigs(Δ) *)
+      (forall {s},
+          NatSet.In s sl ->
+          exists {t}, MapsTo s (Declared t) denv \/ MapsTo s (Input t) denv) ->
+
+      (* Conclusion *)
+      ebeh dstore denv dstate (cs_ps id sl vars stmt) (add id (Process lenv) denv) dstate
+
+(** Elaborates and type-checks a component instantiation statement. *)
+| EBehComp :
+    forall {denv dstate idc ide gmap ipmap opmap
+                 entid archid gens ports adecls behavior
+                 dimen cenv cstate cdesign},
+
+      (* Premises *)
+      emapg (NatMap.empty value) gmap dimen ->
+      edesign dstore dimen cdesign cenv cstate ->
+      validipm denv cenv dstate ipmap ->
+      validopm denv cenv opmap ->
+      
+      (* Side conditions *)
+      cdesign = design_ entid archid gens ports adecls behavior ->
+      MapsTo ide cdesign dstore ->
+      (forall {g}, In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
+      
+      (* Conclusion *)
+      ebeh dstore denv dstate (cs_comp idc ide gmap ipmap opmap) denv dstate.
