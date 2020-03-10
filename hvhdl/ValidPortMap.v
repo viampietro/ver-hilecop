@@ -60,7 +60,7 @@ with eassocpi (denv cenv : DEnv) (dstate : DState) (formals : list (ident * opti
     forall {id e v t},
 
       (* Premises *)
-      vexpr denv dstate EmptyLEnv e (Some v) ->
+      vexpr denv dstate EmptyLEnv e v ->
       is_of_type v t ->
 
       (* Side conditions *)
@@ -76,8 +76,8 @@ with eassocpi (denv cenv : DEnv) (dstate : DState) (formals : list (ident * opti
 
       (* Premises *)
       is_gstatic_expr denv ei ->
-      vexpr denv dstate EmptyLEnv e (Some v) ->
-      vexpr denv dstate EmptyLEnv ei (Some vi) ->
+      vexpr denv dstate EmptyLEnv e v ->
+      vexpr denv dstate EmptyLEnv ei vi ->
       is_of_type v t ->
       is_of_type vi (Tnat l u) ->
       
@@ -179,7 +179,7 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
 
       (* Premises *)
       is_gstatic_expr denv ei ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -204,7 +204,7 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
 
       (* Premises *)
       is_gstatic_expr denv ei ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -240,7 +240,7 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
 
       (* Premises *)
       is_gstatic_expr denv ei ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -260,7 +260,7 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
 
       (* Premises *)
       is_gstatic_expr denv ei ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -282,7 +282,7 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
 
       (* Premises *)
       is_gstatic_expr denv ei ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -305,8 +305,8 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       (* Premises *)
       is_gstatic_expr denv ei ->
       is_gstatic_expr denv ei' ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
-      vexpr denv EmptyDState EmptyLEnv ei' (Some vi') ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
+      vexpr denv EmptyDState EmptyLEnv ei' vi' ->
       is_of_type vi (Tnat l u) ->
       is_of_type vi' (Tnat l' u') ->
       
@@ -331,8 +331,8 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       (* Premises *)
       is_gstatic_expr denv ei ->
       is_gstatic_expr denv ei' ->
-      vexpr denv EmptyDState EmptyLEnv ei (Some vi) ->
-      vexpr denv EmptyDState EmptyLEnv ei' (Some vi') ->
+      vexpr denv EmptyDState EmptyLEnv ei vi ->
+      vexpr denv EmptyDState EmptyLEnv ei' vi' ->
       is_of_type vi (Tnat l u) ->
       is_of_type vi' (Tnat l' u') ->
       

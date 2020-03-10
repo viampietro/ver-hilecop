@@ -81,7 +81,7 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
 
       (* Premises *)
       is_lstatic_expr e ->
-      vexpr EmptyDEnv EmptyDState EmptyLEnv e (Some v) ->
+      vexpr EmptyDEnv EmptyDState EmptyLEnv e v ->
 
       (* Side conditions *)
       ~In id dimen ->

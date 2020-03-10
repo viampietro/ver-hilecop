@@ -59,7 +59,7 @@ with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
       (* Premises. *)
       etype denv tau t ->
       is_gstatic_expr denv e ->
-      vexpr denv dstate EmptyLEnv e (Some v) ->  
+      vexpr denv dstate EmptyLEnv e v ->  
       
       (* Side conditions. *)
       ~In id denv -> (* id ∉ Δ *)

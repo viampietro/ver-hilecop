@@ -43,7 +43,7 @@ with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       (* Premises *)
       etypeg tau t ->
       is_lstatic_expr e ->
-      vexpr EmptyDEnv EmptyDState EmptyLEnv e (Some dv) ->
+      vexpr EmptyDEnv EmptyDState EmptyLEnv e dv ->
 
       (* Side conditions *)
       ~In idg denv ->           (* idg ∉ Δ *)
@@ -59,7 +59,7 @@ with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       (* Premises *)
       etypeg tau t ->
       is_lstatic_expr e ->
-      vexpr EmptyDEnv EmptyDState EmptyLEnv e (Some dv) ->
+      vexpr EmptyDEnv EmptyDState EmptyLEnv e dv ->
 
       (* Side conditions *)
       ~In idg denv ->      (* idg ∉ Δ *)

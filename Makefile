@@ -35,7 +35,8 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 	Environment.v StaticExpressions.v IsOfType.v DefaultValue.v \
 	ExpressionEvaluation.v ConstraintElaboration.v TypeElaboration.v \
 	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
-	ValidSS.v ValidPortMap.v DesignElaboration.v
+	ValidSS.v ValidPortMap.v DesignElaboration.v \
+	SSEvaluation.v
 
 # Builds files with prefixes
 
@@ -51,11 +52,31 @@ all: proof
 
 proof: $(FILES:.v=.vo)
 
+utils: $(UTILS:.v=.vo)
+sitpn: $(SITPN:.v=.vo)
+hvhdl: $(HVHDL:.v=.vo)
+
 %.vo : %.v	
 	@echo "COQC $*.v"
 	@$(COQC) $*.v  
 
-clean:
+cleansitpn:
+	rm -f $(patsubst %, %/*.vo, sitpn)
+	rm -f $(patsubst %, %/.*.aux, sitpn)
+	rm -f $(patsubst %, %/*.glob, sitpn)
+	rm -f $(patsubst %, %/*.vok, sitpn)
+	rm -f $(patsubst %, %/*.vos, sitpn)
+	rm -f $(patsubst %, %/*~, sitpn)
+
+cleanhvdl:
+	rm -f $(patsubst %, %/*.vo, hvhdl)
+	rm -f $(patsubst %, %/.*.aux, hvhdl)
+	rm -f $(patsubst %, %/*.glob, hvhdl)
+	rm -f $(patsubst %, %/*.vok, hvhdl)
+	rm -f $(patsubst %, %/*.vos, hvhdl)
+	rm -f $(patsubst %, %/*~, hvhdl)
+
+cleanall:
 	rm -f $(patsubst %, %/*.vo, $(DIRS))
 	rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	rm -f $(patsubst %, %/*.glob, $(DIRS))
