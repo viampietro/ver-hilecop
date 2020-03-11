@@ -45,7 +45,6 @@ Definition EmptyDEnv   := NatMap.empty SemanticalObject.
 
 Inductive DState  : Type :=
   MkDState {
-      denv      : DEnv;
       sigstore  : IdMap value;
       compstore : IdMap DState;
       events    : IdSet;
@@ -53,8 +52,7 @@ Inductive DState  : Type :=
 
 (** Defines an empty design state. *)
 
-Definition EmptyDState := MkDState EmptyDEnv
-                                   (NatMap.empty value)
+Definition EmptyDState := MkDState (NatMap.empty value)
                                    (NatMap.empty DState)
                                    (NatSet.empty).
 
@@ -63,7 +61,7 @@ Definition EmptyDState := MkDState EmptyDEnv
  *)
 
 Definition sigstore_add (id : ident) (v : value) (dstate : DState) : DState :=
-  MkDState (denv dstate) (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
+  MkDState (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
 
 (** Defines the [InSigStore] predicate that states that
     [id] is mapped in the [sigstore] of design state [dstate].

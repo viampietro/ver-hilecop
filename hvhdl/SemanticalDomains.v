@@ -39,6 +39,23 @@ Fixpoint get_at (i : nat) (lofv : lofvalues) {struct i} : option value :=
   | (S j), Vcons a l' => get_at j l'
   end.
 
+(** Stores value [v] at position [i] in list of values [lofv]. 
+    Returns an error (i.e, None) if the index is greater than 
+    the list length. *)
+
+Fixpoint set_at (v : value) (i : nat) (lofv : lofvalues) {struct i} : option lofvalues :=
+  match i, lofv with
+  (* Error, cannot access elements in an empty lofvalues. *)
+  | _, Vnil => None
+  | 0, Vcons a tl => Some (Vcons v tl)
+  | (S j), Vcons a tl =>
+    (* Inductive step. *)
+    match set_at v j tl with
+    | Some lofv' => Some (Vcons a lofv')
+    | None => None
+    end
+  end.
+
 (** Creates a list of length [n] filled with value [v]. *)
 
 Fixpoint create_list (n : nat) (v : value) {struct n} : lofvalues :=
@@ -47,6 +64,20 @@ Fixpoint create_list (n : nat) (v : value) {struct n} : lofvalues :=
   | S m => Vcons v (create_list m v)
   end.
 
+(** Specifies the equality relation between two values. *)
+
+Inductive VEq : value -> value -> Prop :=
+| VEqBool : forall {b b'}, b = b' -> VEq (Vbool b) (Vbool b')
+| VEqNat  : forall {n n'}, n = n' -> VEq (Vnat n) (Vnat n')
+| VEqArc  : forall {a a'}, a = a' -> VEq (Varc a) (Varc a')
+| VEqTransition : forall {t t'}, t = t' -> VEq (Vtransition t) (Vtransition t')
+| VEqList : forall {l l'}, LOfVEq l l' -> VEq (Vlist l) (Vlist l')
+
+(** Specifies the equality relation between two lists of values. *)
+with LOfVEq : lofvalues -> lofvalues -> Prop :=
+| LOfVEqNil : LOfVEq Vnil Vnil
+| LOfVEqCons : forall {v v' l l'}, VEq v v' -> LOfVEq l l' -> LOfVEq (Vcons v l) (Vcons v' l').
+  
 (** Implements the equality operator between two values. 
     
     Returns an error if the two values do not belong
