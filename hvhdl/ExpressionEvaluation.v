@@ -302,4 +302,41 @@ with vlofexprs (denv : DEnv) (dstate : DState) (lenv : LEnv) :
       vlofexprs denv dstate lenv lofexprs lofvalues ->
       vexpr denv dstate lenv e v ->
       vlofexprs denv dstate lenv (e :: lofexprs) (Vcons v lofvalues).
-                          
+
+(** Defines the relation that evaluates names qualifying simple or
+    indexed "out" port identifiers.  
+    
+    Basically, reads the value associated to an out port identifier
+    at a certain design state σ.
+ *)
+
+Inductive vexpro (denv : DEnv) (dstate : DState) : name -> value -> Prop :=
+
+(** Evaluates a simple out port identifier. *)
+  
+| VEXprOut :
+    forall {id t v},
+
+      (* * Side conditions * *)
+      MapsTo id (Output t) denv ->     (* id ∈ Outs(Δ) and Δ(id) = t *)
+      MapsTo id v (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
+      
+      (* * Conclusion * *)
+      vexpro denv dstate (n_id id) v
+
+(** Evaluates an indexed out port identifier. *)
+  
+| VEXprIdxOut :
+    forall {id ei t l u i lofv v},
+
+      (* * Premises * *)
+      vexpr EmptyDEnv EmptyDState EmptyLEnv ei (Vnat i) ->
+      l <= i <= u ->
+      
+      (* * Side conditions * *)
+      MapsTo id (Output (Tarray t l u)) denv ->     (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
+      MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
+      get_at i lofv = Some v ->                   (* Current value at index [i] of [lofv] is [v] *)
+      
+      (* * Conclusion * *)
+      vexpro denv dstate (n_xid id ei) v.

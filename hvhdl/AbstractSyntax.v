@@ -40,7 +40,9 @@ Inductive expr : Type :=
 (** Names *)
 with name : Type :=
 | n_id : ident -> name  
-| n_xid : ident -> expr -> name.
+| n_xid : ident -> expr -> name
+| n_clk
+| n_rst.
 
 (** Subtype indications and type definitions. *)
 
@@ -79,14 +81,14 @@ Inductive assocg : Type :=
 
 (** Port map entry ("in" mode port). *)
 
-Inductive assocpi : Type :=
-  assocpi_ (n : name) (e : expr).
+Inductive associp : Type :=
+  associp_ (n : name) (e : expr).
 
 (** Port map entry ("out" mode port). *)
 
-Inductive assocpo : Type :=
+Inductive assocop : Type :=
   (** None for the "open" keyword. *)
-  assocpo_ (n : name) (n' : option name). 
+  assocop_ (n : name) (n' : option name). 
 
 (** Concurrent statement. *)
 
@@ -102,8 +104,8 @@ Inductive cs : Type :=
 | cs_comp (compid : ident)       (** Component id *)
           (entid : ident)        (** Entity label *)
           (gmap : list assocg)   (** Generic map *)
-          (ipmap : list assocpi) (** In port map *)
-          (opmap : list assocpo) (** Out port map *)
+          (ipmap : list associp) (** In port map *)
+          (opmap : list assocop) (** Out port map *)
 
 (** Composition of concurrent statements. *)
 | cs_par (cstmt : cs) (cstmt' : cs).

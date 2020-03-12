@@ -37,26 +37,26 @@ Require Import StaticExpressions.
  *)
 
 Inductive listipm (denv cenv : DEnv) (dstate : DState) (formals : list (ident * option value)) :
-  list assocpi -> list (ident * option value) -> Prop :=
+  list associp -> list (ident * option value) -> Prop :=
 
 (** An empty list of port associations does not change the [formals] list. *)
 | ListIPMNil : listipm denv cenv dstate formals [] formals
 
 (** Lists an non-empty list of port associations. *)
 | ListIPMCons :
-    forall {aspi lofaspis formals' formals''},
-      eassocpi denv cenv dstate formals aspi formals' ->
-      listipm denv cenv dstate formals' lofaspis formals'' ->
-      listipm denv cenv dstate formals (aspi :: lofaspis) formals''
+    forall {asip lofasips formals' formals''},
+      eassocip denv cenv dstate formals asip formals' ->
+      listipm denv cenv dstate formals' lofasips formals'' ->
+      listipm denv cenv dstate formals (asip :: lofasips) formals''
 
 (** Defines the relation that checks the validity of a single
     association present in an "in" port map.
  *)
-with eassocpi (denv cenv : DEnv) (dstate : DState) (formals : list (ident * option value)) :
-  assocpi -> list (ident * option value) -> Prop :=
+with eassocip (denv cenv : DEnv) (dstate : DState) (formals : list (ident * option value)) :
+  associp -> list (ident * option value) -> Prop :=
 
 (** Checks an association with a simple port identifier (no index). *)
-| EAssocPIPartial :
+| EAssocipPartial :
     forall {id e v t},
 
       (* Premises *)
@@ -68,10 +68,10 @@ with eassocpi (denv cenv : DEnv) (dstate : DState) (formals : list (ident * opti
       MapsTo id (Input t) cenv ->                     (* id ∈ Ins(Δ_c) and Δ_c(id) = t *)
 
       (* Conclusion *)
-      eassocpi denv cenv dstate formals (assocpi_ (n_id id) e) (formals ++ [(id,None)])
+      eassocip denv cenv dstate formals (associp_ (n_id id) e) (formals ++ [(id,None)])
 
 (** Checks an association with a partial port identifier (with index). *)
-| EAssocPISimple :
+| EAssocipSimple :
     forall {id ei e v vi t l u},
 
       (* Premises *)
@@ -87,7 +87,7 @@ with eassocpi (denv cenv : DEnv) (dstate : DState) (formals : list (ident * opti
       MapsTo id (Input (Tarray t l u)) cenv ->  (* id ∈ Ins(Δ_c) and Δ_c(id) = array(t,l,u) *)
 
       (* Conclusion *)
-      eassocpi denv cenv dstate formals (assocpi_ (n_xid id ei) e) (formals ++ [(id, Some vi)]).
+      eassocip denv cenv dstate formals (associp_ (n_xid id ei) e) (formals ++ [(id, Some vi)]).
 
 (** Defines the predicate that checks the [formals] list (built by the
     [listipm] relation) against the component environment [cenv].  *)
@@ -100,7 +100,7 @@ Definition checkipm (cenv : DEnv) (formals : list (ident * option value)) :=
 
 (** Defines the predicate stating that an "in" port map is valid. *)
 
-Inductive validipm (denv cenv : DEnv) (dstate : DState) (ipmap : list assocpi) : Prop :=
+Inductive validipm (denv cenv : DEnv) (dstate : DState) (ipmap : list associp) : Prop :=
 | ValidIpm :
     forall {formals},
       listipm denv cenv dstate [] ipmap formals ->
@@ -113,7 +113,7 @@ Inductive validipm (denv cenv : DEnv) (dstate : DState) (ipmap : list assocpi) :
     present in an "out" port map. *)
 
 Inductive listopm (denv cenv : DEnv) (formals actuals : list (ident * option value)) :
-  list assocpo -> list (ident * option value) -> list (ident * option value) -> Prop :=
+  list assocop -> list (ident * option value) -> list (ident * option value) -> Prop :=
 
 (** An empty list of port associations does not change the [formals]
     and [actuals] list. *)
@@ -122,7 +122,7 @@ Inductive listopm (denv cenv : DEnv) (formals actuals : list (ident * option val
 (** Lists an non-empty list of port associations. *)
 | ListOPMCons :
     forall {aspo lofaspos formals' actuals' formals'' actuals''},
-      eassocpo denv cenv formals actuals aspo formals' actuals' ->
+      eassocop denv cenv formals actuals aspo formals' actuals' ->
       listopm denv cenv formals' actuals' lofaspos formals'' actuals'' ->
       listopm denv cenv formals actuals (aspo :: lofaspos) formals'' actuals''
 
@@ -130,13 +130,13 @@ Inductive listopm (denv cenv : DEnv) (formals actuals : list (ident * option val
     present in an "out" port map.
  *)
 
-with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value)) :
-  assocpo -> list (ident * option value) -> list (ident * option value) -> Prop :=
+with eassocop (denv cenv : DEnv) (formals actuals : list (ident * option value)) :
+  assocop -> list (ident * option value) -> list (ident * option value) -> Prop :=
 
 (** Checks an "out" port map association of the form "idf => ida", where 
     the actual part refers to a declared signal identifier.
  *)
-| EAssocPOSimpleToSimpleDecl :
+| EAssocopSimpleToSimpleDecl :
     forall {idf ida t},
       
       (* Side conditions *)
@@ -148,14 +148,14 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Declared t) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_id idf) (Some (n_id ida)))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_id idf) (Some (n_id ida)))
                (formals ++ [(idf, None)]) (actuals ++ [(ida, None)])
 
 (** Checks an "out" port map association of the form "idf => ida", where 
     the actual part refers to an output port identifier.
  *)
-| EAssocPOSimpleToSimpleOut :
+| EAssocopSimpleToSimpleOut :
     forall {idf ida t},
       
       (* Side conditions *)
@@ -167,14 +167,14 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Output t) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_id idf) (Some (n_id ida)))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_id idf) (Some (n_id ida)))
                (formals ++ [(idf, None)]) (actuals ++ [(ida, None)])
 
 (** Checks an "out" port map association of the form "idf => ida(ei)", where 
     the actual part refers to a declared signal identifier.
  *)
-| EAssocPOSimpleToPartialDecl :
+| EAssocopSimpleToPartialDecl :
     forall {idf ida ei vi t l u},
 
       (* Premises *)
@@ -192,14 +192,14 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Declared (Tarray t l u)) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_id idf) (Some (n_xid ida ei)))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_id idf) (Some (n_xid ida ei)))
                (formals ++ [(idf, None)]) (actuals ++ [(ida, Some vi)])
 
 (** Checks an "out" port map association of the form "idf => ida(ei)", where 
     the actual part refers to a declared signal identifier.
  *)
-| EAssocPOSimpleToPartialOut :
+| EAssocopSimpleToPartialOut :
     forall {idf ida ei vi t l u},
 
       (* Premises *)
@@ -217,12 +217,12 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Output (Tarray t l u)) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_id idf) (Some (n_xid ida ei)))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_id idf) (Some (n_xid ida ei)))
                (formals ++ [(idf, None)]) (actuals ++ [(ida, Some vi)])
 
 (** Checks an "out" port map association of the form "idf => open". *)
-| EAssocPOSimpleToOpen :
+| EAssocopSimpleToOpen :
     forall {idf t},
       
       (* Side conditions *)
@@ -230,12 +230,12 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo idf (Output t) cenv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_id idf) None)
+      eassocop denv cenv formals actuals
+               (assocop_ (n_id idf) None)
                (formals ++ [(idf,None)]) actuals
 
 (** Checks an "out" port map association of the form "idf(ei) => open". *)
-| EAssocPOPartialToOpen :
+| EAssocopPartialToOpen :
     forall {idf ei vi t l u},
 
       (* Premises *)
@@ -249,13 +249,13 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo idf (Output (Tarray t l u)) cenv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_xid idf ei) None)
+      eassocop denv cenv formals actuals
+               (assocop_ (n_xid idf ei) None)
                (formals ++ [(idf, Some vi)]) actuals
 
 (** Checks an "out" port map association of the form "idf(ei) => ida",
     where ida refers to a declared signal identifier. *)
-| EAssocPOPartialToSimpleDecl :
+| EAssocopPartialToSimpleDecl :
     forall {idf ei ida vi t l u},
 
       (* Premises *)
@@ -271,13 +271,13 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Declared t) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_xid idf ei) (Some (n_id ida)))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_xid idf ei) (Some (n_id ida)))
                (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, None)])
 
 (** Checks an "out" port map association of the form "idf(ei) => ida",
     where ida refers to an output port identifier. *)
-| EAssocPOPartialToSimpleOut :
+| EAssocopPartialToSimpleOut :
     forall {idf ei ida vi t l u},
 
       (* Premises *)
@@ -293,13 +293,13 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Output t) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_xid idf ei) (Some (n_id ida)))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_xid idf ei) (Some (n_id ida)))
                (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, None)])
                
 (** Checks an "out" port map association of the form "idf(ei) => ida(ei')",
     where ida refers to a declared signal identifier. *)
-| EAssocPOPartialToPartialDecl :
+| EAssocopPartialToPartialDecl :
     forall {idf ei ida ei' vi vi' t l u l' u'},
 
       (* Premises *)
@@ -319,13 +319,13 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Declared (Tarray t l' u')) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_xid idf ei) (Some (n_xid ida ei')))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_xid idf ei) (Some (n_xid ida ei')))
                (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, Some vi')])
                
 (** Checks an "out" port map association of the form "idf(ei) => ida(ei')",
     where ida refers to an output port identifier. *)
-| EAssocPOPartialToPartialOut :
+| EAssocopPartialToPartialOut :
     forall {idf ei ida ei' vi vi' t l u l' u'},
 
       (* Premises *)
@@ -345,14 +345,14 @@ with eassocpo (denv cenv : DEnv) (formals actuals : list (ident * option value))
       MapsTo ida (Output (Tarray t l' u')) denv ->
 
       (* Conclusion *)
-      eassocpo denv cenv formals actuals
-               (assocpo_ (n_xid idf ei) (Some (n_xid ida ei')))
+      eassocop denv cenv formals actuals
+               (assocop_ (n_xid idf ei) (Some (n_xid ida ei')))
                (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, Some vi')]).
 
 (** Defines the relation that checks the validity of an "out" port
     map. *)
 
-Inductive validopm (denv cenv : DEnv) (opmap : list assocpo) : Prop :=
+Inductive validopm (denv cenv : DEnv) (opmap : list assocop) : Prop :=
 | ValidOPM :
     forall {formals actuals},
       listopm denv cenv [] [] opmap formals actuals ->
