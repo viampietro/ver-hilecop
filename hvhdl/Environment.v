@@ -56,11 +56,18 @@ Definition EmptyDState := MkDState (NatMap.empty value)
                                    (NatMap.empty DState)
                                    (NatSet.empty).
 
+(** Returns a DState with an empty event set. *)
+
+Definition NoEvDState (dstate : DState) :=
+  MkDState (sigstore dstate)
+           (compstore dstate)
+           (NatSet.empty).
+
 (** Macro to add a new mapping id => value in the
     [sigstore] of od a design state [dstate].
  *)
 
-Definition sigstore_add (id : ident) (v : value) (dstate : DState) : DState :=
+Definition sstore_add (id : ident) (v : value) (dstate : DState) : DState :=
   MkDState (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
 
 (** Defines the [InSigStore] predicate that states that
@@ -69,7 +76,7 @@ Definition sigstore_add (id : ident) (v : value) (dstate : DState) : DState :=
     Wrapper around the [In] predicate.
  *)
 
-Definition InSigStore (id : ident) (dstate : DState) :=
+Definition InSStore (id : ident) (dstate : DState) :=
   NatMap.In id (sigstore dstate).
 
 (** Defines a local environment of a process
