@@ -46,10 +46,10 @@ with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
       
       (* Side conditions. *)
       ~In id denv -> (* id ∉ Δ *)
-      ~InSigStore id dstate ->  (* id ∉ σ *)
+      ~InSStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecl denv dstate (adecl_sig id tau) (add id (Declared t) denv) (sigstore_add id v dstate)
+      edecl denv dstate (adecl_sig id tau) (add id (Declared t) denv) (sstore_add id v dstate)
 
 (** Constant declaration elaboration. *)
              

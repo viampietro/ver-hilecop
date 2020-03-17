@@ -42,34 +42,13 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* * Conclusion * *)
       vcomb denv dstate (cs_ps pid sl vars stmt) dstate'
 
-(** Evaluates a stable component instance (no events and still no
-    events after in port map evaluation). *)
+(** Evaluates a component instance. The new state of the component
+    instance, resulting of the interpretation of its behavior,
+    registered some events. Therefore, we need to add the component
+    identifier to the events field in the state of the
+    embedding design. *)
 
-| VCombStableComp :
-    forall {compid entid gmap ipmap opmap cstmt cenv cstate cstate'},
-      
-      (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
-
-      (* * Side conditions * *)
-
-      (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
-      
-      (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore dstate) ->
-
-      (* No events after evaluation of ipmap. *)
-      events cstate' = NatSet.empty ->
-      
-      (* * Conclusion * *)
-      vcomb denv dstate (cs_comp compid entid gmap ipmap opmap) (NoEvDState dstate)
-
-(** Evaluates an unstable component instance, i.e there are some
-    events in the component instance state. Then, the internal
-    behavior of the component instance is evaluated. *)
-
-| VCombUnstableComp :
+| VCombCompEvents :
     forall {compid entid gmap ipmap opmap cstmt
                    cenv cstate cstate' cstate'' dstate'},
       
@@ -86,8 +65,37 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
 
-      (* No events after evaluation of ipmap. *)
-      events cstate' <> NatSet.empty ->
+      (* Events registered in cstate''. *)
+      events cstate'' <> NatSet.empty ->
+      
+      (* * Conclusion * *)
+      (* Add compid to the events field of dstate' because compid
+         registered some events in its internal state. *)
+      vcomb denv dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+
+(** Evaluates a component instance. The new state of the component
+    instance, resulting of the interpretation of its behavior,
+    registered no events. *)
+
+| VCombCompNoEvent :
+    forall {compid entid gmap ipmap opmap cstmt
+                   cenv cstate cstate' cstate'' dstate'},
+      
+      (* * Premises * *)
+      mapip denv cenv dstate cstate ipmap cstate' ->
+      vcomb cenv cstate' cstmt cstate'' ->
+      mapop denv cenv dstate cstate'' opmap dstate' ->
+      
+      (* * Side conditions * *)
+
+      (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
+      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      
+      (* compid ∈ σ and σ(compid) = cstate *)
+      NatMap.MapsTo compid cstate (compstore dstate) ->
+
+      (* No event registered in cstate''. *)
+      events cstate'' = NatSet.empty ->
       
       (* * Conclusion * *)
       vcomb denv dstate (cs_comp compid entid gmap ipmap opmap) dstate'
@@ -96,8 +104,20 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     statements.  *)
             
 | VCombPar :
-    forall {cstmt cstmt'},
+    forall {cstmt cstmt' dstate' dstate'' merged},
 
-(* * Conclusion * *)
-      vcomb denv dstate (cstmt // cstmt') 
-.
+      (* * Premises * *)
+      vcomb denv dstate cstmt dstate' ->
+      vcomb denv dstate cstmt' dstate'' ->
+
+      (* * Side conditions * *)
+      
+      (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
+      NatSet.inter (events dstate') (events dstate'') = NatSet.empty ->
+
+      (* States that merged is the result of the merging 
+         of states dstate, dstate' and dstate''. *)
+      IsMergedDState dstate dstate' dstate'' merged ->
+      
+      (* * Conclusion * *)
+      vcomb denv dstate (cstmt // cstmt') merged.

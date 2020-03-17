@@ -70,7 +70,14 @@ Definition NoEvDState (dstate : DState) :=
 Definition sstore_add (id : ident) (v : value) (dstate : DState) : DState :=
   MkDState (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
 
-(** Defines the [InSigStore] predicate that states that
+(** Returns a new DState where identifier [id] has been added to
+    the [events] field.
+ *)
+
+Definition events_add (id : ident) (dstate : DState) :=
+  MkDState (sigstore dstate) (compstore dstate) (NatSet.add id (events dstate)).
+
+(** Defines the [InSStore] predicate that states that
     [id] is mapped in the [sigstore] of design state [dstate].
 
     Wrapper around the [In] predicate.
@@ -78,6 +85,46 @@ Definition sstore_add (id : ident) (v : value) (dstate : DState) : DState :=
 
 Definition InSStore (id : ident) (dstate : DState) :=
   NatMap.In id (sigstore dstate).
+
+(** Predicate stating that a DState [merged] results from the
+    interleaving of an origin DState [origin], and two DState
+    [dstate'] and [dstate''].
+
+    To understand the predicate, one can consider that the states
+    [dstate'] and [dstate''] result from the interpretation of two
+    different concurrent statements in the context of [origin].  *)
+
+Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
+
+  (* Describes the content of (sigstore merged) *)
+
+  (forall {id v}, NatSet.In id (events dstate') ->
+                  NatMap.MapsTo id v (sigstore dstate') ->
+                  NatMap.MapsTo id v (sigstore merged)) /\
+  (forall {id v}, NatSet.In id (events dstate'') ->
+                  NatMap.MapsTo id v (sigstore dstate'') ->
+                  NatMap.MapsTo id v (sigstore merged)) /\
+  (forall {id v},
+      ~NatSet.In id (NatSet.union (events dstate') (events dstate'')) ->
+      NatMap.MapsTo id v (sigstore origin) ->
+      NatMap.MapsTo id v (sigstore merged)) /\
+
+  (* Describes the content of (compstore merged) *)
+
+  (forall {id cstate}, NatSet.In id (events dstate') ->
+                       NatMap.MapsTo id cstate (compstore dstate') ->
+                       NatMap.MapsTo id cstate (compstore merged)) /\
+  (forall {id cstate}, NatSet.In id (events dstate'') ->
+                       NatMap.MapsTo id cstate (compstore dstate'') ->
+                       NatMap.MapsTo id cstate (compstore merged)) /\
+  (forall {id cstate},
+      ~NatSet.In id (NatSet.union (events dstate') (events dstate'')) ->
+      NatMap.MapsTo id cstate (compstore origin) ->
+      NatMap.MapsTo id cstate (compstore merged)) /\
+
+  (* Describes the content of (events merged) *)
+  
+  events merged = NatSet.union (events dstate') (events dstate'').
 
 (** Defines a local environment of a process
     as a map from id to couples (type * value).

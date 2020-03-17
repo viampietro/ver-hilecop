@@ -44,10 +44,10 @@ with eport (denv : DEnv) (dstate : DState) : pdecl -> DEnv -> DState -> Prop :=
       
       (* Side conditions. *)
       ~In id denv ->           (* id ∉ Δ *)
-      ~InSigStore id dstate -> (* id ∉ σ *)
+      ~InSStore id dstate -> (* id ∉ σ *)
 
       (* Conclusion *)
-      eport denv dstate (pdecl_in id tau) (add id (Input t) denv) (sigstore_add id v dstate)
+      eport denv dstate (pdecl_in id tau) (add id (Input t) denv) (sstore_add id v dstate)
 
 (** Declaration of port in "out" mode. *)
 | EPortOut :
@@ -59,7 +59,7 @@ with eport (denv : DEnv) (dstate : DState) : pdecl -> DEnv -> DState -> Prop :=
       
       (* Side conditions. *)
       ~In id denv ->           (* id ∉ Δ *)
-      ~InSigStore id dstate -> (* id ∉ σ *)
+      ~InSStore id dstate -> (* id ∉ σ *)
 
       (* Conclusion *)
-      eport denv dstate (pdecl_in id tau) (add id (Output t) denv) (sigstore_add id v dstate).
+      eport denv dstate (pdecl_in id tau) (add id (Output t) denv) (sstore_add id v dstate).
