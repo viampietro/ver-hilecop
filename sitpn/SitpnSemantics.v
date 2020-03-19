@@ -430,7 +430,7 @@ Inductive SitpnSemantics
             In t s.(fired) /\ (has_function sitpn t f) = true) ->
         In (f, true) s'.(exec_f)) ->
 
-    (* All functions not associated with fired transitions not are
+    (* All functions not associated with fired transitions are not
        executed, i.e:
 
        ∀ f ∈ functions, ∀ t ∈ Fired | F(t, f) = 0 ⇒ ex'(f) = 0. *)

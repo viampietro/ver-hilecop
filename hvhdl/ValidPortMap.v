@@ -92,11 +92,11 @@ with eassocip (denv cenv : DEnv) (dstate : DState) (formals : list (ident * opti
 (** Defines the predicate that checks the [formals] list (built by the
     [listipm] relation) against the component environment [cenv].  *)
 
-Definition checkipm (cenv : DEnv) (formals : list (ident * option value)) :=
-  forall {id t t' l u},
+Definition checkipm (cenv : DEnv) (formals : list (ident * option value)) : Prop :=
+  forall (id : ident) (t : type),
     MapsTo id (Input t) cenv ->
     List.In (id, None) formals \/
-    (t = (Tarray t' l u) /\ forall {i}, l <= i <= u -> List.In (id, Some (Vnat i)) formals).
+    (exists {t' l u}, t = (Tarray t' l u) /\ forall {i}, l <= i <= u -> List.In (id, Some (Vnat i)) formals).
 
 (** Defines the predicate stating that an "in" port map is valid. *)
 

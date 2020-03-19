@@ -7,6 +7,14 @@ Require Export NatSet.
 Require Export ArcT.
 Require Export TransitionT.
 
+(** Defines the maximum value taken by a natural number
+    in H-VHDL.
+
+    For now, NATMAX equals 2^31 - 1 (max. value on 32 bits).
+ *)
+
+Definition NATMAX := 2147483647.
+
 (** Type of identifiers, defined as natural. *)
 
 Definition ident := nat.
@@ -32,10 +40,4 @@ Definition IdMap (A : Type) := NatMap.t A.
 
 Definition IdSet := NatSet.t.
 
-(** Defines the maximum value taken by a natural number
-    in H-VHDL.
 
-    For now, NATMAX equals 2^31 - 1 (max. value on 32 bits).
- *)
-
-Definition NATMAX := 2147483647.

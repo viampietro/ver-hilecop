@@ -2,8 +2,8 @@
 
 Require Import Coqlib.
 Require Import Arrays.
-Require Import GlobalTypes.
 Require Import AbstractSyntax.
+Require Import GlobalTypes.
 
 (** Defines the type of values used in the 
     semantical world.

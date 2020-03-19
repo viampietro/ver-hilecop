@@ -12,6 +12,38 @@ Require Import SemanticalDomains.
     their declaration information (e.g, type and value for
     constants). *)
 
+(** Definition of the [dom] function that yields a list of identifiers
+    corresponding to the definition domain of an IdMap. *)
+
+Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
+
+(** Defines the relation stating that a set [idset] is the
+    differentiated intersection of two maps [m] and [m'] mapping
+    identifier to value.
+    
+    The differentiated intersection of two maps [m] and [m'] is the
+    set { x ∈ dom(m) ∩ dom(m') | m(x) ≠ m'(x) }. 
+ *)
+
+Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
+  (forall {id}, NatSet.In id idset -> exists {v v'}, MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') /\
+  (forall {id v v'}, (MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') -> NatSet.In id idset).
+
+(** Defines the relation stating that a map [ovunion] results of the
+    overriding union of two maps [ovridden] and [ovriding].
+
+    A map [m''] results of the overriding union of maps [m] and [m']
+    if m'' = λx. m'(x) if x ∈ dom(m') ∧ m(x) otherwise.
+
+    We add in the relation definition that the overridden map
+    [ovridden] and the resulting map [ovunion] must have the same
+    definition domains.  *)
+
+Definition IsOverrUnion (ovridden ovriding ovunion : IdMap value) :=
+  (forall {id}, NatMap.In id ovridden <-> NatMap.In id ovunion) /\
+  (forall {id v}, MapsTo id v ovriding -> MapsTo id v ovunion) /\
+  (forall {id v}, ~NatMap.In id ovriding -> MapsTo id v ovridden -> MapsTo id v ovunion).
+
 (* Needed because [SemanticalObject] as a recurvise definition that
    does not respect the strict positivity requirement.
    
@@ -126,6 +158,14 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
   
   events merged = NatSet.union (events dstate') (events dstate'').
 
+(** Defines the relation stating that a design state [injected] is the
+    result of the "injection" of the values of map [m] in the
+    [sigstore] and the [events] fields of design state [origin]. *)
+
+Definition IsInjectedDState (origin : DState) (m : IdMap value) (injected : DState) : Prop :=
+  IsOverrUnion (sigstore origin) m (sigstore injected) /\
+  forall {idset}, IsDiffInter (sigstore origin) m idset -> events injected = union (events origin) idset.
+
 (** Defines a local environment of a process
     as a map from id to couples (type * value).
  *)
@@ -136,7 +176,3 @@ Definition LEnv := IdMap (type * value).
 
 Definition EmptyLEnv := NatMap.empty (type * value).
 
-(** Definition of the [dom] function that yields a list of identifiers
-    corresponding to the definition domain of an IdMap. *)
-
-Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).

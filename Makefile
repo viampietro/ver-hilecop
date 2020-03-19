@@ -37,7 +37,8 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
 	ValidSS.v ValidPortMap.v DesignElaboration.v \
 	SSEvaluation.v PortMapEvaluation.v CombinationalEvaluation.v \
-	SynchronousEvaluation.v Stabilize.v Initialization.v
+	SynchronousEvaluation.v Stabilize.v Initialization.v \
+	Simulation.v
 
 # Builds files with prefixes
 
@@ -69,7 +70,7 @@ cleansitpn:
 	rm -f $(patsubst %, %/*.vos, sitpn)
 	rm -f $(patsubst %, %/*~, sitpn)
 
-cleanhvdl:
+cleanhvhdl:
 	rm -f $(patsubst %, %/*.vo, hvhdl)
 	rm -f $(patsubst %, %/.*.aux, hvhdl)
 	rm -f $(patsubst %, %/*.glob, hvhdl)
