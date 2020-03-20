@@ -6,6 +6,8 @@ Require Import Coqlib.
 Require Import Arrays.
 Require Import GlobalTypes.
 
+Declare Scope ast_scope.
+
 (** Set of binary operators. *)
 
 Inductive binop : Set :=
@@ -16,10 +18,14 @@ Inductive binop : Set :=
 (** ** Expressions: *)
 
 (** An expression is either: 
+
     - a natural constant
     - a boolean constant
     - an arc_t constant (basic, test or inhib)
-    - a transition_t constant (not_temporal, temporal_a_a, temporal_a_b, temporal_a_inf)
+
+    - a transition_t constant (not_temporal, temporal_a_a, 
+      temporal_a_b, temporal_a_inf)
+
     - an identifier
     - an identifier with index (e.g "myvar(3)")
     - an aggregate, i.e list of expressions
@@ -40,9 +46,27 @@ Inductive expr : Type :=
 (** Names *)
 with name : Type :=
 | n_id : ident -> name  
-| n_xid : ident -> expr -> name
-| n_clk
-| n_rst.
+| n_xid : ident -> expr -> name.
+
+(** Notations for names. *)
+
+Notation " $ x " := (n_id x) (at level 100) : ast_scope.
+
+(** Notations for expressions. *)
+
+Notation " # x " := (e_name (n_id x)) (at level 99) : ast_scope.
+Notation " x [[ i ]] " := (e_name (n_xid x i)) (at level 100) : ast_scope. 
+
+Notation " x @&& y " := (e_binop bo_and x y) (at level 100) : ast_scope.
+Notation " x @|| y " := (e_binop bo_and x y) (at level 100) : ast_scope.
+Notation " x @= y "  := (e_binop bo_eq x y) (at level 100)  : ast_scope.
+Notation " x @/= y " := (e_binop bo_neq x y) (at level 100) : ast_scope.
+Notation " x @< y "  := (e_binop bo_lt x y) (at level 100)  : ast_scope.
+Notation " x @<= y " := (e_binop bo_le x y) (at level 100)  : ast_scope.
+Notation " x @> y "  := (e_binop bo_gt x y) (at level 100)  : ast_scope.
+Notation " x @>= y " := (e_binop bo_ge x y) (at level 100)  : ast_scope.
+Notation " x @+ y "  := (e_binop bo_add x y) (at level 100) : ast_scope.
+Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : ast_scope.
 
 (** Subtype indications and type definitions. *)
 
@@ -65,7 +89,21 @@ Inductive ss : Type :=
 | ss_rising (stmt : ss)                                   (** Rising edge block statement. *)
 | ss_seq (stmt : ss) (stmt' : ss).                        (** Composition of seq. statements. *)
 
-Notation "stmt ;; stmt'" := (ss_seq stmt stmt') (at level 100).
+(** Notations for sequential statements. *)
+
+Infix "@<==" := ss_sig (at level 100) : ast_scope.
+Infix "@:=" := ss_var (at level 100) : ast_scope.
+
+Notation "'If' c 'Then' e " :=
+  (ss_if c e)
+    (at level 200, right associativity,
+     format "'[v   ' 'If'  c '/' '[' 'Then'  e  ']' ']'") : ast_scope.
+
+Notation "'For' i 'From' l 'To' u 'Do' x " :=
+  (ss_loop i l u x)
+    (at level 200, format "'[v' 'For'  i  'From'  l  'To'  u  'Do' '/' '['   x ']' ']'") : ast_scope.
+
+Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) : ast_scope.
 
 (** ** Concurrent statements. *)
 
