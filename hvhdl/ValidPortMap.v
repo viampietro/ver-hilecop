@@ -10,7 +10,6 @@ Require Import Environment.
 Require Import SemanticalDomains.
 Require Import AbstractSyntax.
 Require Import ExpressionEvaluation.
-Require Import IsOfType.
 Require Import StaticExpressions.
 
 (** ** Valid port map for "in" mode ports. *)

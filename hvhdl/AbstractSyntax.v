@@ -3,8 +3,9 @@
 (*!============================!*)
 
 Require Import Coqlib.
-Require Import Arrays.
 Require Import GlobalTypes.
+
+(** Declares the scope of notations for the H-VHDL abstract syntax. *)
 
 Declare Scope ast_scope.
 
@@ -44,6 +45,7 @@ Inductive expr : Type :=
 | e_not : expr -> expr (** Not expression *)
 
 (** Names *)
+                    
 with name : Type :=
 | n_id : ident -> name  
 | n_xid : ident -> expr -> name.
@@ -68,13 +70,21 @@ Notation " x @>= y " := (e_binop bo_ge x y) (at level 100)  : ast_scope.
 Notation " x @+ y "  := (e_binop bo_add x y) (at level 100) : ast_scope.
 Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : ast_scope.
 
-(** Subtype indications and type definitions. *)
+(** Subtype indications. 
+
+    Subtype indications are used in the declarative parts
+    of a H-VHDL design; e.g:
+
+    signal s : natural(0,255);
+    constant c : boolean := false;
+
+ *)
 
 Inductive tind : Type :=
-| tind_boolean                         (** Boolean type indication. *)
-| tind_natural (rconstr : expr * expr) (** Natural with range constraint. *)
-| tind_arc_t                           (** arc_t type indication. *)
-| tind_transition_t                    (** transition_t type indication. *)
+| tind_boolean                                   (** Boolean type indication. *)
+| tind_natural (rconstr : expr * expr)           (** Natural with range constraint. *)
+| tind_arc_t                                     (** arc_t type indication. *)
+| tind_transition_t                              (** transition_t type indication. *)
 | tind_array (t : tind) (iconstr : expr * expr). (** Array of [t] with index constraint. *)
 
 (** ** Sequential statements. *)
@@ -107,12 +117,21 @@ Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) :
 
 (** ** Concurrent statements. *)
 
-(** Process local environment declarations. *)
+(** Process local variable declaration; e.g:
+    
+    - Concrete syntax = "variable v : natural(0,255);"
+    - Abstract syntax = "vdecl_ v (tind_natural (0,255))"
+
+ *)
 
 Inductive vdecl : Type :=
   vdecl_ (vid : ident) (t : tind).
 
-(** Generic map clause. *)
+(** Generic map entry; e.g:
+
+    - Concrete syntax = "g ⇒ 1"
+    - Abstract syntax = "assocg_ g (e_nat 1)"
+ *)
 
 Inductive assocg : Type :=
   assocg_ (id : ident) (e : expr).
@@ -169,7 +188,21 @@ Inductive adecl : Type :=
 | adecl_sig (sigid : ident) (t : tind)                (** Signal declaration. *)
 | adecl_const (constid : ident) (t : tind) (v : expr). (** Constant declaration. *)
 
-(** Design declaration. *)
+(** Design declaration, i.e the entity-architecture couple; e.g:
+    
+    - Concrete syntax =
+
+    "entity [entid] is [gens]; [ports]; end [entid];
+    
+     architecture [archid] of [entid] is 
+       [adecls]; 
+     begin 
+       [behavior] 
+     end [archid];" 
+
+   - Abstract syntax = "design_ entid archid gens ports adecls behavior"
+
+*)
 
 Inductive design : Type :=
   design_ (entid    : ident)      (** Entity id *)

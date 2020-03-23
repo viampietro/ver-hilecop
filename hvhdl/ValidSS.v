@@ -5,7 +5,6 @@ Require Import AbstractSyntax.
 Require Import Environment.
 Require Import ExpressionEvaluation.
 Require Import SemanticalDomains.
-Require Import IsOfType.
 
 Import NatMap.
 

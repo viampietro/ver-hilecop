@@ -1,3 +1,5 @@
+(** * The type of Petri net arcs (arc_t). *)
+
 Require Import Coqlib.
 
 (** Defines the type of Petri net arcs. *)

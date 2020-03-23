@@ -2,7 +2,6 @@
 
 Require Import Environment.
 Require Import AbstractSyntax.
-Require Import IsOfType.
 Require Import ExpressionEvaluation.
 Require Import SemanticalDomains.
 
@@ -22,23 +21,25 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     value). *)
   
 | VSeqSigAssignEvent :
-    forall {id e v t v' sigstore' events'},
+    forall {id e newv t currv dstate'},
       
-      (* Premises *)
-      vexpr denv dstate lenv e v ->
-      is_of_type v t ->
+      (* * Premises * *)
+      vexpr denv dstate lenv e newv -> (* e ⇝ newv *)
+      is_of_type newv t ->             (* newv ∈c t *)
 
-      (* Side conditions *)
-      (NatMap.MapsTo id (Declared t) denv \/
-       NatMap.MapsTo id (Output t) denv) -> (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      NatMap.MapsTo id v' (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
-      sigstore' = (NatMap.add id v (sigstore dstate)) -> (* S' = S(id) ← v  *)
+      (* * Side conditions * *)
       
-      ~VEq v v' ->                                 (* new value <> current value *)
-      events' = (NatSet.add id (events dstate)) -> (* E' = E ∪ {id} *)
+      (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
+      (NatMap.MapsTo id (Declared t) denv \/ NatMap.MapsTo id (Output t) denv) -> 
+      NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
+
+      VEq newv currv (Some false) -> (* new value <> current value *)
+
+      (* dstate=<S,C,E>, S' = S(id) ← v, E' = E ∪ {id}, dstate'=<S',C,E'>  *)
+      dstate' = (events_add id (sstore_add id newv dstate)) -> 
       
-      (* Conclusion *)
-      vseq denv dstate lenv (ss_sig (n_id id) e) (MkDState sigstore' (compstore dstate) events') lenv
+      (* * Conclusion: Δ,σ,Λ ⊢ id ⇐ e ⇝ σ',Λ * *)
+      vseq denv dstate lenv (ss_sig (n_id id) e) dstate' lenv
 
 (** Evaluates a signal assignment statement.
 
@@ -47,19 +48,20 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     Case where the assignment generates no event. *)
   
 | VSeqSigAssignNoEvent :
-    forall {id e v t v'},
+    forall {id e newv t currv},
       
-      (* Premises *)
-      vexpr denv dstate lenv e v ->
-      is_of_type v t ->
+      (* * Premises * *)
+      vexpr denv dstate lenv e newv ->
+      is_of_type newv t ->
 
-      (* Side conditions *)
-      (NatMap.MapsTo id (Declared t) denv \/
-       NatMap.MapsTo id (Output t) denv) ->    (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      NatMap.MapsTo id v' (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
-      VEq v v' ->                              (* new value = current value *)
+      (* * Side conditions * *)
+
+      (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
+      (NatMap.MapsTo id (Declared t) denv \/ NatMap.MapsTo id (Output t) denv) ->
+      NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
+      VEq newv currv (Some true) -> (* new value = current value *)
       
-      (* Conclusion *)
+      (* * Conclusion * *)
       vseq denv dstate lenv (ss_sig (n_id id) e) dstate lenv
 
 (** Evaluates a signal assignment statement.
@@ -70,33 +72,34 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     value). *)
            
 | VSeqIdxSigAssignEvent :
-    forall {id e ei v i t l u lofv v' lofv' sigstore' events'},
+    forall {id e ei newv i t l u currlofv currv newlofv dstate'},
       
-      (* Premises *)
-      vexpr denv dstate lenv e v ->
-      is_of_type v t ->
+      (*  * Premises * *)
+      vexpr denv dstate lenv e newv ->
+      is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr denv dstate lenv ei (Vnat i) ->
       l <= i <= u ->
         
-      (* Side conditions *)
+      (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
       (NatMap.MapsTo id (Declared (Tarray t l u)) denv \/
        NatMap.MapsTo id (Output (Tarray t l u)) denv) -> 
-      NatMap.MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
+      NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
 
-      get_at i lofv = Some v' ->                   (* Current value at index i of lofv is v' *)
-      ~VEq v v' ->                                 (* new value <> current value *)
-      events' = (NatSet.add id (events dstate)) -> (* E' = E ∪ {id} *)
-      
-      (* S' = S(id) ← set_at(v, i, lofv) *)
-      set_at v i lofv = Some lofv' ->
-      sigstore' = (NatMap.add id (Vlist lofv') (sigstore dstate)) ->     
+      get_at i currlofv = Some currv -> (* Retrieves current value at index i of currlofv *)
+      VEq newv currv (Some false) ->                (* new value <> current value *)
+
+      (* - dstate = <S,C,E>, dstate' = <S',C,E'>
+         - S' = S(id) ← set_at(newv, i, currlofv), E' = E ∪ {id} 
+       *)
+      set_at newv i currlofv = Some newlofv ->
+      dstate' = (events_add id (sstore_add id (Vlist newlofv) dstate)) ->
       
       (* Conclusion *)
-      vseq denv dstate lenv (ss_sig (n_xid id ei) e) (MkDState sigstore' (compstore dstate) events') lenv
+      vseq denv dstate lenv (ss_sig (n_xid id ei) e) dstate' lenv
 
 (** Evaluates a signal assignment statement.
 
@@ -105,11 +108,11 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     Case where the assignment generates no event. *)
            
 | VSeqIdxSigAssignNoEvent :
-    forall {id e ei v i t l u lofv v'},
+    forall {id e ei newv i t l u currlofv currv},
       
-      (* Premises *)
-      vexpr denv dstate lenv e v ->
-      is_of_type v t ->
+      (* * Premises * *)
+      vexpr denv dstate lenv e newv ->
+      is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr denv dstate lenv ei (Vnat i) ->
@@ -120,10 +123,10 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
       (NatMap.MapsTo id (Declared (Tarray t l u)) denv \/
        NatMap.MapsTo id (Output (Tarray t l u)) denv) -> 
-      NatMap.MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
+      NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
 
-      get_at i lofv = Some v' -> (* Current value at index [i] of [lofv] is [v'] *)
-      VEq v v' ->                (* new value <> current value *)
+      get_at i currlofv = Some currv -> (* Current value at index [i] of [currlofv] is [currv] *)
+      VEq newv currv (Some true) -> (* new value = current value *)
             
       (* Conclusion *)
       vseq denv dstate lenv (ss_sig (n_xid id ei) e) dstate lenv
@@ -133,28 +136,28 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     The target must be a variable identifier. *)
            
 | VSeqVarAssign :
-    forall {id e v t val},
+    forall {id e newv t currv},
       
-      (* Premises *)
-      vexpr denv dstate lenv e v ->
-      is_of_type v t ->
+      (* * Premises * *)
+      vexpr denv dstate lenv e newv ->
+      is_of_type newv t ->
 
-      (* Side conditions *)
-      NatMap.MapsTo id (t, val) lenv -> (* id ∈ Λ and Λ(id) = (t, val) *)
+      (* * Side conditions * *)
+      NatMap.MapsTo id (t, currv) lenv -> (* id ∈ Λ and Λ(id) = (t, currv) *)
       
-      (* Conclusion *)
-      vseq denv dstate lenv (ss_var (n_id id) e) dstate (NatMap.add id (t, v) lenv)
+      (* * Conclusion * *)
+      vseq denv dstate lenv (ss_var (n_id id) e) dstate (NatMap.add id (t, newv) lenv)
 
 (** Evaluates a variable assignment statement.
 
     The target must be a variable identifier with an index. *)
            
 | VSeqIdxVarAssign :
-    forall {id e ei v i t l u lofv lofv'},
+    forall {id e ei newv i t l u currlofv newlofv},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e v ->
-      is_of_type v t ->
+      vexpr denv dstate lenv e newv ->
+      is_of_type newv t ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr denv dstate lenv ei (Vnat i) ->
@@ -162,12 +165,12 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
 
       (* * Side conditions * *)
       
-      (* id ∈ Λ and Λ(id) = (array(t, l, u), lofv) *)
-      NatMap.MapsTo id (Tarray t l u, (Vlist lofv)) lenv ->
-      set_at v i lofv = Some lofv' ->
+      (* id ∈ Λ and Λ(id) = (array(t, l, u), currlofv) *)
+      NatMap.MapsTo id (Tarray t l u, (Vlist currlofv)) lenv ->
+      set_at newv i currlofv = Some newlofv ->
       
       (* * Conclusion * *)
-      vseq denv dstate lenv (ss_var (n_xid id ei) e) dstate (NatMap.add id (Tarray t l u, (Vlist lofv')) lenv)
+      vseq denv dstate lenv (ss_var (n_xid id ei) e) dstate (NatMap.add id (Tarray t l u, (Vlist newlofv)) lenv)
 
 (** Evaluates a simple if statement with a true condition. *)
 
@@ -278,7 +281,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
 
       (* * Conclusion * *)
-      (* Remove the binding of id from the local environment. *)
+      (* Removes the binding of id from the local environment. *)
       vseq denv dstate lenv (ss_loop id e e' stmt) dstate (NatMap.remove id lenv)
            
 (** Evaluates a rising edge block statement.
@@ -307,7 +310,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       vseq denv dstate' lenv' stmt dstate'' lenv'' ->
 
       (* * Conclusion * *)
-      vseq denv dstate lenv (stmt;; stmt') dstate'' lenv''.
+      vseq denv dstate lenv (ss_seq stmt stmt') dstate'' lenv''.
   
 (** Defines the relation that evaluates the sequential statements of
     H-VHDL, including the rising edge block statements (only executed
@@ -477,7 +480,7 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       vseqre denv dstate' lenv' stmt dstate'' lenv'' ->
 
       (* * Conclusion * *)
-      vseqre denv dstate lenv (stmt;; stmt') dstate'' lenv''.
+      vseqre denv dstate lenv (ss_seq stmt stmt') dstate'' lenv''.
 
 (** Defines the relation that evaluates the sequential statements of
     H-VHDL, including the falling edge block statements (only executed
@@ -646,4 +649,4 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       vseqfe denv dstate' lenv' stmt dstate'' lenv'' ->
 
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (stmt;; stmt') dstate'' lenv''.
+      vseqfe denv dstate lenv (ss_seq stmt stmt') dstate'' lenv''.

@@ -1,3 +1,5 @@
+(** * The type of Petri net transitions (transition_t). *)
+
 (** Defines the type of Petri net transitions. *)
 
 Inductive transition_t : Type := not_temporal | temporal_a_b |

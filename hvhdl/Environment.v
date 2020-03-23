@@ -1,3 +1,5 @@
+(** * Simulation environment for the H-VHDL semantics. *)
+
 (** Module defining the components of the simulation environment.  *)
 
 Require Import Coqlib.
@@ -26,8 +28,8 @@ Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
  *)
 
 Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
-  (forall {id}, NatSet.In id idset -> exists {v v'}, MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') /\
-  (forall {id v v'}, (MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') -> NatSet.In id idset).
+  (forall {id}, NatSet.In id idset -> exists {v v'}, MapsTo id v m /\ MapsTo id v' m' /\ VEq v v' (Some false)) /\
+  (forall {id v v'}, (MapsTo id v m /\ MapsTo id v' m' /\ VEq v v' (Some false)) -> NatSet.In id idset).
 
 (** Defines the relation stating that a map [ovunion] results of the
     overriding union of two maps [ovridden] and [ovriding].
@@ -64,7 +66,7 @@ Inductive SemanticalObject : Type :=
 | Component (denv : IdMap SemanticalObject) (behavior : cs).
 
 (** Macro definition for the design environment type. 
-    Mapping from identifiers to 
+    Mapping from identifiers to [SemanticalObject].
  *)
 
 Definition DEnv := IdMap SemanticalObject.
@@ -88,16 +90,16 @@ Definition EmptyDState := MkDState (NatMap.empty value)
                                    (NatMap.empty DState)
                                    (NatSet.empty).
 
-(** Returns a DState with an empty event set. *)
+(** Returns a DState with an empty event set, i.e, a record
+    <S,C,∅>. *)
 
 Definition NoEvDState (dstate : DState) :=
   MkDState (sigstore dstate)
            (compstore dstate)
            (NatSet.empty).
 
-(** Macro to add a new mapping id => value in the
-    [sigstore] of od a design state [dstate].
- *)
+(** Macro to add a new mapping id ⇒ value in the [sigstore] of the
+    design state [dstate].  *)
 
 Definition sstore_add (id : ident) (v : value) (dstate : DState) : DState :=
   MkDState (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
@@ -128,6 +130,12 @@ Definition InSStore (id : ident) (dstate : DState) :=
 
 Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
 
+  (* The definition domains of [sigstore] and [compstore] must be
+     the same for [origin] and [merged]. *)
+  
+  EqualDom (sigstore origin) (sigstore merged) ->
+  EqualDom (compstore origin) (compstore merged) ->
+  
   (* Describes the content of (sigstore merged) *)
 
   (forall {id v}, NatSet.In id (events dstate') ->
@@ -156,7 +164,7 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
 
   (* Describes the content of (events merged) *)
   
-  events merged = NatSet.union (events dstate') (events dstate'').
+  NatSet.Equal (events merged) (NatSet.union (events dstate') (events dstate'')).
 
 (** Defines the relation stating that a design state [injected] is the
     result of the "injection" of the values of map [m] in the

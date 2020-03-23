@@ -37,7 +37,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       
       (* * Side conditions * *)
       NatSet.inter sl (events dstate) <> NatSet.empty -> (* sl ∩ E ≠ ∅ *)
-      NatMap.MapsTo pid (Process lenv) denv ->                  (* pid ∈ Δ and Δ(pid) = Λ *)
+      NatMap.MapsTo pid (Process lenv) denv ->           (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
       vcomb denv dstate (cs_ps pid sl vars stmt) dstate'
@@ -120,4 +120,4 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       IsMergedDState dstate dstate' dstate'' merged ->
       
       (* * Conclusion * *)
-      vcomb denv dstate (cstmt // cstmt') merged.
+      vcomb denv dstate (cs_par cstmt cstmt') merged.

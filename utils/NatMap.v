@@ -5,3 +5,4 @@ Require Import FMaps.
 Module NatMap := FMapList.Make (Nat_as_OT).
 Include NatMap.
 
+Definition EqualDom {A} (m m' : t A) : Prop := forall (k : nat), In k m <-> In k m'.

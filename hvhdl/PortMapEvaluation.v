@@ -11,7 +11,6 @@ Require Import GlobalTypes.
 Require Import SemanticalDomains.
 Require Import Environment.
 Require Import AbstractSyntax.
-Require Import IsOfType.
 Require Import ExpressionEvaluation.
 
 (** Defines the evaluation relation for "in" port maps, i.e, port maps
@@ -54,9 +53,9 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       NatMap.MapsTo id (Input t) cenv ->         (* id ∈ Ins(Δc) and Δc(id) = t *)
       NatMap.MapsTo id currv (sigstore cstate) -> (* id ∈ σc and σc(id) = v' *)
 
-      ~VEq newv currv ->                                     (* new value <> current value *)
+      VEq newv currv (Some false) -> (* new value <> current value *)
       sigstore' = (NatMap.add id newv (sigstore cstate)) -> (* S' = S(id) ← v  *)
-      events' = (NatSet.add id (events cstate)) ->          (* E' = E ∪ {id} *)
+      events' = (NatSet.add id (events cstate)) -> (* E' = E ∪ {id} *)
       
       (* * Conclusion * *)
       vassocip denv cenv dstate cstate (associp_ (n_id id) e) (MkDState sigstore' (compstore cstate) events')
@@ -77,7 +76,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       NatMap.MapsTo id (Input t) cenv ->         (* id ∈ Ins(Δc) and Δc(id) = t *)
       NatMap.MapsTo id currv (sigstore cstate) -> (* id ∈ σc and σc(id) = v' *)
 
-      VEq newv currv -> (* new value = current value *)
+      VEq newv currv (Some true) -> (* new value = current value *)
             
       (* * Conclusion * *)
       vassocip denv cenv dstate cstate (associp_ (n_id id) e) cstate
@@ -103,8 +102,8 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       NatMap.MapsTo id (Input (Tarray t l u)) cenv ->    (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
       NatMap.MapsTo id (Vlist lofv) (sigstore cstate) -> (* id ∈ σ and σ(id) = v' *)
 
-      get_at i lofv = Some currv ->              (* Current value at index [i] of [lofv] is [currv] *)
-      ~VEq newv currv ->                         (* new value <> current value *)
+      get_at i lofv = Some currv -> (* Current value at index [i] of [lofv] is [currv] *)
+      VEq newv currv (Some false) -> (* new value <> current value *)
       events' = NatSet.add id (events dstate) -> (* E' = E ∪ {id} *)
       
       (* S' = S(id) ← set_at(v, i, lofv) *)
@@ -135,7 +134,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       NatMap.MapsTo id (Vlist lofv) (sigstore cstate) -> (* id ∈ σ and σ(id) = v' *)
 
       get_at i lofv = Some currv -> (* Current value at index [i] of [lofv] is [currv] *)
-      VEq newv currv ->             (* new value = current value *)
+      VEq newv currv (Some true) -> (* new value = current value *)
             
       (* * Conclusion * *)
       vassocip denv cenv dstate cstate (associp_ (n_xid id ei) e) cstate.
@@ -190,9 +189,9 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       (MapsTo id (Declared t) denv \/ MapsTo id (Output t) denv) -> 
       MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
       
-      ~VEq newv currv ->        (* new value <> current value *)
+      VEq newv currv (Some false) -> (* new value <> current value *)
       sigstore' = NatMap.add id newv (sigstore dstate) -> (* S' = S(id) ← newv *)
-      events' = NatSet.add id (events dstate) ->          (* E' = E ∪ {id} *)
+      events' = NatSet.add id (events dstate) -> (* E' = E ∪ {id} *)
       dstate' = (MkDState sigstore' (compstore dstate) events') -> (* σ' = <S',C,E'> *)
       
       (* * Conclusion * *)
@@ -216,7 +215,7 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       (MapsTo id (Declared t) denv \/ MapsTo id (Output t) denv) -> 
       MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
       
-      VEq newv currv -> (* new value = current value *)
+      VEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
       vassocop denv cenv dstate cstate (assocop_ pname (Some (n_id id))) dstate
@@ -244,7 +243,7 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofv *)
 
       get_at i lofv = Some currv ->              (* Current value at index [i] of [lofv] is [currv] *)
-      ~VEq newv currv ->                         (* new value <> current value *)
+      VEq newv currv (Some false) ->             (* new value <> current value *)
       events' = NatSet.add id (events dstate) -> (* E' = E ∪ {id} *)
       
       (* S' = S(id) ← set_at(v, i, lofv) *)
@@ -280,7 +279,7 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofv *)
 
       get_at i lofv = Some currv -> (* Current value at index [i] of [lofv] is [currv] *)
-      VEq newv currv ->             (* new value = current value *)
+      VEq newv currv (Some true) -> (* new value = current value *)
             
       (* * Conclusion * *)
       vassocop denv cenv dstate cstate (assocop_ pname (Some (n_xid id ei))) dstate.               

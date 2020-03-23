@@ -32,7 +32,10 @@ Definition ident := nat.
 Definition clk : ident := 0.
 Definition rst : ident := 1.
 
-(** Defines IdMap ∈ ident → A, as NatMap. *)
+(** Defines IdMap ∈ ident → A, as NatMap.
+    
+    Useful to implement partial functions of type ident → A as mutable
+    structures (addition, removal, lookup of values). *)
 
 Definition IdMap (A : Type) := NatMap.t A.
 

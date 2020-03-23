@@ -7,7 +7,6 @@ Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SemanticalDomains.
-Require Import IsOfType.
 
 Import NatMap.
 
@@ -276,9 +275,9 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
       (* Premises *)
       vexpr denv dstate lenv e v ->
       vexpr denv dstate lenv e' v' ->
-      veq v v' = Some b ->
+      VEq v v' (Some b) ->
       
-      (* Conclusion *)      
+      (* Conclusion: Δ,σ,Λ ⊢ e = e' ⇝ b *)      
       vexpr denv dstate lenv (e_binop bo_eq e e') (Vbool b)
 
 (** Evaluates expression with difference operator. *)
