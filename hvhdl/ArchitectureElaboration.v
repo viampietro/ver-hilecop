@@ -45,7 +45,7 @@ with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
       defaultv t v ->
       
       (* Side conditions. *)
-      ~In id denv -> (* id ∉ Δ *)
+      ~NatMap.In id denv -> (* id ∉ Δ *)
       ~InSStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)
@@ -62,7 +62,7 @@ with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
       vexpr denv dstate EmptyLEnv e v ->  
       
       (* Side conditions. *)
-      ~In id denv -> (* id ∉ Δ *)
+      ~NatMap.In id denv -> (* id ∉ Δ *)
 
       (* Conclusion *)
       edecl denv dstate (adecl_const id tau e) (add id (Constant t v) denv) dstate.

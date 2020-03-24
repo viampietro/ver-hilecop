@@ -20,6 +20,7 @@ Require Import PortMapEvaluation.
 Require Import Stabilize.
 Require Import SemanticalDomains.
 Require Import GlobalTypes.
+Require Import Petri.
 
 (** Defines the [runinit] relation that computes all concurrent
     statements once, regardless of sensitivity lists or events on

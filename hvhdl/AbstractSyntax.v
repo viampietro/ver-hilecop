@@ -53,6 +53,7 @@ with name : Type :=
 (** Notations for names. *)
 
 Notation " $ x " := (n_id x) (at level 100) : ast_scope.
+Notation " x $[[ i ]] " := (n_xid x i) (at level 100) : ast_scope.
 
 (** Notations for expressions. *)
 
@@ -60,7 +61,7 @@ Notation " # x " := (e_name (n_id x)) (at level 99) : ast_scope.
 Notation " x [[ i ]] " := (e_name (n_xid x i)) (at level 100) : ast_scope. 
 
 Notation " x @&& y " := (e_binop bo_and x y) (at level 100) : ast_scope.
-Notation " x @|| y " := (e_binop bo_and x y) (at level 100) : ast_scope.
+Notation " x @|| y " := (e_binop bo_or x y) (at level 100) : ast_scope.
 Notation " x @= y "  := (e_binop bo_eq x y) (at level 100)  : ast_scope.
 Notation " x @/= y " := (e_binop bo_neq x y) (at level 100) : ast_scope.
 Notation " x @< y "  := (e_binop bo_lt x y) (at level 100)  : ast_scope.
@@ -107,13 +108,25 @@ Infix "@:=" := ss_var (at level 100) : ast_scope.
 Notation "'If' c 'Then' e " :=
   (ss_if c e)
     (at level 200, right associativity,
-     format "'[v   ' 'If'  c '/' '[' 'Then'  e  ']' ']'") : ast_scope.
+     format "'[v' 'If'  c '//' 'Then'  e ']'") : ast_scope.
 
-Notation "'For' i 'From' l 'To' u 'Do' x " :=
+Notation "'If' c 'Then' x 'Else' y" :=
+  (ss_ifelse c x y)
+    (at level 200, right associativity,
+     format "'[v' 'If'  c '//' 'Then'  x '//' 'Else'  y ']'") : ast_scope.
+
+Notation "'For' i 'In' l 'To' u 'Loop' x " :=
   (ss_loop i l u x)
-    (at level 200, format "'[v' 'For'  i  'From'  l  'To'  u  'Do' '/' '['   x ']' ']'") : ast_scope.
+    (at level 200, format "'[v' 'For'  i  'In'  l  'To'  u  'Loop' '/' '['   x ']' ']'") : ast_scope.
+
+Notation "'Rising' stmt" := (ss_rising stmt) (at level 200) : ast_scope.
+Notation "'Falling' stmt" := (ss_falling stmt) (at level 200) : ast_scope.
 
 Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) : ast_scope.
+
+Open Scope ast_scope.
+
+Definition sstest := (0 $[[ #0 ]] @<== (e_nat 0)).
 
 (** ** Concurrent statements. *)
 
@@ -167,7 +180,16 @@ Inductive cs : Type :=
 (** Composition of concurrent statements. *)
 | cs_par (cstmt : cs) (cstmt' : cs).
 
-Notation "cstmt // cstmt'" := (cs_par cstmt cstmt') (at level 0).
+Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z) (at level 100) : ast_scope.
+Notation "pid ':' 'Process' sl vars 'Begin' stmt" :=
+  (cs_ps pid sl vars stmt)
+    (at level 200,
+     format "'[v' pid  ':'  'Process'  sl '/' '['   vars ']' '/' 'Begin' '/' '['   stmt ']' ']'").
+
+Notation "pid ':' 'Process' sl 'Begin' stmt" :=
+  (cs_ps pid sl [] stmt)
+    (at level 200,
+     format "'[v' pid  ':'  'Process'  sl '/' 'Begin' '/' '['   stmt ']' ']'").
 
 (** ** Design declaration. *)
 

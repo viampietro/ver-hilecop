@@ -43,7 +43,7 @@ with eport (denv : DEnv) (dstate : DState) : pdecl -> DEnv -> DState -> Prop :=
       defaultv t v ->
       
       (* Side conditions. *)
-      ~In id denv ->           (* id ∉ Δ *)
+      ~NatMap.In id denv ->           (* id ∉ Δ *)
       ~InSStore id dstate -> (* id ∉ σ *)
 
       (* Conclusion *)
@@ -58,7 +58,7 @@ with eport (denv : DEnv) (dstate : DState) : pdecl -> DEnv -> DState -> Prop :=
       defaultv t v ->
       
       (* Side conditions. *)
-      ~In id denv ->           (* id ∉ Δ *)
+      ~NatMap.In id denv ->           (* id ∉ Δ *)
       ~InSStore id dstate -> (* id ∉ σ *)
 
       (* Conclusion *)

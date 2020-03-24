@@ -11,7 +11,6 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 UTILSFILES=NatMap.v NatSet.v Coqlib.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v \
-	Arrays.v \
 
 # Sitpn structures, semantics and token player (in spn/)
 
@@ -37,9 +36,10 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
 	ValidSS.v ValidPortMap.v DesignElaboration.v \
 	SSEvaluation.v PortMapEvaluation.v \
+	Petri.v \
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \
 	Initialization.v Simulation.v \
-	Petri.v Place.v
+	Place.v
 
 # Builds files with prefixes
 

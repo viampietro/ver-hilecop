@@ -13,6 +13,7 @@ Require Import SSEvaluation.
 Require Import PortMapEvaluation.
 Require Import GlobalTypes.
 Require Import SSEvaluation.
+Require Import Petri.
 
 (** Defines the relation that evaluates concurrent statement in
     reaction to the rising edge event of the clock signal. *)

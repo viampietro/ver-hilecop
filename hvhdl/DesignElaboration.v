@@ -48,8 +48,8 @@ with evar (denv : DEnv) (lenv : LEnv) : vdecl -> LEnv -> Prop :=
       defaultv t v ->
 
       (* Side conditions *)
-      ~In id lenv ->            (* id ∉ Λ *)
-      ~In id denv ->            (* id ∉ Δ *)
+      ~NatMap.In id lenv ->            (* id ∉ Λ *)
+      ~NatMap.In id denv ->            (* id ∉ Δ *)
 
       (* Conclusion *)
       evar denv lenv (vdecl_ id tau) (add id (t, v) lenv).
@@ -84,7 +84,7 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
       vexpr EmptyDEnv EmptyDState EmptyLEnv e v ->
 
       (* Side conditions *)
-      ~In id dimen ->
+      ~NatMap.In id dimen ->
 
       (* Conclusion *)
       eassocg dimen (assocg_ id e) (add id v dimen).
@@ -122,7 +122,7 @@ with ebeh (dstore : IdMap design) : DEnv -> DState -> cs -> DEnv -> DState -> Pr
       validss denv dstate lenv stmt ->
 
       (* Side conditions *)
-      ~In id denv ->
+      ~NatMap.In id denv ->
       (* sl ⊆ Ins(Δ) ∪ Sigs(Δ) *)
       (forall {s},
           NatSet.In s sl ->
@@ -146,7 +146,7 @@ with ebeh (dstore : IdMap design) : DEnv -> DState -> cs -> DEnv -> DState -> Pr
       (* Side conditions *)
       cdesign = design_ entid archid gens ports adecls behavior ->
       MapsTo ide cdesign dstore ->
-      (forall {g}, In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
+      (forall {g}, NatMap.In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
       
       (* Conclusion *)
       ebeh dstore denv dstate (cs_comp idc ide gmap ipmap opmap) denv dstate.

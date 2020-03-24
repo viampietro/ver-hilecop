@@ -46,7 +46,7 @@ with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       vexpr EmptyDEnv EmptyDState EmptyLEnv e dv ->
 
       (* Side conditions *)
-      ~In idg denv ->           (* idg ∉ Δ *)
+      ~NatMap.In idg denv ->           (* idg ∉ Δ *)
       MapsTo idg v dimen ->     (* idg ∈ M and M(idg) = v *)
       
       (* Conclusion *)
@@ -62,8 +62,8 @@ with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       vexpr EmptyDEnv EmptyDState EmptyLEnv e dv ->
 
       (* Side conditions *)
-      ~In idg denv ->      (* idg ∉ Δ *)
-      ~In idg dimen ->     (* idg ∉ M *)
+      ~NatMap.In idg denv ->      (* idg ∉ Δ *)
+      ~NatMap.In idg dimen ->     (* idg ∉ M *)
       
       (* Conclusion *)
       egen denv dimen (gdecl_ idg tau e) (add idg (Generic t dv) denv).
