@@ -56,7 +56,7 @@ Definition marked                  : ident := reinit_transitions_time + 1.
    Used in the range constraints of port type indications.
  *)
 
-Definition out_arcs_nb_minus_1 := e_binop bo_sub (e_name (n_id output_arcs_number)) (e_nat 1).
+Definition out_arcs_nb_minus_1 := #output_arcs_number @- (e_nat 1).
 Definition in_arcs_nb_minus_1 := e_binop bo_sub (e_name (n_id input_arcs_number)) (e_nat 1).
 
 (* Port clause. *)
@@ -121,15 +121,24 @@ Definition v_internal_input_token_sum : ident := local_var.
 
 Definition input_tokens_sum_ps :=
   cs_ps input_tokens_sum
-        {input_transitions_fired, input_arcs_weights}
-        [vdecl_ v_internal_input_token_sum local_weight_t]
-        ($v_internal_input_token_sum @:= (e_nat 0);;
 
-         For i In (e_nat 0) To (#input_arcs_number @- (e_nat 1)) Loop
-             (If (input_transitions_fired[[ #i ]] @= (e_bool true)) Then
-                 $v_internal_input_token_sum @:= (#v_internal_input_token_sum @+ (input_arcs_weights[[ #i ]])));;
+        (* Sensitivity list. *)
+        {input_transitions_fired, input_arcs_weights}
+        
+        (* Local variables. *)
+        [vdecl_ v_internal_input_token_sum local_weight_t]
+
+        (* Process body. *)
+        (
+          ($v_internal_input_token_sum @:= (e_nat 0));;
+
+          (For i In (e_nat 0) To (#input_arcs_number @- (e_nat 1)) Loop
+               (If (input_transitions_fired[[ #i ]] @= (e_bool true)) Then
+                   $v_internal_input_token_sum @:= (#v_internal_input_token_sum @+ (input_arcs_weights[[ #i ]])))
+          );;
          
-         $s_input_token_sum @<== #v_internal_input_token_sum).
+          ($s_input_token_sum @<== #v_internal_input_token_sum)
+        ).
 
 (** Process "output_tokens_sum". *)
 

@@ -21,7 +21,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {pid sl vars stmt},
       
       (* * Side conditions * *)
-      NatSet.inter sl (events dstate) = NatSet.empty -> (* sl ∩ E = ∅ *)
+      Equal (inter sl (events dstate)) NatSet.empty -> (* sl ∩ E = ∅ *)
       
       (* * Conclusion * *)
       vcomb denv dstate (cs_ps pid sl vars stmt) (NoEvDState dstate)
@@ -36,8 +36,8 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       vseq denv (NoEvDState dstate) lenv stmt dstate' lenv' ->
       
       (* * Side conditions * *)
-      NatSet.inter sl (events dstate) <> NatSet.empty -> (* sl ∩ E ≠ ∅ *)
-      NatMap.MapsTo pid (Process lenv) denv ->           (* pid ∈ Δ and Δ(pid) = Λ *)
+      Equal (inter sl (events dstate)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
+      NatMap.MapsTo pid (Process lenv) denv ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
       vcomb denv dstate (cs_ps pid sl vars stmt) dstate'
@@ -66,7 +66,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       NatMap.MapsTo compid cstate (compstore dstate) ->
 
       (* Events registered in cstate''. *)
-      events cstate'' <> NatSet.empty ->
+      Equal (events cstate'') NatSet.empty ->
       
       (* * Conclusion * *)
       (* Add compid to the events field of dstate' because compid
@@ -95,7 +95,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       NatMap.MapsTo compid cstate (compstore dstate) ->
 
       (* No event registered in cstate''. *)
-      events cstate'' = NatSet.empty ->
+      Equal (events cstate'') NatSet.empty ->
       
       (* * Conclusion * *)
       vcomb denv dstate (cs_comp compid entid gmap ipmap opmap) dstate'
@@ -113,7 +113,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NatSet.inter (events dstate') (events dstate'') = NatSet.empty ->
+      Equal (inter (events dstate') (events dstate'')) NatSet.empty ->
 
       (* States that merged is the result of the merging 
          of states dstate, dstate' and dstate''. *)

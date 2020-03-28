@@ -8,6 +8,8 @@ Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.
 
+Open Scope natset_scope.
+
 (** Defines the design environment describing H-VHDL design instances
     in the semantical world. The design environment maps identifiers
     of a certain category of constructs (e.g, constant identifiers) to
@@ -28,7 +30,7 @@ Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
  *)
 
 Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
-  (forall {id}, NatSet.In id idset -> exists {v v'}, MapsTo id v m /\ MapsTo id v' m' /\ VEq v v' (Some false)) /\
+  (forall {id}, NatSet.In id idset -> forall {v v'}, MapsTo id v m -> MapsTo id v' m' -> VEq v v' (Some false)) /\
   (forall {id v v'}, (MapsTo id v m /\ MapsTo id v' m' /\ VEq v v' (Some false)) -> NatSet.In id idset).
 
 (** Defines the relation stating that a map [ovunion] results of the
@@ -42,7 +44,7 @@ Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
     definition domains.  *)
 
 Definition IsOverrUnion (ovridden ovriding ovunion : IdMap value) :=
-  (forall {id}, NatMap.In id ovridden <-> NatMap.In id ovunion) /\
+  EqualDom ovridden ovunion /\
   (forall {id v}, MapsTo id v ovriding -> MapsTo id v ovunion) /\
   (forall {id v}, ~NatMap.In id ovriding -> MapsTo id v ovridden -> MapsTo id v ovunion).
 
@@ -63,7 +65,7 @@ Inductive SemanticalObject : Type :=
 | Output (t : type)
 | Declared (t : type)
 | Process (lenv : IdMap (type * value))
-| Component (denv : IdMap SemanticalObject) (behavior : cs).
+| Component (cenv : IdMap SemanticalObject) (behavior : cs).
 
 (** Macro definition for the design environment type. 
     Mapping from identifiers to [SemanticalObject].
@@ -73,11 +75,11 @@ Definition DEnv := IdMap SemanticalObject.
 
 (** Defines an empty design environment. *)
 
-Definition EmptyDEnv   := NatMap.empty SemanticalObject.
+Definition EmptyDEnv := NatMap.empty SemanticalObject.
 
 (** Defines the structure of design state. *)
 
-Inductive DState  : Type :=
+Inductive DState : Type :=
   MkDState {
       sigstore  : IdMap value;
       compstore : IdMap DState;
@@ -145,7 +147,7 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
                   NatMap.MapsTo id v (sigstore dstate'') ->
                   NatMap.MapsTo id v (sigstore merged)) /\
   (forall {id v},
-      ~NatSet.In id (NatSet.union (events dstate') (events dstate'')) ->
+      ~NatSet.In id ((events dstate') U (events dstate'')) ->
       NatMap.MapsTo id v (sigstore origin) ->
       NatMap.MapsTo id v (sigstore merged)) /\
 
@@ -158,13 +160,13 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
                        NatMap.MapsTo id cstate (compstore dstate'') ->
                        NatMap.MapsTo id cstate (compstore merged)) /\
   (forall {id cstate},
-      ~NatSet.In id (NatSet.union (events dstate') (events dstate'')) ->
+      ~NatSet.In id ((events dstate') U (events dstate'')) ->
       NatMap.MapsTo id cstate (compstore origin) ->
       NatMap.MapsTo id cstate (compstore merged)) /\
 
   (* Describes the content of (events merged) *)
   
-  NatSet.Equal (events merged) (NatSet.union (events dstate') (events dstate'')).
+  Equal (events merged) ((events dstate') U (events dstate'')).
 
 (** Defines the relation stating that a design state [injected] is the
     result of the "injection" of the values of map [m] in the
@@ -172,7 +174,8 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
 
 Definition IsInjectedDState (origin : DState) (m : IdMap value) (injected : DState) : Prop :=
   IsOverrUnion (sigstore origin) m (sigstore injected) /\
-  forall {idset}, IsDiffInter (sigstore origin) m idset -> events injected = union (events origin) idset.
+  forall {idset}, IsDiffInter (sigstore origin) m idset ->
+                  Equal (events injected) ((events origin) U idset).
 
 (** Defines a local environment of a process
     as a map from id to couples (type * value).

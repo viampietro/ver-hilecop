@@ -13,7 +13,7 @@ Require Export TransitionT.
     For now, NATMAX equals 2^31 - 1 (max. value on 32 bits).
  *)
 
-Definition NATMAX := 2147483647.
+Definition NATMAX : nat := 2147483647.
 
 (** Type of identifiers, defined as natural. *)
 

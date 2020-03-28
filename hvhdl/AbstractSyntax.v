@@ -124,10 +124,6 @@ Notation "'Falling' stmt" := (ss_falling stmt) (at level 200) : ast_scope.
 
 Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) : ast_scope.
 
-Open Scope ast_scope.
-
-Definition sstest := (0 $[[ #0 ]] @<== (e_nat 0)).
-
 (** ** Concurrent statements. *)
 
 (** Process local variable declaration; e.g:

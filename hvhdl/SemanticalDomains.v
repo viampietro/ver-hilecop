@@ -78,7 +78,6 @@ Inductive type : Type :=
 | Tarc_t                                (** arc_t type. *)
 | Ttransition_t.                        (** transition_t type. *)
 
-
 (** Defines the typing relation [is_of_type]. *)
 
 Inductive is_of_type : value -> type -> Prop :=

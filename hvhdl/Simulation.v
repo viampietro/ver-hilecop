@@ -101,7 +101,6 @@ Inductive simloop
 | SimLoopEnd :
     simloop ivals denv dstate trace behavior 0 trace.
 
-
 (** Defines the whole workflow necessary to simulate a H-VHDL
     description (elaboration + simulation).
 

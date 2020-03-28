@@ -9,6 +9,7 @@ Require Import Environment.
 Require Import SemanticalDomains.
 
 Import NatMap.
+Open Scope ast_scope.
 
 (** Defines the expression evaluation relation. 
     
@@ -48,7 +49,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
     forall (t : type),
       MapsTo id (Declared t) denv ->   (* id ∈ Sigs(Δ) and Δ(id) = t *)
       MapsTo id v (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
-      vexpr denv dstate lenv (e_name (n_id id)) v
+      vexpr denv dstate lenv (#id) v
 
 (** Evaluates an input signal identifier. *)
 
@@ -56,25 +57,25 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
     forall (t : type),
       MapsTo id (Input t) denv ->      (* id ∈ In(Δ) and Δ(id) = t *)
       MapsTo id v (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
-      vexpr denv dstate lenv (e_name (n_id id)) v
+      vexpr denv dstate lenv (#id) v
 
 (** Evaluates a variable identifier. *)
             
 | VExprVar (id : ident) (t : type) (v : value) :
     MapsTo id (t, v) lenv ->      (* id ∈ Λ and Λ(id) = (t,v) *)
-    vexpr denv dstate lenv (e_name (n_id id)) v
+    vexpr denv dstate lenv (#id) v
           
 (** Evaluates a constant identifier. *)
           
 | VExprConst (id : ident) (t : type) (v : value) :
     MapsTo id (Constant t v) denv ->      (* id ∈ Consts(Δ) and Δ(id) = (t,v) *)
-    vexpr denv dstate lenv (e_name (n_id id)) v
+    vexpr denv dstate lenv (#id) v
 
-(** Evaluates a constant identifier. *)
+(** Evaluates a generic constant identifier. *)
           
 | VExprGen (id : ident) (t : type) (v : value) :
     MapsTo id (Generic t v) denv ->      (* id ∈ Gens(Δ) and Δ(id) = (t,v) *)
-    vexpr denv dstate lenv (e_name (n_id id)) v
+    vexpr denv dstate lenv (#id) v
 
 (** Evaluates an indexed declared signal identifier. *)
           
@@ -91,7 +92,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
       get_at (i - l) lofv = Some v' ->
       
       (* Conclusion *)
-      vexpr denv dstate lenv (e_name (n_xid id ei)) v'
+      vexpr denv dstate lenv (id [[ei]]) v'
 
 (** Evaluates an indexed input signal identifier. *)
             
@@ -109,7 +110,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
              
       (* Conclusion *)
       
-      vexpr denv dstate lenv (e_name (n_xid id ei)) v'
+      vexpr denv dstate lenv (id [[ei]]) v'
 
 (** Evaluates an indexed variable identifier. *)
 
@@ -125,7 +126,7 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
       get_at (i - l) lofv = Some v' ->
       
       (* Conclusion *)      
-      vexpr denv dstate lenv (e_name (n_xid id ei)) v'
+      vexpr denv dstate lenv (id [[ei]]) v'
 
 (** Evaluates an indexed constant identifier. *)
 
@@ -134,14 +135,14 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
 
       (* Premises *)
       vexpr denv dstate lenv ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->             (* index value is in array bounds. *)
+      is_of_type (Vnat i) (Tnat l u) ->      (* index value is in array bounds. *)
       
       (* Side conditions *)
       MapsTo id (Constant (Tarray t l u) (Vlist lofv)) denv -> (* id ∈ Consts(Δ) and Δ(id) = (array(t, l, u), lofvalues) *)
       get_at (i - l) lofv = Some v' ->
       
       (* Conclusion *)      
-      vexpr denv dstate lenv (e_name (n_xid id ei)) v'
+      vexpr denv dstate lenv (id [[ei]]) v'
 
 (** Evaluates expression with addition operator. 
     
