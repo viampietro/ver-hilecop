@@ -55,7 +55,7 @@ with name : Type :=
 Notation " $ x " := (n_id x) (at level 100) : ast_scope.
 Notation " x $[[ i ]] " := (n_xid x i) (at level 100) : ast_scope.
 
-(** Notations for expressions. *)
+(** Notations and coercions for expressions. *)
 
 Notation " # x " := (e_name (n_id x)) (at level 99) : ast_scope.
 Notation " x [[ i ]] " := (e_name (n_xid x i)) (at level 100) : ast_scope. 
@@ -71,6 +71,11 @@ Notation " x @>= y " := (e_binop bo_ge x y) (at level 100)  : ast_scope.
 Notation " x @+ y "  := (e_binop bo_add x y) (at level 100) : ast_scope.
 Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : ast_scope.
 
+Coercion e_nat : nat >-> expr.
+Coercion e_bool : bool >-> expr.
+Coercion e_arc : arc_t >-> expr.
+Coercion e_trans : transition_t >-> expr.
+
 (** Subtype indications. 
 
     Subtype indications are used in the declarative parts
@@ -82,11 +87,11 @@ Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : ast_scope.
  *)
 
 Inductive tind : Type :=
-| tind_boolean                                   (** Boolean type indication. *)
-| tind_natural (rconstr : expr * expr)           (** Natural with range constraint. *)
-| tind_arc_t                                     (** arc_t type indication. *)
-| tind_transition_t                              (** transition_t type indication. *)
-| tind_array (t : tind) (iconstr : expr * expr). (** Array of [t] with index constraint. *)
+| tind_boolean                                           (** Boolean type indication. *)
+| tind_natural (rlower : expr) (rupper : expr)           (** Natural with range constraint. *)
+| tind_arc_t                                             (** arc_t type indication. *)
+| tind_transition_t                                      (** transition_t type indication. *)
+| tind_array (t : tind) (ilower : expr) (iupper : expr). (** Array of [t] with index constraint. *)
 
 (** ** Sequential statements. *)
 

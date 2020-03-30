@@ -39,7 +39,7 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 	Petri.v \
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \
 	Initialization.v Simulation.v \
-	Place.v
+	Place.v Transition.v
 
 # Builds files with prefixes
 

@@ -1,5 +1,6 @@
 (** * Macros for the definition of HILECOP Place and Transition designs. *)
 
+Require Import NArith.
 Require Import AbstractSyntax.
 Require Import GlobalTypes.
 
@@ -47,8 +48,8 @@ Definition MAXIMAL_GLOBAL_MARKING : nat := 255.
 
 (** Type and subtype macros. *)
 
-Definition weight_t        : tind := tind_natural (e_nat 0, e_nat MAXIMAL_GLOBAL_MARKING).
-Definition weight_vector_t : (expr * expr) -> tind := tind_array weight_t.
-Definition arc_vector_t    : (expr * expr) -> tind := tind_array tind_arc_t.
-Definition bool_vector_t : (expr * expr) -> tind := tind_array tind_boolean.
+Definition weight_t        : tind := tind_natural 0 MAXIMAL_GLOBAL_MARKING.
+Definition weight_vector_t : expr -> expr -> tind := tind_array weight_t.
+Definition arc_vector_t    : expr -> expr -> tind := tind_array tind_arc_t.
+Definition bool_vector_t : expr -> expr -> tind := tind_array tind_boolean.
 

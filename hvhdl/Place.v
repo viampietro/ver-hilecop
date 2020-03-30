@@ -28,9 +28,9 @@ Definition maximal_marking    : ident := output_arcs_number + 1.
 (** Defines the generic clause of the Place design. *)
 
 Definition place_gens : list gdecl :=
-  [gdecl_ input_arcs_number (tind_natural (e_nat 0, e_nat NATMAX)) (e_nat 1);
-  gdecl_ output_arcs_number (tind_natural (e_nat 0, e_nat NATMAX)) (e_nat 1);
-  gdecl_ maximal_marking (tind_natural (e_nat 0, e_nat NATMAX)) (e_nat 1)].
+  [gdecl_ input_arcs_number  (tind_natural 0 NATMAX) 1;
+   gdecl_ output_arcs_number (tind_natural 0 NATMAX) 1;
+   gdecl_ maximal_marking    (tind_natural 0 NATMAX) 1].
 
 (** *** Ports of the Place design. *)
 
@@ -56,25 +56,27 @@ Definition marked                  : ident := reinit_transitions_time + 1.
    Used in the range constraints of port type indications.
  *)
 
-Definition out_arcs_nb_minus_1 := #output_arcs_number @- (e_nat 1).
-Definition in_arcs_nb_minus_1 := e_binop bo_sub (e_name (n_id input_arcs_number)) (e_nat 1).
+Definition out_arcs_nb_minus_1 := #output_arcs_number @- 1.
+Definition in_arcs_nb_minus_1 := #input_arcs_number @- 1.
 
 (* Port clause. *)
 
 Definition place_ports : list pdecl :=
   [
-  (* Output ports. *)
-  pdecl_in initial_marking          (tind_natural (e_nat 0, e_name (n_id maximal_marking)));
-  pdecl_in input_arcs_weights       (weight_vector_t (e_nat 0, in_arcs_nb_minus_1));
-  pdecl_in output_arcs_types        (arc_vector_t (e_nat 0, out_arcs_nb_minus_1));
-  pdecl_in output_arcs_weights      (weight_vector_t (e_nat 0, out_arcs_nb_minus_1));
-  pdecl_in input_transitions_fired  (bool_vector_t (e_nat 0, in_arcs_nb_minus_1));
-  pdecl_in output_transitions_fired (bool_vector_t (e_nat 0, out_arcs_nb_minus_1));
+    (* Input ports. *)
+  pdecl_in clk                      tind_boolean;
+  pdecl_in rst                      tind_boolean;
+  pdecl_in initial_marking          (tind_natural 0 (#maximal_marking));
+  pdecl_in input_arcs_weights       (weight_vector_t 0 (#input_arcs_number @- 1));
+  pdecl_in output_arcs_types        (arc_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_in output_arcs_weights      (weight_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_in input_transitions_fired  (bool_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_in output_transitions_fired (bool_vector_t 0 (#output_arcs_number @- 1));
 
-  (* Input ports. *)
-  pdecl_out output_arcs_valid       (bool_vector_t (e_nat 0, out_arcs_nb_minus_1));
-  pdecl_out priority_authorizations (bool_vector_t (e_nat 0, out_arcs_nb_minus_1));
-  pdecl_out reinit_transitions_time (bool_vector_t (e_nat 0, out_arcs_nb_minus_1));
+  (* Output ports. *)
+  pdecl_out output_arcs_valid       (bool_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_out priority_authorizations (bool_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_out reinit_transitions_time (bool_vector_t 0 (#output_arcs_number @- 1));
   pdecl_out marked                  tind_boolean
   ].
 
@@ -85,7 +87,7 @@ Definition place_ports : list pdecl :=
 (* Macro for a type indication used in the architecture declarative
    part of the Place design.  *)
 
-Definition local_weight_t := tind_natural (e_nat 0, e_name (n_id maximal_marking)).
+Definition local_weight_t := tind_natural 0 (#maximal_marking).
 
 (** Declared signal identifiers. *)
 
@@ -130,10 +132,10 @@ Definition input_tokens_sum_ps :=
 
         (* Process body. *)
         (
-          ($v_internal_input_token_sum @:= (e_nat 0));;
+          ($v_internal_input_token_sum @:= 0);;
 
-          (For i In (e_nat 0) To (#input_arcs_number @- (e_nat 1)) Loop
-               (If (input_transitions_fired[[ #i ]] @= (e_bool true)) Then
+          (For i In 0 To (#input_arcs_number @- 1) Loop
+               (If (input_transitions_fired[[ #i ]] @= true) Then
                    $v_internal_input_token_sum @:= (#v_internal_input_token_sum @+ (input_arcs_weights[[ #i ]])))
           );;
          
@@ -162,10 +164,10 @@ Definition output_tokens_sum_ps :=
         
         (* Process body. *)
         (
-          ($v_internal_output_token_sum @:= (e_nat 0));;
+          ($v_internal_output_token_sum @:= 0);;
 
-          (For i In (e_nat 0) To (#output_arcs_number @- (e_nat 1)) Loop 
-               (If ((output_transitions_fired[[ #i ]] @= (e_bool true)) @&& (output_arcs_types[[ #i ]] @= (e_arc basic))) Then
+          (For i In 0 To (#output_arcs_number @- 1) Loop 
+               (If ((output_transitions_fired[[ #i ]] @= true) @&& (output_arcs_types[[ #i ]] @= basic)) Then
                    $v_internal_output_token_sum @:= (#v_internal_output_token_sum @+ (output_arcs_weights[[ #i ]])))
           );;
          
@@ -190,7 +192,7 @@ Definition marking_ps :=
 
         (* Process body. *)
         
-        (If (#rst @= (e_bool false))
+        (If (#rst @= false)
             Then ($s_marking @<== #initial_marking)
             Else (
               Rising ($s_marking @<== (#s_marking @+ (#s_input_token_sum @- #s_output_token_sum)))
@@ -214,7 +216,7 @@ Definition determine_marked_ps :=
         []
 
         (* Process body. *)
-        ($marked @<== (#s_marking @/= (e_nat 0))).
+        ($marked @<== (#s_marking @/= 0)).
 
 (** Process "marking_validation_evaluation". *)
 
@@ -232,12 +234,12 @@ Definition marking_validation_evaluation_ps :=
         []
 
         (* Process body. *)
-        (For i In (e_nat 0) To (#output_arcs_number @- (e_nat 1)) Loop (
-             If ((((output_arcs_types[[ #i ]] @= (e_arc basic)) @|| (output_arcs_types[[ #i ]] @= (e_arc test)))
+        (For i In 0 To (#output_arcs_number @- 1) Loop (
+             If ((((output_arcs_types[[ #i ]] @= basic) @|| (output_arcs_types[[ #i ]] @= test))
                     @&& (#s_marking @>= (output_arcs_weights[[ #i ]])))
-                   @|| ((output_arcs_types[[ #i ]] @= (e_arc inhibitor)) @&& (#s_marking @< (output_arcs_weights[[ #i ]]))))
-             Then (output_arcs_valid $[[ #i ]] @<== (e_bool true))
-             Else (output_arcs_valid $[[ #i ]] @<== (e_bool false))
+                   @|| ((output_arcs_types[[ #i ]] @= inhibitor) @&& (#s_marking @< (output_arcs_weights[[ #i ]]))))
+             Then (output_arcs_valid $[[ #i ]] @<== true)
+             Else (output_arcs_valid $[[ #i ]] @<== false)
              )
         ).
 
@@ -261,14 +263,14 @@ Definition priority_evaluation_ps :=
     [vdecl_ v_saved_output_token_sum local_weight_t]
     
     (* Process body. *)
-    (($v_saved_output_token_sum @:= (e_nat 0));;
+    (($v_saved_output_token_sum @:= 0);;
      
-     (For i In (e_nat 0) To (#output_arcs_number @- (e_nat 1)) Loop
+     (For i In 0 To (#output_arcs_number @- 1) Loop
           ((If (#s_marking @>= (#v_saved_output_token_sum @+ (output_arcs_weights[[ #i ]])))
-               Then (priority_authorizations $[[ #i ]] @<== (e_bool true))
-               Else (priority_authorizations $[[ #i ]] @<== (e_bool false)));;
+               Then (priority_authorizations $[[ #i ]] @<== true)
+               Else (priority_authorizations $[[ #i ]] @<== false));;
            
-           (If ((output_transitions_fired[[ #i ]] @= (e_bool true)) @&& (output_arcs_types[[ #i ]] @= (e_arc basic)))
+           (If ((output_transitions_fired[[ #i ]] @= true) @&& (output_arcs_types[[ #i ]] @= basic))
                Then ($v_saved_output_token_sum @:= (#v_saved_output_token_sum @+ (output_arcs_weights[[ #i ]]))))))).
 
 (** Process "reinit_transitions_time_evaluation". *)
@@ -289,15 +291,15 @@ Definition reinit_transitions_time_evaluation_ps :=
     []
 
     (* Process body. *)
-    (If (#rst @= (e_bool false))
-        Then (For i In (e_nat 0) To (#output_arcs_number @- (e_nat 1)) Loop (reinit_transitions_time $[[ #i ]] @<== (e_bool false)))
+    (If (#rst @= false)
+        Then (For i In 0 To (#output_arcs_number @- 1) Loop (reinit_transitions_time $[[ #i ]] @<== false))
         Else (Rising
-                (For i In (e_nat 0) To (#output_arcs_number @- (e_nat 1)) Loop
-                     (If ((output_arcs_types[[ #i ]] @= (e_arc basic) @|| (output_arcs_types[[ #i ]] @= (e_arc test)))
+                (For i In 0 To (#output_arcs_number @- 1) Loop
+                     (If ((output_arcs_types[[ #i ]] @= basic @|| (output_arcs_types[[ #i ]] @= test))
                             @&& ((#s_marking @- #s_output_token_sum) @< (output_arcs_weights[[ #i ]]))
-                            @&& (#s_output_token_sum @> (e_nat 0)))
-                      Then (reinit_transitions_time $[[ #i ]] @<== (e_bool true))
-                      Else (reinit_transitions_time $[[ #i ]] @<== (e_bool false)))))).
+                            @&& (#s_output_token_sum @> 0))
+                      Then (reinit_transitions_time $[[ #i ]] @<== true)
+                      Else (reinit_transitions_time $[[ #i ]] @<== false))))).
 
 (** Declaration of the Place design behavior. *)
 
