@@ -50,10 +50,12 @@ with name : Type :=
 | n_id : ident -> name  
 | n_xid : ident -> expr -> name.
 
-(** Notations for names. *)
+(** Notations and coercions for names. *)
 
 Notation " $ x " := (n_id x) (at level 100) : ast_scope.
 Notation " x $[[ i ]] " := (n_xid x i) (at level 100) : ast_scope.
+
+Coercion n_id : ident >-> name.
 
 (** Notations and coercions for expressions. *)
 
@@ -70,6 +72,9 @@ Notation " x @> y "  := (e_binop bo_gt x y) (at level 100)  : ast_scope.
 Notation " x @>= y " := (e_binop bo_ge x y) (at level 100)  : ast_scope.
 Notation " x @+ y "  := (e_binop bo_add x y) (at level 100) : ast_scope.
 Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : ast_scope.
+
+Notation " x @|| y @|| .. @|| z " := (e_binop bo_or .. (e_binop bo_or x y) .. z) (at level 100) : ast_scope.
+Notation " x @&& y @&& .. @&& z " := (e_binop bo_and .. (e_binop bo_and x y) .. z) (at level 100) : ast_scope.
 
 Coercion e_nat : nat >-> expr.
 Coercion e_bool : bool >-> expr.

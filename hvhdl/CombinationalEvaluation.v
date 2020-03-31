@@ -3,6 +3,7 @@
 (** Defines the relation that evaluates combinational concurrent
     statements; used in the stabilization phases. *)
 
+Require Import NatSet.
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SSEvaluation.

@@ -11,6 +11,7 @@ Require Export TransitionT.
     in H-VHDL.
 
     For now, NATMAX equals 2^31 - 1 (max. value on 32 bits).
+    =~ 2147483647
  *)
 
 Definition NATMAX : nat := 2147483647.
