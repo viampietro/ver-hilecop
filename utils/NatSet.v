@@ -13,5 +13,3 @@ Notation "{ }" := empty (format "{ }") : natset_scope.
 Notation "{ x , y , .. , z }" := (add x (add y .. (add z empty) ..)) : natset_scope.
 Notation "{ x }s" := (add x empty) : natset_scope.
 
-
-

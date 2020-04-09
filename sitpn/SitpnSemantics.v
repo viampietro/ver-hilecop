@@ -49,11 +49,7 @@ Lemma pre_sum_app_add :
 Proof.
   intros sitpn p l; functional induction (pre_sum sitpn p l) using pre_sum_ind; intro t'.
   - simpl; reflexivity.
-  - simpl.
-    rewrite <- (IHn t').
-    simpl.
-    rewrite plus_assoc_reverse.
-    reflexivity.
+  - simpl; rewrite <- (IHn t'); simpl; rewrite plus_assoc_reverse; reflexivity.
 Qed.
 
 (** Sums edge weight from transitions of the l list to place p. *)
