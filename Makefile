@@ -12,9 +12,9 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 UTILSFILES=NatMap.v NatSet.v Coqlib.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v \
 
-# Sitpn structures, semantics and token player (in spn/)
+# Sitpn structures, semantics and token player (in sitpn/simpl/)
 
-SITPNFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
+SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 	SitpnTactics.v SitpnCoreLemmas.v SitpnWellDefMarking.v \
 	SitpnWellDefFired.v SitpnWellDefInterpretation.v SitpnWellDefTime.v \
 	SitpnRisingEdgeMarking.v SitpnFallingEdgeWellDef.v SitpnFallingEdgeFired.v \
@@ -27,6 +27,10 @@ SITPNFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 	SitpnRisingEdgeMarkingComplete.v SitpnRisingEdgeTimeComplete.v \
 	SitpnRisingEdgeInterpretationComplete.v SitpnRisingEdgeComplete.v \
 	SitpnComplete.v \
+
+# Sitpn structures, semantics and token player (in sitpn/sets/)
+
+SITPNSETSFILES=SitpnGlobalTypes.v Sitpn.v \
 
 # H-VHDL syntax and semantics.
 
@@ -44,19 +48,21 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 # Builds files with prefixes
 
 UTILS=$(foreach f, $(UTILSFILES), utils/$f)
-SITPN=$(foreach f, $(SITPNFILES), sitpn/$f)
+SITPNSIMPL=$(foreach f, $(SITPNSIMPLFILES), sitpn/simpl/$f)
+SITPNSETS=$(foreach f, $(SITPNSETSFILES), sitpn/sets/$f)
 HVHDL=$(foreach f, $(HVHDLFILES), hvhdl/$f)
 
 # All source files
 
-FILES=$(UTILS) $(SITPN) $(HVHDL)
+FILES=$(UTILS) $(SITPNSIMPL) $(SITPNSETS) $(HVHDL)
 
 all: proof 
 
 proof: $(FILES:.v=.vo)
 
 utils: $(UTILS:.v=.vo)
-sitpn: $(SITPN:.v=.vo)
+sitpnsimpl: $(SITPNSIMPL:.v=.vo)
+sitpnsets: $(SITPNSETS:.v=.vo)
 hvhdl: $(HVHDL:.v=.vo)
 
 %.vo : %.v	
