@@ -1,1 +1,1 @@
--R utils hilecop.utils -R sitpn hilecop.sitpn -R hvhdl hilecop.hvhdl
+-R common hilecop.common -R sitpn hilecop.sitpn -R hvhdl hilecop.hvhdl

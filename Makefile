@@ -1,4 +1,4 @@
-DIRS=utils sitpn hvhdl
+DIRS=common sitpn hvhdl
 
 COQINCLUDES=$(foreach d, $(DIRS), -R $(d) hilecop.$(d))
 
@@ -7,10 +7,11 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 ## Compilation files ##
 
-# General-purpose utilities (in utils/)
+# General-purpose utilities (in common/)
 
-UTILSFILES=NatMap.v NatSet.v Coqlib.v \
-	FstSplit.v InAndNoDup.v ListsPlus.v \
+COMMONFILES=NatMap.v NatSet.v Coqlib.v \
+	FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
+	GlobalTypes.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -47,20 +48,20 @@ HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains
 
 # Builds files with prefixes
 
-UTILS=$(foreach f, $(UTILSFILES), utils/$f)
+COMMON=$(foreach f, $(COMMONFILES), common/$f)
 SITPNSIMPL=$(foreach f, $(SITPNSIMPLFILES), sitpn/simpl/$f)
 SITPNSETS=$(foreach f, $(SITPNSETSFILES), sitpn/sets/$f)
 HVHDL=$(foreach f, $(HVHDLFILES), hvhdl/$f)
 
 # All source files
 
-FILES=$(UTILS) $(SITPNSIMPL) $(SITPNSETS) $(HVHDL)
+FILES=$(COMMON) $(SITPNSIMPL) $(SITPNSETS) $(HVHDL)
 
 all: proof 
 
 proof: $(FILES:.v=.vo)
 
-utils: $(UTILS:.v=.vo)
+common: $(COMMON:.v=.vo)
 sitpnsimpl: $(SITPNSIMPL:.v=.vo)
 sitpnsets: $(SITPNSETS:.v=.vo)
 hvhdl: $(HVHDL:.v=.vo)

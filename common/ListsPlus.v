@@ -29,6 +29,8 @@ Section DecreasedList.
       IsDecListCons l l' ->      
       IsDecListCons l (a :: l').
 
+  Hint Constructors IsDecListCons.
+  
   (** Facts about IsDecListCons. *)
   
   Lemma is_dec_list_cons_nil {A : Type} :
@@ -49,39 +51,26 @@ Section DecreasedList.
     - simpl; apply IsDecListCons_refl.
 
     (* INDUCTION CASE *)
-    - rewrite <- app_comm_cons;
-        apply IsDecListCons_cons;
-        assumption.
+    - rewrite <- app_comm_cons; apply IsDecListCons_cons; assumption.
   Qed.
   
   Lemma is_dec_list_cons_incl {A : Type} :
     forall l' l : list A, IsDecListCons l l' -> incl l l'.
   Proof.
-    induction l'.
-    - intros l His_dec x Hin_l.
-      inversion His_dec.
-      rewrite H0 in Hin_l.
-      inversion Hin_l.
-    - intros l His_dec; inversion His_dec.
-      + apply incl_refl.
-      + intros x Hin_l'; apply in_cons; assumption.
-      + apply IHl' in H1.
-        intros x Hin_l.
-        apply H1 in Hin_l.
-        apply in_cons with (a := a) in Hin_l.
-        assumption.      
+    intros l l'; induction 1.
+    - firstorder.
+    - firstorder.
+    - apply incl_tl; assumption.      
   Qed.
 
   Lemma is_dec_list_cons_cons {A : Type} :
     forall (a : A) (l' l : list A), IsDecListCons (a :: l) l' -> IsDecListCons l l'.
   Proof.
     intros a l'.
-    induction l'.
-    - intros l His_dec; inversion His_dec.
-    - intros l His_dec; inversion His_dec.
-      + apply IsDecListCons_eq.
-      + apply IsDecListCons_cons; apply IsDecListCons_eq.
-      + apply IsDecListCons_cons; apply (IHl' l H1).
+    induction l'; intros l His_dec.
+    
+    - inversion His_dec. 
+    - inversion His_dec; auto.
   Qed.
 
   (** If l' has no duplicates and l is a decreased version of l' then
@@ -160,7 +149,6 @@ Section DecreasedList.
 
   Inductive IsDecListApp {A : Type} : list A -> list A -> Prop :=
   | IsDecListApp_refl : forall l : list A, IsDecListApp l l
-  | IsDecListApp_eq : forall (a : A) (l : list A), IsDecListApp l (l ++ [a])
   | IsDecListApp_cons :
       forall (a : A) (l l' : list A),
         IsDecListApp l l' ->

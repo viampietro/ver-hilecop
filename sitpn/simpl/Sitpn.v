@@ -84,7 +84,6 @@ Inductive DynamicTimeInterval : Set :=
 | active : TimeInterval -> DynamicTimeInterval
 | blocked : DynamicTimeInterval.
 
-
 (** * Types for Interpreted Petri nets. *)
 
 (** Defines condition, action and function types.

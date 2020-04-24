@@ -64,7 +64,7 @@ Inductive SemanticalObject : Type :=
 | Input (t : type)
 | Output (t : type)
 | Declared (t : type)
-| Process (lenv : IdMap (type * value))
+| Process (lenv : list (ident * (type * value)))
 | Component (cenv : IdMap SemanticalObject) (behavior : cs).
 
 (** Macro definition for the design environment type. 
@@ -72,6 +72,10 @@ Inductive SemanticalObject : Type :=
  *)
 
 Definition DEnv := IdMap SemanticalObject.
+
+(* genids : list ident; *)
+(*   G := { id | In id genids} *)
+(*   Gens : G -> type * value        *)
 
 (** Defines an empty design environment. *)
 
