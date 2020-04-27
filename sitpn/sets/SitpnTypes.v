@@ -18,34 +18,22 @@ Notation "i+" := niinf (at level 0).
 
 (** Decrements a natinf. Does nothing if [ni] is +∞. *)
 
-Definition dec_natinf (ni : natinf) : natinf :=
-  match ni with
-  | i+ => i+
-  | ninat n => ninat (n - 1)
+Lemma neqinf : i+ <> i+ -> False. congruence. Defined.
+
+Definition dec_natinf (ni : natinf) : ni <> i+ -> natinf :=
+  match ni return ni <> i+ -> natinf with
+  | i+ => (fun pf : i+ <> i+ => match neqinf pf with end)
+  | ninat n => (fun _ => ninat (n - 1))
   end.
-
-(** Converts a [natinf] into a [nat] given a proof that
-    it is different from +∞.
- *)
-
-Definition natinf_to_nat (ni : natinf) : ni <> i+ -> nat.
-  refine (match ni return ni <> i+ -> nat with
-          | i+ => (fun _ => False_rect _ _)
-          | ninat n => (fun _ => n)
-          end); congruence.
-Defined.
-
-Coercion natinf_to_nat : natinf >-> Funclass.
 
 (** Defines the less than or equal relation between a nat and a
     natinf. *)
 
-Definition le_nat_natinf (n : nat) (ni : natinf) : ni <> i+ -> Prop.
-  refine (match ni with
-          | i+ => _
-          | ninat m => (fun _ => n <= m)
-          end); contradiction.
-Defined.
+Definition le_nat_natinf (n : nat) (ni : natinf) : ni <> i+ -> Prop :=
+  match ni return ni <> i+ -> Prop with
+  | i+ => (fun pf : i+ <> i+ => match neqinf pf with end) 
+  | ninat m => (fun _ => n <= m)
+  end.
 
 (** States that N is dijoint from {+∞}. *)
 
@@ -63,6 +51,20 @@ Inductive NatInfInterval : Set :=
     }.
 
 Notation "'<|' a , b '|>'" := (MkNatInfItval a b _) (b at level 69).
+
+Lemma nat_le_inf : forall a notinf, le_nat_natinf a i+ notinf.
+  intros; contradiction.
+Defined.
+
+Lemma sub_is_well_formed :
+  forall a b notinf,
+    le_nat_natinf a b notinf ->
+    forall notinf', le_nat_natinf (a - 1) (dec_natinf b notinf) notinf'.
+Proof.
+  intros a b. induction b; intros.
+  - contradiction.
+  - simpl. apply Nat.sub_le_mono_r. assumption.
+Defined.
 
 (** Defines the type of time interval ≡ I+
     [a,b] ∈ I+, where a ∈ N* and b ∈ N ⊔ {∞} 
@@ -82,20 +84,19 @@ Inductive DynamicTimeInterval : Set :=
 
 Coercion active : NatInfInterval >-> DynamicTimeInterval.
 
+Lemma absurd_natinf : forall a b, b = i+ -> (forall bneqinf, le_nat_natinf a b bneqinf).
+  intros a b beqinf bneqinf; contradiction.
+Defined.
+
 (** Returns a time interval equals to interval [i] with the value of
     its bounds decremented. *)
 
-Definition dec_itval (i : NatInfInterval) : DynamicTimeInterval.
-  refine (match i with
-          | MkNatInfItval a b _ => MkNatInfItval (a - 1) (dec_natinf b) _
-          end).
-  intros notinf; induction b.
-    - contradiction.
-    - simpl.
-      simpl in notinf.
-      specialize (l (nat_diff_inf n)).
-      apply Nat.sub_le_mono_r.
-      assumption.
+Definition dec_itval (i : NatInfInterval) : {(b i) = i+} + {(b i) <> i+} -> DynamicTimeInterval.
+  refine (fun bdec : {(b i) = i+} + {(b i) <> i+} =>
+            match bdec with
+            | left beqinf => MkNatInfItval ((a i) - 1) (b i) (absurd_natinf ((a i) - 1) (b i) beqinf)
+            | right bneqinf => MkNatInfItval ((a i) - 1) (dec_natinf (b i) bneqinf) _
+            end); apply sub_is_well_formed; apply (is_well_formed i).
 Defined.
 
 Notation "i '--'" := (dec_itval i) (at level 0).

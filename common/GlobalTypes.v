@@ -15,14 +15,31 @@ Coercion natstar_to_nat : natstar >-> nat.
     over a type A.
  *)
 
-Inductive StrictOrderB {A} (rel : A -> A -> bool) : Type :=
+Inductive IsStrictOrderBRel {A} (brel : A -> A -> bool) : Prop :=
   MkStrictOrderB {
-      rel_irrefl : forall a, rel a a = false;
-      rel_trans : forall a b c, rel a b = true -> rel b c = true -> rel a c = true;
+      brel_irrefl : forall a, brel a a = false;
+      brel_trans : forall a b c, brel a b = true -> brel b c = true -> brel a c = true;
 
       (* Irreflexivity and transitivity entail anti-symmetry. *)
-      rel_antisym : forall a b, rel a b = true -> rel b a = false;
+      brel_antisym : forall a b, brel a b = true -> brel b a = false;
     }.
+
+(** States that two elements of type A are comparable through
+    the boolean relation [brel]. *)
+
+Definition AreComparableWithBRel {A} (x y : A) (brel : A -> A -> bool) : Prop :=
+  brel x y <> false \/ brel y x <> false.
+
+(** States that [brel] is a strict total order over a type A, that is:  
+    - [brel] is a strict order over type A.
+    - all elements of A that are different are comparable with [brel].
+ *)
+
+Definition IsStrictTotalOrderBRel {A}
+           (eqA : A -> A -> Prop)
+           (decEqA : forall x y, {eqA x y} + {~eqA x y})
+           (brel : A -> A -> bool) :=
+  forall x y, ~eqA x y -> AreComparableWithBRel x y brel.
 
 (** Defines the type of Petri net arcs. *)
 
