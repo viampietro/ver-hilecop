@@ -71,12 +71,12 @@ hvhdl: $(HVHDL:.v=.vo)
 	@$(COQC) $*.v  
 
 cleansitpn:
-	rm -f $(patsubst %, %/*.vo, sitpn)
-	rm -f $(patsubst %, %/.*.aux, sitpn)
-	rm -f $(patsubst %, %/*.glob, sitpn)
-	rm -f $(patsubst %, %/*.vok, sitpn)
-	rm -f $(patsubst %, %/*.vos, sitpn)
-	rm -f $(patsubst %, %/*~, sitpn)
+	rm -f $(patsubst %, %/*/*.vo, sitpn)
+	rm -f $(patsubst %, %/*/.*.aux, sitpn)
+	rm -f $(patsubst %, %/*/*.glob, sitpn)
+	rm -f $(patsubst %, %/*/*.vok, sitpn)
+	rm -f $(patsubst %, %/*/*.vos, sitpn)
+	rm -f $(patsubst %, %/*/*~, sitpn)
 
 cleanhvhdl:
 	rm -f $(patsubst %, %/*.vo, hvhdl)

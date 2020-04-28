@@ -1,5 +1,10 @@
 (** * Global type definitions. *)
 
+Require Import Coqlib.
+Require Import String.
+Require Import Ascii.
+Require Import HexString.
+
 (** Type definitions used in all part of the Hilecop-Cert project. *)
 
 (** Defines the set of strictly positive natural numbers. *)
@@ -11,6 +16,12 @@ Definition natstar := { n : nat | n > 0 }.
 Definition natstar_to_nat (ns : natstar) := proj1_sig ns.
 Coercion natstar_to_nat : natstar >-> nat.
 
+(** Defines some natstar. *)
+
+Definition onens := exist _ 1 (gt_Sn_O 0).
+Definition twons := exist _ 2 (gt_Sn_O 1).
+Definition threens := exist _ 3 (gt_Sn_O 2).
+
 (** Defines the type of relation that are a strict order 
     over a type A.
  *)
@@ -21,7 +32,7 @@ Inductive IsStrictOrderBRel {A} (brel : A -> A -> bool) : Prop :=
       brel_trans : forall a b c, brel a b = true -> brel b c = true -> brel a c = true;
 
       (* Irreflexivity and transitivity entail anti-symmetry. *)
-      brel_antisym : forall a b, brel a b = true -> brel b a = false;
+      (* brel_antisym : forall a b, brel a b = true -> brel b a = false; *)
     }.
 
 (** States that two elements of type A are comparable through
@@ -71,3 +82,16 @@ Definition transt_eqb (t t' : TransitionT) : bool :=
   | _, _ => false
   end.
 
+(** Defines an option type able to return error messages. *)
+
+Inductive optionE (A : Type) : Type :=
+| Success : A -> optionE A
+| Err : string -> optionE A.
+
+Arguments Success {A} a.
+Arguments Err {A}.
+
+(** Converts a nat into its hexadecimal string representation. Useful
+    to display variable values in error messages.  *)
+
+Notation "$$ n" := (of_nat n) (at level 0, only parsing).

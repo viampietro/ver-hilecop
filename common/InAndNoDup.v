@@ -15,7 +15,7 @@ Section InAndNoDupLemmas.
 
   Lemma in_concat {A : Type} :
     forall (a : A) (l : list A) (ll : list (list A)),
-      In a l -> In l ll -> In a (concat ll).
+      In a l -> In l ll -> In a (List.concat ll).
   Proof.
     intros.
     induction ll.
@@ -24,7 +24,7 @@ Section InAndNoDupLemmas.
     (* Inductive case. *)
     - apply in_inv in H0; elim H0; intros.
       + rewrite <- H1 in H.
-        apply or_introl with (B := In a (concat ll)) in H.
+        apply or_introl with (B := In a (List.concat ll)) in H.
         apply in_or_app in H.
         rewrite concat_cons.
         auto.
@@ -91,7 +91,7 @@ Section InAndNoDupLemmas.
 
   Lemma nodup_concat_gen {A : Type} :
     forall ll : list (list A),
-      NoDup (concat ll) ->
+      NoDup (List.concat ll) ->
       forall l : list A, In l ll -> NoDup l.
   Proof.
     intros ll Hnodup_concat l Hin.

@@ -1,12 +1,12 @@
 (** * Types and functions used by the generateInfo function. *)
 
 Require Import Coqlib.
-Require Import ArcT.
 Require Import sets.Sitpn.
 Require Import NatSet.
 Require Import ListsPlus.
 Require Import ListsDep.
 Require Import InfosTypes.
+Require Import GlobalTypes.
 
 Module Type GenerateInfosFun.
 
@@ -21,7 +21,7 @@ Module Type GenerateInfosFun.
     Parameter get_in_transs : P sitpn -> list (T sitpn) -> list (T sitpn).
 
     (**  *)
-    Parameter get_out_transs : P sitpn -> list (T sitpn) -> list ((T sitpn) * arc_t).
+    Parameter get_out_transs : P sitpn -> list (T sitpn) -> list ((T sitpn) * ArcT).
 
     (**  *)
     Parameter get_p_info : P sitpn -> PlaceInfo sitpn.

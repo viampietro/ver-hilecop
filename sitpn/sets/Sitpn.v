@@ -88,9 +88,11 @@ Notation "a '>~' b" := (pr _ a b) (at level 0).
 
 Definition Psubset sitpn Q := { p : P sitpn | Q p }.
 Definition Psubset_in_P sitpn (Q : P sitpn -> Prop) (p : Psubset Q) := proj1_sig p.
+Definition P_in_nat sitpn (p : P sitpn) : nat := proj1_sig p.
 
 Definition Tsubset sitpn Q := { t : T sitpn | Q t }.
 Definition Tsubset_in_T sitpn (Q : T sitpn -> Prop) (t : Tsubset Q) := proj1_sig t.
+Definition T_in_nat sitpn (t : T sitpn) : nat := proj1_sig t.
 
 Definition Ti (sitpn : Sitpn) := Tsubset (fun t : T sitpn => (Is t) <> None).
 Definition Ti_in_T (sitpn : Sitpn) (t : Ti sitpn) := proj1_sig t.
@@ -98,9 +100,11 @@ Definition Ti_in_T (sitpn : Sitpn) (t : Ti sitpn) := proj1_sig t.
 (* Shortcut to express elements of subset of P and T as elements of P
    and T. *)
 
+Coercion P_in_nat : P >-> nat.
 Coercion Psubset_in_P : Psubset >-> P.
 Coercion Tsubset_in_T : Tsubset >-> T.
 Coercion Ti_in_T : Ti >-> T. 
+Coercion T_in_nat : T >-> nat.
 
 (** ** Sitpn state definition. *)
 
@@ -220,10 +224,10 @@ Definition pr' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : bool :=
 
 Definition IsConflictGroup sitpn (Tc : list (T sitpn)) : Prop :=
   exists Pc : list (P sitpn),
-    let InPc := (fun pc => In pc Pc) in
-    let InTc := (fun tc => In tc Tc) in
-    (forall p : Psubset InPc, forall t, pre p t <> None -> In t Tc)
-    /\ (forall t : Tsubset InTc, forall p, pre p t <> None -> In p Pc)
+    let InPc := (fun pc => List.In pc Pc) in
+    let InTc := (fun tc => List.In tc Tc) in
+    (forall p : Psubset InPc, forall t, pre p t <> None -> List.In t Tc)
+    /\ (forall t : Tsubset InTc, forall p, pre p t <> None -> List.In p Pc)
     /\ (forall t t' : Tsubset InTc, ~eq_trans t t' -> AreInConflictThroughPlaces t t' Pc).
 
 (** States that the priority relation of a given [sitpn] is
@@ -233,7 +237,7 @@ Definition IsConflictGroup sitpn (Tc : list (T sitpn)) : Prop :=
 Definition PriorityRelIsWellDefined (sitpn : Sitpn) : Prop :=
   forall Tc : list (T sitpn),
     IsConflictGroup Tc ->
-    let InTc := (fun tc => In tc Tc) in
+    let InTc := (fun tc => List.In tc Tc) in
     @IsStrictTotalOrderBRel (Tsubset InTc) (@eq_trans' sitpn InTc) (@eq_trans'_dec sitpn InTc) (@pr' sitpn InTc).
 
 (** Defines a predicate stating that an Sitpn is well-defined, that is: 
