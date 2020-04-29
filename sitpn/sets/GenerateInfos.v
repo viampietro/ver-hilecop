@@ -2,6 +2,7 @@
 
 Require Import Coqlib.
 Require Import sets.Sitpn.
+Require Import SitpnTypes.
 Require Import NatSet.
 Require Import ListsPlus.
 Require Import ListsDep.
@@ -10,24 +11,21 @@ Require Import SetoidList.
 Require Import InfosTypes.
 Require Import GlobalTypes.
 Require Import String.
-Require Import Ascii.
   
 Open Scope string_scope.
 
-(** Given a proof that the list [transitions] contains elements of
-      T, returns a couple of lists (inp, outp) where [inp] is the list
-      of input transitions of [p], and [outp] the list of output
-      transitions of [t].
-      
-      Remarks:
+(** Given a proof that the list [transs] contains elements of T,
+    returns a couple of lists (inp, outp) where [inp] is the list of
+    input transitions of [p], and [outp] the list of output
+    transitions of [t].
+    
+    Remarks:
 
-      - If there are duplicates in [transitions] then the returned lists
-        possibly have duplicates.
-        
-      - If there are no duplicate, then the returned lists have no
-        duplicate.
+    - If there are duplicates in [transitions] then the returned lists
+      possibly have duplicates.
 
- *)
+    - If there are no duplicate, then the returned lists have no
+      duplicate. *)
 
 Fixpoint get_neighbours_of_p_aux sitpn
          (p : (P sitpn))
@@ -202,12 +200,12 @@ Fixpoint generate_place_infos_aux sitpn
   incl pls (NatSet.this (places sitpn)) -> optionE (list (P sitpn * PlaceInfo sitpn)) :=
   match pls with
   | [] => (fun _ => Success place_infos)
-  | p :: tl => (fun pr : _ =>
+  | p :: tl => (fun pf : _ =>
                   (* Existantial version of p of type {p | In p (this (places sitpn))} *)
-                  let px := exist _ p (pr p (in_eq p tl)) in
+                  let px := exist _ p (pf p (in_eq p tl)) in
                   
                   (* Proof that the tail of places is included in (this (places sitpn)) *)
-                  let incltl := (incl_cons_inv p _ _ pr) in
+                  let incltl := (incl_cons_inv p _ _ pf) in
 
                   (* Computes the informations pertaining to place px. *)
                   match get_p_info sitpn px with
@@ -229,4 +227,49 @@ Fixpoint generate_place_infos_aux sitpn
 
 Definition generate_place_infos (sitpn : Sitpn) : optionE (list (P sitpn * PlaceInfo sitpn)) :=
   generate_place_infos_aux sitpn (NatSet.this (places sitpn)) [] (incl_refl _).
+
+(** Returns the list of input places of transition [t].
+
+    Correctness: Correct iff all input places of [p] are in the
+    returned list, and the returned has no duplicates.
+
+    Does not raise an error if the returned list is nil because it
+    doesn't mean that [t] is an isolated transition; however [t] is a
+    "source" transition (without input).
+    
+ *)
+
+Definition get_inputs_of_t (sitpn : Sitpn) (t : T sitpn) : list (P sitpn) :=
+  let test := (fun p => if (pre p t) then true else false) in
+  let trans := (fun p (H : In p (NatSet.this (places sitpn))) => exist _ p H) in
+  transform_and_filter (NatSet.this (places sitpn)) test trans.
+
+(**  *)
+
+Definition get_conds_of_t (sitpn : Sitpn) (t : T sitpn) : list (C sitpn) :=
+  let test := (fun c => (match has_C t c with one | mone => true | zero => false end)) in
+  let trans := (fun c (H : In c (NatSet.this (conditions sitpn))) => exist _ c H) in
+  transform_and_filter (NatSet.this (conditions sitpn)) test trans.
+
+(**  *)
+
+Definition get_transs_of_c (sitpn : Sitpn) (c : C sitpn) : list (T sitpn) :=
+  let test := (fun t => (match has_C t c with one | mone => true | zero => false end)) in
+  let trans := (fun t (H : In t (NatSet.this (transitions sitpn))) => exist _ t H) in
+  transform_and_filter (NatSet.this (transitions sitpn)) test trans.
+
+(**  *)
+
+Definition get_transs_of_f (sitpn : Sitpn) (f : F sitpn) : list (T sitpn) :=
+  let test := (fun t => has_F t f) in
+  let trans := (fun t (H : In t (NatSet.this (transitions sitpn))) => exist _ t H) in
+  transform_and_filter (NatSet.this (transitions sitpn)) test trans.
+
+(**  *)
+
+Definition get_places_of_a (sitpn : Sitpn) (a : A sitpn) : list (P sitpn) :=
+  let test := (fun p => has_A p a) in
+  let trans := (fun p (H : In p (NatSet.this (places sitpn))) => exist _ p H) in
+  transform_and_filter (NatSet.this (places sitpn)) test trans.
+
 

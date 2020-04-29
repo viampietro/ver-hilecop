@@ -7,6 +7,8 @@ Require Import GlobalTypes.
 
 Set Implicit Arguments.
 
+Local Notation "| e |" := (exist _ e _) (at level 50).
+
 (** ∀ sitpn ∈ SITPN, ∀ t ∈ T, ∀ s ∈ S, 
     AllConditionsTrue(t) iff ∀ c ∈ C, has_C(t,c) ⇒ cond(c) = true
  *)
@@ -21,7 +23,6 @@ Definition Sens (sitpn : Sitpn) (M : (P sitpn) -> nat) (t : (T sitpn)) :=
   forall p n,
     (pre p t = Some (test, n) \/ pre p t = Some (basic, n) -> (M p) >= n) /\
     (pre p t = Some (inhibitor, n) -> (M p) < n).
-    
 
 (** ∀ n ∈ N, ∀ i ∈ I+ ⊔ {ψ}, n ∈ i iff i = [a; b] ∧ a ≤ n ≤ b *)
 
@@ -72,15 +73,18 @@ Definition Set_in_List (S : Type) (l : list S) : Prop := (forall s : S, In s l) 
 
 Inductive PreSumList (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : list {t | P t} -> nat -> Prop :=
 | PreSumListNil : PreSumList p P [] 0
-| PreSumListCons : forall l n t', PreSumList p P l n -> PreSumList p P (t' :: l) (n + pre p (proj1_sig t')).
+| PreSumListCons :
+    forall t l n m a gt_m_O,
+      PreSumList p P l n ->
+      pre p (proj1_sig t) = Some (a, exist _ m gt_m_O) ->
+      PreSumList p P (t :: l) (n + m).
 
 (** For all list [l] and natural [n] such that: 
 
     - [l] implements the subset of transitions verifying predicate [P] (i.e, {t' | P t'})
     - and, ∑ pre(p,t) = n, ∀ t ∈ l 
     
-    then ∑ pre(p, t) = n, ∀ t ∈ {t' | P t'}
-    
+    then ∑ pre(p, t) = n, ∀ t ∈ {t' | P t'}    
 *)
 
 Inductive PreSum (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : nat -> Prop :=
@@ -112,15 +116,18 @@ Definition IsTransientMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitp
 
 Inductive PostSumList (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : list {t | P t} -> nat -> Prop :=
 | PostSumListNil : PostSumList p P [] 0
-| PostSumListCons : forall l n t', PostSumList p P l n -> PostSumList p P (t' :: l) (n + post p (proj1_sig t')).
+| PostSumListCons :
+    forall t l n m gt_m_O,
+      PostSumList p P l n ->
+      post (proj1_sig t) p = Some (exist _ m gt_m_O) ->
+      PostSumList p P (t :: l) (n + m).
 
 (** For all list [l] and natural [n] such that: 
 
     - [l] implements the subset of transitions verifying predicate [P] (i.e, {t' | P t'})
     - and, ∑ post(p,t) = n, ∀ t ∈ l 
     
-    then ∑ post(p, t) = n, ∀ t ∈ {t' | P t'}
-    
+    then ∑ post(p, t) = n, ∀ t ∈ {t' | P t'}    
 *)
 
 Inductive PostSum (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : nat -> Prop :=
@@ -154,7 +161,7 @@ Inductive SitpnStateTransition (sitpn : Sitpn) (s s' : SitpnState sitpn) (env : 
 
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
-    (forall (t : Ti sitpn) i, Sens (M s) t -> (reset s t = true \/ Fired s t) -> Is t = Some i -> I s' t = i--) ->
+    (forall (t : Ti sitpn) i, Sens (M s) t -> (reset s t = true \/ Fired s t) -> Is t = Some i -> I s' t = (itval i)--) ->
     (forall (t : Ti sitpn) i, Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = active i -> I s' t = i--) ->
     (forall (t : Ti sitpn), Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = blocked -> I s' t = blocked) ->
 
@@ -187,8 +194,8 @@ Inductive SitpnStateTransition (sitpn : Sitpn) (s s' : SitpnState sitpn) (env : 
     (forall (t : Ti sitpn) m, IsTransientMarking s m -> Sens m t -> reset s' t = false) ->
 
     (** Determines if some dynamic time intervals are blocked. *)
-    (forall (t : Ti sitpn), I s t = <| 0, 0 |> /\ ~Fired s t -> I s' t = blocked) ->
-    (forall (t : Ti sitpn), I s t <> <| 0, 0 |> \/ Fired s t -> I s' t = I s t) ->
+    (forall (t : Ti sitpn), eq_ditval (I s t) ditval00 /\ ~Fired s t -> eq_ditval (I s' t) blocked) ->
+    (forall (t : Ti sitpn), eq_ditval (I s t) ditval00 \/ Fired s t -> eq_ditval (I s' t) (I s t)) ->
 
     (** Determines if some functions are executed. *)
     (forall f, (exists t, Fired s t /\ has_F t f = true) -> exf s' f = true) ->

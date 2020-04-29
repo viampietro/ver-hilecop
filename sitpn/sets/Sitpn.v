@@ -19,7 +19,7 @@ Record Sitpn  :=
       
       (* A PlaceSet object representing the finite set of places. *)
       places : NatSet.t;
-
+                 
       (* A TransitionSet object representing the finite set of transitions. *)
       transitions : NatSet.t;
       
@@ -62,9 +62,9 @@ Record Sitpn  :=
 
       (* Aliases for the set of elements that belong to the finite set
          [conditions] (resp. [actions] and [functions]). *)
-      C := { c | NatSet.In c conditions };
-      A := { a | NatSet.In a actions };
-      F := { f | NatSet.In f functions };
+      C := { c | In c (NatSet.this conditions) };
+      A := { a | In a (NatSet.this actions) };
+      F := { f | In f (NatSet.this functions) };
       
       (* The function associating conditions to transitions. *)
       has_C : T -> C -> MOneZeroOne; 
@@ -83,6 +83,8 @@ Record Sitpn  :=
     }.
 
 Notation "a '>~' b" := (pr a b) (at level 0).
+
+(** Subsets of P and T, and misc. casting functions. *)
 
 Definition Psubset sitpn Q := { p : P sitpn | Q p }.
 Definition Psubset_in_P sitpn (Q : P sitpn -> Prop) (p : Psubset Q) := proj1_sig p.
@@ -115,38 +117,37 @@ Record SitpnState (sitpn : Sitpn) :=
          and transitions that have been fired on rising edge.
        *)
       
-      Fired : (T sitpn) -> Prop;
+      Fired : T sitpn -> Prop;
       
       (* Current marking of the Sitpn. *)
       
-      M : (P sitpn) -> nat;
+      M : P sitpn -> nat;
 
       (* Current state of time intervals. *)
       
-      I : (Ti sitpn) -> DynamicTimeInterval;
+      I : Ti sitpn -> DynamicTimeInterval;
 
       (* - On falling edge: orders to reset time counters at this
            cycle.  
          - On rising edge: orders to reset time counters at the
            next cycle. *)
       
-      reset : (Ti sitpn) -> bool;
+      reset : Ti sitpn -> bool;
 
       (* Current condition (boolean) values. *)
       
-      cond : (C sitpn) -> bool;
+      cond : C sitpn -> bool;
 
       (* Current activation state for continuous actions. *)
       
-      exa : (A sitpn) -> bool;
+      exa : A sitpn -> bool;
 
       (* Current activation state for interpretation functions. *)
       
-      exf : (F sitpn) -> bool;
+      exf : F sitpn -> bool;
     }.
 
 (** ** Well-definition predicate for an Sitpn. *)
-
 
 (** States that a given place [p] of [sitpn] is isolated.  *)
 
@@ -241,9 +242,9 @@ Definition PriorityRelIsWellDefined (sitpn : Sitpn) : Prop :=
 (** Defines a predicate stating that an Sitpn is well-defined, that is: 
 
     - The set of places and transitions of the Sitpn must not be empty.
+    - There are no isolated (unconnected) place or transition.
     - The priority relation is a strict _total_ order over the group
       of transitions in structural conflict.
-    - There are no isolated (unconnected) place or transition.
  *)
 
 Definition IsWellDefined (sitpn : Sitpn) :=
