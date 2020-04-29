@@ -50,7 +50,7 @@ Definition IsStrictTotalOrderBRel {A}
            (eqA : A -> A -> Prop)
            (decEqA : forall x y, {eqA x y} + {~eqA x y})
            (brel : A -> A -> bool) :=
-  forall x y, ~eqA x y -> AreComparableWithBRel x y brel.
+  IsStrictOrderBRel brel /\ forall x y, ~eqA x y -> AreComparableWithBRel x y brel.
 
 (** Defines the type of Petri net arcs. *)
 

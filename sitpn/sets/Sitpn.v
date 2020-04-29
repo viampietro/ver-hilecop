@@ -79,12 +79,10 @@ Record Sitpn  :=
       (* Priority relation between transitions. *)
 
       pr : T -> T -> bool;
-
-      (* The priority relation is a strict order over set T. *)
-      pr_is_strict_order : IsStrictOrderBRel pr;
+      
     }.
 
-Notation "a '>~' b" := (pr _ a b) (at level 0).
+Notation "a '>~' b" := (pr a b) (at level 0).
 
 Definition Psubset sitpn Q := { p : P sitpn | Q p }.
 Definition Psubset_in_P sitpn (Q : P sitpn -> Prop) (p : Psubset Q) := proj1_sig p.
