@@ -7,6 +7,7 @@ Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SemanticalDomains.
+Require Import HVhdlTypes.
 
 Import NatMap.
 Open Scope ast_scope.
@@ -28,12 +29,6 @@ Inductive vexpr (denv : DEnv) (dstate : DState) (lenv : LEnv) :
 
 (** Evaluates bool constant. *)
 | VExprBool (b : bool) : vexpr denv dstate lenv (e_bool b) (Vbool b)
-
-(** Evaluates arc_t constant. *)
-| VExprArcT (a : arc_t) : vexpr denv dstate lenv (e_arc a) (Varc a)
-
-(** Evaluates arc_t constant. *)
-| VExprTransT (t : transition_t) : vexpr denv dstate lenv (e_trans t) (Vtransition t)
                                          
 (** Evaluates aggregate expression.
     

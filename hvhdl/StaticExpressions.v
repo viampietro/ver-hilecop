@@ -8,20 +8,18 @@ Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SemanticalDomains.
+Require Import HVhdlTypes.
 
 (** Defines the inductive predicate [is_lstatic_expr] stating that an
     expression is locally static, i.e it is:
     
-    - composed of operators and operands of a scalar type (i.e,
-      natural, boolean, arc_t or transition_t).  
+    - composed of operators and operands of a scalar type (i.e, natural, boolean).  
     - a literal of a scalar type.
  *)
 
 Inductive is_lstatic_expr : expr -> Prop :=
 | IsLStaticNat (n : nat) : is_lstatic_expr (e_nat n)
 | IsLStaticBool (b : bool) : is_lstatic_expr (e_bool b)
-| IsLStaticArc (a : arc_t) : is_lstatic_expr (e_arc a)
-| IsLStaticTransition (t : transition_t) : is_lstatic_expr (e_trans t)
 | IsLStaticNot (e : expr) : is_lstatic_expr e -> is_lstatic_expr (e_not e)
 | IsLStaticBinOp (e e' : expr) (bop : binop) :
     is_lstatic_expr e -> is_lstatic_expr e' -> is_lstatic_expr (e_binop bop e e').

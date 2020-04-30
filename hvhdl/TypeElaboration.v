@@ -10,8 +10,6 @@ Require Import ConstraintElaboration.
 
 Inductive etype (denv : DEnv) : tind -> type -> Prop :=
 | ETypeBool : etype denv tind_boolean Tbool
-| ETypeArcT : etype denv tind_arc_t Tarc_t
-| ETypeTransitionT : etype denv tind_transition_t Ttransition_t
 | ETypeNat :
     forall {e e' n n'},
       econstr denv e e' n n' ->
@@ -27,8 +25,6 @@ Inductive etype (denv : DEnv) : tind -> type -> Prop :=
 
 Inductive etypeg : tind -> type -> Prop :=
 | ETypeGBool : etypeg tind_boolean Tbool
-| ETypeGArcT : etypeg tind_arc_t Tarc_t
-| ETypeGTransitionT : etypeg tind_transition_t Ttransition_t
 | ETypeGNat :
     forall {e e' n n'},
       econstrg e e' n n' ->

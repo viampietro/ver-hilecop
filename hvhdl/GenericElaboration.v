@@ -12,8 +12,9 @@ Require Import Environment.
 Require Import ExpressionEvaluation.
 Require Import StaticExpressions.
 Require Import TypeElaboration.
+Require Import HVhdlTypes.
 
-Include NatMap.
+Import NatMap.
 
 (** The generic constant elaboration relation.
     

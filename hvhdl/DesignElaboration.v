@@ -18,6 +18,7 @@ Require Import GenericElaboration.
 Require Import PortElaboration.
 Require Import ArchitectureElaboration.
 Require Import ValidPortMap.
+Require Import HVhdlTypes.
 
 Import NatMap.
 
@@ -129,7 +130,7 @@ with ebeh (dstore : IdMap design) : DEnv -> DState -> cs -> DEnv -> DState -> Pr
           exists {t}, MapsTo s (Declared t) denv \/ MapsTo s (Input t) denv) ->
 
       (* Conclusion *)
-      ebeh dstore denv dstate (cs_ps id sl vars stmt) (add id (Process lenv) denv) dstate
+      ebeh dstore denv dstate (cs_ps id sl vars stmt) (NatMap.add id (Process lenv) denv) dstate
 
 (** Elaborates and type-checks a component instantiation statement. *)
 | EBehComp :

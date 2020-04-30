@@ -6,6 +6,7 @@
     then the design is said to be stabilized.
  *)
 
+Require Import NatSet.
 Require Import Environment.
 Require Import AbstractSyntax.
 Require Import CombinationalEvaluation.

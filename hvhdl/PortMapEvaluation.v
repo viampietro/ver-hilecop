@@ -8,6 +8,8 @@
 
 Require Import Coqlib.
 Require Import GlobalTypes.
+Require Import NatSet.
+Require Import NatMap.
 Require Import SemanticalDomains.
 Require Import Environment.
 Require Import AbstractSyntax.

@@ -7,6 +7,7 @@ Require Import ListsPlus.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.
+Require Import HVhdlTypes.
 
 Open Scope natset_scope.
 
@@ -48,6 +49,16 @@ Definition IsOverrUnion (ovridden ovriding ovunion : IdMap value) :=
   (forall {id v}, MapsTo id v ovriding -> MapsTo id v ovunion) /\
   (forall {id v}, ~NatMap.In id ovriding -> MapsTo id v ovridden -> MapsTo id v ovunion).
 
+(** Defines a local environment of a process
+    as a map from id to couples (type * value).
+ *)
+
+Definition LEnv := IdMap (type * value).
+
+(** Defines an empty local environment. *)
+
+Definition EmptyLEnv := NatMap.empty (type * value).
+
 (* Needed because [SemanticalObject] as a recurvise definition that
    does not respect the strict positivity requirement.
    
@@ -64,7 +75,7 @@ Inductive SemanticalObject : Type :=
 | Input (t : type)
 | Output (t : type)
 | Declared (t : type)
-| Process (lenv : list (ident * (type * value)))
+| Process (lenv : LEnv)
 | Component (cenv : IdMap SemanticalObject) (behavior : cs).
 
 (** Macro definition for the design environment type. 
@@ -170,7 +181,7 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
 
   (* Describes the content of (events merged) *)
   
-  Equal (events merged) ((events dstate') U (events dstate'')).
+  NatSet.Equal (events merged) ((events dstate') U (events dstate'')).
 
 (** Defines the relation stating that a design state [injected] is the
     result of the "injection" of the values of map [m] in the
@@ -179,15 +190,6 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
 Definition IsInjectedDState (origin : DState) (m : IdMap value) (injected : DState) : Prop :=
   IsOverrUnion (sigstore origin) m (sigstore injected) /\
   forall {idset}, IsDiffInter (sigstore origin) m idset ->
-                  Equal (events injected) ((events origin) U idset).
+                  NatSet.Equal (events injected) ((events origin) U idset).
 
-(** Defines a local environment of a process
-    as a map from id to couples (type * value).
- *)
-
-Definition LEnv := IdMap (type * value).
-
-(** Defines an empty local environment. *)
-
-Definition EmptyLEnv := NatMap.empty (type * value).
 

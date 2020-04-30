@@ -9,6 +9,7 @@ Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.
 Require Import Petri.
+Require Import HVhdlTypes.
 
 Open Scope natset_scope.
 Open Scope ast_scope.
@@ -125,7 +126,7 @@ Definition input_tokens_sum_ps :=
   cs_ps input_tokens_sum
 
         (* Sensitivity list. *)
-        {input_transitions_fired, input_arcs_weights}
+        {[input_transitions_fired, input_arcs_weights]}
         
         (* Local variables. *)
         [vdecl_ v_internal_input_token_sum local_weight_t]
@@ -157,7 +158,7 @@ Definition output_tokens_sum_ps :=
   cs_ps output_tokens_sum
         
         (* Sensitivity list. *)
-        {output_arcs_types, output_arcs_weights, output_transitions_fired}
+        {[output_arcs_types, output_arcs_weights, output_transitions_fired]}
 
         (* Local variables. *)
         [vdecl_ v_internal_output_token_sum local_weight_t]
@@ -185,7 +186,7 @@ Definition marking_ps :=
   cs_ps marking
         
         (* Sensitivity list. *)
-        {clk, rst, initial_marking}
+        {[clk, rst, initial_marking]}
 
         (* Local variables. *)
         []
@@ -210,7 +211,7 @@ Definition determine_marked_ps :=
   cs_ps determine_marked
         
         (* Sensitivity list. *)
-        {s_marking}s
+        {[s_marking]}
 
         (* Local variables. *)
         []
@@ -228,7 +229,7 @@ Definition marking_validation_evaluation_ps :=
   cs_ps marking_validation_evaluation
         
         (* Sensitivity list *)
-        {output_arcs_types, output_arcs_weights, s_marking} 
+        {[output_arcs_types, output_arcs_weights, s_marking]} 
 
         (* Local variables. *)
         []
@@ -257,7 +258,7 @@ Definition priority_evaluation_ps :=
     priority_evaluation
     
     (* Sensitivity list. *)
-    {output_arcs_types, output_arcs_weights, output_transitions_fired, s_marking}
+    {[output_arcs_types, output_arcs_weights, output_transitions_fired, s_marking]}
     
     (* Local variables. *)
     [vdecl_ v_saved_output_token_sum local_weight_t]
@@ -285,7 +286,7 @@ Definition reinit_transitions_time_evaluation_ps :=
     reinit_transitions_time_evaluation
     
     (* Sensitivity list. *)
-    {clk, rst}
+    {[clk, rst]}
 
     (* Local variables. *)
     []

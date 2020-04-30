@@ -14,11 +14,12 @@ Require Import GlobalTypes.
 Require Import SemanticalDomains.
 Require Import Environment.
 Require Import AbstractSyntax.
-Require Import SitpnSemantics.
+Require Import sets.SitpnTypes.
 Require Import SynchronousEvaluation.
 Require Import Stabilize.
 Require Import DesignElaboration.
 Require Import Initialization.
+Require Import HVhdlTypes.
 
 (** Defines the relation that computes a simulation cycle in the
     context of a design environment [denv], starting from a design
@@ -38,7 +39,7 @@ Require Import Initialization.
       yet to be executed.  *)
 
 Inductive simcycle
-          (ivals : nat -> Clock -> IdMap value)
+          (ivals : nat -> Clk -> IdMap value)
           (denv : DEnv)
           (dstate : DState)
           (trace : list DState)
@@ -76,7 +77,7 @@ Inductive simcycle
     time-ordered list of design states.  *)
 
 Inductive simloop
-          (ivals : nat -> Clock -> IdMap value)
+          (ivals : nat -> Clk -> IdMap value)
           (denv : DEnv)
           (dstate : DState)
           (trace : list DState)
@@ -123,7 +124,7 @@ Inductive simloop
 Inductive simwf
           (dstore : IdMap design)
           (dimen : IdMap value)
-          (ivals : nat -> Clock -> IdMap value)
+          (ivals : nat -> Clk -> IdMap value)
           (time : nat)
           (d : design) : list DState -> Prop :=
   

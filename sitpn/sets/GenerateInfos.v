@@ -4,10 +4,7 @@ Require Import Coqlib.
 Require Import sets.Sitpn.
 Require Import SitpnTypes.
 Require Import NatSet.
-Require Import ListsPlus.
 Require Import ListsDep.
-Require Import GenerateInfosInterface.
-Require Import SetoidList.
 Require Import InfosTypes.
 Require Import GlobalTypes.
 Require Import String.
@@ -282,7 +279,7 @@ Section SitpnInfos.
     if NatSet.is_empty (places sitpn) then
       Err "Found an empty set of places."
     else
-      if NatSet.is_empty (places sitpn) then
+      if NatSet.is_empty (transitions sitpn) then
         Err "Found an empty set of transitions."
       else
         (* Otherwise, generates information about sitpn. *)

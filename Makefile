@@ -9,9 +9,8 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 # General-purpose utilities (in common/)
 
-COMMONFILES=NatMap.v NatSet.v Coqlib.v \
+COMMONFILES=NatMap.v NatSet.v Coqlib.v GlobalTypes.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
-	GlobalTypes.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -31,12 +30,13 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 # Sitpn structures, semantics and token player (in sitpn/sets/)
 
-SITPNSETSFILES=SitpnGlobalTypes.v Sitpn.v \
+SITPNSETSFILES=SitpnTypes.v Sitpn.v SitpnSemantics.v \
+	InfosTypes.v GenerateInfos.v
 
 # H-VHDL syntax and semantics.
 
-HVHDLFILES=ArcT.v TransitionT.v GlobalTypes.v AbstractSyntax.v SemanticalDomains.v \
-	Environment.v StaticExpressions.v IsOfType.v DefaultValue.v \
+HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
+	Environment.v StaticExpressions.v DefaultValue.v \
 	ExpressionEvaluation.v ConstraintElaboration.v TypeElaboration.v \
 	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
 	ValidSS.v ValidPortMap.v DesignElaboration.v \
@@ -87,9 +87,9 @@ cleanhvhdl:
 	rm -f $(patsubst %, %/*~, hvhdl)
 
 cleanall:
-	rm -f $(patsubst %, %/*.vo, $(DIRS))
-	rm -f $(patsubst %, %/.*.aux, $(DIRS))
-	rm -f $(patsubst %, %/*.glob, $(DIRS))
-	rm -f $(patsubst %, %/*.vok, $(DIRS))
-	rm -f $(patsubst %, %/*.vos, $(DIRS))
-	rm -f $(patsubst %, %/*~, $(DIRS))	
+	rm -f $(patsubst %, %/*/*.vo, $(DIRS))
+	rm -f $(patsubst %, %/*/.*.aux, $(DIRS))
+	rm -f $(patsubst %, %/*/*.glob, $(DIRS))
+	rm -f $(patsubst %, %/*/*.vok, $(DIRS))
+	rm -f $(patsubst %, %/*/*.vos, $(DIRS))
+	rm -f $(patsubst %, %/*/*~, $(DIRS))	

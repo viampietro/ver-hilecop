@@ -144,10 +144,6 @@ Inductive MarkingSubPreSumAddPostSum (sitpn : Sitpn) (s : SitpnState sitpn) (tSe
 Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitpn -> nat) :=
   MarkingSubPreSumAddPostSum s (Fired s) m.
 
-(** Clock events set. *)
-
-Inductive Clk := rising_edge | falling_edge.
-
 (** Defines the Sitpn state transition relation. *)
 
 Inductive SitpnStateTransition (sitpn : Sitpn) (s s' : SitpnState sitpn) (env : C sitpn -> nat -> bool) (tau : nat) : Clk -> Prop :=

@@ -11,6 +11,7 @@ Require Import SemanticalDomains.
 Require Import AbstractSyntax.
 Require Import ExpressionEvaluation.
 Require Import StaticExpressions.
+Require Import HVhdlTypes.
 
 (** ** Valid port map for "in" mode ports. *)
 

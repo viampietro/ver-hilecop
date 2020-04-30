@@ -4,6 +4,7 @@
 
 Require Import Coqlib.
 Require Import GlobalTypes.
+Require Import HVhdlTypes.
 
 (** Declares the scope of notations for the H-VHDL abstract syntax. *)
 
@@ -38,8 +39,6 @@ Inductive expr : Type :=
 | e_nat : nat -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
 | e_name : name -> expr (** Name constant *)
-| e_arc : arc_t -> expr (** [arc_t] constant *)
-| e_trans : transition_t -> expr (** [transition_t] constant *)
 | e_aggreg : list expr -> expr (** Aggregate of expressions *)
 | e_binop : binop -> expr -> expr -> expr (** Binary operator expression *)
 | e_not : expr -> expr (** Not expression *)
@@ -78,8 +77,6 @@ Notation " x @&& y @&& .. @&& z " := (e_binop bo_and .. (e_binop bo_and x y) .. 
 
 Coercion e_nat : nat >-> expr.
 Coercion e_bool : bool >-> expr.
-Coercion e_arc : arc_t >-> expr.
-Coercion e_trans : transition_t >-> expr.
 
 (** Subtype indications. 
 
@@ -94,8 +91,6 @@ Coercion e_trans : transition_t >-> expr.
 Inductive tind : Type :=
 | tind_boolean                                           (** Boolean type indication. *)
 | tind_natural (rlower : expr) (rupper : expr)           (** Natural with range constraint. *)
-| tind_arc_t                                             (** arc_t type indication. *)
-| tind_transition_t                                      (** transition_t type indication. *)
 | tind_array (t : tind) (ilower : expr) (iupper : expr). (** Array of [t] with index constraint. *)
 
 (** ** Sequential statements. *)

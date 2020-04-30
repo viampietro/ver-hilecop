@@ -4,8 +4,6 @@
 Require Import Coqlib.
 Require Export NatMap.
 Require Export NatSet.
-Require Export ArcT.
-Require Export TransitionT.
 
 (** Defines the maximum value taken by a natural number
     in H-VHDL.

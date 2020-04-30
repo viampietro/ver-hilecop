@@ -9,6 +9,7 @@ Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.
 Require Import Petri.
+Require Import HVhdlTypes.
 
 Open Scope natset_scope.
 Open Scope ast_scope.
@@ -29,7 +30,7 @@ Definition maximal_time_counter : ident := conditions_number + 1.
 (** Defines the generic clause of the Transition design. *)
 
 Definition transition_gens : list gdecl :=
-  [gdecl_ transition_type     tind_transition_t not_temporal;
+  [gdecl_ transition_type     transition_t not_temporal;
   gdecl_ input_arcs_number    (tind_natural 0 NATMAX) 1;
   gdecl_ conditions_number    (tind_natural 0 NATMAX) 1;
   gdecl_ maximal_time_counter (tind_natural 0 NATMAX) 1].
@@ -117,7 +118,7 @@ Definition condition_evaluation_ps :=
   cs_ps condition_evaluation
 
         (* Sensitivity list. *)
-        {input_conditions}s
+        {[input_conditions]}
         
         (* Local variables. *)
         [vdecl_ v_internal_condition tind_boolean]
@@ -146,7 +147,7 @@ Definition enable_evaluation_ps :=
   cs_ps enable_evaluation
 
         (* Sensitivity list. *)
-        {input_arcs_valid}s
+        {[input_arcs_valid]}
         
         (* Local variables. *)
         [vdecl_ v_internal_enabled tind_boolean]
@@ -175,7 +176,7 @@ Definition reinit_time_counter_evaluation_ps :=
   cs_ps reinit_time_counter_evaluation
 
         (* Sensitivity list. *)
-        {reinit_time, s_enabled}
+        {[reinit_time, s_enabled]}
         
         (* Local variables. *)
         [vdecl_ v_internal_reinit_time_counter tind_boolean]
@@ -200,7 +201,7 @@ Definition time_counter_ps :=
   cs_ps time_counter
 
         (* Sensitivity list. *)
-        {rst, clk}
+        {[rst, clk]}
         
         (* Local variables. *)
         []
@@ -230,7 +231,7 @@ Definition firing_condition_evaluation_ps :=
   cs_ps firing_condition_evaluation
 
         (* Sensitivity list. *)
-        {s_enabled, s_condition_combination, s_reinit_time_counter, s_time_counter}
+        {[s_enabled, s_condition_combination, s_reinit_time_counter, s_time_counter]}
         
         (* Local variables. *)
         []
@@ -290,7 +291,7 @@ Definition priority_authorization_evaluation_ps :=
   cs_ps priority_authorization_evaluation
 
         (* Sensitivity list. *)
-        {priority_authorizations}s
+        {[priority_authorizations]}
         
         (* Local variables. *)
         [vdecl_ v_priority_combination tind_boolean]
@@ -316,7 +317,7 @@ Definition firable : ident := priority_authorization_evaluation + 1.
 Definition firable_ps :=
   cs_ps firable
         (* Sensitivity list. *)
-        {rst, clk}
+        {[rst, clk]}
         
         (* Local variables. *)
         []
@@ -340,7 +341,7 @@ Definition fired_evaluation : ident := firable + 1.
 Definition fired_evaluation_ps :=
   cs_ps fired_evaluation
         (* Sensitivity list. *)
-        {s_firable, s_priority_combination}
+        {[s_firable, s_priority_combination]}
         
         (* Local variables. *)
         []
@@ -358,7 +359,7 @@ Definition publish_fired : ident := fired_evaluation + 1.
 Definition publish_fired_ps :=
   cs_ps publish_fired
         (* Sensitivity list. *)
-        {s_fired}s
+        {[s_fired]}
         
         (* Local variables. *)
         []

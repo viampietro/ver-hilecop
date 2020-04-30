@@ -1,3 +1,5 @@
+(** * Default values of types. *)
+
 (** Defines the relation yielding the implicit default value 
     associated to a type. 
     
@@ -17,8 +19,6 @@ Inductive defaultv : type -> value -> Prop :=
   
 | DefaultVBool : defaultv Tbool (Vbool false)
 | DefaultVNat : forall {l u}, defaultv (Tnat l u) (Vnat l)
-| DefaultVArcT : defaultv Tarc_t (Varc basic)
-| DefaultVTransitionT : defaultv Ttransition_t (Vtransition not_temporal)
 | DefaultVArray :
     forall {t l u v},
       defaultv t v ->

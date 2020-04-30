@@ -13,15 +13,11 @@ Require Import GlobalTypes.
 
     - a boolean
     - a natural number
-    - an element of arc_t
-    - an element of transition_t
     - a list of values. *)
 
 Inductive value : Type :=
 | Vbool : bool -> value
 | Vnat : nat -> value
-| Varc : arc_t -> value
-| Vtransition : transition_t -> value
 | Vlist : lofvalues -> value
                          
 with lofvalues : Type :=
@@ -72,18 +68,14 @@ Fixpoint create_list (n : nat) (v : value) {struct n} : lofvalues :=
     semantical world. *)
 
 Inductive type : Type :=
-| Tbool                                 (** Boolean *)
-| Tnat (l : nat) (u : nat)              (** Constrained natural. *)
-| Tarray (t : type) (l : nat) (u : nat) (** Fixed-size array. *)
-| Tarc_t                                (** arc_t type. *)
-| Ttransition_t.                        (** transition_t type. *)
+| Tbool                                  (** Boolean *)
+| Tnat (l : nat) (u : nat)               (** Constrained natural. *)
+| Tarray (t : type) (l : nat) (u : nat). (** Fixed-size array. *)
 
 (** Defines the typing relation [is_of_type]. *)
 
 Inductive is_of_type : value -> type -> Prop :=
 | IsBool : forall (b : bool), is_of_type (Vbool b) Tbool
-| IsArcT : forall (a : arc_t), is_of_type (Varc a) Tarc_t
-| IsTransitionT : forall (t : transition_t), is_of_type (Vtransition t) Ttransition_t
 
 (** Value n must satisfy the index constraint, i.e n ∈ [l,u]. *)
 | IsNat : forall (n l u : nat), l <= n <= u -> is_of_type (Vnat n) (Tnat l u)
@@ -123,10 +115,6 @@ Inductive VEq : value -> value -> option bool -> Prop :=
 | VEqBoolF : forall {b b'}, b <> b' -> VEq (Vbool b) (Vbool b') (Some false)
 | VEqNatT  : forall {n n'}, n = n' -> VEq (Vnat n) (Vnat n') (Some true)
 | VEqNatF  : forall {n n'}, n <> n' -> VEq (Vnat n) (Vnat n') (Some false)
-| VEqArcT  : forall {a a'}, a = a' -> VEq (Varc a) (Varc a') (Some true)
-| VEqArcF  : forall {a a'}, a <> a' -> VEq (Varc a) (Varc a') (Some false)
-| VEqTransitionT : forall {t t'}, t = t' -> VEq (Vtransition t) (Vtransition t') (Some true)
-| VEqTransitionF : forall {t t'}, t = t' -> VEq (Vtransition t) (Vtransition t') (Some false)
 | VEqListT : forall {l l'}, LOfVEq l l' (Some true) -> VEq (Vlist l) (Vlist l') (Some true)
 | VEqListF : forall {l l'}, LOfVEq l l' (Some false) -> VEq (Vlist l) (Vlist l') (Some false)
 | VEqListErr : forall {l l'}, LOfVEq l l' None -> VEq (Vlist l) (Vlist l') None
@@ -166,8 +154,6 @@ Fixpoint veq (v v' : value) {struct v} : option bool :=
   match v, v' with
   | Vbool b, Vbool b' => Some (Bool.eqb b b')
   | Vnat n, Vnat n' => Some (Nat.eqb n n')
-  | Varc a, Varc a' => Some (ArcT.eqb a a')
-  | Vtransition t, Vtransition t' => Some (TransitionT.eqb t t')
   | Vlist l, Vlist l' => lofveq l l'
 
   (* Error, cannot compare two values of different domains. *)

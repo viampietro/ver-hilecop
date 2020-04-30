@@ -131,3 +131,7 @@ Definition eq_ditval (x y : DynamicTimeInterval) : Prop :=
     condition and barred condition to transition. *)
 
 Inductive MOneZeroOne : Set := mone | zero | one.
+
+(** Clock events set. *)
+
+Inductive Clk := rising_edge | falling_edge.
