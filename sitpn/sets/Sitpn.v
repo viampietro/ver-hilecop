@@ -24,17 +24,18 @@ Record Sitpn  :=
       transitions : NatSet.t;
       
       (* Alias for the set of elements that belong to the finite set [places]. *)
-      P := { p | In p (NatSet.this places) };
+      InP := (fun p => In p (NatSet.this places));
+      P := { p | InP p };
       
       (* Alias for the set of elements that belong to the finite set [transitions]. *)
-      T := { t | In t (NatSet.this transitions) };
+      InT := (fun t => In t (NatSet.this transitions));
+      T := { t | InT t };
 
-      (* 
-         Given a place p ∈ P and t ∈ T:
+      (* Given a place p ∈ P and t ∈ T:
 
          Yields a couple (a, n) where a is the type of the input arc
-         between the place and transition in parameter, and n is the
-         weight of the arc (therefore, strictly more than zero).  
+         between p and t, and n is the weight of the arc (therefore,
+         strictly more than zero).
          
          Yields None if there is no arc between p and t.
          
@@ -62,9 +63,14 @@ Record Sitpn  :=
 
       (* Aliases for the set of elements that belong to the finite set
          [conditions] (resp. [actions] and [functions]). *)
-      C := { c | In c (NatSet.this conditions) };
-      A := { a | In a (NatSet.this actions) };
-      F := { f | In f (NatSet.this functions) };
+      InC := (fun c => In c (NatSet.this conditions));
+      C := { c | InC c };
+      
+      InA := (fun a => In a (NatSet.this actions));
+      A := { a | InA a };
+
+      InF := (fun f => In f (NatSet.this functions));
+      F := { f | InF f };
       
       (* The function associating conditions to transitions. *)
       has_C : T -> C -> MOneZeroOne; 
@@ -82,6 +88,8 @@ Record Sitpn  :=
       
     }.
 
+(** Notations for Sitpn. *)
+
 Notation "a '>~' b" := (pr a b) (at level 0).
 
 (** Subsets of P and T, and misc. casting functions. *)
@@ -89,22 +97,36 @@ Notation "a '>~' b" := (pr a b) (at level 0).
 Definition Psubset sitpn Q := { p : P sitpn | Q p }.
 Definition Psubset_in_P sitpn (Q : P sitpn -> Prop) (p : Psubset Q) := proj1_sig p.
 Definition P_in_nat sitpn (p : P sitpn) : nat := proj1_sig p.
+Definition nat_to_P {sitpn} p := (fun (pf : InP sitpn p) => exist _ p pf).
 
 Definition Tsubset sitpn Q := { t : T sitpn | Q t }.
 Definition Tsubset_in_T sitpn (Q : T sitpn -> Prop) (t : Tsubset Q) := proj1_sig t.
 Definition T_in_nat sitpn (t : T sitpn) : nat := proj1_sig t.
+Definition nat_to_T {sitpn} t := (fun (pf : InT sitpn t) => exist _ t pf).
 
 Definition Ti (sitpn : Sitpn) := Tsubset (fun t : T sitpn => (Is t) <> None).
 Definition Ti_in_T (sitpn : Sitpn) (t : Ti sitpn) := proj1_sig t.
 
-(* Shortcut to express elements of subset of P and T as elements of P
-   and T. *)
+Definition nat_to_C {sitpn} c := (fun (pf : InC sitpn c) => exist _ c pf).
+Definition nat_to_A {sitpn} a := (fun (pf : InA sitpn a) => exist _ a pf).
+Definition nat_to_F {sitpn} f := (fun (pf : InF sitpn f) => exist _ f pf).
+
+
+(** Coercions for Sitpn. *)
 
 Coercion P_in_nat : P >-> nat.
 Coercion Psubset_in_P : Psubset >-> P.
 Coercion Tsubset_in_T : Tsubset >-> T.
 Coercion Ti_in_T : Ti >-> T. 
 Coercion T_in_nat : T >-> nat.
+
+(** Macro functions for Sitpn. *)
+
+Definition P2List (sitpn : Sitpn) : list nat := NatSet.this (places sitpn).
+Definition T2List (sitpn : Sitpn) : list nat := NatSet.this (transitions sitpn).
+Definition C2List (sitpn : Sitpn) : list nat := NatSet.this (conditions sitpn).
+Definition A2List (sitpn : Sitpn) : list nat := NatSet.this (actions sitpn).
+Definition F2List (sitpn : Sitpn) : list nat := NatSet.this (functions sitpn).
 
 (** ** Sitpn state definition. *)
 

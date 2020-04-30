@@ -10,32 +10,6 @@ Import ListNotations.
 
 Local Notation "'|' e '|'" := (exist _ e _) (at level 50).
 
-(** Given a proof that list [sl] is included in [l], converts [sl]
-    into a list of [A]s that are in [l].  *)
-
-Fixpoint list2listin_aux A (Aeq_dec : forall x y : A, {x = y} + {x <> y}) (l sl : list A) {struct sl} :
-  incl sl l -> list { a | In a l } :=
-  match sl with
-  | nil => (fun _ => nil)
-  | n :: tl =>
-    (fun (p : _) =>
-       let in_n_l := (p n (in_eq n tl)) in
-       let incl_tl_l := (incl_cons_inv n tl l p) in
-       (exist _ n in_n_l) :: list2listin_aux _ Aeq_dec l tl incl_tl_l)
-  end.
-
-(** Converts a list [l] of type [list A] into a list of type [list {a
-| a ∈ l}] of elements that verify their inclusion in [l]
-    
-    Useful to pass to argument to functions that map elements of a
-    finite set, implemented with a list, to another set.
- 
- *)
-
-Definition list2listin A (Aeq_dec : forall x y : A, {x = y} + {x <> y}) (l : list A) :
-  list {a | In a l} :=
-  list2listin_aux _ Aeq_dec l l (incl_refl l).
-
 (** States that if one can obtain a term of B from a proof that 
     a ∈ (b :: l) then one can obtain a term of B from a proof that a ∈ l.  *)
 
@@ -44,62 +18,151 @@ Lemma in_T_in_sublist_T {A B} :
   intros b l H a H'; apply (H a (in_cons b a l H')).
 Defined.
 
-(** Given a proof that all elements in [lofAs] can yield a term of
+(** ** Transform and filter elements of a list. *)
+
+Section TFilter.
+
+  Variable A B : Type.
+  Variable ffilter : B -> bool.
+  
+  (** Given a proof that all elements in [lofAs] can yield a term of
     [B], transform each element of [lofAs] into a term [b] of [B].
 
     If [b] passes the [test] given in parameter then, adds [b]
     to the list [lofBs].
     
- *)
+   *)
 
-Fixpoint transform_and_filter_aux {A B}
-         (lofAs : list A)
-         (test : B -> bool)
-         (lofBs : list B)
-         {struct lofAs} :
-  (forall a, In a lofAs -> B) -> list B :=
-  match lofAs with
-  | nil => fun _ => lofBs
-  | a :: tl =>
-    fun pf : _ =>
-      let b := pf a (in_eq a tl) in
-      let pf_tl := in_T_in_sublist_T a tl pf in
-      if test b then
-        transform_and_filter_aux tl test (lofBs ++ [b]) pf_tl
-      else
-        transform_and_filter_aux tl test lofBs pf_tl
-  end.
+  Fixpoint tfilter_aux (lofAs : list A) (lofBs : list B) {struct lofAs} :
+    (forall a, In a lofAs -> B) -> list B :=
+    match lofAs with
+    | nil => fun _ => lofBs
+    | a :: tl =>
+      fun pf : _ =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
 
-(** Wrapper around the [transform_and_filter_aux] function. *)
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
 
-Definition transform_and_filter {A B}
-           (lofAs : list A)
-           (test : B -> bool) :
-  (forall a, In a lofAs -> B) -> list B :=
-  transform_and_filter_aux lofAs test nil.
+        (* If b passes the test, then adds it to lofBs. *)
+        if ffilter b then
+          tfilter_aux tl (lofBs ++ [b]) pf_tl
+        else
+          tfilter_aux tl lofBs pf_tl
+    end.
 
-(** Tests for the [transform_and_filter] function. *)
+  (** Wrapper around the [tfilter_aux] function. *)
 
-(* Tranforming a list of nat into a list of natstar. *)
+  Definition tfilter (lofAs : list A) :
+    (forall a, In a lofAs -> B) -> list B :=
+    tfilter_aux lofAs nil.
+  
+End TFilter.
 
-Definition lofnat : list nat := [1; 2; 4; 8; 9; 12].
+Arguments tfilter {A B}.
 
-Lemma forall_lofnat_gt_O :
-  forall a, In a lofnat -> a > 0.
-Proof.
-  let rec crush :=
-      match goal with
-      | [ H : In ?a _ |- _ ]  => induction H; crush
-      | [ H: _ = ?a |- ?a > _ ] => rewrite <- H; omega
-      end
-  in induction 1; crush. 
-Defined.
+(** ** Transform and map elements of a list. *)
 
-Lemma forall_lofnat_natstar (a : nat) (H : In a lofnat) : natstar.
-  exact (exist _ a (forall_lofnat_gt_O a H)).
-Defined.  
+Section TMap.
 
-Compute (transform_and_filter lofnat (fun ns => even (proj1_sig ns)) forall_lofnat_natstar). 
-Compute (transform_and_filter lofnat (fun ns => odd (proj1_sig ns)) forall_lofnat_natstar).
-Compute (transform_and_filter lofnat (fun ns => (proj1_sig ns) <? 0) forall_lofnat_natstar).
+  Variable A B C : Type.
+  Variable fmap : B -> C.
+  
+  (** Given a proof that all elements in [lofAs] can yield a term of
+      [B], transform each element of [lofAs] into a term [b] of [B], then
+      maps [b] to a term [c] of [C].
+    
+   *)
+
+  Fixpoint tmap_aux (lofAs : list A) (lofCs : list C) {struct lofAs} :
+    (forall a, In a lofAs -> B) -> list C :=
+    match lofAs with
+    | nil => fun _ => lofCs
+    | a :: tl =>
+      fun pf : _ =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
+
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
+        
+        tmap_aux tl (lofCs ++ [fmap b]) pf_tl
+    end.
+
+  (** Wrapper around the [tmap_aux] function. *)
+
+  Definition tmap (lofAs : list A) :
+    (forall a, In a lofAs -> B) -> list C :=
+    tmap_aux lofAs nil.
+
+  Variable fopt_map : B -> optionE C.
+  
+  (** Given a proof that all elements in [lofAs] can yield a term of
+      [B], transform each element of [lofAs] into a term [b] of [B], then
+      maps [b] to Some term [c] of [C] or return an error.
+   *)
+
+  Fixpoint topt_map_aux (lofAs : list A) (lofCs : list C) {struct lofAs} :
+    (forall a, In a lofAs -> B) -> optionE (list C) :=
+    match lofAs with
+    | nil => fun _ => Success lofCs
+    | a :: tl =>
+      fun pf : _ =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
+
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
+
+        (* Continues the mapping or returns an error. *)
+        match fopt_map b with
+        | Success c => topt_map_aux tl (lofCs ++ [c]) pf_tl
+        | Err msg => Err msg
+        end
+    end.
+
+  (** Wrapper around the [topt_map_aux] function. *)
+
+  Definition topt_map (lofAs : list A) :
+    (forall a, In a lofAs -> B) -> optionE (list C) :=
+    topt_map_aux lofAs nil.
+  
+End TMap.
+
+Arguments tmap {A B C}.
+Arguments topt_map {A B C}.
+
+(** ** Transform and iterate from left to right on a list.  *)
+
+Section TFold_Left_Recursor.
+  
+  Variable A B C : Type.
+  Variable f : C -> B -> C.
+
+  (** Given a proof that all elements in [lofAs] can yield a term of
+      [B], transform each element of [lofAs] into a term [b] of [B], then
+      calls [f] on [c] and [b] to build a new term of [C]. *)
+  
+  Fixpoint tfold_left (lofAs : list A) (c : C) : 
+    (forall a, In a lofAs -> B) -> C :=
+    match lofAs with
+    | nil => fun _ => c
+    | a :: tl =>
+      fun pf : _ =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
+
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
+
+        (* Builds a new term of C by calling f on b and c and
+           continues. *)
+        tfold_left tl (f c b) pf_tl
+    end.
+  
+End TFold_Left_Recursor.
+
+Arguments tfold_left {A B C}.
+
 
