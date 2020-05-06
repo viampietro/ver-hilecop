@@ -208,6 +208,20 @@ Inductive AreInConflictThroughPlaces sitpn (t t' : T sitpn) : list (P sitpn) -> 
       AreInConflictThroughPlaces t'' t' Pc' ->
       AreInConflictThroughPlaces t t' (Pc ++ Pc').
 
+(** For a given [sitpn], defines the equivalence relation [eq_place]
+    between two places as the equality between the first element
+    of the [sig] type [P sitpn].  *)
+
+Definition eq_place sitpn (p p' : P sitpn) : Prop := proj1_sig p = proj1_sig p'.
+Arguments eq_place {sitpn}.
+
+(** The equivalence relation [eq_place] is decidable. *)
+
+Definition eq_place_dec sitpn : forall x y : P sitpn, {eq_place x y} + {~eq_place x y}.
+  unfold eq_place. decide equality.
+Defined.
+Arguments eq_place_dec {sitpn}.
+
 (** For a given [sitpn], defines the equivalence relation [eq_trans]
     between two transitions as the equality between the first element
     of the [sig] type [T sitpn].  *)
@@ -225,6 +239,7 @@ Definition eq_trans' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : Prop :=
 Definition eq_trans_dec sitpn : forall x y : T sitpn, {eq_trans x y} + {~eq_trans x y}.
   unfold eq_trans. decide equality.
 Defined.
+Arguments eq_trans_dec {sitpn}.
 
 (** The equivalence relation [eq_trans'] is also decidable. *)
 
@@ -235,8 +250,7 @@ Definition eq_trans'_dec sitpn (Q : T sitpn -> Prop) :
 Defined.
 
 (** Priority relation between two transitions that are elements
-    of a subset of T.
- *)
+    of a subset of T. *)
 
 Definition pr' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : bool :=
   pr (proj1_sig t) (proj1_sig t').

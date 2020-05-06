@@ -6,13 +6,142 @@
 Require Import Coqlib.
 Require Import Omega.
 Require Import Classical_Prop.
+Require Import GlobalTypes.
 
 Require Export FstSplit.
 Require Export InAndNoDup.
 
-(** ** Predicates IsDecListCons, IsDecListApp and facts. *)
-
 Set Implicit Arguments.
+
+(** ** Finds and sets an element in a list of couple. *)
+
+Section MapAsListOfCouples.
+
+  Variable A B : Type.
+  Variable eq : A -> A -> Prop.
+  Variable eq_dec : forall x y : A, {eq x y} + {~eq x y}.
+  
+  (** Returns [Some a] if it is asscoiated with [k] in list [l].  
+      Returns None, if k is not in the first elements of [l].
+   *)
+
+  Fixpoint getv (k : A) (l : list (A * B)) {struct l} : option B :=
+    match l with
+    | nil => None
+    | cons (a, b) tl => if eq_dec k a then Some b else getv k tl
+    end.
+
+  (** Sets the couple [(k, v)] in list [l]. If [k] is in the first
+      elements of [l], then the old binding of [k] to value in [l] is
+      replaced by the binding of [k] to [v].  Puts the couple [(k,v)]
+      at the end of list [l] otherwise. *)
+
+  Fixpoint setv (k : A) (v : B) (l : list (A * B)) {struct l} : list (A * B) :=
+    match l with
+    | nil => [(k, v)]
+    | cons (a, b) tl => if eq_dec k a then cons (k, v) tl else cons (a, b) (setv k v tl)
+    end.
+  
+End MapAsListOfCouples.
+
+Arguments getv {A B eq}.
+Arguments setv {A B eq}.
+
+(** ** Map function with possible errors. *)
+
+Section OMap.
+
+  Variable A B : Type.
+  
+  Variable fopt_map : A -> option B.
+  
+  (** Maps all elements of [lofAs] to a term [b] of [B] and returns
+      the resulting list or return an error. *)
+
+  Fixpoint omap_aux (lofAs : list A) (lofBs : list B) {struct lofAs} :
+    option (list B) :=
+    match lofAs with
+    | nil => Some lofBs
+    | a :: tl =>
+      (* Continues the mapping or returns an error. *)
+      match fopt_map a with
+      | Some b => omap_aux tl (lofBs ++ [b])
+      | None => None
+      end
+    end.
+
+  (** Wrapper around the [omap_aux] function. *)
+
+  Definition omap (lofAs : list A) : option (list B) :=
+    omap_aux lofAs nil.
+
+  (** Version with optionE used instead of option. *)
+
+  Variable fopte_map : A -> optionE B.
+  
+  (** Maps all elements of [lofAs] to a term [b] of [B] and returns
+      the resulting list or return an error. *)
+
+  Fixpoint oemap_aux (lofAs : list A) (lofBs : list B) {struct lofAs} :
+    optionE (list B) :=
+    match lofAs with
+    | nil => Success lofBs
+    | a :: tl =>
+      (* Continues the mapping or returns an error. *)
+      match fopte_map a with
+      | Success b => oemap_aux tl (lofBs ++ [b])
+      | Err msg => Err msg
+      end
+    end.
+
+  (** Wrapper around the [omap_aux] function. *)
+
+  Definition oemap (lofAs : list A) : optionE (list B) :=
+    oemap_aux lofAs nil.
+  
+End OMap.
+
+Arguments omap_aux {A B}.
+Arguments omap {A B}.
+Arguments oemap_aux {A B}.
+Arguments oemap {A B}.
+
+(** Fold left function with possible errors. *)
+
+Section OFold_left.
+
+  Variable A B : Type.
+  
+  Variable f : A -> B -> option A.
+
+  Fixpoint ofold_left (l:list B) (a0 : A) : option A :=
+    match l with
+    | nil => Some a0
+    | cons b t => match f a0 b with
+                  | None => None
+                  | Some a => ofold_left t a
+                  end
+    end.
+
+  (** Version with optionE used instead of option. *)
+  
+  Variable fe : A -> B -> optionE A.
+
+  Fixpoint oefold_left (l:list B) (a0 : A) : optionE A :=
+    match l with
+    | nil => Success a0
+    | cons b t => match fe a0 b with
+                  | Err msg => Err msg
+                  | Success a => oefold_left t a
+                  end
+    end.
+  
+End OFold_left.
+
+Arguments ofold_left {A B}.
+Arguments oefold_left {A B}.
+
+(** ** Predicates IsDecListCons, IsDecListApp and facts. *)
 
 Section DecreasedList.
 

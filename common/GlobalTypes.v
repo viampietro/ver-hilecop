@@ -66,10 +66,33 @@ Definition arct_eqb (a a' : ArcT) : bool :=
   | _, _ => false
   end.
 
+(** Cast from ArcT to nat. *)
+
+Definition ArcT_in_nat (a : ArcT) :=
+  match a with
+  | basic => 0
+  | test => 1
+  | inhibitor => 2
+  end.
+
+Coercion ArcT_in_nat : ArcT >-> nat.
+
 (** Defines the type of Petri net transitions. *)
 
 Inductive TransitionT : Type := not_temporal | temporal_a_b |
                                 temporal_a_a | temporal_a_inf.
+
+(** Cast from TransitionT to nat. *)
+
+Definition TransitionT_in_nat (t : TransitionT) :=
+  match t with
+  | not_temporal => 0
+  | temporal_a_b => 1
+  | temporal_a_a => 2
+  | temporal_a_inf => 3
+  end.
+
+Coercion TransitionT_in_nat : TransitionT >-> nat.
 
 (** Implements the equality between two transition_t values. *)
 

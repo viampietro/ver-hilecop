@@ -17,87 +17,82 @@ Section PlaceInfos.
 
   Variable sitpn : Sitpn.
 
-  (** Returns a couple of lists [(i, o)] where [i] is the list of input
-      transitions of [p], and [o] is the list of couples [(o, a)] where
-      [o] is an output transition of [p], and [a] is the arc type
-      relating [p] to [o].
+  (** Returns a couple of lists [(i, o)] where [i] is the list of
+      input transitions of [p], and [o] is the list of output
+      transitions of [p].
 
-      Correctness: Correct iff all input transitions of [p] are in [i],
-      and [i] has no duplicates, and all output transitions of [p] are
-      in [o] associated with the right arc type, and the list of first
-      elements of [o] has no duplicate.
-   *)
+      Correctness: Correct iff all input transitions of [p] are in
+      [i], and [i] has no duplicate, and all output transitions of [p]
+      are in [o] and [o] has no duplicate.  *)
 
-  Definition get_neighbors_of_p (p : P sitpn) : optionE (list (T sitpn) * list (T sitpn * ArcT)) :=
+  Definition get_neighbors_of_p (p : P sitpn) : optionE (list (T sitpn) * list (T sitpn)) :=
     (* Adds the transition t to the list of input or output
        transitions of p. *)
-    let is_neighbor_of_p :=
-        (fun (tin_tout : (list (T sitpn) * list (T sitpn * ArcT))) t =>
+    let get_neighbor_of_p :=
+        (fun (tin_tout : (list (T sitpn) * list (T sitpn))) t =>
            let (tin, tout) := tin_tout in
            match post t p, pre p t with
-           | Some _, Some (a, _) => ((tin ++ [t])%list, (tout ++ [(t, a)])%list)
+           | Some _, Some (_, _) => ((tin ++ [t])%list, (tout ++ [t])%list)
            | Some _, None => ((tin ++ [t])%list, tout)
-           | None, Some (a, _) => (tin, (tout ++ [(t, a)])%list)
+           | None, Some (_, _) => (tin, (tout ++ [t])%list)
            | None, None => tin_tout
            end) in
 
     (* Iterates over the list of transitions, and builds the couple of
        lists (tinputs, touputs) of p along the way by applying
        function is_neighbor_of_p.  *)
-    match tfold_left is_neighbor_of_p (T2List sitpn) (nil, nil) nat_to_T with
+    match tfold_left get_neighbor_of_p (T2List sitpn) (nil, nil) nat_to_T with
     | (nil, nil) => Err ("Place " ++ $$p ++ " is an isolated place.")
     | tin_tout => Success tin_tout
     end.
 
-  (** Injects the couple [c], where [c = (t,a)], in the list [stranss]
-    depending on the level of priority of [t] compared to the first
-    elements of the list [stranss].
+  (** Injects transition [t] in the list [stranss] depending on the
+      level of priority of [t] compared to the elements of the list
+      [stranss].
     
-    Returns the new priority-sorted list where [c] has been injected.
+      Returns the new priority-sorted list where [c] has been
+      injected.
 
-    Correctness hypotheses: (1) ~In t (fs stranss), (2) NoDup (fs
-    stranss), (3) First elements of stranss are ordered by decreasing
-    level of priority.
+      Correctness hypotheses: (1) ~In t stranss, (2) NoDup stranss,
+      (3) Elements of stranss are ordered by decreasing level of
+      priority.
 
-    Correct iff the returned has no duplicates and its first elements
-    are ordered by decreasing level of priority. *)
+      Correct iff the returned list has no duplicate and its elements
+      are ordered by decreasing level of priority. *)
 
-  Fixpoint inject_t (c : (T sitpn * ArcT)) (stranss : list (T sitpn * ArcT)) {struct stranss} :
-    optionE (list (T sitpn * ArcT)) :=
-    let (t, _) := c in
+  Fixpoint inject_t (t : T sitpn) (stranss : list (T sitpn)) {struct stranss} :
+    optionE (list (T sitpn)) :=
     match stranss with
     (* If the list of priority-ordered transitions is empty, then
        returns a singleton list where t is the element with the highest
        priority. *)
-    | [] => Success [c]
+    | [] => Success [t]
 
     (* If there is a head element, compares the head element with t
      priority-wise. *)
-    | ((x, _) as c') :: tl =>
+    | x :: tl =>
 
       (* If t and x are the same, then t has already been injected in
        stranss, then stranss is returned. That case does not happen
-       given a proof of [~In t (fs stranss)], that is, t is not among 
+       given a proof of [~In t stranss], that is, t is not among 
        the first elements of stranss.
 
-       Otherwise, checks if t has a higher firing priority than x.
-       *)
+       Otherwise, checks if t has a higher firing priority than x. *)
       if eq_trans_dec t x then Success stranss                                     
       else
-        (* If t is the element with the highest priority,then puts it as
-         the head element of stranss. 
+        (* If t is the element with the highest priority, then puts it
+           as the head element of stranss, and returns the list.
          
-         Otherwise, checks if x has a higher priority than t.
-         *)
-        if t >~ x then Success (c :: stranss)
+         Otherwise, checks if x has a higher priority than t.  *)
+        if t >~ x then Success (t :: stranss)
         else
           (* If x has a higher priority than t, then tries to inject t
            in the list's tail.  *)
           if x >~ t then
-            match inject_t c tl with
-            | Success stranss' => Success (c' :: stranss')
+            match inject_t t tl with
+            | Success stranss' => Success (x :: stranss')
             (* Error case: found a transition that is not comparable with
-             t is the list's tail.
+               t in the list's tail.
              *)
             | Err msg => Err msg
             end
@@ -110,29 +105,27 @@ Section PlaceInfos.
       that contains transitions sorted by level of firing priority.  *)
 
   Fixpoint sort_by_priority_aux
-           (transs : list (T sitpn * ArcT))
-           (stranss : list (T sitpn * ArcT)) {struct transs} :
-    optionE (list (T sitpn * ArcT)) :=
+           (transs : list (T sitpn))
+           (stranss : list (T sitpn)) {struct transs} :
+    optionE (list (T sitpn)) :=
     match transs with
     | [] => Success stranss
-    | c :: tl => match inject_t c stranss with
+    | t :: tl => match inject_t t stranss with
                  | Success stranss' =>
                    sort_by_priority_aux tl stranss'
                  | Err msg => Err msg
                  end
     end.
 
-  (** Takes a list of couple [(t, a)] where [t] ∈ T and [a] is an arc
-    type.
-    
-    Returns a new list of couple where the elements of the list are
-    ordered on their first element by level of firing priority.
+  (** Takes a list of transitions [transs], and returns a new list of
+      transitions where the elements are ordered by level of firing
+      priority.
 
-    Raises an error if no strict total ordering can be established in
-    relation to the priority order.  *)
+      Raises an error if no strict total ordering can be established
+      in relation to the priority order.  *)
 
-  Definition sort_by_priority (transs : list (T sitpn * ArcT)) :
-    optionE (list (T sitpn * ArcT)) := sort_by_priority_aux transs [].
+  Definition sort_by_priority (transs : list (T sitpn)) :
+    optionE (list (T sitpn)) := sort_by_priority_aux transs [].
 
   (** Returns a PlaceInfo structure containing the information related
       to place [p], a place of [sitpn].

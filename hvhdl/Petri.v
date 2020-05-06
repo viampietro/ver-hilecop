@@ -50,15 +50,9 @@ Definition MAXIMAL_GLOBAL_MARKING : nat := 255.
 (** Type and subtype macros. *)
 
 Definition arc_t : tind := tind_natural 0 2.
-Definition basic := 0.
-Definition test := 1.
-Definition inhibitor := 2.
+
 
 Definition transition_t    : tind := tind_natural 0 3.
-Definition not_temporal := 0.
-Definition temporal_a_b := 1.
-Definition temporal_a_a := 2.
-Definition temporal_a_inf := 3.
 
 Definition weight_t        : tind := tind_natural 0 MAXIMAL_GLOBAL_MARKING.
 Definition weight_vector_t : expr -> expr -> tind := tind_array weight_t.

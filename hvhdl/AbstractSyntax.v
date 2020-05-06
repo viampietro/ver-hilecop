@@ -150,6 +150,10 @@ Inductive vdecl : Type :=
 Inductive assocg : Type :=
   assocg_ (id : ident) (e : expr).
 
+(** Type of generic map. *)
+
+Definition genmap := list assocg.
+
 (** Port map entry ("in" mode port). *)
 
 Inductive associp : Type :=
@@ -174,7 +178,7 @@ Inductive cs : Type :=
 (** Component instantiation statement. *)
 | cs_comp (compid : ident)       (** Component id *)
           (entid : ident)        (** Entity label *)
-          (gmap : list assocg)   (** Generic map *)
+          (gmap : genmap)        (** Generic map *)
           (ipmap : list associp) (** In port map *)
           (opmap : list assocop) (** Out port map *)
 
