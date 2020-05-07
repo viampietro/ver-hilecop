@@ -96,14 +96,14 @@ Section TMap.
     (forall a, In a lofAs -> B) -> list C :=
     tmap_aux lofAs nil.
 
-  Variable fopt_map : B -> optionE C.
+  Variable fopte : B -> optionE C.
   
   (** Given a proof that all elements in [lofAs] can yield a term of
       [B], transform each element of [lofAs] into a term [b] of [B], then
       maps [b] to Some term [c] of [C] or return an error.
    *)
 
-  Fixpoint topt_map_aux (lofAs : list A) (lofCs : list C) {struct lofAs} :
+  Fixpoint topte_map_aux (lofAs : list A) (lofCs : list C) {struct lofAs} :
     (forall a, In a lofAs -> B) -> optionE (list C) :=
     match lofAs with
     | nil => fun _ => Success lofCs
@@ -116,22 +116,22 @@ Section TMap.
         let pf_tl := in_T_in_sublist_T a tl pf in
 
         (* Continues the mapping or returns an error. *)
-        match fopt_map b with
-        | Success c => topt_map_aux tl (lofCs ++ [c]) pf_tl
+        match fopte b with
+        | Success c => topte_map_aux tl (lofCs ++ [c]) pf_tl
         | Err msg => Err msg
         end
     end.
 
-  (** Wrapper around the [topt_map_aux] function. *)
+  (** Wrapper around the [topte_map_aux] function. *)
 
-  Definition topt_map (lofAs : list A) :
+  Definition topte_map (lofAs : list A) :
     (forall a, In a lofAs -> B) -> optionE (list C) :=
-    topt_map_aux lofAs nil.
+    topte_map_aux lofAs nil.
   
 End TMap.
 
 Arguments tmap {A B C}.
-Arguments topt_map {A B C}.
+Arguments topte_map {A B C}.
 
 (** ** Transform and iterate from left to right on a list.  *)
 
@@ -160,9 +160,37 @@ Section TFold_Left_Recursor.
            continues. *)
         tfold_left tl (f c b) pf_tl
     end.
+
+  Variable fopte : C -> B -> optionE C.
+
+  (** Given a proof that all elements in [lofAs] can yield a term of
+      [B], transform each element of [lofAs] into a term [b] of [B],
+      then calls [fopte] on [c] and [b] to build a new term of [C] or
+      raises an error. *)
+  
+  Fixpoint topte_fold_left (lofAs : list A) (c : C) : 
+    (forall a, In a lofAs -> B) -> optionE C :=
+    match lofAs with
+    | nil => fun _ => Success c
+    | a :: tl =>
+      fun pf : _ =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
+
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
+
+        (* Checks if calling fopte on b and c returns an error,
+           otherwise continues. *)
+        match fopte c b with
+        | Success c' => topte_fold_left tl c' pf_tl
+        | Err msg => Err msg
+        end
+    end.
   
 End TFold_Left_Recursor.
 
 Arguments tfold_left {A B C}.
+Arguments topte_fold_left {A B C}.
 
 
