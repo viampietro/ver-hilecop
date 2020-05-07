@@ -22,7 +22,7 @@ Set Implicit Arguments.
 Section GeneratePlaceMap.
 
   Variable sitpn : Sitpn.
-  Variable sitpn_info : @SitpnInfo sitpn.
+  Variable sitpn_info : SitpnInfo sitpn.
 
   (** Returns the generic map (abstract syntax) of the place component
       describing place [p]. 
@@ -123,7 +123,8 @@ Section GeneratePlaceMap.
   (** Builds a PlaceMap entry for place p. *)
 
   Definition generate_place_map_entry (p : P sitpn) (max_marking : nat) :
-    optionE (P sitpn * (genmap * InputMap * OutputMap)) :=
+    optionE (P sitpn * HComponent) :=
+    (* Retrieves information about p. *)
     match getv eq_place_dec p (pinfos sitpn sitpn_info) with
     | Some pinfo =>
       (* Retrieves p's generic map. *)
@@ -139,6 +140,7 @@ Section GeneratePlaceMap.
       (* Error case. *)
       | Err msg => Err msg
       end
+    (* Error case. *)
     | None => Err ("Place " ++ $$p ++ " is not referenced in SitpnInfo structure.")%string
     end.
   
@@ -160,7 +162,8 @@ Section GenerateTransMap.
 
   Definition get_trans_type (t : T sitpn) : TransitionT :=
     match Is t with
-    | Some (MkSTimeItval <| a, ninat b |> _)  => if a =? b then temporal_a_a else temporal_a_b
+    | Some (MkSTimeItval <| a, ninat b |> _)  =>
+      if a =? b then temporal_a_a else temporal_a_b
     | Some (MkSTimeItval <| a, i+ |> _) => temporal_a_inf
     | None => not_temporal
     end.
@@ -217,7 +220,7 @@ Section GenerateTransMap.
   (** Builds a TransMap entry for transition t. *)
 
   Definition generate_trans_map_entry (t : T sitpn) :
-    optionE (T sitpn * (genmap * InputMap * OutputMap)) :=
+    optionE (T sitpn * HComponent) :=
     match getv eq_trans_dec t (tinfos sitpn sitpn_info) with
     | Some tinfo =>
       (* Retrieves t's generic map. *)
@@ -234,6 +237,139 @@ Section GenerateTransMap.
   (** Returns the TransMap built out the list of transitions of [sitpn]. *)
 
   Definition generate_trans_map : optionE (TransMap sitpn) :=
-    topt_map (fun t => generate_trans_map_entry t) (T2List sitpn) nat_to_T.
+    topt_map generate_trans_map_entry (T2List sitpn) nat_to_T.
   
 End GenerateTransMap.
+
+(** ** Interconnections between place and transition components. *)
+
+Section GenerateInterconnections.
+
+  Variable sitpn : Sitpn.
+  Variable sitpn_info : SitpnInfo sitpn.
+
+  Local Open Scope ast_scope.
+  
+  (** (1) Connects the "fired" output port of the component
+      representing transition [t] to another composite port via the
+      list of expressions [lofexprs].
+      
+      (2) Adds the newly generated interconnection signal to the list
+      of architecture's declarations, if such a signal has been
+      created.
+
+      (3) Returns the new architecture, the new list of expressions,
+      and the next available identifier. *)
+  
+  Definition connect_fired
+             (arch : Architecture sitpn)
+             (nextid : ident)
+             (lofexprs : list expr)
+             (t : T sitpn) :
+    optionE (Architecture sitpn * ident * list expr ) :=
+    (* Destructs the architecture. *)
+    let '(adecls, plmap, trmap) := arch in
+    
+    (* Retrieves the component associated to transtion t in TransMap
+       trmap.  *)
+    match getv eq_trans_dec t trmap with
+    | Some (tgmap, tipmap, topmap) =>
+    (* Checks if the "fired" port already belongs to the input port map
+       of the component. *)
+      match getv Nat.eq_dec Transition.fired tipmap with
+      (* Case where fired is connected to an expression.  Then, adds
+         the expression e at the end of lofexprs, and returns the
+         triplet (architecture, lofexprs, nextid). *)
+      | Some (inl e) => Success (arch, nextid, lofexprs ++ [e])
+      (* Error case, in the output port map [topmap], fired is
+         connected to a list of expressions, albeit it must be of
+         scalar type (boolean).  *)
+      | Some (inr _) => Err ("The fired port of transition " ++ $$t ++ " must be of scalar type.")%string
+      (* Case where fired is not connected yet. Then, adds a new
+         interconnection signal to the arch's declaration list and at
+         the end of the lofexprs, modifies the output port map of
+         transition t, and returns the resulting triplet. *)
+      | None =>
+        let adecls' := adecls ++ [adecl_sig nextid tind_boolean] in
+        let topmap' := setv Nat.eq_dec Transition.fired (inl ($nextid)) topmap in
+        let thcomp := (tgmap, tipmap, topmap') in
+        let trmap' := setv eq_trans_dec t thcomp trmap in
+        let arch' := (adecls', plmap, trmap') in
+        (* Increments nextid to return the next available identifier. *)
+        Success (arch', nextid + 1, lofexprs ++ [#nextid])
+      end
+    (* Error case. *)
+    | None => Err ("Transition " ++ $$t ++ " is not referenced in the TransMap.")%string
+    end.
+
+  (** Returns a new architecture where the composite input port
+      [iportid] of place [p] has been connected to the "fired" output
+      port of all transitions in the list [transs].  *)
+  
+  Definition connect_transitions_fired
+             (arch : Architecture sitpn)
+             (nextid : ident)
+             (transs : list (T sitpn)) :
+    optionE (Architecture sitpn * ident * list expr) :=
+    
+    (* Destructs the architecture. *)
+    let '(adecls, plmap, trmap) := arch in
+        
+    (* Local variable storing the list of expressions, that is the
+       list of internal signal identifiers connected to the fired port
+       of transitions of the transs list.
+       
+       If the transs list is nil, then the list of expressions
+       contains the singleton expression false.  *)
+    let lofexprs := (if transs then [e_bool false] else []) in
+
+    (* Wrapper around the connect_fired function. *)
+    let connect_fired_fun :=
+        (fun triplet t =>
+           let '(arch, nextid, lofexprs) := triplet in
+           connect_fired arch nextid lofexprs t)
+    in
+    (* Calls the connect_fired function over all transitions
+         of the transs list. *)
+    oefold_left connect_fired_fun transs (arch, nextid, lofexprs).
+
+  (** Connects the input port "input_transitions_fired"
+      (resp. "output_transitions_fired") of a component [phcomp],
+      representing some place p, to the "fired" ports of the
+      components representing the input transitions (resp. output
+      transitions) of p. *)
+
+  Definition connect_place_inputs
+             (arch : Architecture sitpn)
+             (nextid : ident)
+             (pinfo : PlaceInfo sitpn)
+             (phcomp : HComponent) :
+    optionE (Architecture sitpn * ident * HComponent) :=
+
+    (* Destructs phcomp. *)
+    let '(pgmap, pipmap, popmap) := phcomp in
+    
+    (* Calls connect_transitions_fired on the input transitions of p. *)
+    match connect_transitions_fired arch nextid (tinputs pinfo) with
+    | Success (arch', nextid', in_trans_fired) =>
+      (* Calls connect_transitions_fired on the output transitions of p. *)
+      match connect_transitions_fired arch' nextid' (toutputs pinfo) with
+      | Success (arch'', nextid'', out_trans_fired) =>
+        (* Connects ports input_transitions_fired and
+           output_transitions_fired to the list of expressions
+           in_trans_fired and out_trans_fired.  *)
+        let pipmap' := setv Nat.eq_dec Place.input_transitions_fired (inr in_trans_fired) pipmap in
+        let pipmap'' := setv Nat.eq_dec Place.input_transitions_fired (inr out_trans_fired) pipmap' in
+        
+        (* Modifies the phcomp HComponent. *)
+        let phcomp' := (pgmap, pipmap'', popmap) in
+        Success (arch'', nextid'', phcomp')
+        
+      (* Error case. *)
+      | Err msg => Err msg
+      end
+    (* Error case. *)
+    | Err msg => Err msg
+    end.
+
+End GenerateInterconnections.

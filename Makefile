@@ -1,4 +1,4 @@
-DIRS=common sitpn hvhdl
+DIRS=common sitpn hvhdl sitpn2hvhdl
 
 COQINCLUDES=$(foreach d, $(DIRS), -R $(d) hilecop.$(d))
 
@@ -46,16 +46,21 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 	Initialization.v Simulation.v \
 	Place.v Transition.v
 
+# SITPN to H-VHDL transformation.
+
+SITPN2HVHDLFILES=Sitpn2HVhdlTypes.v GenerateArchitecture.v
+
 # Builds files with prefixes
 
 COMMON=$(foreach f, $(COMMONFILES), common/$f)
 SITPNSIMPL=$(foreach f, $(SITPNSIMPLFILES), sitpn/simpl/$f)
 SITPNSETS=$(foreach f, $(SITPNSETSFILES), sitpn/sets/$f)
 HVHDL=$(foreach f, $(HVHDLFILES), hvhdl/$f)
+SITPN2HVHDL=$(foreach f, $(SITPN2HVHDLFILES), sitpn2hvhdl/$f)
 
 # All source files
 
-FILES=$(COMMON) $(SITPNSIMPL) $(SITPNSETS) $(HVHDL)
+FILES=$(COMMON) $(SITPNSIMPL) $(SITPNSETS) $(HVHDL) $(SITPN2HVHDL)
 
 all: proof 
 
@@ -65,6 +70,7 @@ common: $(COMMON:.v=.vo)
 sitpnsimpl: $(SITPNSIMPL:.v=.vo)
 sitpnsets: $(SITPNSETS:.v=.vo)
 hvhdl: $(HVHDL:.v=.vo)
+sitpn2hvhdl: $(SITPN2HVHDL:.v=.vo)
 
 %.vo : %.v	
 	@echo "COQC $*.v"
