@@ -33,6 +33,17 @@ Definition PlaceMap sitpn := list (P sitpn * HComponent).
 
 Definition TransMap sitpn := list (T sitpn * HComponent).
 
+(** Mapping structure between elements of A and the list of expressions
+    that will composed their activation expression.
+ *)
+
+Definition ActionMap sitpn := list (A sitpn * list expr).
+
+(** Mapping structure between elements of F and the list of
+    expressions that will composed their execution expression.  *)
+
+Definition FunMap sitpn := list (F sitpn * list expr).
+
 (** Intermediary representation of an H-VHDL architecture as a triplet
     of list of declarations (list adecl), a mapping from P to
     HComponent and a mapping from T to HComponent.  *)

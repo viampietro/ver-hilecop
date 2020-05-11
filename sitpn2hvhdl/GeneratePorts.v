@@ -11,6 +11,7 @@ Require Import sets.InfosTypes.
 Require Import Sitpn2HVhdlTypes.
 Require Import HVhdlTypes.
 Require Import AbstractSyntax.
+Require Import Petri.
 Require Import Place.
 Require Import GenerateArchitecture.
 
@@ -154,7 +155,7 @@ Section GenerateActionMap.
              (nextid : ident)
              (amap : list (A sitpn * list expr)) 
              (a : A sitpn) :
-    optionE (Architecture sitpn * ident * list (A sitpn * list expr)) :=
+    optionE (Architecture sitpn * ident * ActionMap sitpn) :=
     (* Retrieves information about a. *)
     match getv Aeqdec a (ainfos sitpn sitpn_info) with
     | Some pls_of_a =>
@@ -174,7 +175,7 @@ Section GenerateActionMap.
   Definition generate_action_map
              (arch : Architecture sitpn)
              (nextid : ident) :
-    optionE (Architecture sitpn * ident * list (A sitpn * list expr)) :=
+    optionE (Architecture sitpn * ident * ActionMap sitpn) :=
     (* Wrapper around the add_action_map_entry function. *)
     let add_action_map_entry_fun :=
         (fun triplet a =>
@@ -201,7 +202,7 @@ Section GenerateFunMap.
              (nextid : ident)
              (fmap : list (F sitpn * list expr)) 
              (f : F sitpn) :
-    optionE (Architecture sitpn * ident * list (F sitpn * list expr)) :=
+    optionE (Architecture sitpn * ident * FunMap sitpn) :=
     (* Retrieves information about a. *)
     match getv Feqdec f (finfos sitpn sitpn_info) with
     | Some trs_of_f =>
@@ -221,7 +222,7 @@ Section GenerateFunMap.
   Definition generate_fun_map
              (arch : Architecture sitpn)
              (nextid : ident) :
-    optionE (Architecture sitpn * ident * list (F sitpn * list expr)) :=
+    optionE (Architecture sitpn * ident * FunMap sitpn) :=
     (* Wrapper around the add_action_map_entry function. *)
     let add_fun_map_entry_fun :=
         (fun triplet f =>
@@ -233,3 +234,223 @@ Section GenerateFunMap.
     topte_fold_left add_fun_map_entry_fun (F2List sitpn) (arch, nextid, []) nat_to_F.
   
 End GenerateFunMap.
+
+(** ** Generation of the action activation ports and process. *)
+
+Section GenerateActionPortsAndPs.
+
+  Variable sitpn : Sitpn.
+  Variable sitpn_info : SitpnInfo sitpn.
+  
+  (** Builds the activation expression for action port [aportid] and
+      returns the corresponding signal assignment statement.  *)
+  
+  Definition build_action_stmt (aportid : ident) (lofexprs : list expr) : ss :=
+    let assigne := fold_left (fun assigne e => assigne @|| e) lofexprs (e_bool false) in
+    aportid @<== assigne.
+
+  (** (1) Adds a new output port representing the activation state of
+      action [a] in the list of port declarations [aports].
+      
+      (2) Adds the signal assignment statements that sets the value of
+      the created output port in the reset and falling edge part of the
+      action activation process.  
+      
+      (3) Returns the new list of port declarations, the
+      new statements, and a fresh identifier.x
+   *)
+  
+  Definition generate_action_port_and_ss
+             (amap : ActionMap sitpn)
+             (a : A sitpn)
+             (aports : list pdecl)
+             (stmts : option (ss * ss))
+             (nextid : ident) :
+    optionE (list pdecl * (option (ss * ss)) * ident) :=
+    (* Creates a new action port for representing the
+       activation state of action a. *)
+    let aports := aports ++ [pdecl_out nextid tind_boolean] in
+
+    (* Checks if the action process sequential block being built is
+       empty or not. *)
+    match stmts with
+    | None => 
+      (* Adds the signal assignment setting aportid to false in the
+         reset part of the action activation process *)
+      let rstss := (nextid @<== false) in
+
+      (* Retrieves the list of expressions from the ActionMap *)
+      match getv Aeqdec a amap with
+      | Some lofexprs =>
+        (* Adds the signal assignment setting the value of aportid port
+         in falling edge part of the action activation process.  *)
+        let fallingss := build_action_stmt nextid lofexprs in
+        (* Don't forget to increment nextid to get a fresh identifier. *)
+        Success (aports, Some (rstss, fallingss), nextid + 1)
+      | None => Err ("Action a is not referenced in the ActionMap.")%string
+      end
+    (* If process body is not empty, then add the assignment
+       statements at the end.  *)
+    | Some (rstss, fallingss) =>
+      (* Adds the signal assignment setting aportid to false in the
+         reset part of the action activation process *)
+      let rstss := rstss ;; (nextid @<== false) in
+
+      (* Retrieves the list of expressions from the ActionMap *)
+      match getv Aeqdec a amap with
+      | Some lofexprs =>
+        (* Adds the signal assignment setting the value of aportid port
+         in falling edge part of the action activation process.  *)
+        let fallingss := fallingss ;; (build_action_stmt nextid lofexprs) in
+        (* Don't forget to increment nextid to get a fresh identifier. *)
+        Success (aports, Some (rstss, fallingss), nextid + 1)
+      | None => Err ("Action a is not referenced in the ActionMap.")%string
+      end
+    end.
+
+  (** (1) Generates the list of port declarations corresponding to the
+      creation of output ports for each action of [sitpn].
+      
+      (2) Builds the action activation process. *)
+
+  Definition generate_action_ports_and_ps
+             (amap : ActionMap sitpn)
+             (nextid : ident) :
+    option (optionE (list pdecl * cs * ident)) :=
+    (* If there are no action in sitpn, then no need for the action
+       activation process. *)
+    if NatSet.is_empty (actions sitpn) then None
+    else
+      (* Wrapper around the generate_action_port_and_ss function. *)
+      let gen_action_pandss_fun :=
+          (fun params a =>
+             let '(aports, stmts, nextid) := params in
+             generate_action_port_and_ss amap a aports stmts nextid)
+      in
+      (* Calls generate_action_port_and_ss on each action
+         of the sitpn's action list. *)
+      match topte_fold_left gen_action_pandss_fun (A2List sitpn) ([], None, nextid) nat_to_A with
+      | Success (aports, stmts, nextid) =>
+        (* Checks that the action process statement body is not
+           empty. *)
+        match stmts with
+        (* Cannot happen, then error. *)
+        | None => Some (Err ("generate_action_ports_and_ps: "
+                               ++ "The action activation process body cannot be empty.")%string)
+        | Some (rstss, fallingss) =>
+          (* Builds the action activation process. *)
+          let body := (If (rst @= false) Then rstss Else (Falling fallingss)) in
+          let action_ps := cs_ps action_ps_id {[clk, rst]} [] body in
+          Some (Success (aports, action_ps, nextid))
+        end
+      | Err msg => Some (Err msg)
+      end.
+  
+End GenerateActionPortsAndPs.
+
+(** ** Generation of the function execution ports and process. *)
+
+Section GenerateFunPortsAndPs.
+
+  Variable sitpn : Sitpn.
+  Variable sitpn_info : SitpnInfo sitpn.
+  
+  (** Builds the execution expression for function port [fportid] and
+      returns the corresponding signal assignment statement.  *)
+  
+  Definition build_fun_stmt (fportid : ident) (lofexprs : list expr) : ss :=
+    let assigne := fold_left (fun assigne e => assigne @|| e) lofexprs (e_bool false) in
+    fportid @<== assigne.
+
+  (** (1) Adds a new output port representing the execution state of
+      function [f] in the list of port declarations [fports].
+      
+      (2) Adds the signal assignment statements that sets the value of
+      the created output port in the reset and rising edge part of the
+      function execution process.  
+      
+      (3) Returns the new list of port declarations, the
+      new statements, and a fresh identifier.x
+   *)
+  
+  Definition generate_fun_port_and_ss
+             (fmap : FunMap sitpn)
+             (f : F sitpn)
+             (fports : list pdecl)
+             (stmts : option (ss * ss))
+             (nextid : ident) :
+    optionE (list pdecl * (option (ss * ss)) * ident) :=
+    (* Creates a new function port representing execution state of
+       function f. *)
+    let fports := fports ++ [pdecl_out nextid tind_boolean] in
+
+    (* Checks if the function process sequential block being built is
+       empty or not. *)
+    match stmts with
+    | None => 
+      (* Adds the signal assignment setting fportid to false in the
+         reset part of the process *)
+      let rstss := (nextid @<== false) in
+
+      (* Retrieves the list of expressions from the FunMap *)
+      match getv Feqdec f fmap with
+      | Some lofexprs =>
+        (* Adds the signal assignment setting the value of fportid port
+         in rising edge part of the process.  *)
+        let risingss := build_fun_stmt nextid lofexprs in
+        (* Don't forget to increment nextid to get a fresh identifier. *)
+        Success (fports, Some (rstss, risingss), nextid + 1)
+      | None => Err ("generate_fun_port_and_ss: "
+                       ++ "Function f is not referenced in the FunMap.")%string
+      end
+    (* If process body is not empty, then add the assignment
+       statements at the end.  *)
+    | Some (rstss, risingss) =>
+      let rstss := rstss ;; (nextid @<== false) in
+      match getv Feqdec f fmap with
+      | Some lofexprs =>
+        let risingss := risingss ;; (build_fun_stmt nextid lofexprs) in
+        Success (fports, Some (rstss, risingss), nextid + 1)
+      | None => Err ("generate_fun_port_and_ss: "
+                       ++ "Function f is not referenced in the FunMap.")%string
+      end
+    end.
+
+  (** (1) Generates the list of port declarations corresponding to the
+      creation of output ports for each function of [sitpn].
+      
+      (2) Builds the function execution process. *)
+
+  Definition generate_fun_ports_and_ps
+             (fmap : FunMap sitpn)
+             (nextid : ident) :
+    option (optionE (list pdecl * cs * ident)) :=
+    (* If there are no function in sitpn, then no need for the
+       function execution process. *)
+    if NatSet.is_empty (functions sitpn) then None
+    else
+      (* Wrapper around the generate_fun_port_and_ss function. *)
+      let gen_fun_pandss_fun :=
+          (fun params f =>
+             let '(fports, stmts, nextid) := params in
+             generate_fun_port_and_ss fmap f fports stmts nextid)
+      in
+      (* Calls generate_fun_port_and_ss on each action
+         of the sitpn's function list. *)
+      match topte_fold_left gen_fun_pandss_fun (F2List sitpn) ([], None, nextid) nat_to_F with
+      | Success (fports, stmts, nextid) =>
+        (* Checks that the function process body is not empty. *)
+        match stmts with
+        (* Cannot happen, then error. *)
+        | None => Some (Err ("generate_fun_ports_and_ps: "
+                               ++ "The function execution process body cannot be empty.")%string)
+        | Some (rstss, risingss) =>
+          (* Builds the function execution process. *)
+          let body := (If (rst @= false) Then rstss Else (Rising risingss)) in
+          let fun_ps := cs_ps function_ps_id {[clk, rst]} [] body in
+          Some (Success (fports, fun_ps, nextid))
+        end
+      | Err msg => Some (Err msg)
+      end.
+  
+End GenerateFunPortsAndPs.

@@ -30,6 +30,12 @@ Definition place_archid : ident := 3.
 Definition transition_entid : ident := 4.
 Definition transition_archid : ident := 5.
 
+(** Reserved identifiers for the action activation and function
+    execution generated processes. *)
+
+Definition action_ps_id : ident := 6.
+Definition function_ps_id : ident := 7.
+
 (** Reserved identifiers for variables. *)
 
 Definition local_var : ident := 100.
@@ -50,8 +56,6 @@ Definition MAXIMAL_GLOBAL_MARKING : nat := 255.
 (** Type and subtype macros. *)
 
 Definition arc_t : tind := tind_natural 0 2.
-
-
 Definition transition_t    : tind := tind_natural 0 3.
 
 Definition weight_t        : tind := tind_natural 0 MAXIMAL_GLOBAL_MARKING.

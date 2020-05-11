@@ -16,7 +16,6 @@ Require Import Place.
 Require Import Transition.
 Require Import Sitpn2HVhdlTypes.
 
-
 Set Implicit Arguments.
 
 (** ** Mapping between places and place components. *)
