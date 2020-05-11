@@ -7,6 +7,7 @@ Require Import ListsPlus.
 Require Import ListsDep.
 Require Import String.
 Require Import sets.Sitpn.
+Require Import sets.SitpnFacts.
 Require Import SitpnTypes.
 Require Import InfosTypes.
 Require Import AbstractSyntax.
@@ -14,6 +15,7 @@ Require Import Petri.
 Require Import Place.
 Require Import Transition.
 Require Import Sitpn2HVhdlTypes.
+
 
 Set Implicit Arguments.
 
@@ -125,7 +127,7 @@ Section GeneratePlaceMap.
   Definition generate_place_map_entry (p : P sitpn) (max_marking : nat) :
     optionE (P sitpn * HComponent) :=
     (* Retrieves information about p. *)
-    match getv eq_place_dec p (pinfos sitpn sitpn_info) with
+    match getv Peqdec p (pinfos sitpn sitpn_info) with
     | Some pinfo =>
       (* Retrieves p's generic map. *)
       match generate_place_gen_map p pinfo max_marking with
@@ -221,7 +223,7 @@ Section GenerateTransMap.
 
   Definition generate_trans_map_entry (t : T sitpn) :
     optionE (T sitpn * HComponent) :=
-    match getv eq_trans_dec t (tinfos sitpn sitpn_info) with
+    match getv Teqdec t (tinfos sitpn sitpn_info) with
     | Some tinfo =>
       (* Retrieves t's generic map. *)
       let gmap := generate_trans_gen_map t tinfo in
@@ -258,21 +260,21 @@ Section GenerateInterconnections.
       of architecture's declarations, if such a signal has been
       created.
 
-      (3) Returns the new architecture, the new list of expressions,
-      and the next available identifier. *)
+      (3) Returns the new architecture, the next available identifier,
+      and the new list of expressions. *)
   
-  Definition connect_fired
+  Definition connect_fired_port
              (arch : Architecture sitpn)
              (nextid : ident)
              (lofexprs : list expr)
              (t : T sitpn) :
-    optionE (Architecture sitpn * ident * list expr ) :=
+    optionE (Architecture sitpn * ident * list expr) :=
     (* Destructs the architecture. *)
     let '(adecls, plmap, trmap) := arch in
     
     (* Retrieves the component associated to transtion t in TransMap
        trmap.  *)
-    match getv eq_trans_dec t trmap with
+    match getv Teqdec t trmap with
     | Some (tgmap, tipmap, topmap) =>
     (* Checks if the "fired" port already belongs to the input port map
        of the component. *)
@@ -293,7 +295,7 @@ Section GenerateInterconnections.
         let adecls' := adecls ++ [adecl_sig nextid tind_boolean] in
         let topmap' := setv Nat.eq_dec Transition.fired (inl ($nextid)) topmap in
         let thcomp := (tgmap, tipmap, topmap') in
-        let trmap' := setv eq_trans_dec t thcomp trmap in
+        let trmap' := setv Teqdec t thcomp trmap in
         let arch' := (adecls', plmap, trmap') in
         (* Increments nextid to return the next available identifier. *)
         Success (arch', nextid + 1, lofexprs ++ [#nextid])
@@ -302,11 +304,12 @@ Section GenerateInterconnections.
     | None => Err ("Transition " ++ $$t ++ " is not referenced in the TransMap.")%string
     end.
 
-  (** Returns a new architecture where the composite input port
-      [iportid] of place [p] has been connected to the "fired" output
-      port of all transitions in the list [transs].  *)
+  (** Returns a new architecture where the fired ports of all the
+      transitions of the [transs] list have been connected to an
+      internal signal; the list of all such signals is returned
+      alongside the next available identifier.  *)
   
-  Definition connect_transitions_fired
+  Definition connect_fired_ports
              (arch : Architecture sitpn)
              (nextid : ident)
              (transs : list (T sitpn)) :
@@ -323,15 +326,15 @@ Section GenerateInterconnections.
        contains the singleton expression false.  *)
     let lofexprs := (if transs then [e_bool false] else []) in
 
-    (* Wrapper around the connect_fired function. *)
-    let connect_fired_fun :=
+    (* Wrapper around the connect_fired_port function. *)
+    let connect_fired_port_fun :=
         (fun triplet t =>
            let '(arch, nextid, lofexprs) := triplet in
-           connect_fired arch nextid lofexprs t)
+           connect_fired_port arch nextid lofexprs t)
     in
     (* Calls the connect_fired function over all transitions
          of the transs list. *)
-    oefold_left connect_fired_fun transs (arch, nextid, lofexprs).
+    oefold_left connect_fired_port_fun transs (arch, nextid, lofexprs).
 
   (** Connects the input port map of a component [phcomp],
       representing some place p, to the output port map of the
@@ -349,10 +352,10 @@ Section GenerateInterconnections.
     let '(pgmap, pipmap, popmap) := phcomp in
     
     (* Calls connect_transitions_fired on the input transitions of p. *)
-    match connect_transitions_fired arch nextid (tinputs pinfo) with
+    match connect_fired_ports arch nextid (tinputs pinfo) with
     | Success (arch', nextid', in_trans_fired) =>
       (* Calls connect_transitions_fired on the output transitions of p. *)
-      match connect_transitions_fired arch' nextid' (toutputs pinfo) with
+      match connect_fired_ports arch' nextid' (toutputs pinfo) with
       | Success (arch'', nextid'', out_trans_fired) =>
         (* Connects ports input_transitions_fired and
            output_transitions_fired to the list of expressions
@@ -471,7 +474,7 @@ Section GenerateInterconnections.
     let '(adecls, plmap, trmap) := arch in
     
     (* Retrieves the component associated to transition t in trmap. *)
-    match getv eq_trans_dec t trmap with
+    match getv Teqdec t trmap with
     | Some thcomp =>
       (* Connects output_arcs_valid to input_arcs_valid. *)
       match connect adecls nextid phcomp thcomp Place.output_arcs_valid Transition.input_arcs_valid with
@@ -483,7 +486,7 @@ Section GenerateInterconnections.
           match connect adecls'' nextid'' phcomp'' thcomp'' Place.reinit_transitions_time Transition.reinit_time with
           | Success (adecls''', nextid''', phcomp''', thcomp''') =>
             (* Overrides the association of t to thcomp in trmap. *)
-            let trmap' := setv eq_trans_dec t thcomp''' trmap in
+            let trmap' := setv Teqdec t thcomp''' trmap in
             (* Creates a new architecture, i.e, with new adecls and trmap. *)
             let arch' := (adecls''', plmap, trmap') in
             Success (arch', nextid, phcomp)
@@ -497,7 +500,7 @@ Section GenerateInterconnections.
       | Err msg => Err msg
       end
     (* Error case. *)
-    | None => Err ("connect_popmap_to_ipmap:"
+    | None => Err ("connect_popmap_to_tipmap:"
                      ++ "Transition " ++ $$t ++
                      " is not referenced in the TransMap.")%string
     end.
@@ -524,7 +527,14 @@ Section GenerateInterconnections.
        p.  *)
     oefold_left connect_popmap_to_tipmap_fun (toutputs pinfo) (arch, nextid, phcomp).
 
-  (**  *)
+  (** Retrieves the component representing place [p] in the
+      Architecture [arch] and connects its input and ouput ports to
+      the components representing its input (resp. output)
+      transitions.  
+
+      Informations about which transitions are the input and output
+      of place [p] are retrieved thanks to the [sitpn_info] instance. 
+   *)
   
   Definition interconnect_p
              (arch : Architecture sitpn)
@@ -536,10 +546,10 @@ Section GenerateInterconnections.
     let '(adecls, plmap, trmap) := arch in
     
     (* Retrieves information about p. *)
-    match getv eq_place_dec p (pinfos sitpn sitpn_info) with
+    match getv Peqdec p (pinfos sitpn sitpn_info) with
     | Some pinfo =>
     (* Retrieves the component associated to p in plmap. *)
-      match getv eq_place_dec p plmap with
+      match getv Peqdec p plmap with
       | Some phcomp =>
         (* Connects the input port map of phcomp. *)
         match connect_place_inputs arch nextid pinfo phcomp with
@@ -549,7 +559,7 @@ Section GenerateInterconnections.
           | Success (arch'', nextid'', phcomp'') => 
             (* Associates p to phcomp'' in the PlaceMap of arch''. *)
             let '(adecls'', plmap'', trmap'') := arch'' in
-            let plmap''' := setv eq_place_dec p phcomp'' plmap'' in
+            let plmap''' := setv Peqdec p phcomp'' plmap'' in
             (* Creates an new architecture, and returns the resulting couple. *)
             let arch''' := (adecls'', plmap''', trmap'') in
             Success (arch''', nextid'')
