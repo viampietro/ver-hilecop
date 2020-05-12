@@ -30,7 +30,7 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 # Sitpn structures, semantics and token player (in sitpn/sets/)
 
-SITPNSETSFILES=SitpnTypes.v Sitpn.v SitpnSemantics.v \
+SITPNSETSFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v SitpnSemantics.v \
 	InfosTypes.v GenerateInfos.v
 
 # H-VHDL syntax and semantics.
@@ -48,7 +48,8 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 
 # SITPN to H-VHDL transformation.
 
-SITPN2HVHDLFILES=Sitpn2HVhdlTypes.v GenerateArchitecture.v
+SITPN2HVHDLFILES=Sitpn2HVhdlTypes.v GenerateArchitecture.v \
+	GeneratePorts.v	
 
 # Builds files with prefixes
 
@@ -92,10 +93,13 @@ cleanhvhdl:
 	rm -f $(patsubst %, %/*.vos, hvhdl)
 	rm -f $(patsubst %, %/*~, hvhdl)
 
-cleanall:
-	rm -f $(patsubst %, %/*/*.vo, $(DIRS))
-	rm -f $(patsubst %, %/*/.*.aux, $(DIRS))
-	rm -f $(patsubst %, %/*/*.glob, $(DIRS))
-	rm -f $(patsubst %, %/*/*.vok, $(DIRS))
-	rm -f $(patsubst %, %/*/*.vos, $(DIRS))
-	rm -f $(patsubst %, %/*/*~, $(DIRS))	
+cleansitpn2hvhdl:
+	rm -f $(patsubst %, %/*.vo, sitpn2hvhdl)
+	rm -f $(patsubst %, %/.*.aux, sitpn2hvhdl)
+	rm -f $(patsubst %, %/*.glob, sitpn2hvhdl)
+	rm -f $(patsubst %, %/*.vok, sitpn2hvhdl)
+	rm -f $(patsubst %, %/*.vos, sitpn2hvhdl)
+	rm -f $(patsubst %, %/*~, sitpn2hvhdl)
+
+cleanall: cleansitpn cleanhvhdl cleansitpn2hvhdl
+

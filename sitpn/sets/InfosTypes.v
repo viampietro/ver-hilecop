@@ -32,12 +32,19 @@ Section SitpnInfoTypes.
         ainfos : list (A sitpn * list (P sitpn));
         finfos : list (F sitpn * list (T sitpn));
       }.
-  
+
 End SitpnInfoTypes.
+
+(** Set implicit arguments for PlaceInfo fields. *)
 
 Arguments tinputs {sitpn}.
 Arguments toutputs {sitpn}.
 
+(** Set implicit arguments for TransInfo fields. *)
+
 Arguments pinputs {sitpn}.
 Arguments conds {sitpn}.
 
+(** Set implicit arguments for SitpnInfo fields. *)
+
+Arguments cinfos {sitpn}.

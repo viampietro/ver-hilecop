@@ -2,7 +2,8 @@
 
 Require Import Coqlib.
 Require Import sets.Sitpn.
-Require Import SitpnTypes.
+Require Import sets.SitpnTypes.
+Require Import sets.SitpnFacts.
 Require Import NatSet.
 Require Import ListsDep.
 Require Import InfosTypes.
@@ -78,7 +79,7 @@ Section PlaceInfos.
        the first elements of stranss.
 
        Otherwise, checks if t has a higher firing priority than x. *)
-      if eq_trans_dec t x then Success stranss                                     
+      if Teqdec t x then Success stranss                                     
       else
         (* If t is the element with the highest priority, then puts it
            as the head element of stranss, and returns the list.
@@ -160,7 +161,7 @@ Section PlaceInfos.
       couples implementing function P → PlaceInfo. *)
   
   Definition generate_place_infos : optionE (list (P sitpn * PlaceInfo sitpn)) :=    
-    topt_map get_p_info (P2List sitpn) nat_to_P.
+    topte_map get_p_info (P2List sitpn) nat_to_P.
   
 End PlaceInfos.
 

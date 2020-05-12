@@ -36,13 +36,15 @@ Section GeneratePlaceMap.
     optionE genmap :=
  
     (* Error case: p has no input or output transitions. *)
-    if (Nat.eqb (List.length (tinputs pinfo)) 0) && (Nat.eqb (List.length (toutputs pinfo)) 0) then
-      Err ("Place " ++ $$p ++ " is an isolated place.")%string
+    if is_empty (tinputs pinfo) && is_empty (toutputs pinfo) then
+      Err ("generate_place_gen_map: "
+             ++ "Place " ++ $$p
+             ++ " is an isolated place.")%string
     else
       (* If p has no input, creates one input that will have a weight of zero. *)
-      let p_in_arcs_nb := (if List.length (tinputs pinfo) =? 0 then 1 else List.length (tinputs pinfo)) in
+      let p_in_arcs_nb := (if tinputs pinfo then 1 else List.length (tinputs pinfo)) in
       (* If p has no output, creates one output that will have a weight of zero. *)
-      let p_out_arcs_nb := (if List.length (toutputs pinfo) =? 0 then 1 else List.length (toutputs pinfo)) in
+      let p_out_arcs_nb := (if toutputs pinfo then 1 else List.length (toutputs pinfo)) in
 
       (* Builds the generic map of p. *)
       Success
@@ -52,7 +54,7 @@ Section GeneratePlaceMap.
 
   (** Returns the list of input arcs weights of place [p]. *)
 
-  Definition get_input_arcs_weights (p : P sitpn) (pinfo : PlaceInfo sitpn) : option (list expr) :=
+  Definition get_input_arcs_weights (p : P sitpn) (pinfo : PlaceInfo sitpn) : optionE (list expr) :=
 
     (* If p has no inputs, creates one input with a weight of zero. *)
     let p_in_arcs_weights := (if List.length (tinputs pinfo) =? 0 then [e_nat 0] else []) in
@@ -62,40 +64,45 @@ Section GeneratePlaceMap.
        otherwise.  *)
     let get_in_arc_weight :=
         (fun lofexprs t =>
-           match post t p with Some (exist _ w _) => Some (lofexprs ++ [e_nat w]) | _ => None end) in
+           match post t p with
+           | Some (exist _ w _) => Success (lofexprs ++ [e_nat w])
+           | _ => Err ("get_input_arcs_weights: Transition "
+                         ++ $$t ++ " is not an input of place "
+                         ++ $$p ++ ".")%string
+           end)
+    in
 
     (* Iterates and calls get_in_arc_weight over all input transitions
        of p. *)
-    ofold_left get_in_arc_weight (tinputs pinfo) p_in_arcs_weights.
+    oefold_left get_in_arc_weight (tinputs pinfo) p_in_arcs_weights.
 
   (** Returns the list of output arc weights and types of place [p]. *)
   
   Definition get_output_arcs_weights_and_types (p : P sitpn) (pinfo : PlaceInfo sitpn) :
-    option (list expr * list expr) :=
+    optionE (list expr * list expr) :=
 
     (* If p has no output, creates one output with a weight of zero
        and type basic. *)
     let p_out_arcs_wandt :=
-        (if List.length (toutputs pinfo) =? 0
-         then ([e_nat 0], [e_nat basic])
-         else ([], []))
+        (if (toutputs pinfo) then ([e_nat 0], [e_nat basic]) else ([], []))
     in
     
     (* Adds the weight and the type of the pre arc between p and t to
        the couple of lists (weights, types) if an arc exists between p
        and t. Returns an error otherwise.  *)
     let get_out_arc_wandt :=
-        (fun (wandt : (list expr * list expr)) t =>
-           let (weights, types) := wandt in
+        (fun params t =>
+           let '(weights, types) := params in
            match pre p t with
-           | Some (a, (exist _ w _)) => Some (weights ++ [e_nat w], types ++ [e_nat a])
-           | _ => None
+           | Some (a, (exist _ w _)) => Success (weights ++ [e_nat w], types ++ [e_nat a])
+           | _ => Err ("get_output_arcs_weights_and_types: Transition "
+                      ++ $$t ++ " is not an output of place " ++ $$p ++ ".")%string
            end)
     in
 
     (* Iterates and calls get_in_arc_weight over all input transitions
        of p. *)
-    ofold_left get_out_arc_wandt (toutputs pinfo) p_out_arcs_wandt.
+    oefold_left get_out_arc_wandt (toutputs pinfo) p_out_arcs_wandt.
     
   (** Generates a part of the input map (static part) for the place
       component representing place [p]. *)
@@ -104,10 +111,10 @@ Section GeneratePlaceMap.
     optionE InputMap :=
     (* Retrieves the list of input arc weights. *)
     match get_input_arcs_weights p pinfo with
-    | Some in_arcs_weights =>
+    | Success in_arcs_weights =>
       (* Retrieves the list of output arcs weights and types. *)
       match get_output_arcs_weights_and_types p pinfo with
-      | Some (out_arcs_weights, out_arcs_types) =>
+      | Success (out_arcs_weights, out_arcs_types) =>
         Success
           [(Place.initial_marking, inl (e_nat (M0 p)));
           (Place.input_arcs_weights, inr in_arcs_weights);
@@ -115,10 +122,10 @@ Section GeneratePlaceMap.
           (Place.output_arcs_types, inr out_arcs_types)
           ]
       (* Error case. *)
-      | None => Err ("Ill-formed PlaceInfo structure for place " ++ $$p ++ ".")%string
+      | Err msg => Err msg
       end
     (* Error case. *)
-    | None => Err ("Ill-formed PlaceInfo structure for place " ++ $$p ++ ".")%string
+    | Err msg => Err msg
     end.
 
   (** Builds a PlaceMap entry for place p. *)
@@ -142,7 +149,8 @@ Section GeneratePlaceMap.
       | Err msg => Err msg
       end
     (* Error case. *)
-    | None => Err ("Place " ++ $$p ++ " is not referenced in SitpnInfo structure.")%string
+    | None => Err ("generate_place_map_entry: Place "
+                     ++ $$p ++ " is not referenced in SitpnInfo structure.")%string
     end.
   
   (** Returns the PlaceMap built out the list of places of [sitpn]. *)
@@ -151,6 +159,8 @@ Section GeneratePlaceMap.
     topte_map (fun p => generate_place_map_entry p max_marking) (P2List sitpn) nat_to_P.
   
 End GeneratePlaceMap.
+
+Arguments generate_place_map {sitpn}.
 
 (** ** Mapping between transitions and transition components. *)
 
@@ -191,10 +201,10 @@ Section GenerateTransMap.
     let t_type := get_trans_type t in
 
     (* Retrieves number of input arcs. *)
-    let t_in_arcs_nb := (if List.length (pinputs tinfo) =? 0 then 1 else List.length (pinputs tinfo)) in
+    let t_in_arcs_nb := (if pinputs tinfo then 1 else List.length (pinputs tinfo)) in
 
     (* Retrieves number of conditions. *)
-    let t_conds_nb := (if List.length (conds tinfo) =? 0 then 1 else List.length (conds tinfo)) in
+    let t_conds_nb := (if conds tinfo then 1 else List.length (conds tinfo)) in
 
     (* Retrieves maximal time counter value. *)
     let t_max_time_counter := get_max_time_counter t in
@@ -232,7 +242,8 @@ Section GenerateTransMap.
 
       (* Builds TransMap entry. *)
       Success (t, (gmap, tipmap, []))
-    | None => Err ("Transition " ++ $$t ++ " is not referenced in SitpnInfo structure.")%string
+    | None => Err ("generate_trans_map_entry: Transition "
+                     ++ $$t ++ " is not referenced in SitpnInfo structure.")%string
     end.
   
   (** Returns the TransMap built out the list of transitions of [sitpn]. *)
@@ -241,6 +252,8 @@ Section GenerateTransMap.
     topte_map generate_trans_map_entry (T2List sitpn) nat_to_T.
   
 End GenerateTransMap.
+
+Arguments generate_trans_map {sitpn}.
 
 (** ** Interconnections between place and transition components. *)
 
@@ -300,7 +313,8 @@ Section GenerateInterconnections.
         Success (arch', nextid + 1, lofexprs ++ [#nextid])
       end
     (* Error case. *)
-    | None => Err ("Transition " ++ $$t ++ " is not referenced in the TransMap.")%string
+    | None => Err ("connect_fired_port: Transition "
+                     ++ $$t ++ " is not referenced in the TransMap.")%string
     end.
 
   (** Returns a new architecture where the fired ports of all the
@@ -326,14 +340,14 @@ Section GenerateInterconnections.
     let lofexprs := (if transs then [e_bool false] else []) in
 
     (* Wrapper around the connect_fired_port function. *)
-    let connect_fired_port_fun :=
-        (fun triplet t =>
-           let '(arch, nextid, lofexprs) := triplet in
+    let wconn_fired_port :=
+        (fun params t =>
+           let '(arch, nextid, lofexprs) := params in
            connect_fired_port arch nextid lofexprs t)
     in
     (* Calls the connect_fired function over all transitions
          of the transs list. *)
-    oefold_left connect_fired_port_fun transs (arch, nextid, lofexprs).
+    oefold_left wconn_fired_port transs (arch, nextid, lofexprs).
 
   (** Connects the input port map of a component [phcomp],
       representing some place p, to the output port map of the
@@ -360,7 +374,7 @@ Section GenerateInterconnections.
            output_transitions_fired to the list of expressions
            in_trans_fired and out_trans_fired.  *)
         let pipmap' := setv Nat.eq_dec Place.input_transitions_fired (inr in_trans_fired) pipmap in
-        let pipmap'' := setv Nat.eq_dec Place.input_transitions_fired (inr out_trans_fired) pipmap' in
+        let pipmap'' := setv Nat.eq_dec Place.output_transitions_fired (inr out_trans_fired) pipmap' in
         
         (* Modifies the phcomp HComponent. *)
         let phcomp' := (pgmap, pipmap'', popmap) in
@@ -374,9 +388,9 @@ Section GenerateInterconnections.
     end.
 
   (** Adds an association between the composite port [cportid] and the
-      signal [sigid] in the input port map [ipmap]. *)
+      expression [e] in the input port map [ipmap]. *)
 
-  Definition add_cassoc_to_ipmap (ipmap : InputMap) (cportid sigid : ident) :
+  Definition add_cassoc_to_ipmap (ipmap : InputMap) (cportid : ident) (e : expr) :
     optionE InputMap :=
     
     (* Checks if cportid is known in ipmap. *)
@@ -386,37 +400,37 @@ Section GenerateInterconnections.
     | Some (inl _) => Err ("add_cassoc_to_pmap : cportid is not a composite port.")%string
 
     (* If cportid is a known composite port in ipmap, then adds
-         sigid at the end of the associated list of expressions. *)
+         e at the end of the associated list of expressions. *)
     | Some (inr lofexprs) =>
-      Success (setv Nat.eq_dec cportid (inr (lofexprs ++ [#sigid])) ipmap)
+      Success (setv Nat.eq_dec cportid (inr (lofexprs ++ [e])) ipmap)
 
     (* If cportid is not known in ipmap, then adds the association
-         between cportid and the singleton list [#sigid] in ipmap. *)
+         between cportid and the singleton list [e] in ipmap. *)
     | None =>
-      Success (setv Nat.eq_dec cportid (inr [#sigid]) ipmap)
+      Success (setv Nat.eq_dec cportid (inr [e]) ipmap)
     end.
 
   (** Adds an association between the composite port [cportid] and the
-      signal [sigid] in the output port map [opmap]. *)
+      name [n] in the output port map [opmap]. *)
 
-  Definition add_cassoc_to_opmap (opmap : OutputMap) (cportid sigid : ident) :
+  Definition add_cassoc_to_opmap (opmap : OutputMap) (cportid : ident) (n : name) :
     optionE OutputMap :=
     
     (* Checks if cportid is known in opmap. *)
     match getv Nat.eq_dec cportid opmap with
-    (* If cportid is associated to an expression in opmap, then
+    (* If cportid is associated to a name in opmap, then
          cportid is not a composite port, then error.  *)
     | Some (inl _) => Err ("add_cassoc_to_pmap : cportid is not a composite port.")%string
 
     (* If cportid is a known composite port in opmap, then adds
-         sigid at the end of the associated list of expressions. *)
+         n at the end of the associated list of names. *)
     | Some (inr lofexprs) =>
-      Success (setv Nat.eq_dec cportid (inr (lofexprs ++ [$sigid])) opmap)
+      Success (setv Nat.eq_dec cportid (inr (lofexprs ++ [n])) opmap)
 
     (* If cportid is not known in opmap, then adds the association
-         between cportid and the singleton list [$sigid] in opmap. *)
+         between cportid and the singleton list [n] in opmap. *)
     | None =>
-      Success (setv Nat.eq_dec cportid (inr [$sigid]) opmap)
+      Success (setv Nat.eq_dec cportid (inr [n]) opmap)
     end.
   
   (** Creates an interconnection signal (adds it to [adecls]) and
@@ -440,11 +454,11 @@ Section GenerateInterconnections.
 
     (* Connects xoport to the newly declared interconnection signal in
        output port map xopmap. *)
-    match add_cassoc_to_opmap xopmap xoport nextid with
+    match add_cassoc_to_opmap xopmap xoport ($nextid) with
     | Success xopmap' =>
       (* Connects yiport to the newly declared interconnection signal
          in input port map yipmap. *)
-      match add_cassoc_to_ipmap yipmap yiport nextid with
+      match add_cassoc_to_ipmap yipmap yiport (#nextid) with
       | Success yipmap' =>
         (* Overrides component hcompx and hcompy with their new output
            and input port map.  *)
@@ -501,7 +515,7 @@ Section GenerateInterconnections.
     (* Error case. *)
     | None => Err ("connect_popmap_to_tipmap:"
                      ++ "Transition " ++ $$t ++
-                     " is not referenced in the TransMap.")%string
+                     " is not referenced in the architecture's TransMap.")%string
     end.
 
   (** Connects the output port map of component [phcomp] representing
@@ -517,14 +531,14 @@ Section GenerateInterconnections.
     optionE (Architecture sitpn * ident * HComponent) :=
 
     (* Wrapper around the connect_popmap_to_tipmap function. *)
-    let connect_popmap_to_tipmap_fun :=
-        (fun triplet t =>
-           let '(arch, nextid, phcomp) := triplet in
+    let wconn_pop_to_tip :=
+        (fun params t =>
+           let '(arch, nextid, phcomp) := params in
            connect_popmap_to_tipmap arch nextid phcomp t)
     in
     (* Calls connect_popmap_to_tipmap on every output transitions of
        p.  *)
-    oefold_left connect_popmap_to_tipmap_fun (toutputs pinfo) (arch, nextid, phcomp).
+    oefold_left wconn_pop_to_tip (toutputs pinfo) (arch, nextid, phcomp).
 
   (** Retrieves the component representing place [p] in the
       Architecture [arch] and connects its input and ouput ports to
@@ -566,13 +580,11 @@ Section GenerateInterconnections.
           end
         | Err msg => Err msg
         end
-      (* Error case. *)
       | None =>
         Err ("interconnect_p:"
                ++ "Place " ++ $$p
-               ++ " is not referenced in PlaceMap structure.")%string
+               ++ " is not referenced in the architecture's PlaceMap structure.")%string
       end
-    (* Error case. *)
     | None =>
       Err ("interconnect_p:"
              ++ "Place " ++ $$p
@@ -590,13 +602,50 @@ Section GenerateInterconnections.
     optionE (Architecture sitpn * ident) :=
     
     (* Wrapper around the interconnect_p function. *)
-    let interconnect_p_fun :=
-        (fun c p =>
-           let '(arch, nextid) := c in
+    let winterconn_p :=
+        (fun params p =>
+           let '(arch, nextid) := params in
            interconnect_p arch nextid p)
     in
     
     (* Calls interconnect_p on each place of sitpn. *)
-    topte_fold_left interconnect_p_fun (P2List sitpn) (arch, nextid) nat_to_P.
+    topte_fold_left winterconn_p (P2List sitpn) (arch, nextid) nat_to_P.
   
 End GenerateInterconnections.
+
+Arguments generate_interconnections {sitpn}.
+
+(** ** Generation of an Architecture structure from an Sitpn. *)
+
+Section GenerateArchitecture.
+
+  Variable sitpn : Sitpn.
+  Variable sitpn_info : SitpnInfo sitpn.
+  
+  (** Generates an Architecture structure (i.e, a triplet
+      archictecture declaration list, Placemap instance, and TransMap
+      instance) based on the information and the structure of
+      [sitpn]. *)
+
+  Definition generate_architecture (nextid : ident) (max_marking : nat) :
+    optionE (Architecture sitpn * ident) :=
+    (* Generates the PlaceMap that maps places to intermediary Place
+       components. *)
+    match generate_place_map sitpn_info max_marking with
+    | Success plmap =>
+    (* Generates the TransMap that maps transitions to intermediary
+       Transition components. *)
+      match generate_trans_map sitpn_info with
+      | Success trmap =>
+        let arch := ([], plmap, trmap) in
+      (* Generates the interconnections between Place and Transition
+         components referenced in the PlaceMap plmap and the TransMap
+         trmap, and returns the new architecture and the next
+         available identifier. *)
+        generate_interconnections sitpn_info arch nextid 
+      | Err msg => Err msg
+      end
+    | Err msg => Err msg
+    end.
+
+End GenerateArchitecture.

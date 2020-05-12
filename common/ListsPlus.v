@@ -13,6 +13,16 @@ Require Export InAndNoDup.
 
 Set Implicit Arguments.
 
+(** ** Miscellaneous list functions. *)
+
+Section ListPlusMisc.
+
+  Variable A : Type.
+  
+  Definition is_empty (l : list A) : bool := if l then true else false.
+  
+End ListPlusMisc.
+
 (** ** Finds and sets an element in a list of couple. *)
 
 Section MapAsListOfCouples.
