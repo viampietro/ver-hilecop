@@ -9,7 +9,7 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 # General-purpose utilities (in common/)
 
-COMMONFILES=NatMap.v NatSet.v Coqlib.v GlobalTypes.v \
+COMMONFILES=NatMap.v NatSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
