@@ -2,7 +2,7 @@
 
 Require Import Coqlib.
 Require Import GlobalFacts.
-Require Import sets.Sitpn.
+Require Import dp.Sitpn.
 
 Set Implicit Arguments.
 

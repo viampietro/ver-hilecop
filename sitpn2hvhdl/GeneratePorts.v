@@ -5,10 +5,10 @@ Require Import GlobalTypes.
 Require Import ListsPlus.
 Require Import ListsDep.
 Require Import String.
-Require Import sets.Sitpn.
-Require Import sets.SitpnFacts.
-Require Import sets.SitpnTypes.
-Require Import sets.InfosTypes.
+Require Import dp.Sitpn.
+Require Import dp.SitpnFacts.
+Require Import dp.SitpnTypes.
+Require Import dp.InfosTypes.
 Require Import Sitpn2HVhdlTypes.
 Require Import HVhdlTypes.
 Require Import AbstractSyntax.

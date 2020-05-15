@@ -2,7 +2,7 @@
 
 Require Import HVhdlTypes.
 Require Import AbstractSyntax.
-Require Import sets.Sitpn.
+Require Import dp.Sitpn.
 
 (** ** Types used in the Sitpn2HVhdl transformation. *)
 

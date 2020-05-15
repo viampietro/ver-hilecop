@@ -14,7 +14,7 @@ Require Import GlobalTypes.
 Require Import SemanticalDomains.
 Require Import Environment.
 Require Import AbstractSyntax.
-Require Import sets.SitpnTypes.
+Require Import dp.SitpnTypes.
 Require Import SynchronousEvaluation.
 Require Import Stabilize.
 Require Import DesignElaboration.

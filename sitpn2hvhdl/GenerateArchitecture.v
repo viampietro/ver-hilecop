@@ -6,8 +6,8 @@ Require Import HVhdlTypes.
 Require Import ListsPlus.
 Require Import ListsDep.
 Require Import String.
-Require Import sets.Sitpn.
-Require Import sets.SitpnFacts.
+Require Import dp.Sitpn.
+Require Import dp.SitpnFacts.
 Require Import SitpnTypes.
 Require Import InfosTypes.
 Require Import AbstractSyntax.

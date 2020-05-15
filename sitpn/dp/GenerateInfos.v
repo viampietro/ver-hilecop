@@ -1,9 +1,9 @@
 (** * Types and functions used by the generateInfo function. *)
 
 Require Import Coqlib.
-Require Import sets.Sitpn.
-Require Import sets.SitpnTypes.
-Require Import sets.SitpnFacts.
+Require Import dp.Sitpn.
+Require Import dp.SitpnTypes.
+Require Import dp.SitpnFacts.
 Require Import NatSet.
 Require Import ListsDep.
 Require Import InfosTypes.

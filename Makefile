@@ -28,9 +28,9 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 	SitpnRisingEdgeInterpretationComplete.v SitpnRisingEdgeComplete.v \
 	SitpnComplete.v \
 
-# Sitpn structures, semantics and token player (in sitpn/sets/)
+# Sitpn structures, semantics and token player (in sitpn/dp/)
 
-SITPNSETSFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v SitpnSemantics.v \
+SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v SitpnSemantics.v \
 	InfosTypes.v GenerateInfos.v
 
 # H-VHDL syntax and semantics.
@@ -55,13 +55,13 @@ SITPN2HVHDLFILES=Sitpn2HVhdlTypes.v GenerateArchitecture.v \
 
 COMMON=$(foreach f, $(COMMONFILES), common/$f)
 SITPNSIMPL=$(foreach f, $(SITPNSIMPLFILES), sitpn/simpl/$f)
-SITPNSETS=$(foreach f, $(SITPNSETSFILES), sitpn/sets/$f)
+SITPNDP=$(foreach f, $(SITPNDPFILES), sitpn/dp/$f)
 HVHDL=$(foreach f, $(HVHDLFILES), hvhdl/$f)
 SITPN2HVHDL=$(foreach f, $(SITPN2HVHDLFILES), sitpn2hvhdl/$f)
 
 # All source files
 
-FILES=$(COMMON) $(SITPNSIMPL) $(SITPNSETS) $(HVHDL) $(SITPN2HVHDL)
+FILES=$(COMMON) $(SITPNSIMPL) $(SITPNDP) $(HVHDL) $(SITPN2HVHDL)
 
 all: proof 
 
@@ -69,7 +69,7 @@ proof: $(FILES:.v=.vo)
 
 common: $(COMMON:.v=.vo)
 sitpnsimpl: $(SITPNSIMPL:.v=.vo)
-sitpnsets: $(SITPNSETS:.v=.vo)
+sitpndp: $(SITPNDP:.v=.vo)
 hvhdl: $(HVHDL:.v=.vo)
 sitpn2hvhdl: $(SITPN2HVHDL:.v=.vo)
 

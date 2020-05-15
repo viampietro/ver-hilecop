@@ -1,6 +1,6 @@
 (** * Types of Sitpn information structures. *)
 
-Require Import sets.Sitpn.
+Require Import dp.Sitpn.
 Require Import SitpnTypes.
 Require Import GlobalTypes.
 Require Import NatSet.

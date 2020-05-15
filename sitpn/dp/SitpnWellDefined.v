@@ -3,8 +3,8 @@
 Require Import Coqlib.
 Require Import GlobalTypes.
 Require Import NatSet.
-Require Import sets.Sitpn.
-Require Import sets.SitpnFacts.
+Require Import dp.Sitpn.
+Require Import dp.SitpnFacts.
 
 Set Implicit Arguments.
 

@@ -1,7 +1,7 @@
 (** * Sitpn semantics definition *)
 
 Require Import Coqlib.
-Require Import sets.Sitpn.
+Require Import dp.Sitpn.
 Require Import SitpnTypes.
 Require Import GlobalTypes.
 
