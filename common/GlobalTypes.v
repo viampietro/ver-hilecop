@@ -118,3 +118,4 @@ Arguments Err {A}.
     to display variable values in error messages.  *)
 
 Notation "$$ n" := (of_nat n) (at level 0, only parsing).
+

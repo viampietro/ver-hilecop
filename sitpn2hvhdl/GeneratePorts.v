@@ -155,7 +155,7 @@ Section GenerateActionPortsAndPs.
   Definition add_action_map_entry
              (arch : Architecture sitpn)
              (nextid : ident)
-             (amap : list (A sitpn * list expr)) 
+             (amap : ActionMap sitpn) 
              (a : A sitpn) :
     optionE (Architecture sitpn * ident * ActionMap sitpn) :=
     (* Retrieves information about a. *)

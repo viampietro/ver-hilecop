@@ -78,15 +78,12 @@ Notation " x @&& y @&& .. @&& z " := (e_binop bo_and .. (e_binop bo_and x y) .. 
 Coercion e_nat : nat >-> expr.
 Coercion e_bool : bool >-> expr.
 
-(** Subtype indications. 
+(** Subtype indications.
 
-    Subtype indications are used in the declarative parts
-    of a H-VHDL design; e.g:
+    Subtype indications are used in the declarative parts of a H-VHDL
+    design; e.g:
 
-    signal s : natural(0,255);
-    constant c : boolean := false;
-
- *)
+    signal s : natural(0,255); constant c : boolean := false; *)
 
 Inductive tind : Type :=
 | tind_boolean                                           (** Boolean type indication. *)
@@ -159,11 +156,19 @@ Definition genmap := list assocg.
 Inductive associp : Type :=
   associp_ (n : name) (e : expr).
 
+(** Type of input port map. *)
+
+Definition inputmap := list associp.
+
 (** Port map entry ("out" mode port). *)
 
 Inductive assocop : Type :=
   (** None for the "open" keyword. *)
   assocop_ (n : name) (n' : option name). 
+
+(** Type of output port map. *)
+
+Definition outputmap := list assocop.
 
 (** Concurrent statement. *)
 
@@ -176,11 +181,11 @@ Inductive cs : Type :=
         (stmt : ss)         (** Sequential statement block *)
       
 (** Component instantiation statement. *)
-| cs_comp (compid : ident)       (** Component id *)
-          (entid : ident)        (** Entity label *)
-          (gmap : genmap)        (** Generic map *)
-          (ipmap : list associp) (** In port map *)
-          (opmap : list assocop) (** Out port map *)
+| cs_comp (compid : ident) (** Component id *)
+          (entid : ident)  (** Entity label *)
+          (gmap : genmap)  (** Generic map *)
+          (ipmap : inputmap)  (** In port map *)
+          (opmap : outputmap) (** Out port map *)
 
 (** Composition of concurrent statements. *)
 | cs_par (cstmt : cs) (cstmt' : cs).
