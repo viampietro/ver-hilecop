@@ -10,7 +10,7 @@ Require Import InfosTypes.
 Require Import GlobalTypes.
 Require Import String.
   
-Open Scope string_scope.
+Local Open Scope string_scope.
 
 (** ** Informations about places. *)
 

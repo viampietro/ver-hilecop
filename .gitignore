@@ -8,6 +8,8 @@
 **/*.dot
 **/*.svg
 scripts/
+**/*.pnml
+**/*.tpn
 
 # Compiled source #
 ###################

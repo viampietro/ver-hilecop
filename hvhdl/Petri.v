@@ -42,6 +42,11 @@ Definition local_var : ident := 100.
 Definition loop_var  : ident := 150.
 Definition i : ident := loop_var.
 
+(** Defines the first fresh identifier. 
+    Starts the available identifier range. *)
+
+Definition ffid : ident := 200.
+
 (** Defines multiple macros that are convenient to build
     the Place and Transition designs in H-VHDL abstract syntax. 
 
@@ -55,11 +60,11 @@ Definition MAXIMAL_GLOBAL_MARKING : nat := 255.
 
 (** Type and subtype macros. *)
 
-Definition arc_t : tind := tind_natural 0 2.
+Definition arc_t           : tind := tind_natural 0 2.
 Definition transition_t    : tind := tind_natural 0 3.
 
 Definition weight_t        : tind := tind_natural 0 MAXIMAL_GLOBAL_MARKING.
 Definition weight_vector_t : expr -> expr -> tind := tind_array weight_t.
 Definition arc_vector_t    : expr -> expr -> tind := tind_array arc_t.
-Definition bool_vector_t : expr -> expr -> tind := tind_array tind_boolean.
+Definition bool_vector_t   : expr -> expr -> tind := tind_array tind_boolean.
 

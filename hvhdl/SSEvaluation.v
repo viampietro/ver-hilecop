@@ -5,7 +5,7 @@ Require Import AbstractSyntax.
 Require Import ExpressionEvaluation.
 Require Import SemanticalDomains.
 
-Open Scope ast_scope.
+Open Scope abss_scope.
 
 (** Defines the relation that evaluates the sequential statements
     of H-VHDL. 

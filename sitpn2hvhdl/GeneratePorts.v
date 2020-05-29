@@ -608,3 +608,5 @@ Section GeneratePorts.
     end.
   
 End GeneratePorts.
+
+Arguments generate_ports {sitpn}.

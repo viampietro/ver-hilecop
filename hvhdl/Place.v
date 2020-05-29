@@ -12,7 +12,7 @@ Require Import Petri.
 Require Import HVhdlTypes.
 
 Open Scope natset_scope.
-Open Scope ast_scope.
+Open Scope abss_scope.
 
 (** ** Entity part of the Place design. *)
 

@@ -31,7 +31,7 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 # Sitpn structures, semantics and token player (in sitpn/dp/)
 
 SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v SitpnSemantics.v \
-	InfosTypes.v GenerateInfos.v
+	InfosTypes.v GenerateInfos.v 
 
 # H-VHDL syntax and semantics.
 
@@ -49,7 +49,7 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 # SITPN to H-VHDL transformation.
 
 SITPN2HVHDLFILES=Sitpn2HVhdlTypes.v GenerateArchitecture.v \
-	GeneratePorts.v	
+	GeneratePorts.v	GenerateHVhdl.v
 
 # Builds files with prefixes
 

@@ -262,7 +262,7 @@ Section GenerateInterconnections.
   Variable sitpn : Sitpn.
   Variable sitpn_info : SitpnInfo sitpn.
 
-  Local Open Scope ast_scope.
+  Local Open Scope abss_scope.
   
   (** (1) Connects the "fired" output port of the component
       representing transition [t] to another composite port via the

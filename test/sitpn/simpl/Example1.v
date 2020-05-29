@@ -1,14 +1,6 @@
-(* Import Sitpn types and token player functions. *)
+(** * Implementation of the example 1 of SITPN instance (simple implementation). *)
 
-Require Import Hilecop.Sitpn.Sitpn.
-Require Import Hilecop.Sitpn.SitpnTokenPlayer.
-Require Import Hilecop.Sitpn.SitpnSemantics.
-
-(* Function returning the global condition values through time. *)
-
-Definition env (c : Condition) (time_value : nat) : bool := negb (time_value mod 5 =? 0).
-
-(** * Sitpn and SitpnState examples.  *)
+Require Import simpl.Sitpn.
 
 (** Places and transitions sets. *)
 
@@ -119,7 +111,7 @@ Definition lneighbours1 (t : Trans) : Neighbours :=
   | _ => mk_neighbours [] [] [] []
   end.
 
-(** * Sitpn first example. *)
+(** ** Sitpn instance example 1. *)
 
 Definition sitpn1 :=
   mk_Sitpn places1 transs1 pre1 test1 inhib1 post1 initial_marking1
