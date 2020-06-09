@@ -33,7 +33,7 @@ Inductive is_lstatic_expr : expr -> Prop :=
     - a locally static expression.
  *)
 
-Inductive is_gstatic_expr (env : DEnv) : expr -> Prop :=
+Inductive is_gstatic_expr (env : ElDesign) : expr -> Prop :=
 | IsGStaticLStatic (e : expr) : is_lstatic_expr e -> is_gstatic_expr env e
 | IsGStaticGeneric (id : ident) :
     forall (t : type) (v : value),

@@ -21,22 +21,22 @@ Require Import ExpressionEvaluation.
     The evaluation of an "in" port map affects the current state of
     the component instance to which the port map is related. *)
 
-Inductive mapip (denv cenv : DEnv) (dstate cstate : DState) : list associp -> DState -> Prop := 
+Inductive mapip (ed cenv : ElDesign) (dstate cstate : DState) : list associp -> DState -> Prop := 
 
 (** An empty list of port associations does not change the state
     [cstate] of the component instance. *)
-| MapipNil : mapip denv cenv dstate cstate [] cstate 
+| MapipNil : mapip ed cenv dstate cstate [] cstate 
 
 (** Evaluates a non-empty list of port associations. *)
 | MapipCons :
     forall {asip lofasips cstate' cstate''},
-      vassocip denv cenv dstate cstate asip cstate' ->
-      mapip denv cenv dstate cstate' lofasips cstate'' ->
-      mapip denv cenv dstate cstate (asip :: lofasips) cstate''
+      vassocip ed cenv dstate cstate asip cstate' ->
+      mapip ed cenv dstate cstate' lofasips cstate'' ->
+      mapip ed cenv dstate cstate (asip :: lofasips) cstate''
 
 (** Defines the relation that evaluates a single association present
     in an "in" port map.  *)
-with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState -> Prop := 
+with vassocip (ed cenv : ElDesign) (dstate cstate : DState) : associp -> DState -> Prop := 
 
 (** Evaluates a "in" port map association, with a simple port
     identifier in the formal part.
@@ -48,7 +48,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
     forall {id e newv currv t sigstore' events'},
       
       (* * Premises * *)
-      vexpr denv dstate EmptyLEnv e newv ->
+      vexpr ed dstate EmptyLEnv e newv ->
       is_of_type newv t ->
 
       (* * Side conditions (where σc = <S,C,E>) * *)
@@ -60,7 +60,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       events' = (NatSet.add id (events cstate)) -> (* E' = E ∪ {id} *)
       
       (* * Conclusion * *)
-      vassocip denv cenv dstate cstate (associp_ (n_id id) e) (MkDState sigstore' (compstore cstate) events')
+      vassocip ed cenv dstate cstate (associp_ (n_id id) e) (MkDState sigstore' (compstore cstate) events')
 
 (** Evaluates a "in" port map association, with a simple port
     identifier in the formal part.
@@ -71,7 +71,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
     forall {id e newv currv t},
       
       (* * Premises * *)
-      vexpr denv dstate EmptyLEnv e newv ->
+      vexpr ed dstate EmptyLEnv e newv ->
       is_of_type newv t ->
 
       (* * Side conditions (where σc = <S,C,E>) * *)
@@ -81,7 +81,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       VEq newv currv (Some true) -> (* new value = current value *)
             
       (* * Conclusion * *)
-      vassocip denv cenv dstate cstate (associp_ (n_id id) e) cstate
+      vassocip ed cenv dstate cstate (associp_ (n_id id) e) cstate
 
 (** Evaluates a "in" port map association, with an indexed port
     identifier in the formal part.
@@ -93,11 +93,11 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
     forall {id e ei newv i t l u lofv currv lofv' sigstore' events'},
       
       (* * Premises * *)
-      vexpr denv dstate EmptyLEnv e newv ->
+      vexpr ed dstate EmptyLEnv e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyDEnv EmptyDState EmptyLEnv ei (Vnat i) ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
@@ -113,7 +113,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       sigstore' = NatMap.add id (Vlist lofv') (sigstore dstate) ->
       
       (* * Conclusion * *)
-      vassocip denv cenv dstate cstate (associp_ (n_xid id ei) e) (MkDState sigstore' (compstore cstate) events')
+      vassocip ed cenv dstate cstate (associp_ (n_xid id ei) e) (MkDState sigstore' (compstore cstate) events')
 
 (** Evaluates a "in" port map association, with an indexed port
     identifier in the formal part.
@@ -124,11 +124,11 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
     forall {id e ei newv i t l u lofv currv},
       
       (* * Premises * *)
-      vexpr denv dstate EmptyLEnv e newv ->
+      vexpr ed dstate EmptyLEnv e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyDEnv EmptyDState EmptyLEnv ei (Vnat i) ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv ei (Vnat i) ->
       l <= i <= u ->
       
       (* * Side conditions * *)
@@ -139,7 +139,7 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
       VEq newv currv (Some true) -> (* new value = current value *)
             
       (* * Conclusion * *)
-      vassocip denv cenv dstate cstate (associp_ (n_xid id ei) e) cstate.
+      vassocip ed cenv dstate cstate (associp_ (n_xid id ei) e) cstate.
 
     
 (** Defines the evaluation relation for "out" port maps, i.e, port
@@ -149,28 +149,28 @@ with vassocip (denv cenv : DEnv) (dstate cstate : DState) : associp -> DState ->
     The evaluation of an "out" port map affects the current state
     [dstate] of the embedding design. *)
 
-Inductive mapop (denv cenv : DEnv) (dstate cstate : DState) : list assocop -> DState -> Prop :=
+Inductive mapop (ed cenv : ElDesign) (dstate cstate : DState) : list assocop -> DState -> Prop :=
 
 (** An empty list of port associations does not change the state
     [dstate] of the embedding design. *)
   
-| MapopNil : mapop denv cenv dstate cstate [] cstate 
+| MapopNil : mapop ed cenv dstate cstate [] cstate 
 
 (** Evaluates a non-empty list of port associations. *)
 | MapopCons :
     forall {asop lofasops dstate' dstate''},
-      vassocop denv cenv dstate cstate asop dstate' ->
-      mapop denv cenv dstate' cstate lofasops dstate'' ->
-      mapop denv cenv dstate cstate (asop :: lofasops) dstate''
+      vassocop ed cenv dstate cstate asop dstate' ->
+      mapop ed cenv dstate' cstate lofasops dstate'' ->
+      mapop ed cenv dstate cstate (asop :: lofasops) dstate''
 
 (** Defines the relation that evaluates a single association present
     in an "out" port map.  *)
-with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState -> Prop :=
+with vassocop (ed cenv : ElDesign) (dstate cstate : DState) : assocop -> DState -> Prop :=
 
 (** Evaluates an association where the formal part is not bound, i.e
     the actual part is [None] (the "open" keyword is used in concrete
     VHDL syntax) *)
-| VAssocopOpen : forall {pname}, vassocop denv cenv dstate cstate (assocop_ pname None) dstate
+| VAssocopOpen : forall {pname}, vassocop ed cenv dstate cstate (assocop_ pname None) dstate
 
 (** Evaluates an out port map association where the actual part is a
     simple declared signal or out port identifier.
@@ -188,7 +188,7 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       (* * Side conditions * *)
 
       (* id ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id) = t *)
-      (MapsTo id (Declared t) denv \/ MapsTo id (Output t) denv) -> 
+      (MapsTo id (Declared t) ed \/ MapsTo id (Output t) ed) -> 
       MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
       
       VEq newv currv (Some false) -> (* new value <> current value *)
@@ -197,7 +197,7 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       dstate' = (MkDState sigstore' (compstore dstate) events') -> (* σ' = <S',C,E'> *)
       
       (* * Conclusion * *)
-      vassocop denv cenv dstate cstate (assocop_ pname (Some (n_id id))) dstate'
+      vassocop ed cenv dstate cstate (assocop_ pname (Some (n_id id))) dstate'
                
 (** Evaluates an out port map association where the actual part is a
     simple declared signal or out port identifier.
@@ -214,13 +214,13 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       (* * Side conditions * *)
 
       (* id ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id) = t *)
-      (MapsTo id (Declared t) denv \/ MapsTo id (Output t) denv) -> 
+      (MapsTo id (Declared t) ed \/ MapsTo id (Output t) ed) -> 
       MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
       
       VEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
-      vassocop denv cenv dstate cstate (assocop_ pname (Some (n_id id))) dstate
+      vassocop ed cenv dstate cstate (assocop_ pname (Some (n_id id))) dstate
 
 (** Evaluates an "out" port map association, with an indexed declared
     signal or port identifier in the actual part.
@@ -236,12 +236,12 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyDEnv EmptyDState EmptyLEnv ei (Vnat i) ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
-      (MapsTo id (Declared (Tarray t l u)) denv \/
-       MapsTo id (Output (Tarray t l u)) denv) -> (* id ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id) = array(t,l,u) *)
+      (MapsTo id (Declared (Tarray t l u)) ed \/
+       MapsTo id (Output (Tarray t l u)) ed) -> (* id ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id) = array(t,l,u) *)
       MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofv *)
 
       get_at i lofv = Some currv ->              (* Current value at index [i] of [lofv] is [currv] *)
@@ -256,7 +256,7 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       dstate' = MkDState sigstore' (compstore dstate) events' ->
       
       (* * Conclusion * *)
-      vassocop denv cenv dstate cstate (assocop_ pname (Some (n_xid id ei))) dstate'
+      vassocop ed cenv dstate cstate (assocop_ pname (Some (n_xid id ei))) dstate'
 
 (** Evaluates an "out" port map association, with an indexed declared
     signal or port identifier in the actual part.
@@ -272,17 +272,17 @@ with vassocop (denv cenv : DEnv) (dstate cstate : DState) : assocop -> DState ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyDEnv EmptyDState EmptyLEnv ei (Vnat i) ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
-      (MapsTo id (Declared (Tarray t l u)) denv \/
-       MapsTo id (Output (Tarray t l u)) denv) -> (* id ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id) = array(t,l,u) *)
+      (MapsTo id (Declared (Tarray t l u)) ed \/
+       MapsTo id (Output (Tarray t l u)) ed) -> (* id ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id) = array(t,l,u) *)
       MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofv *)
 
       get_at i lofv = Some currv -> (* Current value at index [i] of [lofv] is [currv] *)
       VEq newv currv (Some true) -> (* new value = current value *)
             
       (* * Conclusion * *)
-      vassocop denv cenv dstate cstate (assocop_ pname (Some (n_xid id ei))) dstate.               
+      vassocop ed cenv dstate cstate (assocop_ pname (Some (n_xid id ei))) dstate.               
 

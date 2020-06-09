@@ -13,7 +13,7 @@ Require Import PortMapEvaluation.
     concurrent statements.
  *)
 
-Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
+Inductive vcomb (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a stable process (no event are related to signals of the
     process sensitivity list). *)
@@ -25,7 +25,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       NatSet.Equal (NatSet.inter sl (events dstate)) NatSet.empty -> (* sl ∩ E = ∅ *)
       
       (* * Conclusion * *)
-      vcomb denv dstate (cs_ps pid sl vars stmt) (NoEvDState dstate)
+      vcomb ed dstate (cs_ps pid sl vars stmt) (NoEvDState dstate)
             
 (** Evaluates an unstable process (signals of the process sensitivity
     list generated events). Then, the process body is evaluated. *)
@@ -34,14 +34,14 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {pid sl vars stmt lenv dstate' lenv'},
 
       (* * Premises * *)
-      vseq denv (NoEvDState dstate) lenv stmt dstate' lenv' ->
+      vseq ed (NoEvDState dstate) lenv stmt dstate' lenv' ->
       
       (* * Side conditions * *)
       NatSet.Equal (NatSet.inter sl (events dstate)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
-      NatMap.MapsTo pid (Process lenv) denv ->         (* pid ∈ Δ and Δ(pid) = Λ *)
+      NatMap.MapsTo pid (Process lenv) ed ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
-      vcomb denv dstate (cs_ps pid sl vars stmt) dstate'
+      vcomb ed dstate (cs_ps pid sl vars stmt) dstate'
 
 (** Evaluates a component instance. The new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -54,14 +54,14 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vcomb cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -72,7 +72,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* * Conclusion * *)
       (* Add compid to the events field of dstate' because compid
          registered some events in its internal state. *)
-      vcomb denv dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+      vcomb ed dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
 
 (** Evaluates a component instance. The new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -83,14 +83,14 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vcomb cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -99,7 +99,7 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       NatSet.Equal (events cstate'') NatSet.empty ->
       
       (* * Conclusion * *)
-      vcomb denv dstate (cs_comp compid entid gmap ipmap opmap) dstate'
+      vcomb ed dstate (cs_comp compid entid gmap ipmap opmap) dstate'
 
 (** Evaluates the parallel execution of two combinational concurrent
     statements.  *)
@@ -108,8 +108,8 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' dstate' dstate'' merged},
 
       (* * Premises * *)
-      vcomb denv dstate cstmt dstate' ->
-      vcomb denv dstate cstmt' dstate'' ->
+      vcomb ed dstate cstmt dstate' ->
+      vcomb ed dstate cstmt' dstate'' ->
 
       (* * Side conditions * *)
       
@@ -121,4 +121,4 @@ Inductive vcomb (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       IsMergedDState dstate dstate' dstate'' merged ->
       
       (* * Conclusion * *)
-      vcomb denv dstate (cs_par cstmt cstmt') merged.
+      vcomb ed dstate (cs_par cstmt cstmt') merged.

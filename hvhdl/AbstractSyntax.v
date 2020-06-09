@@ -238,3 +238,8 @@ Inductive design : Type :=
           (ports    : list pdecl) (** Port clause *)
           (adecls   : list adecl) (** Architecture declarative part *)
           (behavior : cs).        (** Concurrent statement part *)
+
+(** Projection functions for [design] *)
+
+Definition get_behavior (d : design) : cs :=
+  let '(design_ _ _ _ _ _ behavior) := d in behavior.

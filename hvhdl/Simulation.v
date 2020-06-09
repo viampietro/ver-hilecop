@@ -22,39 +22,34 @@ Require Import Initialization.
 Require Import HVhdlTypes.
 
 (** Defines the relation that computes a simulation cycle in the
-    context of a design environment [denv], starting from a design
+    context of an elaborated design [ed], starting from a design
     state [dstate] at the beginning of the cycle.  A simulation cycle
     executes the [behavior] of a design, with respect to the different
-    phases that happen during a cycle, and generates a new simulation
-    trace, and a new final state for the simulated design.
+    phases that happen during a cycle, and generates a new design
+    state.
 
-    - [ivals] is the function yielding the values of input ports at a
+    - [Ep] is the function yielding the values of input ports at a
       given simulation time and for a given clock signal event.
-
-    - [trace] represents the simulation trace, that is the ordered
-      list of design states computed during the previous simulation
-      cycles.
       
-    - [time] corresponds to the number of simulation cycles that are
+    - [tau] corresponds to the number of simulation cycles that are
       yet to be executed.  *)
 
 Inductive simcycle
-          (ivals : nat -> Clk -> IdMap value)
-          (denv : DEnv)
+          (Ep : nat -> Clk -> IdMap value)
+          (ed : ElDesign)
+          (tau : nat)
           (dstate : DState)
-          (trace : list DState)
-          (time : nat)
-          (behavior : cs) : list DState -> DState -> Prop :=
+          (behavior : cs) : DState -> Prop :=
 
 (** Defines one simulation cycle *)
 | SimCycle :
-    forall {dstate_re dstate_fe dstate1 dstate2 dstate3 dstate4},
+    forall {dstate_re dstate_fe dstate1 dstate2 dstate3 dstate'},
       
       (* * Premises * *)
-      vrising denv dstate_re behavior dstate1 ->
-      stabilize denv dstate1 behavior dstate2 ->
-      vfalling denv dstate_fe behavior dstate3 ->
-      stabilize denv dstate3 behavior dstate4 ->
+      vrising ed dstate_re behavior dstate1 ->
+      stabilize ed dstate1 behavior dstate2 ->
+      vfalling ed dstate_fe behavior dstate3 ->
+      stabilize ed dstate3 behavior dstate' ->
 
       (* * Side conditions * *)
 
@@ -62,45 +57,46 @@ Inductive simcycle
          differentiated intersection. *)
       
       (* σ = <S, C, E> and σre = <S ⊌ Pi(Tc, ↑), C, E ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState dstate (ivals time rising_edge) dstate_re ->
+      IsInjectedDState dstate (Ep tau rising_edge) dstate_re ->
 
       (* σ2 = <S2, C2, E2> and σfe = <S2 ∪← Pi(Tc, ↓), C2, E2 ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState dstate2 (ivals time falling_edge) dstate_fe ->
+      IsInjectedDState dstate2 (Ep tau falling_edge) dstate_fe ->
       
       (* * Conclusion * *)
-      simcycle ivals denv dstate trace time behavior (trace ++ [dstate1; dstate2; dstate3; dstate4]) dstate4.
+      simcycle Ep ed tau dstate behavior dstate'.
 
-(** Defines the simulation loop relation, that computes simulation
-    cycles until the time counter reaches zero.
+(** Defines the simulation loop relation, that relates the design
+    state through simulation cycles, until the time counter reaches
+    zero.
     
-    The simulation loop produces a simulation trace, that is, an
-    time-ordered list of design states.  *)
+    The simulation loop relation binds the state of a design at the
+    beginning of the simulation and the state of the design at the end
+    of the simulation.  *)
 
 Inductive simloop
-          (ivals : nat -> Clk -> IdMap value)
-          (denv : DEnv)
+          (Ep : nat -> Clk -> IdMap value)
+          (ed : ElDesign)
           (dstate : DState)
-          (trace : list DState)
-          (behavior : cs) : nat -> list DState -> Prop :=
+          (behavior : cs) : nat -> DState -> Prop :=
 
 (** Loops if time counter is greater than zero. *)
   
 | SimLoop :
-    forall {time trace' dstate' trace''},
+    forall {tau dstate' dstate''},
 
       (* * Premises * *)
-      simcycle ivals denv dstate trace time behavior trace' dstate' ->
-      simloop ivals denv dstate' trace' behavior (time - 1) trace'' ->
+      simcycle Ep ed tau dstate behavior dstate' ->
+      simloop Ep ed dstate' behavior (tau - 1) dstate'' ->
       
       (* * Side conditions * *)
-      time > 0 ->
+      tau > 0 ->
       
       (* * Conclusion * *)
-      simloop ivals denv dstate trace behavior time trace''
+      simloop Ep ed dstate behavior tau dstate''
 
 (** Stops if time counter is zero. *)
 | SimLoopEnd :
-    simloop ivals denv dstate trace behavior 0 trace.
+    simloop Ep ed dstate behavior 0 dstate.
 
 (** Defines the whole workflow necessary to simulate a H-VHDL
     description (elaboration + simulation).
@@ -109,13 +105,13 @@ Inductive simloop
       the identifier of the entity part of the design) to their
       description in abstract syntax.
 
-    - [dimen], the dimensioning (partial) function that yields the
+    - [Mg], the dimensioning (partial) function that yields the
       values attached to the generic constant of the design.
 
-    - [ivals], the function that yields the values for the input
+    - [Ep], the function that yields the values for the input
       ports of the design at a certain time and clock event.
 
-    - [time], the number of simulation cycle to be performed after
+    - [tau], the number of simulation cycle to be performed after
       the initialization.
 
     - [d], the design that will elaborated and simulated.
@@ -123,25 +119,19 @@ Inductive simloop
 
 Inductive simwf
           (dstore : IdMap design)
-          (dimen : IdMap value)
-          (ivals : nat -> Clk -> IdMap value)
-          (time : nat)
-          (d : design) : list DState -> Prop :=
+          (Mg : IdMap value)
+          (Ep : nat -> Clk -> IdMap value)
+          (tau : nat)
+          (d : design) : DState -> Prop :=
   
 | SimWorkflow :
-    forall {trace denv dstate dstate' entid archid
-                  gens ports adecls behavior},
+    forall {ed dstate dstate0 dstate'},
       
       (* * Premises * *)
 
-      edesign dstore dimen d denv dstate ->                       (* Elaboration *)
-      init denv dstate behavior dstate' ->                        (* Initialization *)
-      simloop ivals denv dstate' [dstate'] behavior time trace -> (* Simulation loop *)
-              
-      (* * Side conditions * *)
-      
-      (* Needed to retrieve the behavioral part of the design. *)
-      d = design_ entid archid gens ports adecls behavior ->
-      
+      edesign dstore Mg d ed dstate ->                   (* Elaboration *)
+      init ed dstate (get_behavior d) dstate0 ->            (* Initialization *)
+      simloop Ep ed dstate0 (get_behavior d) tau dstate' -> (* Simulation loop *)
+                    
       (* * Conclusion * *)
-      simwf dstore dimen ivals time d trace.
+      simwf dstore Mg Ep tau d dstate'.

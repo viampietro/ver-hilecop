@@ -90,7 +90,7 @@ Record Sitpn  :=
 
 (** Notations for Sitpn. *)
 
-Notation "a '>~' b" := (pr a b) (at level 0).
+Notation "a '>~' b" := ((pr a b) = true) (at level 0).
 
 (** ** Subsets of P and T, and misc. casting functions. *)
 

@@ -22,20 +22,20 @@ Import NatMap.
     function yielding the values assigned to the generic constants
     being elaborated.  *)
 
-Inductive egens (denv : DEnv) (dimen : IdMap value) : list gdecl -> DEnv -> Prop :=
+Inductive egens (ed : ElDesign) (dimen : IdMap value) : list gdecl -> ElDesign -> Prop :=
 
 (* Elaborates an empty list of generic constant declaration. *)
-| EGensNil: egens denv dimen [] denv
+| EGensNil: egens ed dimen [] ed
 
 (* Elaborates a non-empty list of generic constant declaration. *)
 | EGensCons:
-    forall {gd lofgdecls denv' denv''},
-      egen denv dimen gd denv' ->
-      egens denv' dimen lofgdecls denv'' ->
-      egens denv dimen (gd :: lofgdecls) denv''
+    forall {gd lofgdecls ed' ed''},
+      egen ed dimen gd ed' ->
+      egens ed' dimen lofgdecls ed'' ->
+      egens ed dimen (gd :: lofgdecls) ed''
     
 (** Defines the elaboration relation for one generic constant declaration. *)
-with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
+with egen (ed : ElDesign) (dimen : IdMap value) : gdecl -> ElDesign -> Prop :=
   
 (* Elaboration with given a dimensioning value. *)
 | EGenDimen :
@@ -44,14 +44,14 @@ with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       (* Premises *)
       etypeg tau t ->
       is_lstatic_expr e ->
-      vexpr EmptyDEnv EmptyDState EmptyLEnv e dv ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv e dv ->
 
       (* Side conditions *)
-      ~NatMap.In idg denv ->           (* idg ∉ Δ *)
+      ~NatMap.In idg ed ->           (* idg ∉ Δ *)
       MapsTo idg v dimen ->     (* idg ∈ M and M(idg) = v *)
       
       (* Conclusion *)
-      egen denv dimen (gdecl_ idg tau e) (add idg (Generic t v) denv)
+      egen ed dimen (gdecl_ idg tau e) (add idg (Generic t v) ed)
 
 (* Elaboration with default value. *)
 | EGenDefault :
@@ -60,14 +60,14 @@ with egen (denv : DEnv) (dimen : IdMap value) : gdecl -> DEnv -> Prop :=
       (* Premises *)
       etypeg tau t ->
       is_lstatic_expr e ->
-      vexpr EmptyDEnv EmptyDState EmptyLEnv e dv ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv e dv ->
 
       (* Side conditions *)
-      ~NatMap.In idg denv ->      (* idg ∉ Δ *)
+      ~NatMap.In idg ed ->      (* idg ∉ Δ *)
       ~NatMap.In idg dimen ->     (* idg ∉ M *)
       
       (* Conclusion *)
-      egen denv dimen (gdecl_ idg tau e) (add idg (Generic t dv) denv).
+      egen ed dimen (gdecl_ idg tau e) (add idg (Generic t dv) ed).
 
       
 

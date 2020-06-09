@@ -27,7 +27,7 @@ Require Import NatSet.
     statements once, regardless of sensitivity lists or events on
     signals and component instances.  *)
 
-Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
+Inductive vruninit (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement exactly once, regardless of its
     sensitivity list. *)
@@ -36,13 +36,13 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {pid sl vars stmt lenv dstate' lenv'},
 
       (* * Premises * *)
-      vseq denv dstate lenv stmt dstate' lenv' ->
+      vseq ed dstate lenv stmt dstate' lenv' ->
       
       (* * Side conditions * *)
-      NatMap.MapsTo pid (Process lenv) denv ->
+      NatMap.MapsTo pid (Process lenv) ed ->
       
       (* * Conclusion * *)
-      vruninit denv dstate (cs_ps pid sl vars stmt) dstate'
+      vruninit ed dstate (cs_ps pid sl vars stmt) dstate'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -55,14 +55,14 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vruninit cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -73,7 +73,7 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* * Conclusion * *)
       (* Add compid to the events field of dstate' because compid
          registered some events in its internal state. *)
-      vruninit denv dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+      vruninit ed dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -84,14 +84,14 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vruninit cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -100,7 +100,7 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       events cstate'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vruninit denv dstate (cs_comp compid entid gmap ipmap opmap) dstate'
+      vruninit ed dstate (cs_comp compid entid gmap ipmap opmap) dstate'
 
 (** Evaluates the parallel execution of two concurrent
     statements computed with the [runinit] relation.  *)
@@ -109,8 +109,8 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' dstate' dstate'' merged},
 
       (* * Premises * *)
-      vruninit denv dstate cstmt dstate' ->
-      vruninit denv dstate cstmt' dstate'' ->
+      vruninit ed dstate cstmt dstate' ->
+      vruninit ed dstate cstmt' dstate'' ->
 
       (* * Side conditions * *)
       
@@ -122,12 +122,12 @@ Inductive vruninit (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       IsMergedDState dstate dstate' dstate'' merged ->
       
       (* * Conclusion * *)
-      vruninit denv dstate (cstmt // cstmt') merged.
+      vruninit ed dstate (cstmt // cstmt') merged.
 
 (** Defines the [init] relation, sequential composition of the
     [vruninit] and the [stabilize] relation. *)
 
-Inductive init (denv : DEnv) : DState -> cs -> DState -> Prop :=
+Inductive init (ed : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
     forall {dstate behavior dstate' dstate''},
@@ -136,12 +136,12 @@ Inductive init (denv : DEnv) : DState -> cs -> DState -> Prop :=
 
       (* Sets the rst (i.e, reset) signal to ⊥ to trigger the
          evaluation of code related to "factory reset".  *)
-      vruninit denv (sstore_add rst (Vbool false) dstate) behavior dstate' ->
+      vruninit ed (sstore_add rst (Vbool false) dstate) behavior dstate' ->
 
       (* Sets the rst signal to ⊤, and no longer will it gain the
          value ⊥ during the whole simulation loop.  *)
-      stabilize denv (sstore_add rst (Vbool true) dstate') behavior dstate'' ->
+      stabilize ed (sstore_add rst (Vbool true) dstate') behavior dstate'' ->
       
       (* * Conclusion * *)
-      init denv dstate behavior dstate''.
+      init ed dstate behavior dstate''.
 

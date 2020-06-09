@@ -2,7 +2,7 @@
     part of a design, declared in abstract syntax.
 
     The result is the addition of entries refering to constant and
-    declared signal declarations in the design environment [denv] (Δ)
+    declared signal declarations in the design environment [ed] (Δ)
     and the mapping from declared signal id to their default value in
     the design state [dstate] (σ).  *)
 
@@ -20,20 +20,20 @@ Import NatMap.
 
 (** The architecture declarative part elaboration relation. *)
 
-Inductive edecls (denv : DEnv) (dstate : DState)  : list adecl -> DEnv -> DState -> Prop :=
+Inductive edecls (ed : ElDesign) (dstate : DState)  : list adecl -> ElDesign -> DState -> Prop :=
 
 (** Empty list of architecture declarations. *)
-| EDeclsNil : edecls denv dstate [] denv dstate
+| EDeclsNil : edecls ed dstate [] ed dstate
   
 (** Sequence of architecture declaration. *)
 | EDeclsCons :
-    forall {ad lofadecls denv' dstate' denv'' dstate''},
-      edecl denv dstate ad denv' dstate' ->
-      edecls denv' dstate' lofadecls denv'' dstate'' ->
-      edecls denv dstate (ad :: lofadecls) denv'' dstate''
+    forall {ad lofadecls ed' dstate' ed'' dstate''},
+      edecl ed dstate ad ed' dstate' ->
+      edecls ed' dstate' lofadecls ed'' dstate'' ->
+      edecls ed dstate (ad :: lofadecls) ed'' dstate''
 
 (** Defines the elaboration relation for single architecture declaration. *)
-with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
+with edecl (ed : ElDesign) (dstate : DState)  : adecl -> ElDesign -> DState -> Prop :=
   
 (** Signal declaration elaboration. *)
   
@@ -41,15 +41,15 @@ with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
     forall {tau t v id},
       
       (* Premises. *)
-      etype denv tau t ->
+      etype ed tau t ->
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NatMap.In id denv -> (* id ∉ Δ *)
+      ~NatMap.In id ed -> (* id ∉ Δ *)
       ~InSStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecl denv dstate (adecl_sig id tau) (add id (Declared t) denv) (sstore_add id v dstate)
+      edecl ed dstate (adecl_sig id tau) (add id (Declared t) ed) (sstore_add id v dstate)
 
 (** Constant declaration elaboration. *)
              
@@ -57,12 +57,12 @@ with edecl (denv : DEnv) (dstate : DState)  : adecl -> DEnv -> DState -> Prop :=
     forall {id tau e t v},
       
       (* Premises. *)
-      etype denv tau t ->
-      is_gstatic_expr denv e ->
-      vexpr denv dstate EmptyLEnv e v ->  
+      etype ed tau t ->
+      is_gstatic_expr ed e ->
+      vexpr ed dstate EmptyLEnv e v ->  
       
       (* Side conditions. *)
-      ~NatMap.In id denv -> (* id ∉ Δ *)
+      ~NatMap.In id ed -> (* id ∉ Δ *)
 
       (* Conclusion *)
-      edecl denv dstate (adecl_const id tau e) (add id (Constant t v) denv) dstate.
+      edecl ed dstate (adecl_const id tau e) (add id (Constant t v) ed) dstate.

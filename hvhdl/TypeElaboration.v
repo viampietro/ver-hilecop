@@ -8,17 +8,17 @@ Require Import ConstraintElaboration.
 
 (** The type elaboration relation (general definition). *)
 
-Inductive etype (denv : DEnv) : tind -> type -> Prop :=
-| ETypeBool : etype denv tind_boolean Tbool
+Inductive etype (ed : ElDesign) : tind -> type -> Prop :=
+| ETypeBool : etype ed tind_boolean Tbool
 | ETypeNat :
     forall {e e' n n'},
-      econstr denv e e' n n' ->
-      etype denv (tind_natural e e') (Tnat n n')
+      econstr ed e e' n n' ->
+      etype ed (tind_natural e e') (Tnat n n')
 | ETypeArray :
     forall {tau t e e' n n'},
-      etype denv tau t ->
-      econstr denv e e' n n' ->
-      etype denv (tind_array tau e e') (Tarray t n n').
+      etype ed tau t ->
+      econstr ed e e' n n' ->
+      etype ed (tind_array tau e e') (Tarray t n n').
 
 (** The type elaboration relation for generic constant type
     indication. *)

@@ -27,33 +27,33 @@ Import NatMap.
 (** Defines the relation that elaborates the declarative part of a
     process. *)
 
-Inductive evars (denv : DEnv) (lenv : LEnv) : list vdecl -> LEnv -> Prop :=
+Inductive evars (ed : ElDesign) (lenv : LEnv) : list vdecl -> LEnv -> Prop :=
 
 (* Elaborates an empty list of local variable declarations. *)
-| EVarsNil : evars denv lenv [] lenv
+| EVarsNil : evars ed lenv [] lenv
 
 (* Elaborates a non-empty list of local variable decls. *)
 | EVarsCons :
     forall {vd lofvdecls lenv' lenv''},
-      evar denv lenv vd lenv' ->
-      evars denv lenv' lofvdecls lenv'' ->
-      evars denv lenv (vd :: lofvdecls) lenv''
+      evar ed lenv vd lenv' ->
+      evars ed lenv' lofvdecls lenv'' ->
+      evars ed lenv (vd :: lofvdecls) lenv''
 
 (** Defines the elaboration relation for one local variable declaration. *)
-with evar (denv : DEnv) (lenv : LEnv) : vdecl -> LEnv -> Prop :=
+with evar (ed : ElDesign) (lenv : LEnv) : vdecl -> LEnv -> Prop :=
 | EVar :
     forall {tau t v id},
       
       (* Premises *)
-      etype denv tau t ->
+      etype ed tau t ->
       defaultv t v ->
 
       (* Side conditions *)
       ~NatMap.In id lenv ->            (* id ∉ Λ *)
-      ~NatMap.In id denv ->            (* id ∉ Δ *)
+      ~NatMap.In id ed ->            (* id ∉ Δ *)
 
       (* Conclusion *)
-      evar denv lenv (vdecl_ id tau) (add id (t, v) lenv).
+      evar ed lenv (vdecl_ id tau) (add id (t, v) lenv).
 
 (** ** Component instantiation elaboration. *)
 
@@ -82,7 +82,7 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
 
       (* Premises *)
       is_lstatic_expr e ->
-      vexpr EmptyDEnv EmptyDState EmptyLEnv e v ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv e v ->
 
       (* Side conditions *)
       ~NatMap.In id dimen ->
@@ -95,54 +95,54 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
 
 (** Defines the design elaboration relation. *)
 
-Inductive edesign (dstore : IdMap design) : IdMap value -> design -> DEnv -> DState -> Prop :=
+Inductive edesign (dstore : IdMap design) : IdMap value -> design -> ElDesign -> DState -> Prop :=
 | EDesign :
     forall {dimen entid archid gens ports adecls behavior
-                  denv denv' denv'' denv''' dstate dstate' dstate''},
+                  ed ed' ed'' ed''' dstate dstate' dstate''},
 
       (* Premises *)
-      egens EmptyDEnv dimen gens denv ->
-      eports denv EmptyDState ports denv' dstate ->
-      edecls denv' dstate adecls denv'' dstate' ->
-      ebeh dstore denv'' dstate' behavior denv''' dstate'' ->
+      egens EmptyElDesign dimen gens ed ->
+      eports ed EmptyDState ports ed' dstate ->
+      edecls ed' dstate adecls ed'' dstate' ->
+      ebeh dstore ed'' dstate' behavior ed''' dstate'' ->
       
       (* Conclusion *)
-      edesign dstore dimen (design_ entid archid gens ports adecls behavior) denv''' dstate''    
+      edesign dstore dimen (design_ entid archid gens ports adecls behavior) ed''' dstate''    
 
 (** Defines the relation that elaborates the concurrent statements
     defining the behavior of a design.  *)
 
-with ebeh (dstore : IdMap design) : DEnv -> DState -> cs -> DEnv -> DState -> Prop :=
+with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState -> Prop :=
 
 (** Elaborates and type-checks a process statement. *)
 | EBehPs :
-    forall {id sl vars stmt lenv denv dstate},
+    forall {id sl vars stmt lenv ed dstate},
 
       (* Premises *)
-      evars denv EmptyLEnv vars lenv ->
-      validss denv dstate lenv stmt ->
+      evars ed EmptyLEnv vars lenv ->
+      validss ed dstate lenv stmt ->
 
       (* Side conditions *)
-      ~NatMap.In id denv ->
+      ~NatMap.In id ed ->
       (* sl ⊆ Ins(Δ) ∪ Sigs(Δ) *)
       (forall {s},
           NatSet.In s sl ->
-          exists {t}, MapsTo s (Declared t) denv \/ MapsTo s (Input t) denv) ->
+          exists {t}, MapsTo s (Declared t) ed \/ MapsTo s (Input t) ed) ->
 
       (* Conclusion *)
-      ebeh dstore denv dstate (cs_ps id sl vars stmt) (NatMap.add id (Process lenv) denv) dstate
+      ebeh dstore ed dstate (cs_ps id sl vars stmt) (NatMap.add id (Process lenv) ed) dstate
 
 (** Elaborates and type-checks a component instantiation statement. *)
 | EBehComp :
-    forall {denv dstate idc ide gmap ipmap opmap
+    forall {ed dstate idc ide gmap ipmap opmap
                  entid archid gens ports adecls behavior
                  dimen cenv cstate cdesign},
 
       (* Premises *)
       emapg (NatMap.empty value) gmap dimen ->
       edesign dstore dimen cdesign cenv cstate ->
-      validipm denv cenv dstate ipmap ->
-      validopm denv cenv opmap ->
+      validipm ed cenv dstate ipmap ->
+      validopm ed cenv opmap ->
       
       (* Side conditions *)
       cdesign = design_ entid archid gens ports adecls behavior ->
@@ -150,4 +150,4 @@ with ebeh (dstore : IdMap design) : DEnv -> DState -> cs -> DEnv -> DState -> Pr
       (forall {g}, NatMap.In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
       
       (* Conclusion *)
-      ebeh dstore denv dstate (cs_comp idc ide gmap ipmap opmap) denv dstate.
+      ebeh dstore ed dstate (cs_comp idc ide gmap ipmap opmap) ed dstate.

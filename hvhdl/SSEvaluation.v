@@ -13,7 +13,7 @@ Open Scope abss_scope.
     [vseq] does not define error cases.
  *)
 
-Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
+Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
 
 (** Evaluates a signal assignment statement.
 
@@ -26,13 +26,13 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e newv t currv dstate'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e newv -> (* e ⇝ newv *)
+      vexpr ed dstate lenv e newv -> (* e ⇝ newv *)
       is_of_type newv t ->             (* newv ∈c t *)
 
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      (NatMap.MapsTo id (Declared t) denv \/ NatMap.MapsTo id (Output t) denv) -> 
+      (NatMap.MapsTo id (Declared t) ed \/ NatMap.MapsTo id (Output t) ed) -> 
       NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
 
       VEq newv currv (Some false) -> (* new value <> current value *)
@@ -41,7 +41,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       dstate' = (events_add id (sstore_add id newv dstate)) -> 
       
       (* * Conclusion: Δ,σ,Λ ⊢ id ⇐ e ⇝ σ',Λ * *)
-      vseq denv dstate lenv ($id @<== e) dstate' lenv
+      vseq ed dstate lenv ($id @<== e) dstate' lenv
 
 (** Evaluates a signal assignment statement.
 
@@ -53,18 +53,18 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e newv t currv},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e newv ->
+      vexpr ed dstate lenv e newv ->
       is_of_type newv t ->
 
       (* * Side conditions * *)
 
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      (NatMap.MapsTo id (Declared t) denv \/ NatMap.MapsTo id (Output t) denv) ->
+      (NatMap.MapsTo id (Declared t) ed \/ NatMap.MapsTo id (Output t) ed) ->
       NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
       VEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
-      vseq denv dstate lenv ($id @<== e) dstate lenv
+      vseq ed dstate lenv ($id @<== e) dstate lenv
 
 (** Evaluates a signal assignment statement.
 
@@ -77,18 +77,18 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e ei newv i t l u currlofv currv newlofv dstate'},
       
       (*  * Premises * *)
-      vexpr denv dstate lenv e newv ->
+      vexpr ed dstate lenv e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr denv dstate lenv ei (Vnat i) ->
+      vexpr ed dstate lenv ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
-      (NatMap.MapsTo id (Declared (Tarray t l u)) denv \/
-       NatMap.MapsTo id (Output (Tarray t l u)) denv) -> 
+      (NatMap.MapsTo id (Declared (Tarray t l u)) ed \/
+       NatMap.MapsTo id (Output (Tarray t l u)) ed) -> 
       NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
 
       get_at i currlofv = Some currv -> (* Retrieves current value at index i of currlofv *)
@@ -101,7 +101,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       dstate' = (events_add id (sstore_add id (Vlist newlofv) dstate)) ->
       
       (* Conclusion *)
-      vseq denv dstate lenv (id $[[ei]] @<== e) dstate' lenv
+      vseq ed dstate lenv (id $[[ei]] @<== e) dstate' lenv
 
 (** Evaluates a signal assignment statement.
 
@@ -113,25 +113,25 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e ei newv i t l u currlofv currv},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e newv ->
+      vexpr ed dstate lenv e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr denv dstate lenv ei (Vnat i) ->
+      vexpr ed dstate lenv ei (Vnat i) ->
       l <= i <= u ->
       
       (* Side conditions *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
-      (NatMap.MapsTo id (Declared (Tarray t l u)) denv \/
-       NatMap.MapsTo id (Output (Tarray t l u)) denv) -> 
+      (NatMap.MapsTo id (Declared (Tarray t l u)) ed \/
+       NatMap.MapsTo id (Output (Tarray t l u)) ed) -> 
       NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
 
       get_at i currlofv = Some currv -> (* Current value at index [i] of [currlofv] is [currv] *)
       VEq newv currv (Some true) -> (* new value = current value *)
             
       (* Conclusion *)
-      vseq denv dstate lenv (id $[[ei]] @<== e) dstate lenv
+      vseq ed dstate lenv (id $[[ei]] @<== e) dstate lenv
            
 (** Evaluates a variable assignment statement.
 
@@ -141,14 +141,14 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e newv t currv},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e newv ->
+      vexpr ed dstate lenv e newv ->
       is_of_type newv t ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, currv) lenv -> (* id ∈ Λ and Λ(id) = (t, currv) *)
       
       (* * Conclusion * *)
-      vseq denv dstate lenv ($id @:= e) dstate (NatMap.add id (t, newv) lenv)
+      vseq ed dstate lenv ($id @:= e) dstate (NatMap.add id (t, newv) lenv)
 
 (** Evaluates a variable assignment statement.
 
@@ -158,11 +158,11 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e ei newv i t l u currlofv newlofv},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e newv ->
+      vexpr ed dstate lenv e newv ->
       is_of_type newv t ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr denv dstate lenv ei (Vnat i) ->
+      vexpr ed dstate lenv ei (Vnat i) ->
       l <= i <= u ->      
 
       (* * Side conditions * *)
@@ -172,7 +172,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       set_at newv i currlofv = Some newlofv ->
       
       (* * Conclusion * *)
-      vseq denv dstate lenv (id $[[ei]] @:= e) dstate (NatMap.add id (Tarray t l u, (Vlist newlofv)) lenv)
+      vseq ed dstate lenv (id $[[ei]] @:= e) dstate (NatMap.add id (Tarray t l u, (Vlist newlofv)) lenv)
 
 (** Evaluates a simple if statement with a true condition. *)
 
@@ -180,11 +180,11 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {e stmt dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool true) ->
-      vseq denv dstate lenv stmt dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool true) ->
+      vseq ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseq denv dstate lenv (If e Then stmt) dstate' lenv'
+      vseq ed dstate lenv (If e Then stmt) dstate' lenv'
 
 (** Evaluates a simple if statement with a false condition. *)
 
@@ -192,10 +192,10 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {e stmt},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv e (Vbool false) ->
       
       (* * Conclusion * *)
-      vseq denv dstate lenv (If e Then stmt) dstate lenv
+      vseq ed dstate lenv (If e Then stmt) dstate lenv
 
 (** Evaluates a if-else statement with a true condition. *)
 
@@ -203,11 +203,11 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool true) ->
-      vseq denv dstate lenv stmt dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool true) ->
+      vseq ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseq denv dstate lenv (If e Then stmt Else stmt') dstate' lenv'
+      vseq ed dstate lenv (If e Then stmt Else stmt') dstate' lenv'
 
 (** Evaluates a if-else statement with a false condition. *)
 
@@ -215,11 +215,11 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool false) ->
-      vseq denv dstate lenv stmt' dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool false) ->
+      vseq ed dstate lenv stmt' dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseq denv dstate lenv (If e Then stmt Else stmt') dstate' lenv'
+      vseq ed dstate lenv (If e Then stmt Else stmt') dstate' lenv'
 
 (** Evaluates a loop statement.
     
@@ -230,17 +230,17 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e e' stmt n n' lenvi dstate' lenv'},
 
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vnat n) ->
-      vexpr denv dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv e (Vnat n) ->
+      vexpr ed dstate lenv e' (Vnat n') ->
       
-      vseq denv dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
+      vseq ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
 
       (* * Side conditions * *)
       ~NatMap.In id lenv ->     (* id ∉ Λ *)
       lenvi = NatMap.add id (Tnat n n', Vnat n) lenv -> (* lenvi = lenv ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
-      vseq denv dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
+      vseq ed dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
 
 (** Evaluates a loop statement.
     
@@ -254,16 +254,16 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr denv dstate lenvi (#id @= e') (Vbool false) ->
-      vseq denv dstate lenvi stmt dstate' lenv' ->
-      vseq denv dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
+      vexpr ed dstate lenvi (#id @= e') (Vbool false) ->
+      vseq ed dstate lenvi stmt dstate' lenv' ->
+      vseq ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
       lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
 
       (* * Conclusion * *)
-      vseq denv dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
+      vseq ed dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
            
 (** Evaluates a loop statement.
     
@@ -275,7 +275,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {id e e' stmt t n lenvi},
 
       (* * Premises * *)
-      vexpr denv dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
@@ -283,7 +283,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
 
       (* * Conclusion * *)
       (* Removes the binding of id from the local environment. *)
-      vseq denv dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
+      vseq ed dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
            
 (** Evaluates a rising edge block statement.
 
@@ -291,7 +291,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     blocks. See [vseqfe] and [vseqre] for evaluation of synchronous
     statement blocks. *)
            
-| VSeqRising : forall {stmt}, vseq denv dstate lenv (Rising stmt) dstate lenv
+| VSeqRising : forall {stmt}, vseq ed dstate lenv (Rising stmt) dstate lenv
 
 (** Evaluates a falling edge block statement.
 
@@ -299,7 +299,7 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     blocks. See [vseqfe] and [vseqre] for evaluation of synchronous
     statement blocks. *)
                                    
-| VSeqFalling : forall {stmt}, vseq denv dstate lenv (Falling stmt) dstate lenv
+| VSeqFalling : forall {stmt}, vseq ed dstate lenv (Falling stmt) dstate lenv
 
 (** Evaluates a sequence of statements. *)
 
@@ -307,17 +307,17 @@ Inductive vseq (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> L
     forall {stmt stmt' dstate' lenv' dstate'' lenv''},
       
       (* * Premises * *)
-      vseq denv dstate lenv stmt dstate' lenv' ->
-      vseq denv dstate' lenv' stmt dstate'' lenv'' ->
+      vseq ed dstate lenv stmt dstate' lenv' ->
+      vseq ed dstate' lenv' stmt dstate'' lenv'' ->
 
       (* * Conclusion * *)
-      vseq denv dstate lenv (stmt ;; stmt') dstate'' lenv''.
+      vseq ed dstate lenv (stmt ;; stmt') dstate'' lenv''.
   
 (** Defines the relation that evaluates the sequential statements of
     H-VHDL, including the rising edge block statements (only executed
     at the rising edge of the clock signal).  *)
 
-Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
+Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
 
 (** Evaluates a signal assignment statement. *)
   
@@ -325,10 +325,10 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {sname e dstate' lenv'},
       
       (* Premises *)
-      vseq denv dstate lenv (ss_sig sname e) dstate' lenv' ->
+      vseq ed dstate lenv (ss_sig sname e) dstate' lenv' ->
            
       (* Conclusion *)
-      vseqre denv dstate lenv (ss_sig sname e) dstate' lenv'
+      vseqre ed dstate lenv (ss_sig sname e) dstate' lenv'
            
 (** Evaluates a variable assignment statement.
 
@@ -338,10 +338,10 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {vname e dstate' lenv'},
       
       (* Premises *)
-      vseq denv dstate lenv (ss_sig vname e) dstate' lenv' ->
+      vseq ed dstate lenv (ss_sig vname e) dstate' lenv' ->
       
       (* Conclusion *)
-      vseqre denv dstate lenv (ss_var vname e) dstate' lenv'
+      vseqre ed dstate lenv (ss_var vname e) dstate' lenv'
 
 (** Evaluates a simple if statement with a true condition. *)
 
@@ -349,11 +349,11 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool true) ->
-      vseqre denv dstate lenv stmt dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool true) ->
+      vseqre ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseqre denv dstate lenv (ss_if e stmt) dstate' lenv'
+      vseqre ed dstate lenv (ss_if e stmt) dstate' lenv'
 
 (** Evaluates a simple if statement with a false condition. *)
 
@@ -361,10 +361,10 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv e (Vbool false) ->
       
       (* * Conclusion * *)
-      vseqre denv dstate lenv (ss_if e stmt) dstate lenv
+      vseqre ed dstate lenv (ss_if e stmt) dstate lenv
 
 (** Evaluates a if-else statement with a true condition. *)
 
@@ -372,11 +372,11 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool true) ->
-      vseqre denv dstate lenv stmt dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool true) ->
+      vseqre ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseqre denv dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
+      vseqre ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
 
 (** Evaluates a if-else statement with a false condition. *)
 
@@ -384,11 +384,11 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool false) ->
-      vseqre denv dstate lenv stmt' dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool false) ->
+      vseqre ed dstate lenv stmt' dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseqre denv dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
+      vseqre ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
            
 
 (** Evaluates a loop statement.
@@ -400,17 +400,17 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e e' stmt n n' lenvi dstate' lenv'},
 
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vnat n) ->
-      vexpr denv dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv e (Vnat n) ->
+      vexpr ed dstate lenv e' (Vnat n') ->
       
-      vseqre denv dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
+      vseqre ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
 
       (* * Side conditions * *)
       ~NatMap.In id lenv ->     (* id ∉ Λ *)
       lenvi = NatMap.add id (Tnat n n', Vnat n) lenv -> (* lenvi = lenv ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
-      vseqre denv dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
+      vseqre ed dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
 
 (** Evaluates a loop statement.
     
@@ -424,16 +424,16 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr denv dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
-      vseqre denv dstate lenvi stmt dstate' lenv' ->
-      vseqre denv dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
+      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
+      vseqre ed dstate lenvi stmt dstate' lenv' ->
+      vseqre ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
       lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
 
       (* * Conclusion * *)
-      vseqre denv dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
+      vseqre ed dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
            
 (** Evaluates a loop statement.
     
@@ -445,7 +445,7 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e e' stmt t n lenvi},
 
       (* * Premises * *)
-      vexpr denv dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
@@ -453,7 +453,7 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
 
       (* * Conclusion * *)
       (* Remove the binding of id from the local environment. *)
-      vseqre denv dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
+      vseqre ed dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
            
 (** Evaluates a rising edge block statement. 
     Contrary to [vseq], [vseqre] evaluates rising edge blocks.
@@ -462,14 +462,14 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
 | VSeqRERising :
     forall {stmt dstate' lenv'},
       (* * Premises * *)
-      vseqre denv dstate lenv stmt dstate' lenv' ->
+      vseqre ed dstate lenv stmt dstate' lenv' ->
 
       (* * Conclusion * *)
-      vseqre denv dstate lenv (ss_rising stmt) dstate' lenv'
+      vseqre ed dstate lenv (ss_rising stmt) dstate' lenv'
 
 (** Evaluates a falling edge block statement (do nothing). *)
                                    
-| VSeqREFalling : forall {stmt}, vseqre denv dstate lenv (ss_falling stmt) dstate lenv
+| VSeqREFalling : forall {stmt}, vseqre ed dstate lenv (ss_falling stmt) dstate lenv
 
 (** Evaluates a sequence of statements. *)
 
@@ -477,17 +477,17 @@ Inductive vseqre (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {stmt stmt' dstate' lenv' dstate'' lenv''},
       
       (* * Premises * *)
-      vseqre denv dstate lenv stmt dstate' lenv' ->
-      vseqre denv dstate' lenv' stmt dstate'' lenv'' ->
+      vseqre ed dstate lenv stmt dstate' lenv' ->
+      vseqre ed dstate' lenv' stmt dstate'' lenv'' ->
 
       (* * Conclusion * *)
-      vseqre denv dstate lenv (ss_seq stmt stmt') dstate'' lenv''.
+      vseqre ed dstate lenv (ss_seq stmt stmt') dstate'' lenv''.
 
 (** Defines the relation that evaluates the sequential statements of
     H-VHDL, including the falling edge block statements (only executed
     at the falling edge of the clock signal).  *)
 
-Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
+Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
 
 (** Evaluates a signal assignment statement. *)
   
@@ -495,10 +495,10 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {sname e dstate' lenv'},
       
       (* Premises *)
-      vseq denv dstate lenv (ss_sig sname e) dstate' lenv' ->
+      vseq ed dstate lenv (ss_sig sname e) dstate' lenv' ->
            
       (* Conclusion *)
-      vseqfe denv dstate lenv (ss_sig sname e) dstate' lenv'
+      vseqfe ed dstate lenv (ss_sig sname e) dstate' lenv'
            
 (** Evaluates a variable assignment statement.
 
@@ -508,10 +508,10 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {vname e dstate' lenv'},
       
       (* Premises *)
-      vseq denv dstate lenv (ss_sig vname e) dstate' lenv' ->
+      vseq ed dstate lenv (ss_sig vname e) dstate' lenv' ->
       
       (* Conclusion *)
-      vseqfe denv dstate lenv (ss_var vname e) dstate' lenv'
+      vseqfe ed dstate lenv (ss_var vname e) dstate' lenv'
 
 (** Evaluates a simple if statement with a true condition. *)
 
@@ -519,11 +519,11 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool true) ->
-      vseqfe denv dstate lenv stmt dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool true) ->
+      vseqfe ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (ss_if e stmt) dstate' lenv'
+      vseqfe ed dstate lenv (ss_if e stmt) dstate' lenv'
 
 (** Evaluates a simple if statement with a false condition. *)
 
@@ -531,10 +531,10 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv e (Vbool false) ->
       
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (ss_if e stmt) dstate lenv
+      vseqfe ed dstate lenv (ss_if e stmt) dstate lenv
 
 (** Evaluates a if-else statement with a true condition. *)
 
@@ -542,11 +542,11 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool true) ->
-      vseqfe denv dstate lenv stmt dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool true) ->
+      vseqfe ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
+      vseqfe ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
 
 (** Evaluates a if-else statement with a false condition. *)
 
@@ -554,11 +554,11 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vbool false) ->
-      vseqfe denv dstate lenv stmt' dstate' lenv' ->
+      vexpr ed dstate lenv e (Vbool false) ->
+      vseqfe ed dstate lenv stmt' dstate' lenv' ->
       
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
+      vseqfe ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
            
 
 (** Evaluates a loop statement.
@@ -570,17 +570,17 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e e' stmt n n' lenvi dstate' lenv'},
 
       (* * Premises * *)
-      vexpr denv dstate lenv e (Vnat n) ->
-      vexpr denv dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv e (Vnat n) ->
+      vexpr ed dstate lenv e' (Vnat n') ->
       
-      vseqfe denv dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
+      vseqfe ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
 
       (* * Side conditions * *)
       ~NatMap.In id lenv ->     (* id ∉ Λ *)
       lenvi = NatMap.add id (Tnat n n', Vnat n) lenv -> (* lenvi = lenv ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
+      vseqfe ed dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
 
 (** Evaluates a loop statement.
     
@@ -594,16 +594,16 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr denv dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
-      vseqfe denv dstate lenvi stmt dstate' lenv' ->
-      vseqfe denv dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
+      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
+      vseqfe ed dstate lenvi stmt dstate' lenv' ->
+      vseqfe ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
       lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
 
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
+      vseqfe ed dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
            
 (** Evaluates a loop statement.
     
@@ -615,7 +615,7 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e e' stmt t n lenvi},
 
       (* * Premises * *)
-      vexpr denv dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
@@ -623,7 +623,7 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
 
       (* * Conclusion * *)
       (* Remove the binding of id from the local environment. *)
-      vseqfe denv dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
+      vseqfe ed dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
            
 (** Evaluates a falling edge block statement.  Contrary to [vseq] and
     [vseqre], [vseqfe] evaluates falling edge blocks.  *)
@@ -631,14 +631,14 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
 | VSeqFEFalling :
     forall {stmt dstate' lenv'},
       (* * Premises * *)
-      vseqfe denv dstate lenv stmt dstate' lenv' ->
+      vseqfe ed dstate lenv stmt dstate' lenv' ->
 
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (ss_falling stmt) dstate' lenv'
+      vseqfe ed dstate lenv (ss_falling stmt) dstate' lenv'
 
 (** Evaluates a rising edge block statement (does nothing). *)
                                    
-| VSeqFERising : forall {stmt}, vseqfe denv dstate lenv (ss_rising stmt) dstate lenv
+| VSeqFERising : forall {stmt}, vseqfe ed dstate lenv (ss_rising stmt) dstate lenv
 
 (** Evaluates a sequence of statements. *)
 
@@ -646,8 +646,8 @@ Inductive vseqfe (denv : DEnv) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {stmt stmt' dstate' lenv' dstate'' lenv''},
       
       (* * Premises * *)
-      vseqfe denv dstate lenv stmt dstate' lenv' ->
-      vseqfe denv dstate' lenv' stmt dstate'' lenv'' ->
+      vseqfe ed dstate lenv stmt dstate' lenv' ->
+      vseqfe ed dstate' lenv' stmt dstate'' lenv'' ->
 
       (* * Conclusion * *)
-      vseqfe denv dstate lenv (ss_seq stmt stmt') dstate'' lenv''.
+      vseqfe ed dstate lenv (ss_seq stmt stmt') dstate'' lenv''.

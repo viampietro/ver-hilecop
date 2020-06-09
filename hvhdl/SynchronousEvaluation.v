@@ -19,7 +19,7 @@ Require Import NatSet.
 (** Defines the relation that evaluates concurrent statement in
     reaction to the rising edge event of the clock signal. *)
 
-Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
+Inductive vrising (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement that does not hold the reserved
     identifier [clk] (referring to the clock signal identifier) in its
@@ -32,7 +32,7 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       ~NatSet.In clk sl ->
       
       (* * Conclusion * *)
-      vrising denv dstate (cs_ps pid sl vars stmt) dstate
+      vrising ed dstate (cs_ps pid sl vars stmt) dstate
 
 (** Evaluates a process statement that is sensitive to the clock
     signal.
@@ -45,14 +45,14 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {pid sl vars stmt lenv dstate' lenv'},
 
       (* * Premises * *)
-      vseqre denv dstate lenv stmt dstate' lenv' ->
+      vseqre ed dstate lenv stmt dstate' lenv' ->
       
       (* * Side conditions * *)
       NatSet.In clk sl ->
-      NatMap.MapsTo pid (Process lenv) denv ->
+      NatMap.MapsTo pid (Process lenv) ed ->
       
       (* * Conclusion * *)
-      vrising denv dstate (cs_ps pid sl vars stmt) dstate'
+      vrising ed dstate (cs_ps pid sl vars stmt) dstate'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -65,14 +65,14 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vrising cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -83,7 +83,7 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* * Conclusion * *)
       (* Add compid to the events field of dstate' because compid
          registered some events in its internal state. *)
-      vrising denv dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+      vrising ed dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -94,14 +94,14 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vrising cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -110,7 +110,7 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       events cstate'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vrising denv dstate (cs_comp compid entid gmap ipmap opmap) dstate'
+      vrising ed dstate (cs_comp compid entid gmap ipmap opmap) dstate'
 
 (** Evaluates the parallel execution of two synchronous concurrent
     statements.  *)
@@ -119,8 +119,8 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' dstate' dstate'' merged},
 
       (* * Premises * *)
-      vrising denv dstate cstmt dstate' ->
-      vrising denv dstate cstmt' dstate'' ->
+      vrising ed dstate cstmt dstate' ->
+      vrising ed dstate cstmt' dstate'' ->
 
       (* * Side conditions * *)
       
@@ -132,12 +132,12 @@ Inductive vrising (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       IsMergedDState dstate dstate' dstate'' merged ->
       
       (* * Conclusion * *)
-      vrising denv dstate (cstmt // cstmt') merged.
+      vrising ed dstate (cstmt // cstmt') merged.
 
 (** Defines the relation that evaluates concurrent statement in
     reaction to the falling edge event of the clock signal. *)
 
-Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
+Inductive vfalling (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement that does not hold the reserved
     identifier [clk] (referring to the clock signal identifier) in its
@@ -150,7 +150,7 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       ~NatSet.In clk sl ->
       
       (* * Conclusion * *)
-      vfalling denv dstate (cs_ps pid sl vars stmt) dstate
+      vfalling ed dstate (cs_ps pid sl vars stmt) dstate
 
 (** Evaluates a process statement that is sensitive to the clock
     signal.
@@ -163,14 +163,14 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {pid sl vars stmt lenv dstate' lenv'},
 
       (* * Premises * *)
-      vseqre denv dstate lenv stmt dstate' lenv' ->
+      vseqre ed dstate lenv stmt dstate' lenv' ->
       
       (* * Side conditions * *)
       NatSet.In clk sl ->
-      NatMap.MapsTo pid (Process lenv) denv ->
+      NatMap.MapsTo pid (Process lenv) ed ->
       
       (* * Conclusion * *)
-      vfalling denv dstate (cs_ps pid sl vars stmt) dstate'
+      vfalling ed dstate (cs_ps pid sl vars stmt) dstate'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -183,14 +183,14 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vfalling cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -201,7 +201,7 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       (* * Conclusion * *)
       (* Add compid to the events field of dstate' because compid
          registered some events in its internal state. *)
-      vfalling denv dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+      vfalling ed dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -212,14 +212,14 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
                    cenv cstate cstate' cstate'' dstate'},
       
       (* * Premises * *)
-      mapip denv cenv dstate cstate ipmap cstate' ->
+      mapip ed cenv dstate cstate ipmap cstate' ->
       vfalling cenv cstate' cstmt cstate'' ->
-      mapop denv cenv dstate cstate'' opmap dstate' ->
+      mapop ed cenv dstate cstate'' opmap dstate' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) denv ->
+      NatMap.MapsTo compid (Component cenv cstmt) ed ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
       NatMap.MapsTo compid cstate (compstore dstate) ->
@@ -228,7 +228,7 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       events cstate'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vfalling denv dstate (cs_comp compid entid gmap ipmap opmap) dstate'
+      vfalling ed dstate (cs_comp compid entid gmap ipmap opmap) dstate'
 
 (** Evaluates the parallel execution of two synchronous concurrent
     statements.  *)
@@ -237,8 +237,8 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' dstate' dstate'' merged},
 
       (* * Premises * *)
-      vfalling denv dstate cstmt dstate' ->
-      vfalling denv dstate cstmt' dstate'' ->
+      vfalling ed dstate cstmt dstate' ->
+      vfalling ed dstate cstmt' dstate'' ->
 
       (* * Side conditions * *)
       
@@ -250,4 +250,4 @@ Inductive vfalling (denv : DEnv) (dstate : DState) : cs -> DState -> Prop :=
       IsMergedDState dstate dstate' dstate'' merged ->
       
       (* * Conclusion * *)
-      vfalling denv dstate (cstmt // cstmt') merged.
+      vfalling ed dstate (cstmt // cstmt') merged.

@@ -146,12 +146,12 @@ Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitpn -> n
 
 (** Defines the Sitpn state transition relation. *)
 
-Inductive SitpnStateTransition (sitpn : Sitpn) (s s' : SitpnState sitpn) (env : C sitpn -> nat -> bool) (tau : nat) : Clk -> Prop :=
+Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s s' : SitpnState sitpn) : Clk -> Prop :=
 | SitpnStateTransition_falling :
 
     (** Captures the new value of conditions, and determines the
         activation status for actions.  *)
-    (forall c, (cond s' c) = (env c tau)) ->
+    (forall c, (cond s' c) = (E tau c)) ->
     (forall a, (exists p, (M s p) > 0 /\ has_A p a = true) -> (exa s' a) = true) ->
     (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (exa s' a) = false) ->    
 
@@ -176,7 +176,7 @@ Inductive SitpnStateTransition (sitpn : Sitpn) (s s' : SitpnState sitpn) (env : 
     (forall f, exf s f = exf s' f) ->
     
     (** Conclusion *)
-    SitpnStateTransition s s' env tau falling_edge
+    SitpnStateTransition E tau s s' falling_edge
 
 | SitpnStateTransition_rising:
 
@@ -207,7 +207,27 @@ Inductive SitpnStateTransition (sitpn : Sitpn) (s s' : SitpnState sitpn) (env : 
     (forall a, exa s' a = exa s a) ->
     
     (** Conclusion *)
-    SitpnStateTransition s s' env tau rising_edge.    
+    SitpnStateTransition E tau s s' rising_edge.    
+
+(** ** SITPN Execution Relations *)
+
+(** Defines the SITPN Cycle Relation. 
+    Relates two SitpnState over one cycle of execution.
+ *)
+
+Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s s'' : SitpnState sitpn) :=
+  exists s', SitpnStateTransition E tau s s' rising_edge /\ SitpnStateTransition E tau s' s'' falling_edge.
+
+(** Defines the SITPN Execution Relation. *)
+
+Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> SitpnState sitpn -> Prop :=
+| SitpnExecute_end : SitpnExecute E s 0 s
+| SitpnExecute_loop: forall tau s' s'',
+    tau > 0 ->
+    SitpnCycle E tau s s' ->
+    SitpnExecute E s' (tau - 1) s'' ->
+    SitpnExecute E s tau s''.
+
 
 
 

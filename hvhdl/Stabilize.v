@@ -13,7 +13,7 @@ Require Import CombinationalEvaluation.
 
 (** Defines the stabilization relation. *)
 
-Inductive stabilize (denv : DEnv) (dstate : DState) (behavior : cs) : DState -> Prop :=
+Inductive stabilize (ed : ElDesign) (dstate : DState) (behavior : cs) : DState -> Prop :=
 
 (** Case when the design state [dstate] registered no event; it has
     stabilized.  *)
@@ -23,7 +23,7 @@ Inductive stabilize (denv : DEnv) (dstate : DState) (behavior : cs) : DState -> 
     events dstate = NatSet.empty ->
     
     (* * Conclusion * *)
-    stabilize denv dstate behavior dstate 
+    stabilize ed dstate behavior dstate 
   
 (** Case when the design state [dstate] registered some events;
     therefore it has not stabilized.
@@ -35,12 +35,12 @@ Inductive stabilize (denv : DEnv) (dstate : DState) (behavior : cs) : DState -> 
     forall {dstate' dstate''},
       
       (* * Premises * *)
-      vcomb denv dstate behavior dstate' ->
-      stabilize denv dstate' behavior dstate'' ->
+      vcomb ed dstate behavior dstate' ->
+      stabilize ed dstate' behavior dstate'' ->
 
       (* * Side conditions * *)
       (* Some events are registered in dstate. *)
       events dstate <> NatSet.empty ->
       
       (* * Conclusion * *)
-      stabilize denv dstate behavior dstate''.
+      stabilize ed dstate behavior dstate''.
