@@ -48,7 +48,7 @@ Definition Firable (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
  *)
 
 Definition IsPriorityAndFirable (sitpn : Sitpn) (s : SitpnState sitpn) (t t' : T sitpn) : Prop :=
-  pr t' t = true /\ Firable s t'.
+  t' >~ t = true /\ Firable s t'.
 
 (** Subset of transitions that are firable and have a higher firing
     priority than [t]. *)
@@ -228,7 +228,18 @@ Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn)
     SitpnExecute E s' (tau - 1) s'' ->
     SitpnExecute E s tau s''.
 
+(** Converts the Is partial function, which associates static time intervals
+    to transitions, into an application from Ti to dynamic time intervals. *)
 
+Definition Is_to_I (sitpn : Sitpn) : { t | (@Is sitpn t) <> None } -> DynamicTimeInterval.
+  refine (fun tex => let '(exist _ t pf) := tex in _);
+    destruct Is; [ destruct s; exact (itval) | contradiction ].
+Defined.
+
+(** Defines the initial state of an SITPN. *)
+
+Definition s0 sitpn : SitpnState sitpn :=
+  BuildSitpnState (fun _ => False) (@M0 sitpn) (@Is_to_I sitpn) nullb nullb nullb nullb.
 
 
 

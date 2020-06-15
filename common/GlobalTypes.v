@@ -119,3 +119,6 @@ Arguments Err {A}.
 
 Notation "$$ n" := (of_nat n) (at level 0, only parsing).
 
+(** ** Global definitions for bool *)
+
+Definition nullb {A : Type} := fun _ : A => false.
