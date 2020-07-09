@@ -14,7 +14,6 @@ Require Import HVhdlTypes.
 Require Import Environment.
 Require Import SemanticalDomains.
 Require Import Simulation.
-Require Import SimulationFacts.
 Require Import DesignElaboration.
 Require Import AbstractSyntax.
 Require Import HilecopDesignStore.
@@ -39,7 +38,7 @@ Require Import Coq.Program.Equality.
     ports of design [d] that implements the conditions of [sitpn].
 *)
 
-Definition EnvEq sitpn (Ec : nat -> C sitpn -> bool) (Ep : nat -> Clk -> IdMap value) : Prop := True.
+Definition EnvEq sitpn (Ec : nat -> C sitpn -> bool) (Ep : nat -> Clk -> IdMap value) : Prop := False.
 
 (** Defines the state similarity relation between an SITPN state and
     a H-VHDL design state.
@@ -55,7 +54,7 @@ Lemma simulation_lemma :
     (* From state s1 to state s2 after tau execution cycles. *)
     SitpnExecute Ec s1 tau s2 ->
 
-    forall  Mg d Ep dstate1 dstate2 ed dstate mm,
+    forall  Mg d Ep dstate1 dstate2 ed dstatee mm,
       
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
@@ -64,7 +63,7 @@ Lemma simulation_lemma :
     EnvEq sitpn Ec Ep ->
 
     (* ed, dstate are the results of the elaboration of d. *)
-    edesign hdstore Mg d ed dstate ->
+    edesign hdstore Mg d ed dstatee ->
 
     (* States s1 and dstate1 are similar; *)
     SimState s1 dstate1 ->
@@ -79,36 +78,28 @@ Proof.
     intros *; intros Htransl Henveq Helab Hsimstate Hsim.
   
   (* CASE tau = 0, trivial. *)
-  - apply simloop_eqstate_at_0 in Hsim; rewrite <- Hsim; assumption.
+  - inversion Hsim. rewrite <- H0; assumption.
 
   (* CASE tau > 0 *)
-  -
-    (* Adds premises of simloop relation in the context (using a lemma
-       instead of inversion). *)
-    match goal with
-    | [ H: tau > 0 |- _ ] => 
-      specialize (simloop_tau_gt0 Ep ed dstate1 (get_behavior d) dstate2 tau H Hsim) as Hex;
-        inversion_clear Hex as (dstate' & Hcyc & Hsim')
-    end.
-
+  - inversion_clear Hsim as [ tau0 dstate' dstate'' Hcyc Hsiml Heqtau Heqdstate |  ].
     (* Specializes the induction hypothesis, then apply the step lemma. *)
-    specialize (IHHexec Mg d Ep dstate' dstate2 ed dstate mm Htransl Henveq Helab).
+    specialize (IHHexec Mg d Ep dstate' dstate2 ed dstatee mm Htransl Henveq Helab).
     
 Admitted.
 
 (** ** Equal Initial States  *)
 
 Lemma init_states_sim :
-  forall sitpn mm d Mg ed dstate dstate0,
+  forall sitpn mm d Mg ed dstatee dstate0,
     
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
 
     (* ed, dstate are the results of the elaboration of d. *)
-    edesign hdstore Mg d ed dstate ->
+    edesign hdstore Mg d ed dstatee ->
 
     (* initialization d's state. *)
-    init ed dstate (get_behavior d) dstate0 ->
+    init ed dstatee (get_behavior d) dstate0 ->
 
     (* init states are similar *)
     SimState (s0 sitpn) dstate0.
@@ -118,7 +109,7 @@ Admitted.
 (** ** Semantic Preservation Theorem *)
 
 Theorem sitpn2vhdl_sound :
-  forall sitpn Ec tau s d Mg Ep dstate mm,
+  forall sitpn Ec tau s' d Mg Ep dstate' mm,
 
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
@@ -127,15 +118,30 @@ Theorem sitpn2vhdl_sound :
     EnvEq sitpn Ec Ep ->      
 
     (* sitpn is in state s after tau execution cycles. *)
-    SitpnExecute Ec (s0 sitpn) tau s ->
+    SitpnExecute Ec (s0 sitpn) tau s' ->
     
     (* d is in state dstate after tau execution cycles. *)
-    simwf hdstore Mg Ep tau d dstate ->
+    simwf hdstore Mg Ep tau d dstate' ->
 
     (* ** Conclusion: final states are equal. ** *)
-    SimState s dstate.
+    SimState s' dstate'.
 Proof.
   inversion_clear 4.
-  specialize (init_states_sim sitpn mm d Mg ed dstate0 dstate1 H H3 H4) as Hinit_eq.
-  apply (simulation_lemma sitpn d Ep Ec Mg (s0 sitpn) s dstate1 dstate ed dstate0 tau mm H H0 H3 Hinit_eq H1 H5).
+
+  match goal with
+  | [
+    Htransl: sitpn_to_hvhdl _ _ = _,
+    Henveq: EnvEq _ _ _,
+    Hsitpnexec: SitpnExecute _ _ _ _,
+    Helab: edesign _ _ _ _ _,
+    Hinit: init _ _ _ _,
+    Hsimloop: simloop _ _ _ _ _ _
+    |- _ ] =>
+    specialize (init_states_sim sitpn mm d Mg ed dstatee dstate0 Htransl Helab Hinit) as Hinit_eq; 
+      apply (simulation_lemma sitpn Ec (s0 sitpn) s' tau Hsitpnexec 
+                              Mg d Ep dstate0 dstate' ed dstatee mm
+                              Htransl Henveq Helab Hinit_eq Hsimloop)
+  end.
+
 Qed.
+  

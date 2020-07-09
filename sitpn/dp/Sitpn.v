@@ -144,14 +144,11 @@ Record SitpnState (sitpn : Sitpn) :=
       
       M : P sitpn -> nat;
 
-      (* Current state of time intervals. *)
+      (* Current state of time counters. *)
       
-      I : Ti sitpn -> DynamicTimeInterval;
+      I : Ti sitpn -> option nat;
 
-      (* - On falling edge: orders to reset time counters at this
-           cycle.  
-         - On rising edge: orders to reset time counters at the
-           next cycle. *)
+      (* Orders to reset time counters. *)
       
       reset : Ti sitpn -> bool;
 

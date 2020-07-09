@@ -28,14 +28,14 @@ Require Import HVhdlTypes.
     phases that happen during a cycle, and generates a new design
     state.
 
-    - [Ep] is the function yielding the values of input ports at a
+    - [Pi] is the function yielding the values of input ports at a
       given simulation time and for a given clock signal event.
       
     - [tau] corresponds to the number of simulation cycles that are
       yet to be executed.  *)
 
 Inductive simcycle
-          (Ep : nat -> Clk -> IdMap value)
+          (Pi : nat -> Clk -> IdMap value)
           (ed : ElDesign)
           (tau : nat)
           (dstate : DState)
@@ -46,6 +46,7 @@ Inductive simcycle
     forall {dstate_re dstate_fe dstate1 dstate2 dstate3 dstate'},
       
       (* * Premises * *)
+      
       vrising ed dstate_re behavior dstate1 ->
       stabilize ed dstate1 behavior dstate2 ->
       vfalling ed dstate_fe behavior dstate3 ->
@@ -57,13 +58,13 @@ Inductive simcycle
          differentiated intersection. *)
       
       (* σ = <S, C, E> and σre = <S ⊌ Pi(Tc, ↑), C, E ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState dstate (Ep tau rising_edge) dstate_re ->
+      IsInjectedDState dstate (Pi tau rising_edge) dstate_re ->
 
       (* σ2 = <S2, C2, E2> and σfe = <S2 ∪← Pi(Tc, ↓), C2, E2 ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState dstate2 (Ep tau falling_edge) dstate_fe ->
+      IsInjectedDState dstate2 (Pi tau falling_edge) dstate_fe ->
       
       (* * Conclusion * *)
-      simcycle Ep ed tau dstate behavior dstate'.
+      simcycle Pi ed tau dstate behavior dstate'.
 
 (** Defines the simulation loop relation, that relates the design
     state through simulation cycles, until the time counter reaches
@@ -74,7 +75,7 @@ Inductive simcycle
     of the simulation.  *)
 
 Inductive simloop
-          (Ep : nat -> Clk -> IdMap value)
+          (Pi : nat -> Clk -> IdMap value)
           (ed : ElDesign)
           (dstate : DState)
           (behavior : cs) : nat -> DState -> Prop :=
@@ -85,18 +86,15 @@ Inductive simloop
     forall {tau dstate' dstate''},
 
       (* * Premises * *)
-      simcycle Ep ed tau dstate behavior dstate' ->
-      simloop Ep ed dstate' behavior (tau - 1) dstate'' ->
-      
-      (* * Side conditions * *)
-      tau > 0 ->
-      
+      simcycle Pi ed (S tau) dstate behavior dstate' ->
+      simloop Pi ed dstate' behavior tau dstate'' ->
+            
       (* * Conclusion * *)
-      simloop Ep ed dstate behavior tau dstate''
+      simloop Pi ed dstate behavior (S tau) dstate''
 
 (** Stops if time counter is zero. *)
 | SimLoopEnd :
-    simloop Ep ed dstate behavior 0 dstate.
+    simloop Pi ed dstate behavior 0 dstate.
 
 (** Defines the whole workflow necessary to simulate a H-VHDL
     description (elaboration + simulation).
@@ -108,7 +106,7 @@ Inductive simloop
     - [Mg], the dimensioning (partial) function that yields the
       values attached to the generic constant of the design.
 
-    - [Ep], the function that yields the values for the input
+    - [Pi], the function that yields the values for the input
       ports of the design at a certain time and clock event.
 
     - [tau], the number of simulation cycle to be performed after
@@ -120,18 +118,18 @@ Inductive simloop
 Inductive simwf
           (dstore : IdMap design)
           (Mg : IdMap value)
-          (Ep : nat -> Clk -> IdMap value)
+          (Pi : nat -> Clk -> IdMap value)
           (tau : nat)
           (d : design) : DState -> Prop :=
   
 | SimWorkflow :
-    forall {ed dstate dstate0 dstate'},
+    forall {ed dstatee dstate0 dstate'},
       
       (* * Premises * *)
 
-      edesign dstore Mg d ed dstate ->                   (* Elaboration *)
-      init ed dstate (get_behavior d) dstate0 ->            (* Initialization *)
-      simloop Ep ed dstate0 (get_behavior d) tau dstate' -> (* Simulation loop *)
+      edesign dstore Mg d ed dstatee ->                      (* Elaboration *)
+      init ed dstatee (get_behavior d) dstate0 ->            (* Initialization *)
+      simloop Pi ed dstate0 (get_behavior d) tau dstate' -> (* Simulation loop *)
                     
       (* * Conclusion * *)
-      simwf dstore Mg Ep tau d dstate'.
+      simwf dstore Mg Pi tau d dstate'.

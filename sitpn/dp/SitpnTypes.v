@@ -39,6 +39,15 @@ Definition le_nat_natinf (n : nat) (ni : natinf) : ni <> i+ -> Prop :=
   | ninat m => (fun _ => n <= m)
   end.
 
+(** Defines the equality relation between a nat and a
+    natinf. *)
+
+Definition eq_nat_natinf (n : nat) (ni : natinf) : ni <> i+ -> Prop :=
+  match ni return ni <> i+ -> Prop with
+  | i+ => (fun pf : i+ <> i+ => match neqinf pf with end) 
+  | ninat m => (fun _ => n = m)
+  end.
+
 (** States that N is dijoint from {+∞}. *)
 
 Definition nat_diff_inf : forall n, ninat n <> i+. congruence. Defined.

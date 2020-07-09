@@ -24,17 +24,34 @@ Definition Sens (sitpn : Sitpn) (M : (P sitpn) -> nat) (t : (T sitpn)) :=
     (pre p t = Some (test, n) \/ pre p t = Some (basic, n) -> (M p) >= n) /\
     (pre p t = Some (inhibitor, n) -> (M p) < n).
 
-(** ∀ n ∈ N, ∀ i ∈ I+ ⊔ {ψ}, n ∈ i iff i = [a; b] ∧ a ≤ n ≤ b *)
+(** ∀ optn ∈ N ⊔ {ψ}, n ∈ i iff n ≠ ψ ∧ i = [a; b] ∧ a ≤ n ≤ b *)
 
-Definition InItval (n : nat) (i : DynamicTimeInterval) :=
-  forall nii,
-    i = active nii ->
-    (a nii) <= n /\ forall bnotinf, le_nat_natinf n (b nii) bnotinf.
+Definition InItval (optn : option nat) (i : StaticTimeInterval) : Prop :=
+  match optn with
+  | None => False
+  | Some n =>   (a (itval i)) <= n /\ forall bnotinf, le_nat_natinf n (b (itval i)) bnotinf
+  end.
   
 (** t ∉ Ti ∨ 0 ∈ I(t) *)
 
 Definition HasReachedTimeWindow (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
-  forall t_is_timet, InItval 0 (I s (exist _ t t_is_timet)).
+  match Is t with
+  | None => True
+  | Some itval => forall t_is_timet, InItval (I s (exist _ t t_is_timet)) itval
+  end.
+
+(** t ∈ Ti ∧ I(t) = upper(Is(t)) *)
+
+Definition HasReachedUpperBound sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+  refine (fun tex => (let '(exist _ t pf) := tex in _));
+  destruct Is;
+    [ refine (match I s tex with
+              | None => True
+              | Some n => forall pf_bnotinf, eq_nat_natinf n (b (itval s0)) pf_bnotinf
+              end)
+    |
+    contradiction].
+Defined.
 
 (** ∀ t ∈ T, ∀ s ∈ S, t ∈ firable(s) iff
     t ∈ Sens(M) ∧ (t ∉ Ti ∨ 0 ∈ I(t)) ∧ AllConditionsTrue(t). 
@@ -92,6 +109,17 @@ Inductive PreSum (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : nat -> Pr
 
 Inductive MarkingSubPreSum (sitpn : Sitpn) (s : SitpnState sitpn) (tSet : T sitpn -> Prop) (msub : P sitpn -> nat) : Prop :=
 | MarkingSubPreSum_ : (forall p n, PreSum p tSet n -> msub p = M s p - n) -> MarkingSubPreSum s tSet msub.
+
+(* Commented code; trying to implement the Fired predicate as an
+   inductive predicate, but result in the non stricly positive
+   occurence of the predicate. Indeed, Fired is used to define the
+   residual marking, and in its turn the residual marking is used to
+   defined Fired. *)
+
+(* Inductive Fired (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) : Prop := *)
+(* | Fired_ : forall m, Firable s t -> IsResidualMarking s t m -> Sens m t -> Fired s t *)
+(* with IsResidualMarking (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) : (P sitpn -> nat) -> Prop := *)
+(* | Residual_ : forall m, MarkingSubPreSum s (Fired s) m -> IsResidualMarking s t m. *)
 
 (** States that marking [m] is the residual marking resulting of the
     withdrawal of the tokens from the input places of [t] after the
@@ -157,9 +185,10 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
 
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
-    (forall (t : Ti sitpn) i, Sens (M s) t -> (reset s t = true \/ Fired s t) -> Is t = Some i -> I s' t = (itval i)--) ->
-    (forall (t : Ti sitpn) i, Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = active i -> I s' t = i--) ->
-    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = blocked -> I s' t = blocked) ->
+    (forall (t : Ti sitpn), ~Sens (M s) t -> I s' t = Some 0) ->
+    (forall (t : Ti sitpn), Sens (M s) t -> (reset s t = true \/ Fired s t) -> I s' t = Some 1) ->
+    (forall (t : Ti sitpn) n, Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = Some n -> I s' t = Some (S n)) ->
+    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = None -> I s' t = None) ->
 
     (** Determines transitions to be fired at the next clock event. *)
     (forall t, ~Firable s' t -> ~Fired s' t) ->
@@ -190,8 +219,8 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (forall (t : Ti sitpn) m, IsTransientMarking s m -> Sens m t -> reset s' t = false) ->
 
     (** Determines if some dynamic time intervals are blocked. *)
-    (forall (t : Ti sitpn), eq_ditval (I s t) ditval00 /\ ~Fired s t -> eq_ditval (I s' t) blocked) ->
-    (forall (t : Ti sitpn), eq_ditval (I s t) ditval00 \/ Fired s t -> eq_ditval (I s' t) (I s t)) ->
+    (forall (t : Ti sitpn), HasReachedUpperBound s t /\ ~Fired s t -> (I s' t) = None) ->
+    (forall (t : Ti sitpn), ~HasReachedUpperBound s t \/ Fired s t -> (I s' t) = (I s t)) ->
 
     (** Determines if some functions are executed. *)
     (forall f, (exists t, Fired s t /\ has_F t f = true) -> exf s' f = true) ->
@@ -223,23 +252,14 @@ Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s s'' : Si
 Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> SitpnState sitpn -> Prop :=
 | SitpnExecute_end : SitpnExecute E s 0 s
 | SitpnExecute_loop: forall tau s' s'',
-    tau > 0 ->
-    SitpnCycle E tau s s' ->
-    SitpnExecute E s' (tau - 1) s'' ->
-    SitpnExecute E s tau s''.
-
-(** Converts the Is partial function, which associates static time intervals
-    to transitions, into an application from Ti to dynamic time intervals. *)
-
-Definition Is_to_I (sitpn : Sitpn) : { t | (@Is sitpn t) <> None } -> DynamicTimeInterval.
-  refine (fun tex => let '(exist _ t pf) := tex in _);
-    destruct Is; [ destruct s; exact (itval) | contradiction ].
-Defined.
+    SitpnCycle E (S tau) s s' ->
+    SitpnExecute E s' tau s'' ->
+    SitpnExecute E s (S tau) s''.
 
 (** Defines the initial state of an SITPN. *)
 
 Definition s0 sitpn : SitpnState sitpn :=
-  BuildSitpnState (fun _ => False) (@M0 sitpn) (@Is_to_I sitpn) nullb nullb nullb nullb.
+  BuildSitpnState (fun _ => False) (@M0 sitpn) (fun _ => Some 0) nullb nullb nullb nullb.
 
 
 
