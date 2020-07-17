@@ -12,6 +12,11 @@ Require Import String.
   
 Local Open Scope string_scope.
 
+
+Inductive res (A: Type) (sitpn : Sitpn) (s: SitpnInfo sitpn): Type :=
+| Err: String -> res A sitpn s
+| Success: A -> res A sitpn s.
+
 (** ** Informations about places. *)
 
 Section PlaceInfos.
