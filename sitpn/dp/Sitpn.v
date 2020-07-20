@@ -134,12 +134,6 @@ Definition F2List (sitpn : Sitpn) : list nat := NatSet.this (functions sitpn).
 Record SitpnState (sitpn : Sitpn) :=
   BuildSitpnState {
 
-      (* Fired set: transitions to be fired on falling edge, 
-         and transitions that have been fired on rising edge.
-       *)
-      
-      Fired : T sitpn -> Prop;
-      
       (* Current marking of the Sitpn. *)
       
       M : P sitpn -> nat;

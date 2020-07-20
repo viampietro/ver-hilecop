@@ -16,14 +16,14 @@ Local Notation "| e |" := (exist _ e _) (at level 50).
     belong to the [Fired] field of state s.  *)
 
 Definition IsTransientMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitpn -> nat) :=
-  MarkingSubPreSum s (Fired s) m.
+  MarkingSubPreSum (Fired s) (M s) m.
 
 (** States that marking [m] is the residual marking resulting of the
     withdrawal of the tokens from the input places of transitions that
     belong to the [Fired] field of state s.  *)
 
 Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitpn -> nat) :=
-  MarkingSubPreSumAddPostSum s (Fired s) m.
+  MarkingSubPreSumAddPostSum (Fired s) (M s) m.
 
 (** Defines the Sitpn state transition relation. *)
 
@@ -39,14 +39,9 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
     (forall (t : Ti sitpn), ~Sens (M s) t -> I s' t = Some 0) ->
-    (forall (t : Ti sitpn), Sens (M s) t -> (reset s t = true \/ Fired s t) -> I s' t = Some 1) ->
-    (forall (t : Ti sitpn) n, Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = Some n -> I s' t = Some (S n)) ->
-    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = false -> ~Fired s t -> I s t = None -> I s' t = None) ->
-
-    (** Determines transitions to be fired at the next clock event. *)
-    (forall t, ~Firable s' t -> ~Fired s' t) ->
-    (forall t m, Firable s' t -> IsResidualMarking s' t m  -> Sens m t -> Fired s' t) ->
-    (forall t m, Firable s' t -> IsResidualMarking s' t m  -> ~Sens m t -> ~Fired s' t) ->
+    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = true -> I s' t = Some 1) ->
+    (forall (t : Ti sitpn) n, Sens (M s) t -> reset s t = false -> I s t = Some n -> I s' t = Some (S n)) ->
+    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = false -> I s t = None -> I s' t = None) ->
 
     (** Marking stays the same between s and s'. *)
     (forall p, M s p = M s' p) -> 
@@ -67,21 +62,18 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
         s. *)
     IsNewMarking s (M s') ->
 
-    (** Computes the reset orders for dynamic time intervals. *)
-    (forall (t : Ti sitpn) m, IsTransientMarking s m -> ~Sens m t -> reset s' t = true) ->
-    (forall (t : Ti sitpn) m, IsTransientMarking s m -> Sens m t -> reset s' t = false) ->
+    (** Computes the reset orders for time counters and fired transitions. *)
+    (forall (t : Ti sitpn) m, IsTransientMarking s m -> (~Sens m t \/ Fired s t) -> reset s' t = true) ->
+    (forall (t : Ti sitpn) m, IsTransientMarking s m -> Sens m t -> ~Fired s t -> reset s' t = false) ->
 
-    (** Determines if some dynamic time intervals are blocked. *)
-    (forall (t : Ti sitpn), HasReachedUpperBound s t /\ ~Fired s t -> (I s' t) = None) ->
-    (forall (t : Ti sitpn), ~HasReachedUpperBound s t \/ Fired s t -> (I s' t) = (I s t)) ->
+    (** Determines if some time counters are blocked. *)
+    (forall (t : Ti sitpn), HasReachedUpperBound s t -> ~Fired s t -> (I s' t) = None) ->
+    (forall (t : Ti sitpn), (~HasReachedUpperBound s t \/ Fired s t) -> (I s' t) = (I s t)) ->
 
     (** Determines if some functions are executed. *)
     (forall f, (exists t, Fired s t /\ has_F t f = true) -> exf s' f = true) ->
     (forall f, (forall t, ~Fired s t \/ has_F t f = false) -> exf s' f = true) -> 
     
-    (** Fired subset stays the same between s and s'. *)
-    (forall t, Fired s' t <-> Fired s t) ->
-
     (** Condition values stay the same between s and s'. *)
     (forall c, cond s' c = cond s c) -> 
 
