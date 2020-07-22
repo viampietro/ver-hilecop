@@ -90,7 +90,6 @@ Definition IsTopPriorityList sitpn (lofT : list (T sitpn)) (tp : list (T sitpn))
 (** Elects the fired transitions from a list of transitions [lofT];
     the election is based on the firability status of transitions at
     state [s] and their sensitization status at marking [m].
-    
  *)
 
 Inductive ElectFired sitpn (s : SitpnState sitpn) :
@@ -150,12 +149,16 @@ Inductive IsFiredListAux sitpn (s : SitpnState sitpn) :
 
 (** Wrapper around the IsFiredListAux predicate.  *)
 
-Definition IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) :=
-  forall l,
-    @Set_in_List (T sitpn) l -> 
-    IsFiredListAux s l (M s) [] fired.
+Inductive IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Prop :=
+  IsFiredList_ :
+    forall l,
+      @Set_in_List (T sitpn) l -> 
+      IsFiredListAux s l (M s) [] fired ->
+      IsFiredList s fired.
 
 (** Final definition of the set of fired transitions at state [s]. *)
 
-Definition Fired sitpn (s : SitpnState sitpn) (t : T sitpn) : Prop :=
-  forall fired, IsFiredList s fired /\ In t fired.
+Inductive Fired sitpn (s : SitpnState sitpn) (t : T sitpn) : Prop :=
+   Fired_ : forall fired, IsFiredList s fired -> In t fired -> Fired s t.
+
+

@@ -76,7 +76,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     
     (** Condition values stay the same between s and s'. *)
     (forall c, cond s' c = cond s c) -> 
-
+    
     (** Action states stay the same between s and s'. *)
     (forall a, exa s' a = exa s a) ->
     
@@ -104,7 +104,7 @@ Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn)
 (** Defines the initial state of an SITPN. *)
 
 Definition s0 sitpn : SitpnState sitpn :=
-  BuildSitpnState (fun _ => False) (@M0 sitpn) (fun _ => Some 0) nullb nullb nullb nullb.
+  BuildSitpnState (@M0 sitpn) (fun _ => Some 0) nullb nullb nullb nullb.
 
 
 
