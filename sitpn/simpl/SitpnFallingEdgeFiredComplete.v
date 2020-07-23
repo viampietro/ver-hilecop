@@ -2,11 +2,11 @@ Require Import Coqlib.
 
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
-Require Import SitpnCoreLemmas.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
+Require Import simpl.SitpnCoreLemmas.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
@@ -15,13 +15,13 @@ Require Import SitpnCoreLemmas.
 
 (* Import lemmas on marking functions. *)
 
-Require Import SitpnRisingEdgeMarking.
-Require Import SitpnWellDefMarking.
+Require Import simpl.SitpnRisingEdgeMarking.
+Require Import simpl.SitpnWellDefMarking.
 
 (* Import lemmas on fired functions. *)
 
-Require Import SitpnFallingEdgeFired.
-Require Import SitpnWellDefFired.
+Require Import simpl.SitpnFallingEdgeFired.
+Require Import simpl.SitpnWellDefFired.
 
 (* Misc. imports. *)
 

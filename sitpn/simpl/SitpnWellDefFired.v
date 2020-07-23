@@ -1,13 +1,13 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import misc. lemmas and tactics. *)
 
-Require Import SitpnCoreLemmas.
-Require Import SitpnTactics.
+Require Import simpl.SitpnCoreLemmas.
+Require Import simpl.SitpnTactics.
 
 (** * Lemmas about [sitpn_map_fire] and well-definition.  *)
 

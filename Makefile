@@ -30,7 +30,8 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 # Sitpn structures, semantics and token player (in sitpn/dp/)
 
-SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v SitpnSemantics.v \
+SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v \
+	SitpnSemanticsDefs.v Fired.v SitpnSemantics.v \
 	InfosTypes.v GenerateInfos.v 
 
 # H-VHDL syntax and semantics.

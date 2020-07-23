@@ -3,13 +3,13 @@ Require Import ListsPlus.
 
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import Sitpn tactics, and misc. lemmas. *)
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 (** * Lemmas about interpretation and well-definition. *)
 

@@ -1,22 +1,22 @@
 
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import misc. lemmas and tactics. *)
 
-Require Import SitpnCoreLemmas.
+Require Import simpl.SitpnCoreLemmas.
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 
 (* Import lemmas on well-definition. *)
 
-Require Import SitpnFallingEdgeWellDef.
-Require Import SitpnWellDefMarking.
-Require Import SitpnWellDefFired.
+Require Import simpl.SitpnFallingEdgeWellDef.
+Require Import simpl.SitpnWellDefMarking.
+Require Import simpl.SitpnWellDefFired.
 
 (* Import classic logic. *)
 
@@ -24,7 +24,7 @@ Require Import Classical_Prop.
 
 (* Import lemmas on marking. *)
 
-Require Import SitpnRisingEdgeMarking.
+Require Import simpl.SitpnRisingEdgeMarking.
 
 (** * Falling edge lemmas about synchronous execution rules. *)
 

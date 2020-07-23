@@ -1,19 +1,19 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import lemmas on well-definition. *)
 
-Require Import SitpnWellDefFired.
-Require Import SitpnWellDefTime.
-Require Import SitpnWellDefInterpretation.
-Require Import SitpnWellDefMarking.
+Require Import simpl.SitpnWellDefFired.
+Require Import simpl.SitpnWellDefTime.
+Require Import simpl.SitpnWellDefInterpretation.
+Require Import simpl.SitpnWellDefMarking.
 
 (* Import Sitpn tactics. *)
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 (** * sitpn_falling_edge and well-definedness of states. *)
 

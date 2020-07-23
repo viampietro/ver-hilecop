@@ -17,18 +17,28 @@ Set Implicit Arguments.
 Record Sitpn  :=
   BuildSitpn {
       
-      (* A PlaceSet object representing the finite set of places. *)
-      places : NatSet.t;
+      (* A list of nat representing the finite set of places.
+
+         To fully implement a finite set, the [Nodup] constraint comes
+         from the [IsWellDefined] predicate, found in the
+         [SitpnWellDefined.v] file.  *)
+      places : list nat;
                  
-      (* A TransitionSet object representing the finite set of transitions. *)
-      transitions : NatSet.t;
+      (* A list of nat representing the finite set of transitions. 
+         
+         To fully implement a finite set, the [Nodup] constraint comes
+         from the [IsWellDefined] predicate, found in the
+         [SitpnWellDefined.v] file.
+
+       *)
+      transitions : list nat;
       
       (* Alias for the set of elements that belong to the finite set [places]. *)
-      InP := (fun p => In p (NatSet.this places));
+      InP := (fun p => In p places);
       P := { p | InP p };
       
       (* Alias for the set of elements that belong to the finite set [transitions]. *)
-      InT := (fun t => In t (NatSet.this transitions));
+      InT := (fun t => In t transitions);
       T := { t | InT t };
 
       (* Given a place p ∈ P and t ∈ T:
@@ -57,19 +67,19 @@ Record Sitpn  :=
       Is : T -> option StaticTimeInterval;
 
       (* Finite sets of conditions, actions and functions. *)
-      conditions : NatSet.t;
-      actions : NatSet.t;
-      functions : NatSet.t;
+      conditions : list nat;
+      actions : list nat;
+      functions : list nat;
 
       (* Aliases for the set of elements that belong to the finite set
          [conditions] (resp. [actions] and [functions]). *)
-      InC := (fun c => In c (NatSet.this conditions));
+      InC := (fun c => In c conditions);
       C := { c | InC c };
       
-      InA := (fun a => In a (NatSet.this actions));
+      InA := (fun a => In a actions);
       A := { a | InA a };
 
-      InF := (fun f => In f (NatSet.this functions));
+      InF := (fun f => In f functions);
       F := { f | InF f };
       
       (* The function associating conditions to transitions. *)
@@ -121,11 +131,11 @@ Coercion T_in_nat : T >-> nat.
 
 (** Macro functions for Sitpn. *)
 
-Definition P2List (sitpn : Sitpn) : list nat := NatSet.this (places sitpn).
-Definition T2List (sitpn : Sitpn) : list nat := NatSet.this (transitions sitpn).
-Definition C2List (sitpn : Sitpn) : list nat := NatSet.this (conditions sitpn).
-Definition A2List (sitpn : Sitpn) : list nat := NatSet.this (actions sitpn).
-Definition F2List (sitpn : Sitpn) : list nat := NatSet.this (functions sitpn).
+Definition P2List (sitpn : Sitpn) : list nat := places sitpn.
+Definition T2List (sitpn : Sitpn) : list nat := transitions sitpn.
+Definition C2List (sitpn : Sitpn) : list nat := conditions sitpn.
+Definition A2List (sitpn : Sitpn) : list nat := actions sitpn.
+Definition F2List (sitpn : Sitpn) : list nat := functions sitpn.
 
 (** ** Sitpn state definition. *)
 

@@ -12,11 +12,6 @@ Require Import String.
   
 Local Open Scope string_scope.
 
-
-Inductive res (A: Type) (sitpn : Sitpn) (s: SitpnInfo sitpn): Type :=
-| Err: String -> res A sitpn s
-| Success: A -> res A sitpn s.
-
 (** ** Informations about places. *)
 
 Section PlaceInfos.
@@ -201,9 +196,9 @@ Section TransitionInfos.
     (* Tests if a condition is associated to t. *)
     let is_cond_of_t := (fun c => (match has_C t c with one | mone => true | zero => false end)) in
     tfilter is_cond_of_t (C2List sitpn) nat_to_C.
-
+  
   (** Computes the information about transition t, and returns
-    a couple [(t, info)].
+      a couple [(t, info)].
    *)
 
   Definition get_t_info (t : T sitpn) : (T sitpn * TransInfo sitpn) :=
@@ -275,10 +270,10 @@ Section SitpnInfos.
   
   Definition generate_sitpn_infos : optionE (SitpnInfo sitpn) :=
     (* Raises an error if sitpn has an empty set of places or transitions. *)
-    if NatSet.is_empty (places sitpn) then
+    if (places sitpn) then
       Err "Found an empty set of places."
     else
-      if NatSet.is_empty (transitions sitpn) then
+      if (transitions sitpn) then
         Err "Found an empty set of transitions."
       else
         (* Otherwise, generates information about sitpn. *)

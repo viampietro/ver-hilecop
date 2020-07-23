@@ -1,22 +1,22 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
 
 (* Import lemmas about marking. *)
 
-Require Import SitpnWellDefMarking.
-Require Import SitpnRisingEdgeMarkingComplete.
+Require Import simpl.SitpnWellDefMarking.
+Require Import simpl.SitpnRisingEdgeMarkingComplete.
 
 (* Import lemmas about time. *)
 
-Require Import SitpnRisingEdgeTimeComplete.
+Require Import simpl.SitpnRisingEdgeTimeComplete.
 
 (* Import lemmas about interpretation. *)
 
-Require Import SitpnRisingEdgeInterpretationComplete.
+Require Import simpl.SitpnRisingEdgeInterpretationComplete.
 
 (** * Completeness of [sitpn_rising_edge]. *)
 

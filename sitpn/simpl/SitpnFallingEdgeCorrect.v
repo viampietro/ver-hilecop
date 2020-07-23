@@ -1,27 +1,27 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import sitpn falling edge well-defined state. *)
 
-Require Import SitpnFallingEdgeWellDef.
-Require Import SitpnWellDefTime.
-Require Import SitpnWellDefMarking.
-Require Import SitpnWellDefInterpretation.
+Require Import simpl.SitpnFallingEdgeWellDef.
+Require Import simpl.SitpnWellDefTime.
+Require Import simpl.SitpnWellDefMarking.
+Require Import simpl.SitpnWellDefInterpretation.
 
 (* Import lemmas about interpretation-related semantics rules. *)
 
-Require Import SitpnFallingEdgeInterpretation.
+Require Import simpl.SitpnFallingEdgeInterpretation.
 
 (* Import lemmas about time-related semantics rules. *)
 
-Require Import SitpnFallingEdgeTime.
+Require Import simpl.SitpnFallingEdgeTime.
 
 (* Import lemmas about firing semantics rules. *)
 
-Require Import SitpnFallingEdgeFired.
+Require Import simpl.SitpnFallingEdgeFired.
 
 (** * Correctness of sitpn_falling_edge function. *)
 

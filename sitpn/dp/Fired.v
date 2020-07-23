@@ -46,15 +46,15 @@ Section FiredMiscImplementation.
   Definition OutputOfT {sitpn} (t : T sitpn) := { p | post t p <> None }.
   Definition InputOfT {sitpn} (t : T sitpn) := { p | pre p t <> None }.
 
-  Inductive HasAllAuth {sitpn} (s : SitpnState sitpn) (t : T sitpn) : Prop :=
-    HasAllAuth_ : Firable s t /\ (forall p, @HasAuth sitpn s t p) -> HasAllAuth s t
-                                                                                
-  with HasAuth {sitpn} (s : SitpnState sitpn) (t : T sitpn) : InputOfT t -> Prop :=
-    HasAuth_ :
+  Inductive HasAuthToFire {sitpn} (s : SitpnState sitpn) (t : T sitpn) : Prop :=
+    HasAuthToFire_ : Firable s t /\ (forall p, @HasAuthFromPlace sitpn s t p) -> HasAuthToFire s t
+                                                                                               
+  with HasAuthFromPlace {sitpn} (s : SitpnState sitpn) (t : T sitpn) : InputOfT t -> Prop :=
+    HasAuthFromPlace_ :
       forall m (p : InputOfT t),
-        MarkingSubPreSum (fun t' => t' >~ t = true /\ pre (proj1_sig p) t' <> None /\ HasAllAuth s t') (M s) m ->
+        MarkingSubPreSum (fun t' => t' >~ t = true /\ pre (proj1_sig p) t' <> None /\ HasAuthToFire s t') (M s) m ->
         Sens m t ->
-        @HasAuth sitpn s t p.
+        @HasAuthFromPlace sitpn s t p.
   
 End FiredMiscImplementation.
 

@@ -3,7 +3,7 @@
 (*! =============================== !*)
 
 Require Export ListsPlus.
-Require Import Sitpn.
+Require Import simpl.Sitpn.
 
 (** * General preliminary definitions.  *)
 

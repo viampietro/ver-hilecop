@@ -1,16 +1,16 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import lemmas on synchronous execution rules. *)
 
-Require Import SitpnFallingEdgeFired.
+Require Import simpl.SitpnFallingEdgeFired.
 
 (* Import Sitpn tactics, and misc. lemmas. *)
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 
 (** * Falling Edge Lemmas about Interpretation-Related Semantics Rules. *) 

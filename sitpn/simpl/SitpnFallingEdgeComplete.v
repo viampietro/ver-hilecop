@@ -1,9 +1,9 @@
 (* Import Sitpn core material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
@@ -11,9 +11,9 @@ Require Import SitpnTactics.
 
 (* Import lemmas about time, fired and interpretation. *)
 
-Require Import SitpnFallingEdgeTimeComplete.
-Require Import SitpnFallingEdgeFiredComplete.
-Require Import SitpnFallingEdgeInterpretationComplete.
+Require Import simpl.SitpnFallingEdgeTimeComplete.
+Require Import simpl.SitpnFallingEdgeFiredComplete.
+Require Import simpl.SitpnFallingEdgeInterpretationComplete.
 
 (** * Completeness of [sitpn_falling_edge]. *)
 

@@ -236,7 +236,7 @@ Section GenerateActionPortsAndPs.
     optionE (Architecture sitpn * ident * option (list pdecl * cs)) :=
     (* If there are no action in sitpn, then no need for the action
        activation process. *)
-    if NatSet.is_empty (actions sitpn) then Success (arch, nextid, None)
+    if (actions sitpn) then Success (arch, nextid, None)
     else
       (* Generates the ActionMap that will help build the action ports
          and process. *)
@@ -373,7 +373,7 @@ Section GenerateFunPortsAndPs.
     optionE (Architecture sitpn * ident * option (list pdecl * cs)) :=
     (* If there are no function in sitpn, then no need for the
        function execution process. *)
-    if NatSet.is_empty (functions sitpn) then Success (arch, nextid, None)
+    if (functions sitpn) then Success (arch, nextid, None)
     else
       (* Generates the FunMap that will help built the function ports
          and ps. *)

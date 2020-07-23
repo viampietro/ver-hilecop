@@ -1,10 +1,10 @@
 (* Import Sitpn core material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
-Require Import SitpnCoreLemmas.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
+Require Import simpl.SitpnCoreLemmas.
 
 (* Import Hilecop utils. *)
 
@@ -14,7 +14,7 @@ Require Import SitpnCoreLemmas.
 
 (* Import lemmas about interpretation. *)
 
-Require Import SitpnFallingEdgeInterpretation.
+Require Import simpl.SitpnFallingEdgeInterpretation.
 
 (** * Completeness of [get_condition_values]. *)
 

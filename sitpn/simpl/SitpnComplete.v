@@ -1,17 +1,17 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import falling edge and rising edge completeness lemmas. *)
 
-Require Import SitpnFallingEdgeComplete.
-Require Import SitpnRisingEdgeComplete.
+Require Import simpl.SitpnFallingEdgeComplete.
+Require Import simpl.SitpnRisingEdgeComplete.
 
 (* Import lemmas on SITPN and states well-definition. *)
 
-Require Import SitpnFallingEdgeWellDef.
+Require Import simpl.SitpnFallingEdgeWellDef.
 
 (** * Completeness proof between [sitpn_cycle] and [SitpnSemantics]. *)
 

@@ -1,6 +1,6 @@
 Require Import ListsPlus.
-Require Import Sitpn.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnSemantics.
 
 (** Renames all hypotheses resulting of the decomposition 
     of the IsWelldefinedSitpn predicate. *)

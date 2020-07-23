@@ -1,30 +1,30 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import lemmas on fired transitions. *)
 
-Require Import SitpnWellDefFired.
+Require Import simpl.SitpnWellDefFired.
 
 (* Import lemmas on interpretation. *)
 
-Require Import SitpnWellDefInterpretation.
+Require Import simpl.SitpnWellDefInterpretation.
 
 (* Import lemmas on marking. *)
 
-Require Import SitpnRisingEdgeMarking.
+Require Import simpl.SitpnRisingEdgeMarking.
 
 (* Import lemmas on well-definition. *)
 
-Require Import SitpnRisingEdgeWellDef.
+Require Import simpl.SitpnRisingEdgeWellDef.
 
 (* Import misc. tactics and lemmas. *)
 
 
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 (** * [sitpn_rising_edge] and [sitpn_state_eq] relation. *)
 

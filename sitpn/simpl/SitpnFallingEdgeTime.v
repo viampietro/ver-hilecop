@@ -1,18 +1,18 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import Sitpn tactics, and misc. lemmas. *)
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 
 
 (* Import Sitpn core lemmas. *)
 
-Require Import SitpnCoreLemmas.
+Require Import simpl.SitpnCoreLemmas.
 
 (** * Falling Edge Lemmas about Time-Related Semantics Rules. *)
 

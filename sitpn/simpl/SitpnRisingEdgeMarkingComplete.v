@@ -1,10 +1,10 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
-Require Import SitpnCoreLemmas.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
+Require Import simpl.SitpnCoreLemmas.
 
 (* Import misc. lemmas, tactics and definitions. *)
 
@@ -13,9 +13,9 @@ Require Import SitpnCoreLemmas.
 
 (* Import lemmas about marking. *)
 
-Require Import SitpnWellDefMarking.
-Require Import SitpnRisingEdgeMarking.
-Require Import SitpnFallingEdgeFiredComplete.
+Require Import simpl.SitpnWellDefMarking.
+Require Import simpl.SitpnRisingEdgeMarking.
+Require Import simpl.SitpnFallingEdgeFiredComplete.
 
 (* Import classical logic. *)
 

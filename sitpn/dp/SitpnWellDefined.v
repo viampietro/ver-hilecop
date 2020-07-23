@@ -2,7 +2,6 @@
 
 Require Import Coqlib.
 Require Import GlobalTypes.
-Require Import NatSet.
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
 
@@ -71,6 +70,21 @@ Definition PriorityRelIsWellDefined (sitpn : Sitpn) : Prop :=
     let InTc := (fun tc => List.In tc Tc) in
     @IsStrictTotalOrderBRel (Tsubset InTc) (@Teq' sitpn InTc) (@Teq'_dec sitpn InTc) (@pr' sitpn InTc).
 
+(** Defines a predicate stating that the list of nat used in an
+    [Sitpn] structure to implement finite sets respect the [Nodup]
+    constraint. 
+
+    We define this property in a separate predicate because it is
+    an implementation-dependent property.
+ *)
+
+Definition AreWellImplementedFiniteSets (sitpn : Sitpn) : Prop :=
+  NoDup (places sitpn)
+  /\ NoDup (transitions sitpn)
+  /\ NoDup (conditions sitpn)
+  /\ NoDup (actions sitpn)
+  /\ NoDup (functions sitpn).
+
 (** Defines a predicate stating that an Sitpn is well-defined, that is: 
 
     - The set of places and transitions of the Sitpn must not be empty.
@@ -80,9 +94,12 @@ Definition PriorityRelIsWellDefined (sitpn : Sitpn) : Prop :=
  *)
 
 Definition IsWellDefined (sitpn : Sitpn) :=
-  ~NatSet.Empty (places sitpn)
-  /\ ~NatSet.Empty (transitions sitpn)
+  places sitpn <> nil
+  /\ transitions sitpn <> nil
   /\ HasNoIsolatedPlace sitpn
   /\ HasNoIsolatedTransition sitpn
-  /\ PriorityRelIsWellDefined sitpn.
+  /\ PriorityRelIsWellDefined sitpn
+                              
+  (* Implementation-dependent property. *)
+  /\ AreWellImplementedFiniteSets sitpn.
 

@@ -1,12 +1,12 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
 
 (* Import Sitpn tactics, and misc. lemmas. *)
 
-Require Import SitpnTactics.
+Require Import simpl.SitpnTactics.
 
 (** [sitpn_falling_edge] returns a SitpnState with the same marking 
     as the starting state. *)

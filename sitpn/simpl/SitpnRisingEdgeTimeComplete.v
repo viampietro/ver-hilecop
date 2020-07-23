@@ -1,10 +1,10 @@
 (* Import Sitpn core material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
-Require Import SitpnCoreLemmas.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
+Require Import simpl.SitpnCoreLemmas.
 
 (* Import Hilecop utils. *)
 
@@ -14,11 +14,11 @@ Require Import SitpnCoreLemmas.
 
 (* Import lemmas about time. *)
 
-Require Import SitpnRisingEdgeTime.
+Require Import simpl.SitpnRisingEdgeTime.
 
 (* Import lemmas about marking. *)
 
-Require Import SitpnFallingEdgeFiredComplete.
+Require Import simpl.SitpnFallingEdgeFiredComplete.
 
 (** * Completeness of [get_blocked_itvals_and_reset_orders]. *)
 

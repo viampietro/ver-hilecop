@@ -1,18 +1,18 @@
 (* Import Sitpn material. *)
 
-Require Import Sitpn.
-Require Import SitpnTokenPlayer.
-Require Import SitpnSemantics.
-Require Import SitpnTactics.
-Require Import SitpnCoreLemmas.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnTokenPlayer.
+Require Import simpl.SitpnSemantics.
+Require Import simpl.SitpnTactics.
+Require Import simpl.SitpnCoreLemmas.
 
 (* Import lemmas about well-definition. *)
 
-Require Import SitpnWellDefMarking.
+Require Import simpl.SitpnWellDefMarking.
 
 (* Import lemmas about marking. *)
 
-Require Import SitpnRisingEdgeMarking.
+Require Import simpl.SitpnRisingEdgeMarking.
 
 (** * Lemmas about reset orders on rising edge.  *)
 

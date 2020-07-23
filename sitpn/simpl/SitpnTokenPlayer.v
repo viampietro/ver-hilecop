@@ -3,8 +3,8 @@
 (*! ================================== !*)
 
 Require Import Coqlib.
-Require Import Sitpn.
-Require Import SitpnSemantics.
+Require Import simpl.Sitpn.
+Require Import simpl.SitpnSemantics.
 
 Set Implicit Arguments.
 
