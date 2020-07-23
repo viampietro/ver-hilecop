@@ -69,14 +69,22 @@ all: proof
 proof: $(FILES:.v=.vo)
 
 common: $(COMMON:.v=.vo)
-sitpnsimpl: $(SITPNSIMPL:.v=.vo)
-sitpndp: $(SITPNDP:.v=.vo)
-hvhdl: $(HVHDL:.v=.vo)
-sitpn2hvhdl: $(SITPN2HVHDL:.v=.vo)
+sitpnsimpl: common $(SITPNSIMPL:.v=.vo)
+sitpndp: common $(SITPNDP:.v=.vo)
+hvhdl: sitpndp $(HVHDL:.v=.vo)
+sitpn2hvhdl: sitpndp hvhdl $(SITPN2HVHDL:.v=.vo)
 
 %.vo : %.v	
 	@echo "COQC $*.v"
 	@$(COQC) $*.v  
+
+cleancommon:
+	rm -f $(patsubst %, %/*.vo, common)
+	rm -f $(patsubst %, %/.*.aux, common)
+	rm -f $(patsubst %, %/*.glob, common)
+	rm -f $(patsubst %, %/*.vok, common)
+	rm -f $(patsubst %, %/*.vos, common)
+	rm -f $(patsubst %, %/*~, common)
 
 cleansitpn:
 	rm -f $(patsubst %, %/*/*.vo, sitpn)
@@ -102,5 +110,5 @@ cleansitpn2hvhdl:
 	rm -f $(patsubst %, %/*.vos, sitpn2hvhdl)
 	rm -f $(patsubst %, %/*~, sitpn2hvhdl)
 
-cleanall: cleansitpn cleanhvhdl cleansitpn2hvhdl
+cleanall: cleancommon cleansitpn cleanhvhdl cleansitpn2hvhdl
 

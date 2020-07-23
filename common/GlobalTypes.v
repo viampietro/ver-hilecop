@@ -114,6 +114,36 @@ Inductive optionE (A : Type) : Type :=
 Arguments Success {A} a.
 Arguments Err {A}.
 
+
+Module ErrMonadNotations.
+
+  Notation "[| x |]" := (Success x).
+
+
+
+  Notation "x <- e1 ; e2" := (match e1 with
+                              | Err msg => Err msg
+                              | Success x => e2
+                              end)
+                               (right associativity, at level 60).
+  
+  Notation "'|(' x , y ')|' <- e1 ; e2" :=
+    (z <- e1; let '(x, y) := z in e2)
+      (right associativity, at level 60).
+
+  Notation "'|(' x , y , z ')|' <- e1 ; e2" :=
+    (a <- e1; let '(x, y, z) := a in e2)
+      (right associativity, at level 60).
+    
+  Definition f (n : nat) : optionE (nat * nat * nat) :=
+    [| (0, 0, 0) |].
+
+  Definition g (n : nat) : optionE (nat * nat) :=
+    |( x, y , z )| <- f n; [| (x, y) |].
+
+  
+End ErrMonadNotations.
+
 (** Converts a nat into its hexadecimal string representation. Useful
     to display variable values in error messages.  *)
 

@@ -16,6 +16,8 @@ Require Import Petri.
 Require Import Place.
 Require Import GenerateArchitecture.
 
+Import ErrMonadNotations.
+
 (** ** Common to action/function ports and process generation. *)
 
 Section GeneratePortsAndPs.
@@ -91,7 +93,7 @@ Section GenerateActionPortsAndPs.
              (p : P sitpn) :
     optionE (Architecture sitpn * ident * list expr) :=
     (* Destructs the architecture. *)
-    let '(adecls, plmap, trmap) := arch in
+    let '(adecls, plmap, trmap, fmap, amap) := arch in
     
     (* Retrieves the component associated to place p in PlaceMap
        plmap.  *)
@@ -103,7 +105,7 @@ Section GenerateActionPortsAndPs.
       (* Case where marked is connected to a name.  Then, adds the
          equivalent expression at the end of lofexprs, and returns the
          triplet (architecture, nextid, lofexprs). *)
-      | Some (inl n) => Success (arch, nextid, lofexprs ++ [e_name n])
+      | Some (inl n) => [| (arch, nextid, lofexprs ++ [e_name n]) |]
       (* Error case, in the output port map [popmap], the marked port
          is connected to a list of names, albeit it must be of scalar
          type (boolean).  *)
@@ -117,9 +119,9 @@ Section GenerateActionPortsAndPs.
         let popmap' := setv Nat.eq_dec Place.marked (inl ($nextid)) popmap in
         let phcomp := (pgmap, pipmap, popmap') in
         let plmap' := setv Peqdec p phcomp plmap in
-        let arch' := (adecls', plmap', trmap) in
+        let arch' := (adecls', plmap', trmap, fmap, amap) in
         (* Increments nextid to return the next available identifier. *)
-        Success (arch', nextid + 1, lofexprs ++ [#nextid])
+        [| (arch', nextid + 1, lofexprs ++ [#nextid]) |]
       end
     (* Error case. *)
     | None => Err ("Place " ++ $$p ++ " is not referenced in the PlaceMap.")%string
@@ -163,11 +165,9 @@ Section GenerateActionPortsAndPs.
     | Some pls_of_a =>
       (* Calls connect_marked_ports over the list of places associated
        with action a. *)
-      match connect_marked_ports arch nextid pls_of_a with
-      | Success (arch', nextid', lofexprs) =>
-        Success (arch', nextid', amap ++ [(a, lofexprs)])
-      | Err msg => Err msg
-      end
+      s' <- connect_marked_ports arch nextid pls_of_a;
+      let '(arch', nextid', lofexprs) := s' in
+      [| (arch', nextid', amap ++ [(a, lofexprs)]) |]
     (* Error case. *)
     | None => Err ("Action $$a is not referenced in the SitpnInfo structure.")%string
     end.
@@ -218,7 +218,7 @@ Section GenerateActionPortsAndPs.
       let stmts' := add_to_stmts nextid lofexprs stmts in
       
       (* Don't forget to increment nextid to get a fresh identifier. *)
-      Success (aports, Some stmts', nextid + 1)
+      [| (aports, Some stmts', nextid + 1) |]
     | None => Err ("Action a is not referenced in the ActionMap.")%string
     end.
 
@@ -236,12 +236,12 @@ Section GenerateActionPortsAndPs.
     optionE (Architecture sitpn * ident * option (list pdecl * cs)) :=
     (* If there are no action in sitpn, then no need for the action
        activation process. *)
-    if (actions sitpn) then Success (arch, nextid, None)
+    if (actions sitpn) then [| (arch, nextid, None) |]
     else
       (* Generates the ActionMap that will help build the action ports
          and process. *)
       match generate_action_map arch nextid with
-      | Success (arch', nextid', amap) => 
+      | [| (arch', nextid', amap) |] => 
         (* Wrapper around the generate_action_port_and_ss function. *)
         let gen_action_pandss_fun :=
             (fun params a =>
@@ -251,7 +251,7 @@ Section GenerateActionPortsAndPs.
         (* Calls generate_action_port_and_ss on each action
            of the sitpn's action list. *)
         match topte_fold_left gen_action_pandss_fun (A2List sitpn) ([], None, nextid') nat_to_A with
-        | Success (aports, stmts, nextid'') =>
+        | [| (aports, stmts, nextid'') |] =>
           (* Checks that the action process statement body is not
            empty. *)
           match stmts with
@@ -266,7 +266,7 @@ Section GenerateActionPortsAndPs.
             let aps := cs_ps action_ps_id {[clk, rst]} [] body in
             (* Returns the architecture, the action ports and ps, and
                the next available id. *)
-            Success (arch', nextid'', Some (aports, aps))
+            [| (arch', nextid'', Some (aports, aps)) |]
           end
         | Err msg => Err msg
         end
@@ -455,7 +455,7 @@ Section GenerateAndConnectCondPorts.
              (t : T sitpn) :
     optionE (Architecture sitpn) :=
     (* Destructs architecture. *)
-    let '(adecls, plmap, trmap) := arch in
+    let '(adecls, plmap, trmap, fmap, amap) := arch in
 
     (* Retrieves the component representing t in TransMap. *)
     match getv Teqdec t trmap with
@@ -475,7 +475,7 @@ Section GenerateAndConnectCondPorts.
           (* Updates the architecture's TransMap. *)
           let trmap' := setv Teqdec t thcomp' trmap in
           (* Returns the new architecture *)
-          Success (adecls, plmap, trmap')
+          Success (adecls, plmap, trmap', fmap, amap)
         | Err msg => Err msg
         end
       | Err msg => Err msg

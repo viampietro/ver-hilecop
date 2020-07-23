@@ -4,13 +4,14 @@ Require Import Coqlib.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import dp.SitpnFacts.
-Require Import NatSet.
 Require Import ListsDep.
 Require Import InfosTypes.
 Require Import GlobalTypes.
 Require Import String.
   
 Local Open Scope string_scope.
+
+Import ErrMonadNotations.
 
 (** ** Informations about places. *)
 
@@ -44,7 +45,7 @@ Section PlaceInfos.
        function is_neighbor_of_p.  *)
     match tfold_left get_neighbor_of_p (T2List sitpn) (nil, nil) nat_to_T with
     | (nil, nil) => Err ("Place " ++ $$p ++ " is an isolated place.")
-    | tin_tout => Success tin_tout
+    | tin_tout => [| tin_tout |]
     end.
 
   (** Injects transition [t] in the list [stranss] depending on the
@@ -67,7 +68,7 @@ Section PlaceInfos.
     (* If the list of priority-ordered transitions is empty, then
        returns a singleton list where t is the element with the highest
        priority. *)
-    | [] => Success [t]
+    | [] => [| [t] |]
 
     (* If there is a head element, compares the head element with t
      priority-wise. *)
@@ -79,24 +80,20 @@ Section PlaceInfos.
        the first elements of stranss.
 
        Otherwise, checks if t has a higher firing priority than x. *)
-      if Teqdec t x then Success stranss                                     
+      if Teqdec t x then [| stranss |]
       else
         (* If t is the element with the highest priority, then puts it
            as the head element of stranss, and returns the list.
          
          Otherwise, checks if x has a higher priority than t.  *)
-        if t >~ x then Success (t :: stranss)
+        if t >~ x then [| t :: stranss |]
         else
           (* If x has a higher priority than t, then tries to inject t
            in the list's tail.  *)
           if x >~ t then
-            match inject_t t tl with
-            | Success stranss' => Success (x :: stranss')
-            (* Error case: found a transition that is not comparable with
-               t in the list's tail.
-             *)
-            | Err msg => Err msg
-            end
+            (* Error case: found a transition that is not comparable
+               with t in the list's tail.  *)
+            stranss' <- inject_t t tl; [| x :: stranss' |]
           else
             (* Error case: t >~ x and x >~ t evaluate to false. *)
             Err ("Transitions " ++ $$t ++ " and " ++ $$x ++ " are not comparable with the priority relation.")
@@ -110,12 +107,9 @@ Section PlaceInfos.
            (stranss : list (T sitpn)) {struct transs} :
     optionE (list (T sitpn)) :=
     match transs with
-    | [] => Success stranss
-    | t :: tl => match inject_t t stranss with
-                 | Success stranss' =>
-                   sort_by_priority_aux tl stranss'
-                 | Err msg => Err msg
-                 end
+    | [] => [| stranss |]
+    | t :: tl =>
+      stranss' <- inject_t t stranss; sort_by_priority_aux tl stranss'
     end.
 
   (** Takes a list of transitions [transs], and returns a new list of
@@ -142,21 +136,19 @@ Section PlaceInfos.
 
   Definition get_p_info (p : P sitpn) : optionE (P sitpn * PlaceInfo sitpn) :=
 
-    (* Gets the input and output transitions list of place p. *)
-    match get_neighbors_of_p p with
-    (* Error case: p is an isolated place. *)
-    | Err msg => Err msg
-    | Success (tin, tout) =>
-      (* Sorts the output transitions of p by decreasing level of firing
-         priority. *)
-      match sort_by_priority tout with
-      | Success stout => Success (p, MkPlaceInfo _ tin stout)
-      (* Error case: the priority relation is not a strict total order
-         over the output transitions of p. *)
-      | Err msg => Err msg
-      end
-    end.
-
+    (* Gets the input and output transitions list of place p. 
+       Error: p is an isolated place.
+     *)
+    tin_tout <- get_neighbors_of_p p;
+    (* Sorts the output transitions of p by decreasing level of firing
+       priority. 
+       Error: the priority relation is not a strict total order
+       over the output transitions of p.
+     *)
+    let '(tin, tout) := tin_tout in
+    stout <- sort_by_priority tout;
+    [| (p, MkPlaceInfo _ tin stout) |].
+  
   (** Computes information for all p ∈ P, and returns the list of
       couples implementing function P → PlaceInfo. *)
   
@@ -270,23 +262,17 @@ Section SitpnInfos.
   
   Definition generate_sitpn_infos : optionE (SitpnInfo sitpn) :=
     (* Raises an error if sitpn has an empty set of places or transitions. *)
-    if (places sitpn) then
-      Err "Found an empty set of places."
+    if (places sitpn) then Err "Found an empty set of places."
     else
-      if (transitions sitpn) then
-        Err "Found an empty set of transitions."
+      if (transitions sitpn) then Err "Found an empty set of transitions."
       else
         (* Otherwise, generates information about sitpn. *)
-        match generate_place_infos sitpn with
-        | Success pinfos =>
-          let tinfos := generate_trans_infos in
-          let cinfos := generate_cond_infos in
-          let ainfos := generate_action_infos in
-          let finfos := generate_fun_infos in
-          Success (MkSitpnInfo _ pinfos tinfos cinfos ainfos finfos)
-        (* Error case: propagates the error raised by generate_place_infos. *)
-        | Err msg => Err msg
-        end.
+        pinfos <- generate_place_infos sitpn;
+        let tinfos := generate_trans_infos in
+        let cinfos := generate_cond_infos in
+        let ainfos := generate_action_infos in
+        let finfos := generate_fun_infos in
+        [| MkSitpnInfo _ pinfos tinfos cinfos ainfos finfos |].
   
 End SitpnInfos.
 

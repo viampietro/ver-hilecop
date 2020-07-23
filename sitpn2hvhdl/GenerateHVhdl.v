@@ -176,7 +176,7 @@ Section GeneratePlaceCompInst.
     optionE (option cs * ident) :=
     
     (* Destructs the architecture. *)
-    let '(adecls, plmap, trmap) := arch in
+    let '(adecls, plmap, trmap, fmap, amap) := arch in
 
     (* Retrieves the component implementing place p. *)
     match getv Peqdec p plmap with
@@ -233,7 +233,7 @@ Section GenerateTransCompInst.
     optionE (option cs * ident) :=
     
     (* Destructs the architecture. *)
-    let '(adecls, plmap, trmap) := arch in
+    let '(adecls, plmap, trmap, fmap, amap) := arch in
 
     (* Retrieves the component implementing transition t. *)
     match getv Teqdec t trmap with
@@ -371,7 +371,7 @@ Section Sitpn2HVhdl.
             let entid := nfid'' in
             let archid := entid + 1 in
             (* Retrieves the architecture declarative part. *)
-            let '(adecls, _, _) := arch' in
+            let '(adecls, _, _, _, _) := arch' in
             (* Generates a H-VHDL design from the results of the
                previous function calls. *)
             generate_design entid archid condports aports_and_ps fports_and_ps adecls obeh

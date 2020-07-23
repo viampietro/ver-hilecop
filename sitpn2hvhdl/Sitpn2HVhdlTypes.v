@@ -48,4 +48,12 @@ Definition FunMap sitpn := list (F sitpn * list expr).
     of list of declarations (list adecl), a mapping from P to
     HComponent and a mapping from T to HComponent.  *)
 
-Definition Architecture sitpn := (list adecl * PlaceMap sitpn * TransMap sitpn)%type.
+Definition Architecture sitpn := (list adecl * PlaceMap sitpn * TransMap sitpn * FunMap sitpn * ActionMap sitpn)%type.
+
+(** ** Compile-time state *)
+
+Record Sitpn2HVhdlState sitpn : Type :=
+  BuildState {
+      arch : Architecture sitpn;
+
+    }.
