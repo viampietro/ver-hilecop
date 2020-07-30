@@ -33,7 +33,60 @@ Section SitpnInfoTypes.
         finfos : list (F sitpn * list (T sitpn));
       }.
 
+  (** ** Setters *)
+  
+  (* Adds a new place info entry to the pinfos list *)
+  
+  Definition set_pinfo (pinfo : (P sitpn * PlaceInfo)) (sitpninfo : SitpnInfo) : SitpnInfo :=
+    MkSitpnInfo (pinfo :: (pinfos sitpninfo))
+                (tinfos sitpninfo)
+                (cinfos sitpninfo)
+                (ainfos sitpninfo)
+                (finfos sitpninfo).
+  
+  (* Adds a new transition info entry to the tinfos list *)
+  
+  Definition set_tinfo (tinfo : (T sitpn * TransInfo)) (sitpninfo : SitpnInfo) : SitpnInfo :=
+    MkSitpnInfo (pinfos sitpninfo)
+                (tinfo :: (tinfos sitpninfo))
+                (cinfos sitpninfo)
+                (ainfos sitpninfo)
+                (finfos sitpninfo).
+
+  (* Adds a new condition info entry to the cinfos list *)
+  
+  Definition set_cinfo (cinfo : (C sitpn * list (T sitpn))) (sitpninfo : SitpnInfo) : SitpnInfo :=
+    MkSitpnInfo (pinfos sitpninfo)
+                (tinfos sitpninfo)
+                (cinfo :: cinfos sitpninfo)
+                (ainfos sitpninfo)
+                (finfos sitpninfo).
+
+  (* Adds a new action info entry to the ainfos list *)
+  
+  Definition set_ainfo (ainfo : (A sitpn * list (P sitpn))) (sitpninfo : SitpnInfo) : SitpnInfo :=
+    MkSitpnInfo (pinfos sitpninfo)
+                (tinfos sitpninfo)
+                (cinfos sitpninfo)
+                (ainfo :: ainfos sitpninfo)
+                (finfos sitpninfo).
+
+  (* Adds a new function info entry to the finfos list *)
+  
+  Definition set_finfo (finfo : (F sitpn * list (T sitpn))) (sitpninfo : SitpnInfo) : SitpnInfo :=
+    MkSitpnInfo (pinfos sitpninfo)
+                (tinfos sitpninfo)
+                (cinfos sitpninfo)
+                (ainfos sitpninfo)
+                (finfo :: finfos sitpninfo).
+  
 End SitpnInfoTypes.
+
+Arguments set_pinfo {sitpn}.
+Arguments set_tinfo {sitpn}.
+Arguments set_ainfo {sitpn}.
+Arguments set_cinfo {sitpn}.
+Arguments set_finfo {sitpn}.
 
 (** Set implicit arguments for PlaceInfo fields. *)
 

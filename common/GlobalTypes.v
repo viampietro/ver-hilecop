@@ -1,4 +1,4 @@
-(** * Global type definitions. *)
+ (** * Global type definitions. *)
 
 Require Import Coqlib.
 Require Import String.
@@ -114,12 +114,9 @@ Inductive optionE (A : Type) : Type :=
 Arguments Success {A} a.
 Arguments Err {A}.
 
-
 Module ErrMonadNotations.
 
   Notation "[| x |]" := (Success x).
-
-
 
   Notation "x <- e1 ; e2" := (match e1 with
                               | Err msg => Err msg
