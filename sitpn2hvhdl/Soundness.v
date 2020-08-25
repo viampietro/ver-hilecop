@@ -9,7 +9,6 @@ Require Import dp.Sitpn.
 Require Import dp.SitpnSemantics.
 Require Import dp.Fired.
 
-
 (* H-VHDL Libraries *)
 
 Require Import HVhdlTypes.
@@ -152,7 +151,7 @@ Proof.
 Qed.
 
 Lemma falling_edge_compute_fired :
-  forall Δ σ d σ__f sitpn Ec τ s s' σ' mm γ id__t σ'__t,
+  forall Δ σ__f d σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
 
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
@@ -168,7 +167,7 @@ Lemma falling_edge_compute_fired :
 
     (* Stabilize from σf to σ' *)
     stabilize Δ σ__f (get_behavior d) σ' ->
-
+    
     (* Conclusion *)
     forall t,
       (** Component idt implements transition t *)
@@ -181,7 +180,6 @@ Lemma falling_edge_compute_fired :
       @Fired sitpn s' t ->
       MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
-  intros Δ σ d σ__f.
   inversion 5.
   - admit.
   -

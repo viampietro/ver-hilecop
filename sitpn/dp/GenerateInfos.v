@@ -27,12 +27,12 @@ Section GenSitpnInfos.
   Section PlaceInfos.
     
     (** Returns a couple of lists [(i, o)] where [i] is the list of
-      input transitions of [p], and [o] is the list of output
-      transitions of [p].
+        input transitions of [p], and [o] is the list of output
+        transitions of [p].
 
-      Correctness: Correct iff all input transitions of [p] are in
-      [i], and [i] has no duplicate, and all output transitions of [p]
-      are in [o] and [o] has no duplicate.  *)
+        Correctness: Correct iff all input transitions of [p] are in
+        [i], and [i] has no duplicate, and all output transitions of [p]
+        are in [o] and [o] has no duplicate.  *)
 
     Definition get_neighbors_of_p (p : P sitpn) : GenInfosMon (list (T sitpn) * list (T sitpn)) :=
       
@@ -97,13 +97,14 @@ Section GenSitpnInfos.
           if t >~ x then Ret (t :: stranss)
           else
             (* If x has a higher priority than t, then tries to inject t
-           in the list's tail.  *)
+               in the list's tail.  *)
             if x >~ t then
-              (* Error case: found a transition that is not comparable
-               with t in the list's tail.  *)
               do stranss' <- inject_t t tl; Ret (x :: stranss')
             else
-              (* Error case: t >~ x and x >~ t evaluate to false. *)
+              (* Error case: t and x are not comparable, the priority
+                 relation is ill-formed (i.e, not a total order on
+                 group of transitions with a input place in
+                 common). *)
               Err ("Transitions " ++ $$t ++ " and " ++ $$x ++ " are not comparable with the priority relation.")
       end.
 
@@ -149,22 +150,21 @@ Section GenSitpnInfos.
        Error: p is an isolated place.
        *)
       do tin_tout <- get_neighbors_of_p p;
-      (* Sorts the output transitions of p by decreasing level of firing
-       priority. 
-       Error: the priority relation is not a strict total order
-       over the output transitions of p.
-       *)
+      (* Sorts the output transitions of p by decreasing level of
+         firing priority.
+         
+         Error: the priority relation is not a strict total order over
+         the output transitions of p.  *)
       let '(tin, tout) := tin_tout in
       do stout <- sort_by_priority tout;
       do sitpninfo <- Get;
       Put (set_pinfo (p, MkPlaceInfo _ tin stout) sitpninfo).
     
-    (** Computes information for all p ∈ P, and returns the list of
-      couples implementing function P → PlaceInfo. *)
+    (** Computes information for all p ∈ P, and adds the infos to the
+        current state. *)
     
     Definition generate_place_infos : GenInfosMon unit :=
-      do s <- Get;
-      tfold_left (fun s p => add_pinfo p) (P2List sitpn) (Put s) nat_to_P.
+      titer add_pinfo (P2List sitpn) nat_to_P.
     
   End PlaceInfos.
 
@@ -174,12 +174,12 @@ Section GenSitpnInfos.
 
     (** Returns the list of input places of transition [t].
 
-    Correctness: Correct iff all input places of [p] are in the
-    returned list, and the returned has no duplicates.
+        Correctness: Correct iff all input places of [p] are in the
+        returned list, and the returned has no duplicates.
 
-    Does not raise an error if the returned list is nil because it
-    doesn't mean that [t] is an isolated transition; however [t] is a
-    "source" transition (without input).
+        Does not raise an error if the returned list is nil because it
+        doesn't mean that [t] is an isolated transition; however [t] is a
+        "source" transition (without input).
     
      *)
 
@@ -198,9 +198,8 @@ Section GenSitpnInfos.
       let is_cond_of_t := (fun c => (match has_C t c with one | mone => true | zero => false end)) in
       Ret (tfilter is_cond_of_t (C2List sitpn) nat_to_C).
     
-    (** Computes the information about transition t, and returns
-      a couple [(t, info)].
-     *)
+    (** Computes the information about transition t, and adds it to
+        the current state. *)
 
     Definition add_tinfo (t : T sitpn) : GenInfosMon unit :=
       do inputs_of_t <- get_inputs_of_t t;
@@ -208,90 +207,97 @@ Section GenSitpnInfos.
       do sitpninfo <- Get;
       Put (set_tinfo (t, MkTransInfo _ inputs_of_t conds_of_t) sitpninfo).
 
-    (** Maps the function [get_t_info] to the list of transitions of [sitpn],
-      and returns the resulting list of couples [(t, info)]. *)
+    (** Calls the function [add_tinfo] for each transition of [sitpn], thus
+        modifying the current state. *)
 
     Definition generate_trans_infos : GenInfosMon unit :=
-      do s <- Get;
-      tfold_left (fun s t => get_t_info t) (T2List sitpn) nat_to_T.
+      titer add_tinfo (T2List sitpn) nat_to_T.
     
   End TransitionInfos.
 
-  Arguments generate_trans_infos {sitpn}.
-  
-  
-End GenSitpnInfos.
+  (** ** Informations about conditions, actions and functions. *)
 
+  Section InterpretationInfos.
 
+    (** Returns the list of transitions associated to condition [c]. *)
 
+    Definition get_transs_of_c (c : C sitpn) : GenInfosMon (list (T sitpn)) :=
+      let is_trans_of_c := (fun t => (match has_C t c with one | mone => true | zero => false end)) in
+      Ret (tfilter is_trans_of_c (T2List sitpn) nat_to_T).
 
-(** ** Informations about conditions, actions and functions. *)
+    (** Computes the information about transition c, and adds it to
+        the current state. *)
 
-Section InterpretationInfos.
+    Definition add_cinfo (c : C sitpn) : GenInfosMon unit :=
+      do transs_of_c <- get_transs_of_c c;
+      do sitpninfo <- Get;
+      Put (set_cinfo (c, transs_of_c) sitpninfo).
 
-  Variable sitpn : Sitpn.
-  
-  (** Returns the list of transitions associated to condition [c]. *)
+    (** Calls the function [add_cinfo] for each condition of [sitpn], thus
+        modifying the current state. *)
 
-  Definition get_transs_of_c (c : C sitpn) : list (T sitpn) :=
-    let is_trans_of_c := (fun t => (match has_C t c with one | mone => true | zero => false end)) in
-    tfilter is_trans_of_c (T2List sitpn) nat_to_T.
+    Definition generate_cond_infos : GenInfosMon unit :=
+      titer add_cinfo (C2List sitpn) nat_to_C.
+    
+    (** Returns the list of transitions associated to function [f]. *)
 
-  (** Returns the list of transitions associated to function [f]. *)
+    Definition get_transs_of_f (f : F sitpn) : GenInfosMon (list (T sitpn)) :=
+      Ret (tfilter (fun t => has_F t f) (T2List sitpn) nat_to_T).
 
-  Definition get_transs_of_f (f : F sitpn) : list (T sitpn) :=
-    tfilter (fun t => has_F t f) (T2List sitpn) nat_to_T.
+    (** Computes the information about function f, and adds it to
+        the current state. *)
 
-  (** Returns the list of places associated to action [a]. *)
+    Definition add_finfo (f : F sitpn) : GenInfosMon unit :=
+      do transs_of_f <- get_transs_of_f f;
+      do sitpninfo <- Get;
+      Put (set_finfo (f, transs_of_f) sitpninfo).
+    
+    (** Calls the function [add_finfo] for each function of [sitpn];
+        thus modifying the current state. *)
+    
+    Definition generate_fun_infos : GenInfosMon unit :=
+      titer add_finfo (F2List sitpn) nat_to_F.
+    
+    (** Returns the list of places associated to action [a]. *)
 
-  Definition get_places_of_a (a : A sitpn) : list (P sitpn) :=
-    tfilter (fun p => has_A p a) (P2List sitpn) nat_to_P.
+    Definition get_places_of_a (a : A sitpn) : GenInfosMon (list (P sitpn)) :=
+      Ret (tfilter (fun p => has_A p a) (P2List sitpn) nat_to_P).    
 
-  (** Maps the function [get_transs_of_c] to the list of conditions of
-      [sitpn]. Returns the resulting list of couples [(c, transs_of_c)]. *)
-  
-  Definition generate_cond_infos : list (C sitpn * list (T sitpn)) :=
-    tmap (fun c => (c, get_transs_of_c c)) (C2List sitpn) nat_to_C.
+    (** Computes the information about action a, and adds it to the
+        current state. *)
 
-  (** Maps the function [get_transs_of_f] to the list of functions of
-      [sitpn]. Returns the resulting list of couples [(f, transs_of_f)]. *)
-  
-  Definition generate_fun_infos : list (F sitpn * list (T sitpn)) :=
-    tmap (fun f => (f, get_transs_of_f f)) (F2List sitpn) nat_to_F.
+    Definition add_ainfo (a : A sitpn) : GenInfosMon unit :=
+      do places_of_a <- get_places_of_a a;
+      do sitpninfo <- Get;
+      Put (set_ainfo (a, places_of_a) sitpninfo).
+    
+    (** Calls the function [add_ainfo] for each action of
+      [sitpn], thus modifying the current state. *)
+    
+    Definition generate_action_infos : GenInfosMon unit :=
+      titer add_ainfo (A2List sitpn) nat_to_A.
+    
+  End InterpretationInfos.
 
-  (** Maps the function [get_places_of_a] to the list of actions of
-      [sitpn]. Returns the resulting list of couples [(a, places_of_a)]. *)
-  
-  Definition generate_action_infos : list (A sitpn * list (P sitpn)) :=
-    tmap (fun a => (a, get_places_of_a a)) (A2List sitpn) nat_to_A.
-  
-End InterpretationInfos.
-
-Arguments generate_cond_infos {sitpn}.
-Arguments generate_action_infos {sitpn}.
-Arguments generate_fun_infos {sitpn}.
-
-(** ** Informations about an Sitpn. *)
-
-Section SitpnInfos.
-
-  Variable sitpn : Sitpn.
+  (** ** Informations about an Sitpn. *)
 
   (** Returns an SitpnInfo instance computed from [sitpn]. *)
   
-  Definition generate_sitpn_infos : optionE (SitpnInfo sitpn) :=
+  Definition generate_sitpn_infos : GenInfosMon (SitpnInfo sitpn) := 
+  
     (* Raises an error if sitpn has an empty set of places or transitions. *)
     if (places sitpn) then Err "Found an empty set of places."
     else
       if (transitions sitpn) then Err "Found an empty set of transitions."
       else
         (* Otherwise, generates information about sitpn. *)
-        pinfos <- generate_place_infos sitpn;
-        let tinfos := generate_trans_infos in
-        let cinfos := generate_cond_infos in
-        let ainfos := generate_action_infos in
-        let finfos := generate_fun_infos in
-        [| MkSitpnInfo _ pinfos tinfos cinfos ainfos finfos |].
+        
+        do _ <- generate_place_infos;
+        do _ <- generate_trans_infos;
+        do _ <- generate_cond_infos; 
+        do _ <- generate_action_infos;
+        do _ <- generate_fun_infos;
+        Get.
   
-End SitpnInfos.
+End GenSitpnInfos.
 
