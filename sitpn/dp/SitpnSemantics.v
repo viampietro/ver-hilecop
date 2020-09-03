@@ -15,15 +15,15 @@ Local Notation "| e |" := (exist _ e _) (at level 50).
     withdrawal of the tokens from the input places of transitions that
     belong to the [Fired] field of state s.  *)
 
-Definition IsTransientMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitpn -> nat) :=
-  MarkingSubPreSum (Fired s) (M s) m.
+Definition IsTransientMarking (sitpn : Sitpn) (s : SitpnState sitpn) (fired : list (T sitpn)) (m : P sitpn -> nat) :=
+  MarkingSubPreSum (Fired s fired) (M s) m.
 
 (** States that marking [m] is the residual marking resulting of the
     withdrawal of the tokens from the input places of transitions that
     belong to the [Fired] field of state s.  *)
 
-Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (m : P sitpn -> nat) :=
-  MarkingSubPreSumAddPostSum (Fired s) (M s) m.
+Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (fired : list (T sitpn)) (m : P sitpn -> nat) :=
+  MarkingSubPreSumAddPostSum (Fired s fired) (M s) m.
 
 (** Defines the Sitpn state transition relation. *)
 
@@ -60,19 +60,19 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (** Marking at state s' is the new marking resulting of the firing
         of all transitions belonging to the Fired subset at state
         s. *)
-    IsNewMarking s (M s') ->
+    forall fired, IsNewMarking s fired (M s') ->
 
     (** Computes the reset orders for time counters and fired transitions. *)
-    (forall (t : Ti sitpn) m, IsTransientMarking s m -> (~Sens m t \/ Fired s t) -> reset s' t = true) ->
-    (forall (t : Ti sitpn) m, IsTransientMarking s m -> Sens m t -> ~Fired s t -> reset s' t = false) ->
+    (forall (t : Ti sitpn) fired m, IsTransientMarking s fired m -> (~Sens m t \/ Fired s fired t) -> reset s' t = true) ->
+    (forall (t : Ti sitpn) fired m, IsTransientMarking s fired m -> Sens m t -> ~Fired s fired t -> reset s' t = false) ->
 
     (** Determines if some time counters are blocked. *)
-    (forall (t : Ti sitpn), HasReachedUpperBound s t -> ~Fired s t -> (I s' t) = None) ->
-    (forall (t : Ti sitpn), (~HasReachedUpperBound s t \/ Fired s t) -> (I s' t) = (I s t)) ->
+    (forall (t : Ti sitpn) fired, HasReachedUpperBound s t -> ~Fired s fired t -> (I s' t) = None) ->
+    (forall (t : Ti sitpn) fired, (~HasReachedUpperBound s t \/ Fired s fired t) -> (I s' t) = (I s t)) ->
 
     (** Determines if some functions are executed. *)
-    (forall f, (exists t, Fired s t /\ has_F t f = true) -> exf s' f = true) ->
-    (forall f, (forall t, ~Fired s t \/ has_F t f = false) -> exf s' f = true) -> 
+    (forall f fired, (exists t, Fired s fired t /\ has_F t f = true) -> exf s' f = true) ->
+    (forall f fired, (forall t, ~Fired s fired t \/ has_F t f = false) -> exf s' f = true) -> 
     
     (** Condition values stay the same between s and s'. *)
     (forall c, cond s' c = cond s c) -> 
@@ -94,12 +94,12 @@ Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s s'' : Si
 
 (** Defines the SITPN Execution Relation. *)
 
-Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> SitpnState sitpn -> Prop :=
-| SitpnExecute_end : SitpnExecute E s 0 s
-| SitpnExecute_loop: forall tau s' s'',
+Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> list (SitpnState sitpn) -> SitpnState sitpn -> Prop :=
+| SitpnExecute_end : SitpnExecute E s 0 [] s
+| SitpnExecute_loop: forall tau θ s' s'',
     SitpnCycle E (S tau) s s' ->
-    SitpnExecute E s' tau s'' ->
-    SitpnExecute E s (S tau) s''.
+    SitpnExecute E s' tau θ s'' ->
+    SitpnExecute E s (S tau) (s' :: θ) s''.
 
 (** Defines the initial state of an SITPN. *)
 

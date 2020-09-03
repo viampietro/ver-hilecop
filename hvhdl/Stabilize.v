@@ -6,6 +6,7 @@
     then the design is said to be stabilized.
  *)
 
+Require Import Coqlib.
 Require Import NatSet.
 Require Import Environment.
 Require Import AbstractSyntax.
@@ -13,34 +14,38 @@ Require Import CombinationalEvaluation.
 
 (** Defines the stabilization relation. *)
 
-Inductive stabilize (ed : ElDesign) (dstate : DState) (behavior : cs) : DState -> Prop :=
+Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState -> DState -> Prop :=
 
-(** Case when the design state [dstate] registered no event; it has
-    stabilized.  *)
+(** Case when the design state [σ] registered no event; it has
+    stabilized.  The stabilization trace is empty (4th argument). *)
 
 | StabilizeEnd :
     (* * Side conditions * *)
-    events dstate = NatSet.empty ->
+    events σ = NatSet.empty ->
     
     (* * Conclusion * *)
-    stabilize ed dstate behavior dstate 
+    stabilize Δ σ behavior [] σ 
   
-(** Case when the design state [dstate] registered some events;
+(** Case when the design state [σ] registered some events;
     therefore it has not stabilized.
 
     Evaluates [behavior] with the [vcomb] relation and sees if the
     newly generated state has stabilized. *)
 
 | StabilizeLoop :
-    forall {dstate' dstate''},
+    forall σ' σ'' θ,
       
       (* * Premises * *)
-      vcomb ed dstate behavior dstate' ->
-      stabilize ed dstate' behavior dstate'' ->
+      vcomb Δ σ behavior σ' ->
+      stabilize Δ σ' behavior θ σ'' ->
 
       (* * Side conditions * *)
-      (* Some events are registered in dstate. *)
-      events dstate <> NatSet.empty ->
+      
+      (* Some events are registered in σ. *)
+      events σ <> NatSet.empty ->
+
+      (* σ'' is a quiet state (i.e, no events) *)
+      events σ'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      stabilize ed dstate behavior dstate''.
+      stabilize Δ σ behavior (σ' :: θ) σ''.

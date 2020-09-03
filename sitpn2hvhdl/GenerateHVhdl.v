@@ -11,6 +11,8 @@ Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
 Require Import AbstractSyntax.
 Require Import Petri.
+Require Import InfosTypes.
+Require Import StateAndErrorMonad.
 
 (* Import transformation functions. *)
 
@@ -50,7 +52,7 @@ Section GenerateCompInstFuns.
     if lofexprs
     (* Error if id is associated with an empty list of expressions. 
        Cannot happen for input ports. *)
-    then Err ("build_cport_assocs: Input port " ++ $$id ++ " must be associated.")%string
+    then GlobalTypes.Err ("build_cport_assocs: Input port " ++ $$id ++ " must be associated.")%string
              (* Returns only the inputmap, not interested in the index count. *)
     else Success (fst (fold_left (expr_to_cassocip id) lofexprs (nil, 0))).
   
@@ -69,7 +71,7 @@ Section GenerateCompInstFuns.
     | (id, inr lofexprs) =>
       match build_icport_assocs id lofexprs with
       | Success ipmap' => Success (ipmap ++ ipmap')
-      | Err msg => Err msg%string
+      | GlobalTypes.Err msg => GlobalTypes.Err msg%string
       end
     end.
   
@@ -143,7 +145,7 @@ Section GenerateCompInstFuns.
       let opmap_AST := OutputMap_to_AST opmap in
       (* Returns the component instantiation statement. *)
       Success (cs_comp compid entid gmap ipmap_AST opmap_AST)
-    | Err msg => Err msg
+    | GlobalTypes.Err msg => GlobalTypes.Err msg
     end.  
 
   (** Returns [cstmt] alone if [ocstmt] is empty (i.e, None) and
@@ -187,10 +189,10 @@ Section GeneratePlaceCompInst.
         (* Returns the parallel composition of the existing behavior and 
            the generated component instantiation statement. *)
         Success (compose_cs obeh pcomp, nextid + 1)
-      | Err msg => Err msg
+      | GlobalTypes.Err msg => GlobalTypes.Err msg
       end
     (* Error case. *)
-    | None => Err ("Place " ++ $$p ++ " is not referenced in the PlaceMap.")%string
+    | None => GlobalTypes.Err ("Place " ++ $$p ++ " is not referenced in the PlaceMap.")%string
     end.
 
   (** Generates a component instantiation statement for each place
@@ -244,10 +246,10 @@ Section GenerateTransCompInst.
         (* Returns the parallel composition of the existing behavior and 
            the generated component instantiation statement. *)
         Success (compose_cs obeh tcomp, nextid + 1)
-      | Err msg => Err msg
+      | GlobalTypes.Err msg => GlobalTypes.Err msg
       end
     (* Error case. *)
-    | None => Err ("Transition " ++ $$t ++ " is not referenced in the TransMap.")%string
+    | None => GlobalTypes.Err ("Transition " ++ $$t ++ " is not referenced in the TransMap.")%string
     end.
 
   (** Generates a component instantiation statement for each transition
@@ -289,7 +291,7 @@ Section GenerateCompInsts.
       (* Generates place component inst. statements. 
          Completes the behavior yielded by the last function call. *)
       generate_trans_comp_insts arch nextid' obeh  
-    | Err msg => Err msg
+    | GlobalTypes.Err msg => GlobalTypes.Err msg
     end.
   
 End GenerateCompInsts.
@@ -343,7 +345,7 @@ Section Sitpn2HVhdl.
       | None, None =>
         Success (design_ entid archid [] ports adecls beh)
       end
-    | None => Err ("generate_design: the architecture body cannot be empty.")%string
+    | None => GlobalTypes.Err ("generate_design: the architecture body cannot be empty.")%string
     end .
   
   (** Defines the transformation function that generates an H-VHDL design
@@ -351,8 +353,9 @@ Section Sitpn2HVhdl.
 
   Definition sitpn_to_hvhdl (max_marking : nat) : optionE design :=
     (* Generates information from sitpn. *)
-    match generate_sitpn_infos sitpn with
-    | Success sitpn_info =>
+    let init_infos := (MkSitpnInfo sitpn [] [] [] [] []) in
+    match generate_sitpn_infos sitpn init_infos with
+    | OK _ _ _ _ sitpn_info =>
       (* Generates the intermediate representation of the H-VHDL
          design's architecture. *)
       match generate_architecture sitpn_info Petri.ffid max_marking with
@@ -375,13 +378,13 @@ Section Sitpn2HVhdl.
             (* Generates a H-VHDL design from the results of the
                previous function calls. *)
             generate_design entid archid condports aports_and_ps fports_and_ps adecls obeh
-          | Err msg => Err msg
+          | GlobalTypes.Err msg => GlobalTypes.Err msg
           end
-        | Err msg => Err msg
+        | GlobalTypes.Err msg => GlobalTypes.Err msg
         end
-      | Err msg => Err msg
+      | GlobalTypes.Err msg => GlobalTypes.Err msg
       end  
-    | Err msg => Err msg
+    | Error _ _ _ msg => GlobalTypes.Err msg
     end.
   
 End Sitpn2HVhdl.

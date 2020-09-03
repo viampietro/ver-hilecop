@@ -156,9 +156,10 @@ Inductive IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Pr
       IsFiredListAux s l (M s) [] fired ->
       IsFiredList s fired.
 
-(** Final definition of the set of fired transitions at state [s]. *)
+(** Final definition of the set of [fired] transitions at state [s]
+    and the fact that a transition [t] belongs to the set. *)
 
-Definition Fired sitpn (s : SitpnState sitpn) (t : T sitpn) : Prop :=
-  forall fired, IsFiredList s fired -> In t fired.
+Definition Fired sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) (t : T sitpn) : Prop :=
+  IsFiredList s fired /\ In t fired.
 
 

@@ -51,6 +51,66 @@ Definition EnvEq sitpn (Ec : nat -> C sitpn -> bool) (Ep : nat -> Clk -> IdMap v
 Definition SimState {sitpn} (s : SitpnState sitpn) (σ : DState) : Prop := False.
 Local Notation "s '∼' σ" := (SimState s σ) (at level 50).
 
+Inductive SimTrace {sitpn} : list (SitpnState sitpn) -> list DState -> Prop :=
+| SimTraceInit: SimTrace nil nil
+| SimTraceCons: forall s σ θ__s θ__σ,
+    s ∼ σ ->
+    SimTrace θ__s θ__σ ->
+    SimTrace (s :: θ__s) (σ :: θ__σ).
+
+(** ** Semantic Preservation Theorem *)
+
+Theorem sitpn2vhdl_sound :
+  forall sitpn E__c τ θ__s s',
+
+    (* sitpn is in state s' after τ execution cycles and yields
+       exec. trace θs. *)
+    
+    SitpnExecute E__c (s0 sitpn) τ θ__s s' ->    
+
+    forall d Mg E__p σ' mm Δ σ__e σ0 θ__σ,
+      
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* (* Environments are similar. *) *)
+    EnvEq sitpn E__c E__p ->
+
+    (* Design elaboration *)
+    edesign hdstore Mg d Δ σ__e ->
+    
+    (* Initialization of design state *)
+    init Δ σ__e (get_behavior d) σ0 ->
+
+    (* Simulation of design *)
+    simloop E__p Δ σ0 (get_behavior d) τ θ__σ σ' ->
+    
+    (* ** Conclusion: exec. traces are equal. ** *)
+    SimTrace θ__s θ__σ.
+Proof.
+  intros sitpn E__c τ θ__s s' Hexec. intros d M__g induction Hexec.
+  - admit.
+  -
+    
+  lazymatch goal with
+  | [
+    Htransl: sitpn_to_hvhdl _ _ = _,
+    Henveq: EnvEq _ _ _,
+    Hsitpnexec: SitpnExecute _ _ _ _,
+    Helab: edesign _ _ _ _ _,
+    Hinit: init _ _ _ _,
+    Hsimloop: simloop _ _ _ _ _ _
+    |- _ ] =>
+    specialize (init_states_sim sitpn mm d Mg ed dstatee dstate0 Htransl Helab Hinit) as Hinit_eq; 
+      apply (simulation_lemma sitpn Ec (s0 sitpn) s' τ Hsitpnexec 
+                              Mg d Ep dstate0 σ' ed dstatee mm
+                              Htransl Henveq Helab Hinit_eq Hsimloop)
+  end.
+
+Qed.
+
+
+
 (** ** Simulation Lemma *)
 
 Lemma simulation_lemma :
@@ -111,47 +171,9 @@ Lemma init_states_sim :
 Proof.
 Admitted.
   
-(** ** Semantic Preservation Theorem *)
-
-Theorem sitpn2vhdl_sound :
-  forall sitpn Ec τ s' d Mg Ep σ' mm,
-
-    (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
-
-    (* Environments are similar. *)
-    EnvEq sitpn Ec Ep ->      
-
-    (* sitpn is in state s after \tau execution cycles. *)
-    SitpnExecute Ec (s0 sitpn) τ s' ->
     
-    (* d is in state dstate after \tau execution cycles. *)
-    simwf hdstore Mg Ep τ d σ' ->
-
-    (* ** Conclusion: final states are equal. ** *)
-    SimState s' σ'.
-Proof.
-  inversion_clear 4.
-
-  lazymatch goal with
-  | [
-    Htransl: sitpn_to_hvhdl _ _ = _,
-    Henveq: EnvEq _ _ _,
-    Hsitpnexec: SitpnExecute _ _ _ _,
-    Helab: edesign _ _ _ _ _,
-    Hinit: init _ _ _ _,
-    Hsimloop: simloop _ _ _ _ _ _
-    |- _ ] =>
-    specialize (init_states_sim sitpn mm d Mg ed dstatee dstate0 Htransl Helab Hinit) as Hinit_eq; 
-      apply (simulation_lemma sitpn Ec (s0 sitpn) s' τ Hsitpnexec 
-                              Mg d Ep dstate0 σ' ed dstatee mm
-                              Htransl Henveq Helab Hinit_eq Hsimloop)
-  end.
-
-Qed.
-
 Lemma falling_edge_compute_fired :
-  forall Δ σ__f d σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
 
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
@@ -166,10 +188,10 @@ Lemma falling_edge_compute_fired :
     vfalling Δ σ (get_behavior d) σ__f ->
 
     (* Stabilize from σf to σ' *)
-    stabilize Δ σ__f (get_behavior d) σ' ->
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
     
     (* Conclusion *)
-    forall t,
+    forall flist t,
       (** Component idt implements transition t *)
       γ t = id__t ->
 
@@ -177,10 +199,15 @@ Lemma falling_edge_compute_fired :
       MapsTo id__t σ'__t (compstore σ') ->
 
       (* Conclusion *)
-      @Fired sitpn s' t ->
+      @Fired sitpn s' flist t ->
       MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
-  inversion 5.
+  intros.
+  unfold Fired in H6.
+  inversion H6.
+  inversion H7.
+  inversion H10.
   - admit.
   -
+
 Admitted.  

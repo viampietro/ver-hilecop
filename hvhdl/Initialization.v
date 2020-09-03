@@ -130,7 +130,7 @@ Inductive vruninit (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 Inductive init (ed : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
-    forall {dstate behavior dstate' dstate''},
+    forall {dstate behavior dstate' dstate'' θ},
 
       (* * Premises * *)
 
@@ -140,7 +140,7 @@ Inductive init (ed : ElDesign) : DState -> cs -> DState -> Prop :=
 
       (* Sets the rst signal to ⊤, and no longer will it gain the
          value ⊥ during the whole simulation loop.  *)
-      stabilize ed (sstore_add rst (Vbool true) dstate') behavior dstate'' ->
+      stabilize ed (sstore_add rst (Vbool true) dstate') behavior θ dstate'' ->
       
       (* * Conclusion * *)
       init ed dstate behavior dstate''.

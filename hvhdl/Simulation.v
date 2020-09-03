@@ -23,34 +23,35 @@ Require Import HVhdlTypes.
 
 (** Defines the relation that computes a simulation cycle in the
     context of an elaborated design [ed], starting from a design
-    state [dstate] at the beginning of the cycle.  A simulation cycle
+    state [σ] at the beginning of the cycle.  A simulation cycle
     executes the [behavior] of a design, with respect to the different
     phases that happen during a cycle, and generates a new design
-    state.
+    state [σ'].
 
     - [Pi] is the function yielding the values of input ports at a
       given simulation time and for a given clock signal event.
       
-    - [tau] corresponds to the number of simulation cycles that are
+    - [τ] corresponds to the number of simulation cycles that are
       yet to be executed.  *)
 
 Inductive simcycle
           (Pi : nat -> Clk -> IdMap value)
-          (ed : ElDesign)
-          (tau : nat)
-          (dstate : DState)
+          (Δ : ElDesign)
+          (τ : nat)
+          (σ : DState)
           (behavior : cs) : DState -> Prop :=
 
 (** Defines one simulation cycle *)
+  
 | SimCycle :
-    forall {dstate_re dstate_fe dstate1 dstate2 dstate3 dstate'},
+    forall σ__injr σ__r σ' σ__injf σ__f σ'' θ θ',
       
       (* * Premises * *)
       
-      vrising ed dstate_re behavior dstate1 ->
-      stabilize ed dstate1 behavior dstate2 ->
-      vfalling ed dstate_fe behavior dstate3 ->
-      stabilize ed dstate3 behavior dstate' ->
+      vrising Δ σ__injr behavior σ__r ->
+      stabilize Δ σ__r behavior θ σ' ->
+      vfalling Δ σ__injf behavior σ__f ->
+      stabilize Δ σ__f behavior θ' σ'' ->
 
       (* * Side conditions * *)
 
@@ -58,13 +59,13 @@ Inductive simcycle
          differentiated intersection. *)
       
       (* σ = <S, C, E> and σre = <S ⊌ Pi(Tc, ↑), C, E ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState dstate (Pi tau rising_edge) dstate_re ->
+      IsInjectedDState σ (Pi τ rising_edge) σ__injr ->
 
-      (* σ2 = <S2, C2, E2> and σfe = <S2 ∪← Pi(Tc, ↓), C2, E2 ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState dstate2 (Pi tau falling_edge) dstate_fe ->
+      (* σ' = <S', C', E'> and σfe = <S' ∪← Pi(Tc, ↓), C', E' ∪ (S ∩≠ Pi(Tc, ↑))> *)
+      IsInjectedDState σ' (Pi τ falling_edge) σ__injf ->
       
       (* * Conclusion * *)
-      simcycle Pi ed tau dstate behavior dstate'.
+      simcycle Pi Δ τ σ behavior σ''.
 
 (** Defines the simulation loop relation, that relates the design
     state through simulation cycles, until the time counter reaches
@@ -76,25 +77,28 @@ Inductive simcycle
 
 Inductive simloop
           (Pi : nat -> Clk -> IdMap value)
-          (ed : ElDesign)
-          (dstate : DState)
-          (behavior : cs) : nat -> DState -> Prop :=
+          (Δ : ElDesign)
+          (σ : DState)
+          (behavior : cs) : nat -> list DState -> DState -> Prop :=
 
-(** Loops if time counter is greater than zero. *)
+(** Loops if time counter is greater than zero, and adds the state at
+    the end cycle to the simulation trace. *)
   
 | SimLoop :
-    forall {tau dstate' dstate''},
+    forall τ σ' σ'' θ,
 
       (* * Premises * *)
-      simcycle Pi ed (S tau) dstate behavior dstate' ->
-      simloop Pi ed dstate' behavior tau dstate'' ->
+      simcycle Pi Δ (S τ) σ behavior σ' ->
+      
+      simloop Pi Δ σ' behavior τ θ σ'' ->
             
       (* * Conclusion * *)
-      simloop Pi ed dstate behavior (S tau) dstate''
+      simloop Pi Δ σ behavior (S τ) (σ' :: θ) σ''
 
-(** Stops if time counter is zero. *)
+(** Stops if time counter is zero and produce an empty loop trace. *)
+              
 | SimLoopEnd :
-    simloop Pi ed dstate behavior 0 dstate.
+    simloop Pi Δ σ behavior 0 [] σ.
 
 (** Defines the whole workflow necessary to simulate a H-VHDL
     description (elaboration + simulation).
@@ -109,7 +113,7 @@ Inductive simloop
     - [Pi], the function that yields the values for the input
       ports of the design at a certain time and clock event.
 
-    - [tau], the number of simulation cycle to be performed after
+    - [τ], the number of simulation cycle to be performed after
       the initialization.
 
     - [d], the design that will elaborated and simulated.
@@ -119,17 +123,17 @@ Inductive simwf
           (dstore : IdMap design)
           (Mg : IdMap value)
           (Pi : nat -> Clk -> IdMap value)
-          (tau : nat)
-          (d : design) : DState -> Prop :=
+          (τ : nat)
+          (d : design) : list DState -> Prop :=
   
 | SimWorkflow :
-    forall {ed dstatee dstate0 dstate'},
+    forall {Δ σ__e σ0 σ' θ},
       
       (* * Premises * *)
 
-      edesign dstore Mg d ed dstatee ->                      (* Elaboration *)
-      init ed dstatee (get_behavior d) dstate0 ->            (* Initialization *)
-      simloop Pi ed dstate0 (get_behavior d) tau dstate' -> (* Simulation loop *)
+      edesign dstore Mg d Δ σ__e ->                (* Elaboration *)
+      init Δ σ__e (get_behavior d) σ0 ->           (* Initialization *)
+      simloop Pi Δ σ0 (get_behavior d) τ θ σ' -> (* Simulation loop *)
                     
       (* * Conclusion * *)
-      simwf dstore Mg Pi tau d dstate'.
+      simwf dstore Mg Pi τ d θ.
