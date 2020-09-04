@@ -51,6 +51,13 @@ Definition EnvEq sitpn (Ec : nat -> C sitpn -> bool) (Ep : nat -> Clk -> IdMap v
 Definition SimState {sitpn} (s : SitpnState sitpn) (σ : DState) : Prop := False.
 Local Notation "s '∼' σ" := (SimState s σ) (at level 50).
 
+(** States that two execution trace are similar. The first list
+    argument is the execution trace of an SITPN and the second list
+    argument is the execution trace of a VHDL design.
+    
+    By construction, and in order to be similar, the two traces must
+    have the same length, and must have pair-wise similar states. *)
+
 Inductive SimTrace {sitpn} : list (SitpnState sitpn) -> list DState -> Prop :=
 | SimTraceInit: SimTrace nil nil
 | SimTraceCons: forall s σ θ__s θ__σ,
@@ -58,17 +65,116 @@ Inductive SimTrace {sitpn} : list (SitpnState sitpn) -> list DState -> Prop :=
     SimTrace θ__s θ__σ ->
     SimTrace (s :: θ__s) (σ :: θ__σ).
 
+(** ** Step lemma
+    
+    States that starting from similar state, state are similar after
+    one execution cycle.
+
+ *)
+
+Lemma step_lemma :
+  forall sitpn mm d s s' E__c σ σ' Δ Mg σ__e P__i τ,
+    
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Starting states are similar *)
+    s ∼ σ ->
+
+    (* Δ, σ are the results of the elaboration of d. *)
+    edesign hdstore Mg d Δ σ__e ->
+    
+    (* One execution cycle for SITPN *)
+    
+    @SitpnCycle sitpn E__c τ s s' ->
+
+    (* One execution cycle for VHDL *)
+    simcycle P__i Δ τ σ (get_behavior d) σ' ->
+     
+    (* Final states are similar *)
+    s' ∼ σ'.
+Proof.
+  
+Admitted.
+
+(** ** Equal Initial States  *)
+
+Lemma init_states_sim :
+  forall sitpn mm d Mg Δ σ__e σ0,
+    
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* ed, dstate are the results of the elaboration of d. *)
+    edesign hdstore Mg d Δ σ__e ->
+
+    (* initialization d's state. *)
+    init Δ σ__e (get_behavior d) σ0 ->
+
+    (* init states are similar *)
+    (s0 sitpn) ∼ σ0.
+Proof.
+Admitted.
+
+(** ** Simulation Lemma *)
+
+Lemma simulation_lemma :
+  
+  forall sitpn Ec τ s θ__s s',
+
+    (* From state s to state s' after τ execution cycles, and
+       producing trace θs. *)
+    SitpnExecute Ec s τ θ__s s' ->
+
+    forall d mm Ep Mg Δ σ__e θ__σ σ σ',
+      
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Environments are similar. *)
+    EnvEq sitpn Ec Ep ->
+
+    (* Δ, σe are the results of the elaboration of d. *)
+    edesign hdstore Mg d Δ σ__e ->
+
+    (* States s and σ are similar; *)
+    s ∼ σ ->
+    
+    (* From σ to σ' after τ execution cycles, producing trace θσ. *)
+    simloop Ep Δ σ (get_behavior d) τ θ__σ σ' ->
+
+    (* Conclusion *)
+    SimTrace θ__s θ__σ.
+Proof.
+  intros *; intros Hexec; dependent induction Hexec;
+  intros *; intros Htransl Henveq Helab Hsimstate Hsim.
+  
+  (* CASE tau = 0, trivial. *)
+  - inversion Hsim; apply SimTraceInit.
+
+  (* CASE tau > 0 *)
+  - inversion_clear Hsim as [ τ0 σ0 σ'0 θ0 Hcyc Hsiml |  ].
+    
+    (* Specializes the induction hypothesis, then apply the step lemma. *)
+    
+    specialize (IHHexec d mm Ep Mg Δ σ__e θ0 σ0 σ').
+    specialize (IHHexec Htransl Henveq Helab).
+
+    (* Then, we need a lemma stating that s' ∼ σ0. That is, state are
+       similar after one execution cycle. *)
+
+    specialize (step_lemma sitpn mm d s s' Ec σ σ0 Δ Mg σ__e Ep (S tau)
+                           Htransl Hsimstate Helab H Hcyc)
+      as Heq_state_cyc.
+
+    (* Solve the induction case. *)
+    apply SimTraceCons; [ assumption | apply (IHHexec Heq_state_cyc Hsiml)].
+Qed.
+
 (** ** Semantic Preservation Theorem *)
 
 Theorem sitpn2vhdl_sound :
-  forall sitpn E__c τ θ__s s',
-
-    (* sitpn is in state s' after τ execution cycles and yields
-       exec. trace θs. *)
-    
-    SitpnExecute E__c (s0 sitpn) τ θ__s s' ->    
-
-    forall d Mg E__p σ' mm Δ σ__e σ0 θ__σ,
+  forall sitpn E__c τ θ__s s' d Mg E__p σ' mm Δ σ__e σ0 θ__σ,
       
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
@@ -76,6 +182,11 @@ Theorem sitpn2vhdl_sound :
     (* (* Environments are similar. *) *)
     EnvEq sitpn E__c E__p ->
 
+    (* sitpn is in state s' after τ execution cycles and yields
+       exec. trace θs. *)
+    
+    SitpnExecute E__c (s0 sitpn) τ θ__s s' ->    
+    
     (* Design elaboration *)
     edesign hdstore Mg d Δ σ__e ->
     
@@ -88,89 +199,24 @@ Theorem sitpn2vhdl_sound :
     (* ** Conclusion: exec. traces are equal. ** *)
     SimTrace θ__s θ__σ.
 Proof.
-  intros sitpn E__c τ θ__s s' Hexec. intros d M__g induction Hexec.
-  - admit.
-  -
-    
+  intros.
+
   lazymatch goal with
   | [
-    Htransl: sitpn_to_hvhdl _ _ = _,
+    Htransl: sitpn_to_hvhdl _ _ = Success _,
     Henveq: EnvEq _ _ _,
-    Hsitpnexec: SitpnExecute _ _ _ _,
+    Hsitpnexec: SitpnExecute _ _ _ _ _,
     Helab: edesign _ _ _ _ _,
     Hinit: init _ _ _ _,
-    Hsimloop: simloop _ _ _ _ _ _
+    Hsimloop: simloop _ _ _ _ _ _ _
     |- _ ] =>
-    specialize (init_states_sim sitpn mm d Mg ed dstatee dstate0 Htransl Helab Hinit) as Hinit_eq; 
-      apply (simulation_lemma sitpn Ec (s0 sitpn) s' τ Hsitpnexec 
-                              Mg d Ep dstate0 σ' ed dstatee mm
+    specialize (init_states_sim sitpn mm d Mg Δ σ__e σ0 Htransl Helab Hinit) as Hinit_eq;
+      apply (simulation_lemma sitpn E__c τ (s0 sitpn) θ__s s' Hsitpnexec
+                              d mm E__p Mg Δ σ__e θ__σ σ0 σ'
                               Htransl Henveq Helab Hinit_eq Hsimloop)
   end.
 
 Qed.
-
-
-
-(** ** Simulation Lemma *)
-
-Lemma simulation_lemma :
-  forall sitpn Ec s1 s2 tau,
-
-    (* From state s1 to state s2 after tau execution cycles. *)
-    SitpnExecute Ec s1 tau s2 ->
-
-    forall  Mg d Ep dstate1 dstate2 ed dstatee mm,
-      
-    (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
-
-    (* Environments are similar. *)
-    EnvEq sitpn Ec Ep ->
-
-    (* ed, dstate are the results of the elaboration of d. *)
-    edesign hdstore Mg d ed dstatee ->
-
-    (* States s1 and dstate1 are similar; *)
-    SimState s1 dstate1 ->
-    
-    (* From dstate1 to dstate2 after tau execution cycles. *)
-    simloop Ep ed dstate1 (get_behavior d) tau dstate2 ->
-
-    (* Conclusion *)
-    SimState s2 dstate2.
-Proof.
-  intros *; intros Hexec; dependent induction Hexec;
-    intros *; intros Htransl Henveq Helab Hsimstate Hsim.
-  
-  (* CASE tau = 0, trivial. *)
-  - inversion Hsim. rewrite <- H0; assumption.
-
-  (* CASE tau > 0 *)
-  - inversion_clear Hsim as [ tau0 dstate' dstate'' Hcyc Hsiml Heqtau Heqdstate |  ].
-    (* Specializes the induction hypothesis, then apply the step lemma. *)
-    specialize (IHHexec Mg d Ep dstate' dstate2 ed dstatee mm Htransl Henveq Helab).
-    
-Admitted.
-
-(** ** Equal Initial States  *)
-
-Lemma init_states_sim :
-  forall sitpn mm d Mg ed dstatee dstate0,
-    
-    (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
-
-    (* ed, dstate are the results of the elaboration of d. *)
-    edesign hdstore Mg d ed dstatee ->
-
-    (* initialization d's state. *)
-    init ed dstatee (get_behavior d) dstate0 ->
-
-    (* init states are similar *)
-    SimState (s0 sitpn) dstate0.
-Proof.
-Admitted.
-  
     
 Lemma falling_edge_compute_fired :
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
