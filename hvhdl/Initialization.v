@@ -27,22 +27,24 @@ Require Import NatSet.
     statements once, regardless of sensitivity lists or events on
     signals and component instances.  *)
 
-Inductive vruninit (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
+Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement exactly once, regardless of its
     sensitivity list. *)
 
 | VRunInitPs :
-    forall {pid sl vars stmt lenv dstate' lenv'},
+    forall {pid sl vars stmt Λ σ' Λ'},
 
       (* * Premises * *)
-      vseq ed dstate lenv stmt dstate' lenv' ->
+      vseq Δ σ Λ stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      NatMap.MapsTo pid (Process lenv) ed ->
+      
+      (* Process id maps to the local environment Λ in elaborated design Δ *)
+      NatMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
-      vruninit ed dstate (cs_ps pid sl vars stmt) dstate'
+      vruninit Δ σ (cs_ps pid sl vars stmt) σ'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -52,28 +54,36 @@ Inductive vruninit (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 | VRunInitCompEvents :
     forall {compid entid gmap ipmap opmap cstmt
-                   cenv cstate cstate' cstate'' dstate'},
+                   Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
-      mapip ed cenv dstate cstate ipmap cstate' ->
-      vruninit cenv cstate' cstmt cstate'' ->
-      mapop ed cenv dstate cstate'' opmap dstate' ->
+
+      (* Injects input port values into component state *)
+      mapip Δ Δ__c σ σ__c ipmap σ__c' ->
+
+      (* Executes component behavior *)
+      vruninit Δ__c σ__c' cstmt σ__c'' ->
+
+      (* Propagates output port values to embedded design *)
+      mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
-      (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) ed ->
+      (* compid ∈ Comps(Δ) and Δ(compid) = (Δc, cstmt) *)
+      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
-      (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore dstate) ->
+      (* compid ∈ σ and σ(compid) = σc *)
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* Events registered in cstate''. *)
-      events cstate'' <> NatSet.empty ->
+      (* Events registered in σc''. *)
+      events σ__c'' <> NatSet.empty ->
       
       (* * Conclusion * *)
-      (* Add compid to the events field of dstate' because compid
+      
+      (* Add compid to the events field of σ' because compid
          registered some events in its internal state. *)
-      vruninit ed dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+      
+      vruninit Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -81,67 +91,67 @@ Inductive vruninit (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 | VRunInitCompNoEvent :
     forall {compid entid gmap ipmap opmap cstmt
-                   cenv cstate cstate' cstate'' dstate'},
+                   Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
-      mapip ed cenv dstate cstate ipmap cstate' ->
-      vruninit cenv cstate' cstmt cstate'' ->
-      mapop ed cenv dstate cstate'' opmap dstate' ->
+      mapip Δ Δ__c σ σ__c ipmap σ__c' ->
+      vruninit Δ__c σ__c' cstmt σ__c'' ->
+      mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
-      (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) ed ->
+      (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
+      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
-      (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore dstate) ->
+      (* compid ∈ σ and σ(compid) = \sigma__c *)
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* No event registered in cstate''. *)
-      events cstate'' = NatSet.empty ->
+      (* No event registered in \sigma__c''. *)
+      events σ__c'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vruninit ed dstate (cs_comp compid entid gmap ipmap opmap) dstate'
+      vruninit Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
 (** Evaluates the parallel execution of two concurrent
     statements computed with the [runinit] relation.  *)
                
 | VRunInitPar :
-    forall {cstmt cstmt' dstate' dstate'' merged},
+    forall {cstmt cstmt' σ' σ'' merged},
 
       (* * Premises * *)
-      vruninit ed dstate cstmt dstate' ->
-      vruninit ed dstate cstmt' dstate'' ->
+      vruninit Δ σ cstmt σ' ->
+      vruninit Δ σ cstmt' σ'' ->
 
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NatSet.inter (events dstate') (events dstate'') = NatSet.empty ->
+      NatSet.inter (events σ') (events σ'') = NatSet.empty ->
 
       (* States that merged is the result of the merging 
-         of states dstate, dstate' and dstate''. *)
-      IsMergedDState dstate dstate' dstate'' merged ->
+         of states \sigma, \sigma' and \sigma''. *)
+      IsMergedDState σ σ' σ'' merged ->
       
       (* * Conclusion * *)
-      vruninit ed dstate (cstmt // cstmt') merged.
+      vruninit Δ σ (cstmt // cstmt') merged.
 
 (** Defines the [init] relation, sequential composition of the
     [vruninit] and the [stabilize] relation. *)
 
-Inductive init (ed : ElDesign) : DState -> cs -> DState -> Prop :=
+Inductive init (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
-    forall {dstate behavior dstate' dstate'' θ},
+    forall {σ behavior σ' σ'' θ},
 
       (* * Premises * *)
 
       (* Sets the rst (i.e, reset) signal to ⊥ to trigger the
          evaluation of code related to "factory reset".  *)
-      vruninit ed (sstore_add rst (Vbool false) dstate) behavior dstate' ->
+      vruninit Δ (sstore_add rst (Vbool false) σ) behavior σ' ->
 
       (* Sets the rst signal to ⊤, and no longer will it gain the
          value ⊥ during the whole simulation loop.  *)
-      stabilize ed (sstore_add rst (Vbool true) dstate') behavior θ dstate'' ->
+      stabilize Δ (sstore_add rst (Vbool true) σ') behavior θ σ'' ->
       
       (* * Conclusion * *)
-      init ed dstate behavior dstate''.
+      init Δ σ behavior σ''.
 

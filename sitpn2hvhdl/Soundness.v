@@ -114,6 +114,8 @@ Lemma init_states_sim :
     (* init states are similar *)
     (s0 sitpn) ∼ σ0.
 Proof.
+  intros *; intros Htransl Helab Hinit.
+  inversion_clear Hinit as (σ', beh, σ, σ'', θ, Hruninit, Hstab).
 Admitted.
 
 (** ** Simulation Lemma *)
