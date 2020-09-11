@@ -1,6 +1,7 @@
 (** * Semantic Preservation Theorem *)
 
 Require Import GlobalTypes.
+Require Import SitpnSemanticsDefs.
 
 (* SITPN Libraries *)
 
@@ -154,6 +155,65 @@ Admitted.
     transition components with a fired out port valuated to true (or
     false otherwise).  *)
 
+Lemma falling_edge_compute_fired_aux :
+  
+  forall sitpn s lofT fset t,
+    
+    (* t ∈ fired(s) *)
+    @IsFiredListAux sitpn s lofT (M s) nil fset ->
+    List.In t fset ->
+    @Set_in_List (T sitpn) lofT ->
+
+    False.
+Proof.
+  intros sitpn s lofT fset t Hfired; induction Hfired.
+  - intros Hin_fired Hset_in_l.
+    inversion_clear Hset_in_l as (Hin_T, Hnodup).
+    specialize (Hin_T t); contradiction.
+  - intros Hin_f'' Hset_in_l; specialize (IHHfired Hin_f'').
+    apply IHHfired.
+    unfold Set_in_List in *.
+    split.
+    + unfold IsDiff in H1.
+      inversion_clear Hset_in_l as (Hall_in_T, Hnodup).
+      admit.
+    + inversion_clear Hset_in_l as (Hall_in_T, Hnodup).
+      induction Hnodup.
+      -- specialize (Hall_in_T t); contradiction.
+      -- apply List.NoDup_cons.
+         ++ 
+    (* forall d mm Δ σ θ σ' (γ : (P sitpn) + (T sitpn) -> ident) id__t σ'__t, *)
+      
+    (* (* sitpn translates into d. *) *)
+    (* sitpn_to_hvhdl sitpn mm = Success d -> *)
+    
+    (* (* Stabilize from σf to σ' *) *)
+    (* stabilize Δ σ (get_behavior d) θ σ' -> *)
+    
+    (* (** Component idt implements transition t *) *)
+    (* γ (inr t) = id__t -> *)
+
+    (* (* σ't is the state of component idt at design's state σ'. *) *)
+    (* MapsTo id__t σ'__t (compstore σ') -> *)
+
+    (* (* Conclusion *) *)
+
+    (* (* σ't(fired) = true *) *)
+    (* MapsTo Transition.fired (Vbool true) (sigstore σ'__t). *)
+Proof.
+  induction 3.
+  - admit.
+  -
+  intros sitpn mm d s fset t Hfired.
+  inversion_clear Hfired as (His_fset, Hin_fset).
+  inversion_clear His_fset as (Tlist, His_fset_aux).
+  dependent induction His_fset_aux.
+
+  (* Base case *)
+  - contradiction.
+  - apply (IHHis_fset_aux Hin_fset).
+Admitted.
+     
 Lemma falling_edge_compute_fired :
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
 
@@ -184,14 +244,12 @@ Lemma falling_edge_compute_fired :
       @Fired sitpn s' fset t ->
       MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
-  intros.
-  unfold Fired in H6.
-  induction H6.
-  inversion H6.
-  inversion_clear H9.
-  - admit.
-  - unfold SitpnSemanticsDefs.Set_in_List in H8.
-    induction H8.
+  intros
+  inversion_clear H6.
+  inversion_clear H7.
+  dependent induction H6.
+  - contradiction.
+  - induction H8.
     generalize (H8 t).
 Admitted.  
 
