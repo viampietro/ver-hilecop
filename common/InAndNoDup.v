@@ -511,10 +511,10 @@ Section InAndNoDupLemmas.
     (* Applies  *)
     apply (NoDup_Permutation Hnodup_fs_l Hnodup_fs_m Hequiv_lm).
   Qed.
-  
+
 End InAndNoDupLemmas.
 
-(** ** Tactics for [In] and [NoDup] *)
+(** ** Misc. tactics for [In] and [NoDup] predicates *)
 
 (** Search for a hypothesis H of the form (incl l l') 
       and a hypothesis H' of the form (In a l).
@@ -536,8 +536,8 @@ Ltac apply_incl Hin :=
     the head. *)
 
 Ltac incl_rm_hd_fs Hincl_fs :=
-  match Hincl_fs with
-  | ?H: incl (fst (split ((_, _) :: _))) _ =>
+  lazymatch Hincl_fs with
+  | incl (fst (split ((_, _) :: _))) _ =>
     rewrite fst_split_cons_app in Hincl_fs;
     simpl in Hincl_fs;
     apply incl_cons_inv in Hincl_fs
@@ -561,9 +561,9 @@ Ltac contradiction_with_nodup_same_pair l p p' Hin_p_l Hin_p'_l :=
 
   (* Checks that arguments are well-typed. *)
   lazymatch Hin_p_l with
-  | ?H: In p l =>
+  | In p l =>
     lazymatch Hin_p'_l with
-    | ?H': In p' l =>
+    | In p' l =>
       lazymatch goal with
       | [ Hnodup: NoDup (fst (split l)) |- _ ] =>
         
@@ -588,12 +588,21 @@ Ltac contradiction_with_nodup_same_pair l p p' Hin_p_l Hin_p'_l :=
 
 Ltac deduce_nodup_hd_not_in :=
   match goal with
-  | [ Hnodup: NoDup (?a :: ?l) |- _ ] =>
+  | [ Hnodup: NoDup (_ :: _) |- _ ] =>
     let Hnot_in := fresh "Hnot_in_tl" in
     assert (Hnot_in := Hnodup);
     rewrite NoDup_cons_iff in Hnot_in;
     apply proj1 in Hnot_in
   | _ => fail "No hypothesis of the form 'NoDup (?a :: ?l)'"
+  end.
+
+(* Applies the [in_app_or] lemma on an hypothesis of the 
+   form "In _ (_ ++ _)", then inversion. *)
+
+Ltac destruct_in_app_or :=
+  lazymatch goal with
+  | [ H : List.In _ (_ ++ _) |- _ ] =>
+    apply in_app_or in H; inversion_clear H
   end.
 
 (** *** Lemmas using the above tactics . *)
@@ -674,4 +683,12 @@ Proof.
          assumption) in
     (deduce_goal m Hperm_fs_lm || deduce_goal n Hperm_fs_ln).
 Qed.
+
+(* Hints to solve In predicate goals *)
+
+Hint Resolve in_app_or : core.
+Hint Resolve in_cons : core.
+Hint Resolve nodup_app : core.
+
+
 

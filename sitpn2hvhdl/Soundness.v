@@ -1,5 +1,7 @@
 (** * Semantic Preservation Theorem *)
 
+Require Import Coqlib.
+Require Import InAndNoDup.
 Require Import GlobalTypes.
 Require Import SitpnSemanticsDefs.
 
@@ -148,73 +150,88 @@ Lemma rising_edge_states_equal :
 Proof.
 Admitted.
 
-(** ** Falling edge compute fired lemma
+(** ** Falling edge compute fired lemma *)
 
-    States that starting from similar state, after the falling edge of
+Ltac decide_in_single :=
+  lazymatch goal with
+  | [ H: List.In ?a [?b] |- _ ] =>
+    inversion_clear H as [Heq | ]; [auto | contradiction]
+  end.
+
+(*  *)
+
+Lemma electfired_compute_fired :
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Similar starting states *)
+    γ ⊢ s ∼ σ ->
+    
+    (* Falling edge from s to s', s ⇝↓ s' *)
+    SitpnStateTransition Ec τ s s' falling_edge -> 
+
+    (* Falling edge from σ to σf *)
+    vfalling Δ σ (get_behavior d) σ__f -> 
+    
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    
+    forall m fired  tp m' fired',
+
+      (* All transitions of the fired list verify the conclusion *)
+      (forall t,
+          List.In t fired ->
+          γ (inr t) = id__t ->
+          MapsTo id__t σ'__t (compstore σ') ->
+          MapsTo Transition.fired (Vbool true) (sigstore σ'__t)) ->
+      
+      @ElectFired sitpn s' m fired tp (m', fired') ->
+      
+      forall t,
+        List.In t fired' ->
+      
+        (** Component idt implements transition t *)
+        γ (inr t) = id__t ->
+
+        (* σ't is the state of component idt at design's state σ'. *)
+        MapsTo id__t σ'__t (compstore σ') ->
+
+        (* Conclusion *)
+        MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+Proof.
+  intros *;
+    intros Htransl Hsim Hfalling Hfall_hdl Hstab;
+    intros m fired tp m' fired' Hin_fired_compute Helect;
+    dependent induction Helect;
+
+    (* BASE CASE *)
+    auto;
+
+    (* IND. CASES *)
+    (* [auto] solves the case where (t ∉ firable(s) or t ∉ sens(m)) *)
+    apply IHHelect with (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired'); auto.
+
+  (* CASE t ∈ firable(s) ∧ t ∈ sens(m) *)
+  intros t' Hin_app Hbind_t' Hid__t; destruct_in_app_or.
+
+  (* Case t ∈ fired *)
+  - apply Hin_fired_compute with (t := t'); auto.
+
+    
+  (* Case t = t' *)
+  - decide_in_single.
+Admitted.
+  
+(*  States that starting from similar state, after the falling edge of
     the clock signal, all fired transitions are associated with
     transition components with a fired out port valuated to true (or
-    false otherwise).  *)
+    false otherwise). *)
 
 Lemma falling_edge_compute_fired_aux :
-  
-  forall sitpn s lofT fset t,
-    
-    (* t ∈ fired(s) *)
-    @IsFiredListAux sitpn s lofT (M s) nil fset ->
-    List.In t fset ->
-    @Set_in_List (T sitpn) lofT ->
-
-    False.
-Proof.
-  intros sitpn s lofT fset t Hfired; induction Hfired.
-  - intros Hin_fired Hset_in_l.
-    inversion_clear Hset_in_l as (Hin_T, Hnodup).
-    specialize (Hin_T t); contradiction.
-  - intros Hin_f'' Hset_in_l; specialize (IHHfired Hin_f'').
-    apply IHHfired.
-    unfold Set_in_List in *.
-    split.
-    + unfold IsDiff in H1.
-      inversion_clear Hset_in_l as (Hall_in_T, Hnodup).
-      admit.
-    + inversion_clear Hset_in_l as (Hall_in_T, Hnodup).
-      induction Hnodup.
-      -- specialize (Hall_in_T t); contradiction.
-      -- apply List.NoDup_cons.
-         ++ 
-    (* forall d mm Δ σ θ σ' (γ : (P sitpn) + (T sitpn) -> ident) id__t σ'__t, *)
-      
-    (* (* sitpn translates into d. *) *)
-    (* sitpn_to_hvhdl sitpn mm = Success d -> *)
-    
-    (* (* Stabilize from σf to σ' *) *)
-    (* stabilize Δ σ (get_behavior d) θ σ' -> *)
-    
-    (* (** Component idt implements transition t *) *)
-    (* γ (inr t) = id__t -> *)
-
-    (* (* σ't is the state of component idt at design's state σ'. *) *)
-    (* MapsTo id__t σ'__t (compstore σ') -> *)
-
-    (* (* Conclusion *) *)
-
-    (* (* σ't(fired) = true *) *)
-    (* MapsTo Transition.fired (Vbool true) (sigstore σ'__t). *)
-Proof.
-  induction 3.
-  - admit.
-  -
-  intros sitpn mm d s fset t Hfired.
-  inversion_clear Hfired as (His_fset, Hin_fset).
-  inversion_clear His_fset as (Tlist, His_fset_aux).
-  dependent induction His_fset_aux.
-
-  (* Base case *)
-  - contradiction.
-  - apply (IHHis_fset_aux Hin_fset).
-Admitted.
-     
-Lemma falling_edge_compute_fired :
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
 
     (* sitpn translates into d. *)
@@ -233,25 +250,46 @@ Lemma falling_edge_compute_fired :
     stabilize Δ σ__f (get_behavior d) θ σ' ->
     
     (* Conclusion *)
-    forall fset t,
-      (** Component idt implements transition t *)
-      γ (inr t) = id__t ->
+    
+    forall m fired lofT fset,
 
-      (* σ't is the state of component idt at design's state σ'. *)
-      MapsTo id__t σ'__t (compstore σ') ->
+      (* All transitions of the fired list verify the conclusion *)
+      (forall t,
+          List.In t fired ->
+          γ (inr t) = id__t ->
+          MapsTo id__t σ'__t (compstore σ') ->
+          MapsTo Transition.fired (Vbool true) (sigstore σ'__t)) ->
+      
+      (* t ∈ fired(s') *)
+      @IsFiredListAux sitpn s' m fired lofT fset ->
+      
+      forall t,
+        List.In t fset ->
+      
+        (** Component idt implements transition t *)
+        γ (inr t) = id__t ->
 
-      (* Conclusion *)
-      @Fired sitpn s' fset t ->
-      MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+        (* σ't is the state of component idt at design's state σ'. *)
+        MapsTo id__t σ'__t (compstore σ') ->
+
+        (* Conclusion *)
+        MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
-  intros
-  inversion_clear H6.
-  inversion_clear H7.
-  dependent induction H6.
-  - contradiction.
-  - induction H8.
-    generalize (H8 t).
-Admitted.  
+  intros Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t
+         Htransl Hsim Hfalling Hfall_hdl Hstab fired m lofT fset
+         Hin_fired_compute Hfired_aux. 
+  induction Hfired_aux.
+
+  (* BASE CASE *)
+  - assumption.
+
+  (* IND. CASE *)
+  - apply IHHfired_aux.
+    apply (electfired_compute_fired Δ σ__f d θ σ' σ sitpn Ec τ s s' mm) with
+        (fired' := fired') (fired := fired) (m' := m') (m := m) (tp := tp)
+        (γ := γ) (id__t := id__t) (σ'__t := σ'__t);
+      auto.
+Qed.  
 
 (** ** Falling edge states equal.
  

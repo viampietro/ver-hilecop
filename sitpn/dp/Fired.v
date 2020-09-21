@@ -42,44 +42,40 @@ Definition IsTopPriorityList sitpn (lofT : list (T sitpn)) (tp : list (T sitpn))
     state [s] and their sensitization status at marking [m].
  *)
 
-Inductive ElectFired sitpn (s : SitpnState sitpn) :
-  list (T sitpn) ->
-  ((P sitpn) -> nat) ->
-  list (T sitpn) ->
-  ((P sitpn -> nat) * (list (T sitpn))) -> Prop :=
+Inductive ElectFired sitpn (s : SitpnState sitpn) (m : (P sitpn) -> nat) (fired : list (T sitpn)) :
+  list (T sitpn) -> ((P sitpn -> nat) * (list (T sitpn))) -> Prop :=
 | ElectFired_nil :
-    forall m fired, ElectFired s [] m fired (m, fired)
+    ElectFired s m fired [] (m, fired)
 | ElectFired_cons :
-    forall m fired lofT t msub m' fired',
+    forall lofT t msub m' fired',
       Firable s t ->
       Sens m t ->
       (* Singleton set {t}. *)
       MarkingSubPreSum (fun t' => t' = t) m msub ->
-      ElectFired s lofT msub (fired ++ [t]) (m', fired') ->
-      ElectFired s (t :: lofT) m fired (m', fired')
+      ElectFired s msub (fired ++ [t]) lofT (m', fired') ->
+      ElectFired s m fired (t :: lofT) (m', fired')
 | ElectFired_not_fired :
-    forall m fired lofT t m' fired',
+    forall lofT t m' fired',
       ~(Firable s t /\ Sens m t) ->
-      ElectFired s lofT m fired (m', fired') ->
-      ElectFired s (t :: lofT) m fired (m', fired').
+      ElectFired s m fired lofT (m', fired') ->
+      ElectFired s m fired (t :: lofT) (m', fired').
 
 (** States that a list [d] is the result of the difference between two
     lists [l] and [m]; i.e, d = l\m is set theory notation. *)
 
 Definition IsDiff {A} (l m d : list A) :=
-  forall a, In a d <-> (In a l /\ ~In a m).
+  NoDup l /\ NoDup m /\ NoDup d /\ forall a, In a d <-> (In a l /\ ~In a m).
 
 (** Builds the list of fired transitions from the list [lofT], the
     list of already elected fired transitions [fired], and the
     residual marking [m]. *)
 
-Inductive IsFiredListAux sitpn (s : SitpnState sitpn) :
-  list (T sitpn) -> (P sitpn -> nat) -> list (T sitpn) -> list (T sitpn) -> Prop :=
+Inductive IsFiredListAux sitpn (s : SitpnState sitpn) (m : P sitpn -> nat) (fired : list (T sitpn)) :
+  list (T sitpn) -> list (T sitpn) -> Prop :=
 | IsFiredListAux_nil :
-    forall m fired,
-      IsFiredListAux s [] m fired fired
+      IsFiredListAux s m fired [] fired 
 | IsFiredListAux_cons :
-    forall lofT m fired tp m' fired' lofT' fired'',
+    forall lofT tp m' fired' lofT' fired'',
 
       (* [tp] is the list of top-priority transitions contained in [lofT]. *)
       IsTopPriorityList lofT tp ->
@@ -89,15 +85,14 @@ Inductive IsFiredListAux sitpn (s : SitpnState sitpn) :
          [m], and the list of top-priority transitions [tp].
 
          [m'] is the new residual marking. *)
-      ElectFired s tp m fired (m', fired') ->
+      ElectFired s m fired tp (m', fired') ->
 
       (* lofT' = lofT \ tp *)
       IsDiff lofT tp lofT' ->
       
-      IsFiredListAux s lofT' m' fired' fired'' ->      
-      IsFiredListAux s lofT m fired fired''.
-
-Scheme Induction for IsFiredListAux Sort Prop.
+      IsFiredListAux s m' fired' lofT' fired'' ->
+      
+      IsFiredListAux s m fired lofT fired''.
 
 (** Wrapper around the IsFiredListAux predicate.  
 
@@ -112,7 +107,7 @@ Scheme Induction for IsFiredListAux Sort Prop.
 Inductive IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Prop :=
   IsFiredList_ :
     forall lofT,
-      IsFiredListAux s lofT (M s) [] fired ->
+      IsFiredListAux s (M s) [] lofT fired ->
       IsFiredList s fired.
 
 (** Final definition of the set of [fired] transitions at state [s]

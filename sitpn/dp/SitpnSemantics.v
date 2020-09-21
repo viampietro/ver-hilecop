@@ -89,17 +89,17 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     Relates two SitpnState over one cycle of execution.
  *)
 
-Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s s'' : SitpnState sitpn) :=
-  exists s', SitpnStateTransition E tau s s' rising_edge /\ SitpnStateTransition E tau s' s'' falling_edge.
+Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s'' : SitpnState sitpn) :=
+  exists s', SitpnStateTransition E τ s s' rising_edge /\ SitpnStateTransition E τ s' s'' falling_edge.
 
 (** Defines the SITPN Execution Relation. *)
 
 Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> list (SitpnState sitpn) -> SitpnState sitpn -> Prop :=
 | SitpnExecute_end : SitpnExecute E s 0 [] s
-| SitpnExecute_loop: forall tau θ s' s'',
-    SitpnCycle E (S tau) s s' ->
-    SitpnExecute E s' tau θ s'' ->
-    SitpnExecute E s (S tau) (s' :: θ) s''.
+| SitpnExecute_loop: forall τ θ s' s'',
+    SitpnCycle E (S τ) s s' ->
+    SitpnExecute E s' τ θ s'' ->
+    SitpnExecute E s (S τ) (s' :: θ) s''.
 
 (** Defines the initial state of an SITPN. *)
 
