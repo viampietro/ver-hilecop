@@ -152,15 +152,69 @@ Admitted.
 
 (** ** Falling edge compute fired lemma *)
 
-Ltac decide_in_single :=
+(* Deduces "?a = ?b" from "In ?a [?b]".  Introduces an hypothesis Heqn
+   in the proof context.  *)
+
+Ltac singleton_eq :=
   lazymatch goal with
   | [ H: List.In ?a [?b] |- _ ] =>
+    let Heq := fresh "Heq" in
     inversion_clear H as [Heq | ]; [auto | contradiction]
   end.
 
 (*  *)
 
-Lemma electfired_compute_fired :
+Lemma stabilize_compute_priority :
+  forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident) id__t σ'__t,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+        
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    
+    forall t m fired fset,
+
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
+      
+      MarkingSubPreSum (fun t => List.In t fired) (M s') m ->
+
+      (* [fset] is the list of fired transitions *)
+      IsFiredList s' fset ->
+      
+      (* fired ≡ { t' | t' ≻ t ∧ t' ∈ fired(s') } *)
+      (forall t', List.In t' fired -> t' >~ t = true /\ List.In t' fset) ->
+
+      (* t ∈ sens(m) *)
+      @Sens sitpn m t ->
+      
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
+
+      (* Conclusion *)
+      MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t).
+Proof.
+  intros *; intros Htransl Hstab.
+  dependent induction Hstab.
+
+  (* BASE CASE, θ = [] *)
+  - admit.
+    
+  -
+Admitted.
+
+(* All transitions that are in the list of transitions elected to be
+   fired - at state [s'] and considering the residual marking [m] -
+   have a bounded transition component (binding through γ) with a
+   "fired" port set to true at state σ'. *)
+
+Lemma elect_fired_compute_fired :
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
 
     (* sitpn translates into d. *)
@@ -188,7 +242,12 @@ Lemma electfired_compute_fired :
           γ (inr t) = id__t ->
           MapsTo id__t σ'__t (compstore σ') ->
           MapsTo Transition.fired (Vbool true) (sigstore σ'__t)) ->
+
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
       
+      MarkingSubPreSum (fun t => List.In t fired) (M s') m ->
+
       @ElectFired sitpn s' m fired tp (m', fired') ->
       
       forall t,
@@ -205,7 +264,7 @@ Lemma electfired_compute_fired :
 Proof.
   intros *;
     intros Htransl Hsim Hfalling Hfall_hdl Hstab;
-    intros m fired tp m' fired' Hin_fired_compute Helect;
+    intros m fired tp m' fired' Hin_fired_compute Hresm Helect;
     dependent induction Helect;
 
     (* BASE CASE *)
@@ -216,14 +275,20 @@ Proof.
     apply IHHelect with (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired'); auto.
 
   (* CASE t ∈ firable(s) ∧ t ∈ sens(m) *)
-  intros t' Hin_app Hbind_t' Hid__t; destruct_in_app_or.
 
-  (* Case t ∈ fired *)
-  - apply Hin_fired_compute with (t := t'); auto.
-
+  (* ∀ t' ∈ fired ++ [t] → C *)
+  - intros t' Hin_app Hbind_t' Hid__t; destruct_in_app_or.
     
-  (* Case t = t' *)
-  - decide_in_single.
+    (* Case t ∈ fired *)
+    + apply Hin_fired_compute with (t := t'); auto.
+    
+    (* Case t = t' *)
+    (* Use [falling_compute_firable] and [stabilize_compute_priority] to solve the subgoal *)
+    + singleton_eq. 
+
+  (* msub = M s' - ∑ pre(ti), ∀ ti ∈ fired ++ [t] *)
+  - admit.
+    
 Admitted.
   
 (*  States that starting from similar state, after the falling edge of
@@ -259,6 +324,11 @@ Lemma falling_edge_compute_fired_aux :
           γ (inr t) = id__t ->
           MapsTo id__t σ'__t (compstore σ') ->
           MapsTo Transition.fired (Vbool true) (sigstore σ'__t)) ->
+
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
+      
+      MarkingSubPreSum (fun t : T sitpn => List.In t fired) (M s') m -> 
       
       (* t ∈ fired(s') *)
       @IsFiredListAux sitpn s' m fired lofT fset ->
@@ -277,7 +347,7 @@ Lemma falling_edge_compute_fired_aux :
 Proof.
   intros Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t
          Htransl Hsim Hfalling Hfall_hdl Hstab fired m lofT fset
-         Hin_fired_compute Hfired_aux. 
+         Hin_fired_compute Hresm Hfired_aux. 
   induction Hfired_aux.
 
   (* BASE CASE *)
@@ -285,12 +355,121 @@ Proof.
 
   (* IND. CASE *)
   - apply IHHfired_aux.
-    apply (electfired_compute_fired Δ σ__f d θ σ' σ sitpn Ec τ s s' mm) with
-        (fired' := fired') (fired := fired) (m' := m') (m := m) (tp := tp)
-        (γ := γ) (id__t := id__t) (σ'__t := σ'__t);
-      auto.
-Qed.  
+    
+    (* CASE elect fired compute fired *)
+    + eapply (elect_fired_compute_fired); eauto.
 
+    (* CASE elect fired compute residual *)
+    + admit.
+      
+Admitted.  
+
+(*  Corollary of the [falling_edge_compute_fired_aux] lemma.
+
+    States that starting from similar state, after the falling edge of
+    the clock signal, all fired transitions are associated with
+    transition components with a fired out port valuated to true (or
+    false otherwise). *)
+
+Lemma falling_edge_compute_fired_list :
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Similar starting states *)
+    γ ⊢ s ∼ σ ->
+    
+    (* Falling edge from s to s', s ⇝↓ s' *)
+    SitpnStateTransition Ec τ s s' falling_edge -> 
+
+    (* Falling edge from σ to σf *)
+    vfalling Δ σ (get_behavior d) σ__f -> 
+
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    
+    forall fset,
+      
+      (* t ∈ fired(s') *)
+      @IsFiredList sitpn s' fset ->
+      
+      forall t,
+        List.In t fset ->
+        
+        (** Component idt implements transition t *)
+        γ (inr t) = id__t ->
+
+        (* σ't is the state of component idt at design's state σ'. *)
+        MapsTo id__t σ'__t (compstore σ') ->
+
+        (* Conclusion *)
+        MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+Proof.
+    intros until t; 
+    lazymatch goal with
+    | [ H: IsFiredList _ _ |- _ ] =>
+      inversion H;
+        eapply falling_edge_compute_fired_aux;
+        eauto    
+    end.
+    
+    (* ∀ t ∈ [] ⇒ C *)
+    contradiction.
+
+    (* M s' = M s' - ∑ pre(ti), ∀ ti ∈ [] *)
+    apply MarkingSubPreSum_;
+      inversion_clear 1;
+      lazymatch goal with
+      | [ H: PreSumList _ _ _ _ |- _ ] =>
+        inversion H; [omega | assert (Hfalse := proj2_sig t0); contradiction ]
+      end.
+Qed.
+
+(*  Corollary of the [falling_edge_compute_fired_list] lemma. *)
+
+Lemma falling_edge_compute_fired :
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Similar starting states *)
+    γ ⊢ s ∼ σ ->
+    
+    (* Falling edge from s to s', s ⇝↓ s' *)
+    SitpnStateTransition Ec τ s s' falling_edge -> 
+
+    (* Falling edge from σ to σf *)
+    vfalling Δ σ (get_behavior d) σ__f -> 
+
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    
+    forall fset t,
+      
+      (* t ∈ fired(s') *)
+      @Fired sitpn s' fset t ->
+        
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
+
+      (* Conclusion *)
+      MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+Proof.
+  intros until t;
+    inversion 1;
+    eapply falling_edge_compute_fired_list;
+    eauto.
+Qed.
+  
 (** ** Falling edge states equal.
  
     Utopic lemma; not sure it is provable. *)
