@@ -1,5 +1,7 @@
 (** * Semantic Preservation Theorem *)
 
+Require Import NatMap.
+
 Require Import Coqlib.
 Require Import InAndNoDup.
 Require Import GlobalTypes.
@@ -25,14 +27,13 @@ Require Import AbstractSyntax.
 Require Import HilecopDesignStore.
 Require Import Initialization.
 Require Import Stabilize.
+Require Import PortMapEvaluation.
 
 (* SITPN to H-VHDL Libraries *)
 
 Require Import GenerateHVhdl.
 
-(* Specific Tactics. *)
-
-Require Import Coq.Program.Equality.
+(* Facts about NatMap. *)
 
 (** Defines the relation stating that an SITPN execution environment
     and a H-VHDL design execution environment described the same
@@ -162,21 +163,62 @@ Ltac singleton_eq :=
     inversion_clear H as [Heq | ]; [auto | contradiction]
   end.
 
+Lemma comb_maps_id :
+  forall Δ σ behavior σ' id σ__id,
+    vcomb Δ σ behavior σ' ->
+    MapsTo id σ__id (compstore σ) ->
+    exists σ'__id, MapsTo id σ'__id (compstore σ').
+Proof.
+  induction 1; intros Hmaps.
+
+  (* CASE behavior is a quiescent process  *)
+  - simpl; exists σ__id; assumption.
+
+  (* CASE behavior is an eventful process, needs ind. on vseq. *)
+  - admit.
+
+  (* CASE behavior is an eventful component *)
+  - admit.
+
+  (* CASE behavior is a quiescent component *)
+  - admit.
+
+  (* CASE behavior is a sequence of concurrent statements. *)
+    
+  - unfold IsMergedDState in H2.
+    apply proj2, proj1 in H2.
+    unfold MapsTo.
+    unfold EqualDom in H2.
+    unfold common.NatMap.In, common.NatMap.Raw.PX.In in H2.
+    rewrite <- (H2 id).
+    exists σ__id. assumption.
+    
+Admitted.
+
 (*  *)
 
 Lemma stabilize_compute_priority :
-  forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident) id__t σ'__t,
+  forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
 
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
-        
+    
     (* Stabilize from σf to σ' *)
     stabilize Δ σ (get_behavior d) θ σ' ->
     
     (* Conclusion *)
     
-    forall t m fired fset,
+    forall id__t σ__t σ'__t t m fired fset,
 
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+
+      (* σt is the state of component idt at design's state σ. *)
+      MapsTo id__t σ__t (compstore σ) ->
+      
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
+      
       (* Marking [m] is the current residual marking computed from
          start marking [M s'].  *)
       
@@ -190,23 +232,32 @@ Lemma stabilize_compute_priority :
 
       (* t ∈ sens(m) *)
       @Sens sitpn m t ->
-      
-      (** Component idt implements transition t *)
-      γ (inr t) = id__t ->
 
-      (* σ't is the state of component idt at design's state σ'. *)
-      MapsTo id__t σ'__t (compstore σ') ->
+      (* Signal σt("s_priority_combination") = true *)
+      MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ__t) ->
 
-      (* Conclusion *)
+      (* Signal σ't("s_priority_combination") = true *)
       MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t).
 Proof.
   intros *; intros Htransl Hstab.
   dependent induction Hstab.
 
   (* BASE CASE, θ = [] *)
-  - admit.
+  - intros;
+      lazymatch goal with
+      | [ H: @MapsTo DState _ _ _, H': @MapsTo DState _ _ _ |- _ ] =>
+        specialize (MapsTo_fun H H') as Heq; rewrite <- Heq; assumption
+      end.
+
+  (* IND. CASE *)
+  - intros id__t σ__t σ''__t t m fired fset Hbind_t Hσ__t Hσ''__t Hresm Hfiredl Hprt Hsens Hσt_true.
+
+    (** Need a lemma saying: 
+        σ ⇝ σ' ⇒ σ(idt) = σt ⇒ ∃σ't, σ'(idt) = σ't 
+        where ⇝ is an "execution" relation between σ and σ'.
+     *)
     
-  -
+    apply IHHstab with (id__t := id__t) (σ__t := σ'__t) (t := t) (m := m) (fired := fired) (fset := fset); auto.
 Admitted.
 
 (* All transitions that are in the list of transitions elected to be

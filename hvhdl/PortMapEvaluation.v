@@ -154,7 +154,7 @@ Inductive mapop (ed cenv : ElDesign) (dstate cstate : DState) : list assocop -> 
 (** An empty list of port associations does not change the state
     [dstate] of the embedding design. *)
   
-| MapopNil : mapop ed cenv dstate cstate [] cstate 
+| MapopNil : mapop ed cenv dstate cstate [] dstate 
 
 (** Evaluates a non-empty list of port associations. *)
 | MapopCons :

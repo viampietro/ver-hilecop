@@ -149,8 +149,8 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
   (* The definition domains of [sigstore] and [compstore] must be
      the same for [origin] and [merged]. *)
   
-  EqualDom (sigstore origin) (sigstore merged) ->
-  EqualDom (compstore origin) (compstore merged) ->
+  EqualDom (sigstore origin) (sigstore merged) /\
+  EqualDom (compstore origin) (compstore merged) /\
   
   (* Describes the content of (sigstore merged) *)
 
