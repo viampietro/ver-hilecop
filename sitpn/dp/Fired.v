@@ -96,18 +96,14 @@ Inductive IsFiredListAux sitpn (s : SitpnState sitpn) (m : P sitpn -> nat) (fire
 
 (** Wrapper around the IsFiredListAux predicate.  
 
-    Remove from the definition of the IsFiredList predicate that 
-    lofT must implement the T set of transitions of the sitpn.
-
-    [lofT] is a potentially ill-formed list of transitions (i.e, with duplicates...).
-
-    The calling context must ensure its well-formedness.
+    Adds that [Tlist] must implement the set (T sitpn).
  *)
 
 Inductive IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Prop :=
   IsFiredList_ :
-    forall lofT,
-      IsFiredListAux s (M s) [] lofT fired ->
+    forall Tlist,
+      @Set_in_List (T sitpn) Tlist ->
+      IsFiredListAux s (M s) [] Tlist fired ->
       IsFiredList s fired.
 
 (** Final definition of the set of [fired] transitions at state [s]

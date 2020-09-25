@@ -63,7 +63,7 @@ Definition Firable (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
 (** States that a given Set S is implemented by a list l.  As a side
     effect, states that a given set is finite and enumerable. *)
 
-Definition Set_in_List (S : Type) (l : list S) : Prop := (forall s : S, In s l) /\ NoDup l.
+Definition Set_in_List (S : Set) (l : list S) : Prop := (forall s : S, In s l) /\ NoDup l.
 
 (** Sums the weight of the pre-edges between the place [p] 
     and the transitions of a list given in parameter.
