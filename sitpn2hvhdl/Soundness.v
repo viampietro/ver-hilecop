@@ -223,11 +223,6 @@ Proof.
     end.
 Qed.
 
-Inductive LeInList {A} (x : A) : A -> list A -> Prop :=
-| LeInList_refl : forall l, LeInList x x (x :: l)
-| LeInList_hd : forall y, LeInList x y (x :: y :: nil)
-| LeInList_cons : forall y l a, LeInList x y l -> LeInList x y (a :: l).
-
 Lemma is_last_of_trace :
   forall Δ σ behavior θ σ',
     stabilize Δ σ behavior θ σ' ->
@@ -264,39 +259,60 @@ Proof.
     apply (IHstabilize (last_cons_inv Hconsl Hlast)).
 Qed.
 
+
+Inductive LeInList {A} (x : A) : A -> list A -> Prop :=
+| LeInList_refl :
+    forall l, LeInList x x (x :: l)
+| LeInList_hd :
+    forall y l, LeInList x y (x :: y :: l)
+| LeInlist_rm_snd :
+    forall y l a, LeInList x y (x :: l) ->
+                  LeInList x y (x :: a :: l)
+| LeInList_rm_fst : 
+    forall y l a, (x = y \/ a <> y) ->
+                  LeInList x y l ->
+                  LeInList x y (a :: l).
+
+Lemma leinlist_cons {A} :
+  forall l (x y a : A), LeInList x y  (a :: l) -> List.In x l -> LeInList x y l.
+Proof.
+Admitted.
+
 (*  *)
 
 Lemma quiescent_signal :
   forall θ Δ σ behavior σ',
+    θ <> [] ->
     stabilize Δ σ behavior θ σ' ->
-    exists σ__i,
-      List.In σ__i θ ->
-      forall s v,
-        MapsTo s v (sigstore σ__i) ->
-        forall σ__j, LeInList σ__i σ__j θ -> MapsTo s v (sigstore σ__j).
+    forall s, exists σ__i,
+        List.In σ__i θ /\ (forall v, MapsTo s v (sigstore σ__i) -> forall σ__j, LeInList σ__i σ__j θ -> MapsTo s v (sigstore σ__j)).
 Proof.
-  induction 1.
+  induction 2; intros s.
   
   (* BASE CASE *)
-  - exists σ; contradiction.
-
+  - contradiction.
+    
   (* IND. CASE *)
-  - lazymatch goal with
-    | [ H: stabilize _ _ _ _ _ |- _ ] =>
-      specialize (is_last_of_trace Δ σ' behavior θ σ'' H) as Hw;
-        inversion_clear Hw as [Hlast | Heq]
-    end.
+  - inversion H1.
 
-    (* CASE Last θ σ'' *)
-    + lazymatch goal with
-      | [ H: stabilize _ _ _ _ _ |- _ ] =>
-        destruct θ
-      end.
-      -- inversion Hlast.
-      -- exists σ''. intros Hin.
-         inversion Hin.
-         ++ admit.
-         ++
+    + exists σ''. split.
+      -- apply in_eq.
+      -- inversion 2.
+         ++ rewrite <- H9; assumption.
+         ++ inversion H13.
+         
+    + assert (Hconsl : σ'0 :: θ0 <> []) by inversion 1.
+      rewrite <- H8 in IHstabilize.
+      specialize (IHstabilize Hconsl s).
+      inversion_clear IHstabilize as (σ__i, Hw).
+      inversion_clear Hw as (Hin_θ, Hquies).
+      exists σ__i.
+      split.
+
+      -- auto.
+      -- intros; specialize (leinlist_cons (σ'0 :: θ0) σ__i σ__j σ' H11 Hin_θ) as Hle.
+         apply Hquies; auto.
+
 Qed.
 
 (*  *)
