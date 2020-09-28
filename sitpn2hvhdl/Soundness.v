@@ -5,6 +5,7 @@ Require Import NatMap.
 Require Import Coqlib.
 Require Import InAndNoDup.
 Require Import GlobalTypes.
+Require Import ListsPlus.
 Require Import SitpnSemanticsDefs.
 
 (* SITPN Libraries *)
@@ -153,167 +154,23 @@ Admitted.
 
 (** ** Falling edge compute fired lemma *)
 
-(* Deduces "?a = ?b" from "In ?a [?b]".  Introduces an hypothesis Heqn
-   in the proof context.  *)
-
-Ltac singleton_eq :=
-  lazymatch goal with
-  | [ H: List.In ?a [?b] |- _ ] =>
-    let Heq := fresh "Heq" in
-    inversion_clear H as [Heq | ]; [auto | contradiction]
-  end.
-
-Lemma comb_maps_id :
-  forall Δ σ behavior σ' id σ__id,
-    vcomb Δ σ behavior σ' ->
-    MapsTo id σ__id (compstore σ) ->
-    exists σ'__id, MapsTo id σ'__id (compstore σ').
-Proof.
-  induction 1; intros Hmaps.
-
-  (* CASE behavior is a quiescent process  *)
-  - simpl; exists σ__id; assumption.
-
-  (* CASE behavior is an eventful process, needs ind. on vseq. *)
-  - admit.
-
-  (* CASE behavior is an eventful component *)
-  - admit.
-
-  (* CASE behavior is a quiescent component *)
-  - admit.
-
-  (* CASE behavior is a sequence of concurrent statements. *)
-    
-  - unfold IsMergedDState in H2.
-    apply proj2, proj1 in H2.
-    unfold MapsTo.
-    unfold EqualDom in H2.
-    unfold common.NatMap.In, common.NatMap.Raw.PX.In in H2.
-    rewrite <- (H2 id).
-    exists σ__id. assumption.
-    
-Admitted.
-
-(*  *)
-
-Lemma comb_maps_id_rev :
-  forall Δ σ behavior σ' id σ'__id,
-    vcomb Δ σ behavior σ' ->
-    MapsTo id σ'__id (compstore σ') ->
-    exists σ__id, MapsTo id σ__id (compstore σ).
-Proof.
-Admitted.
-
-(*  *)
-
-Require Import ListsPlus.
-
-Inductive Last {A} : list A -> A -> Prop :=
-| Last_singleton : forall a, Last (cons a nil) a
-| Last_cons : forall l a b, Last l a -> Last (b :: l) a.
-
-Lemma last_cons_inv :
-  forall {A l a b}, l <> nil -> @Last A (b :: l) a -> @Last A l a.
-Proof.
-  intros;
-    lazymatch goal with
-    | [ H: Last (_ :: _) _ |- _ ] =>
-      dependent induction H; [contradiction | assumption]
-    end.
-Qed.
-
-Lemma is_last_of_trace :
-  forall Δ σ behavior θ σ',
-    stabilize Δ σ behavior θ σ' ->
-    (Last θ σ' \/ σ = σ').
-Proof.
-  induction 1.
-
-  (* BASE CASE. *)
-  - right; reflexivity. 
-
-  (* IND. CASE. *)
-  - destruct θ.
-    + lazymatch goal with
-      | [ H: stabilize _ _ _ [] _ |- _ ] =>
-        inversion H; left; apply Last_singleton
-      end.
-    + inversion_clear IHstabilize as [Hlast | Heq].
-      -- left; apply Last_cons; assumption.
-      -- rewrite Heq in H0; inversion H0; contradiction.
-Qed.
-
-Lemma last_no_event :
-  forall Δ σ behavior θ σ',
-    stabilize Δ σ behavior θ σ' ->
-    Last θ σ' ->
-    events σ' = {[]}.
-Proof.
-  induction 1.
-  - inversion 1.
-  - intros Hlast.
-    destruct θ.
-    assumption.
-    assert (Hconsl : d :: θ <> nil) by inversion 1.
-    apply (IHstabilize (last_cons_inv Hconsl Hlast)).
-Qed.
-
-
-Inductive LeInList {A} (x : A) : A -> list A -> Prop :=
-| LeInList_refl :
-    forall l, LeInList x x (x :: l)
-| LeInList_hd :
-    forall y l, LeInList x y (x :: y :: l)
-| LeInlist_rm_snd :
-    forall y l a, LeInList x y (x :: l) ->
-                  LeInList x y (x :: a :: l)
-| LeInList_rm_fst : 
-    forall y l a, (x = y \/ a <> y) ->
-                  LeInList x y l ->
-                  LeInList x y (a :: l).
-
-Lemma leinlist_cons {A} :
-  forall l (x y a : A), LeInList x y  (a :: l) -> List.In x l -> LeInList x y l.
-Proof.
-Admitted.
-
 (*  *)
 
 Lemma quiescent_signal :
   forall θ Δ σ behavior σ',
-    θ <> [] ->
     stabilize Δ σ behavior θ σ' ->
-    forall s, exists σ__i,
-        List.In σ__i θ /\ (forall v, MapsTo s v (sigstore σ__i) -> forall σ__j, LeInList σ__i σ__j θ -> MapsTo s v (sigstore σ__j)).
+    forall s, exists σ__i θ',
+        IsDecListCons (σ__i :: θ') θ 
+        /\ (forall v,
+               MapsTo s v (sigstore σ__i) ->
+               forall σ__j, List.In σ__j θ' -> MapsTo s v (sigstore σ__j)).
 Proof.
-  induction 2; intros s.
-  
-  (* BASE CASE *)
-  - contradiction.
-    
-  (* IND. CASE *)
-  - inversion H1.
+  induction 1.
 
-    + exists σ''. split.
-      -- apply in_eq.
-      -- inversion 2.
-         ++ rewrite <- H9; assumption.
-         ++ inversion H13.
-         
-    + assert (Hconsl : σ'0 :: θ0 <> []) by inversion 1.
-      rewrite <- H8 in IHstabilize.
-      specialize (IHstabilize Hconsl s).
-      inversion_clear IHstabilize as (σ__i, Hw).
-      inversion_clear Hw as (Hin_θ, Hquies).
-      exists σ__i.
-      split.
+  - admit.
 
-      -- auto.
-      -- intros; specialize (leinlist_cons (σ'0 :: θ0) σ__i σ__j σ' H11 Hin_θ) as Hle.
-         apply Hquies; auto.
-
-Qed.
+  - admit.
+Admitted.
 
 (*  *)
 
@@ -349,16 +206,19 @@ Lemma stabilize_compute_priority :
       
       (* fired ≡ { t' | t' ≻ t ∧ t' ∈ fired(s') } *)
       (forall t', List.In t' fired -> t' >~ t = true /\ List.In t' fset) ->
-
+      
       (* All transitions of the fired group have a "fired" port set to
          true at σ, and these "fired" ports are quiescent. *)
-      (forall t' id__t' σ__t', List.In t' fired ->
-                  γ (inr t') = id__t' ->
-                  MapsTo id__t' σ__t' (compstore σ) ->
-                  MapsTo Transition.fired (Vbool true) (sigstore σ__t')
-                  /\ forall σ__j σt'__j, List.In σ__j θ ->
-                                     MapsTo id__t' σt'__j (compstore σ__j) ->
-                                     MapsTo Transition.fired (Vbool true) (sigstore σt'__j)) -> 
+      
+      (forall t' id__t' σ__t',
+          List.In t' fired ->
+          γ (inr t') = id__t' ->
+          MapsTo id__t' σ__t' (compstore σ) ->
+          MapsTo Transition.fired (Vbool true) (sigstore σ__t')
+          /\ forall σ__j σt'__j, List.In σ__j θ ->
+                             MapsTo id__t' σt'__j (compstore σ__j) ->
+                             MapsTo Transition.fired (Vbool true) (sigstore σt'__j)) ->
+      
       (* t ∈ sens(m) *)
       @Sens sitpn m t ->
 
@@ -511,7 +371,7 @@ Proof.
     (* Use [falling_compute_firable] and [stabilize_compute_priority] to solve the subgoal *)
     + singleton_eq. admit.
 
-  (* msub = M s' - ∑ pre(ti), ∀ ti ∈ fired ++ [t] *)
+  (* CASE msub = M s' - ∑ pre(ti), ∀ ti ∈ fired ++ [t] *)
   - admit.
     
 Admitted.

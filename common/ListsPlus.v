@@ -168,7 +168,7 @@ Section DecreasedList.
       IsDecListCons l l' ->      
       IsDecListCons l (a :: l').
 
-  Hint Constructors IsDecListCons.
+  Hint Constructors IsDecListCons : core.
   
   (** Facts about IsDecListCons. *)
   
@@ -320,7 +320,7 @@ Section PredInList.
   Definition IsPredInNoDupList (x y : A) (l : list A) :=
     x <> y /\ NoDup l /\ IsPredInList x y l.
 
-  (** Facts about IsPredInList and IsPredInNoDuplist. *)
+  (** *** Facts about IsPredInList and IsPredInNoDuplist. *)
   
   Lemma not_is_pred_in_list_nil :
     forall (x y : A), ~IsPredInList x y [].
@@ -484,8 +484,70 @@ Section PredInList.
            apply proj2 in Hnodup.
            apply (IHl' l x y H4 Hin_x_l (conj Hneq_xy (conj Hnodup H0))).
   Qed.
+
+  (** *** Predecessor or same element in list *)
+
+  (** Same as [IsPredInList]; addition of the rule [LeInlist_refl]. *)
+  
+  Inductive LeInList {A} (x : A) : A -> list A -> Prop :=
+  | LeInList_refl :
+      forall l, LeInList x x (x :: l)
+  | LeInList_hd :
+      forall y l, LeInList x y (x :: y :: l)
+  | LeInlist_rm_snd :
+      forall y l a, LeInList x y (x :: l) ->
+                    LeInList x y (x :: a :: l)
+  | LeInList_rm_fst : 
+      forall y l a, (x = y \/ a <> y) ->
+                    LeInList x y l ->
+                    LeInList x y (a :: l).
+
+  (** *** Facts about [LeInList] *)
+  
+  Lemma leinlist_in_refl :
+    forall l (x : A), List.In x l -> LeInList x x l.
+  Proof.
+    intros l; induction l.
+    - contradiction.
+    - inversion 1; [
+        lazymatch goal with
+        | [ H: a = ?x |- _ ] => rewrite H; apply LeInList_refl
+        end |
+        apply LeInList_rm_fst; auto].
+  Qed.
+
+  Lemma leinlist_cons :
+    forall l (x y a : A), LeInList x y  (a :: l) -> x <> a -> List.In x l -> LeInList x y l.
+  Proof.
+    intros l x y a Hle_cons; dependent induction Hle_cons; intros; (contradiction || assumption).    
+  Qed.
   
 End PredInList.
+
+(** ** Last element of a list *)
+
+Section LastElt.
+
+  (** States that some elt is at the last position of an non-empty
+      list. *)
+  
+  Inductive Last {A} : list A -> A -> Prop :=
+  | Last_singleton : forall a, Last (cons a nil) a
+  | Last_cons : forall l a b, Last l a -> Last (b :: l) a.
+
+  (** *** Facts about [Last] *)
+  
+  Lemma last_cons_inv :
+    forall {A l a b}, l <> nil -> @Last A (b :: l) a -> @Last A l a.
+  Proof.
+    intros;
+      lazymatch goal with
+      | [ H: Last (_ :: _) _ |- _ ] =>
+        dependent induction H; [contradiction | assumption]
+      end.
+  Qed.
+  
+End LastElt.
 
 
 

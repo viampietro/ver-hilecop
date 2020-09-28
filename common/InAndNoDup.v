@@ -605,6 +605,16 @@ Ltac destruct_in_app_or :=
     apply in_app_or in H; inversion_clear H
   end.
 
+(* Deduces "?a = ?b" from "In ?a [?b]".  Introduces an hypothesis Heqn
+   in the proof context.  *)
+
+Ltac singleton_eq :=
+  lazymatch goal with
+  | [ H: List.In ?a [?b] |- _ ] =>
+    let Heq := fresh "Heq" in
+    inversion_clear H as [Heq | ]; [auto | contradiction]
+  end.
+
 (** *** Lemmas using the above tactics . *)
 
 (** Proves the equivalence between to list 

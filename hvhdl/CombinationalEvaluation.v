@@ -3,6 +3,8 @@
 (** Defines the relation that evaluates combinational concurrent
     statements; used in the stabilization phases. *)
 
+Require Import Coqlib.
+Require Import NatMap.
 Require Import NatSet.
 Require Import AbstractSyntax.
 Require Import Environment.
@@ -122,3 +124,47 @@ Inductive vcomb (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
       
       (* * Conclusion * *)
       vcomb ed dstate (cs_par cstmt cstmt') merged.
+
+(** ** Facts about [vcomb] *)
+
+Lemma comb_maps_id :
+  forall Δ σ behavior σ' id σ__id,
+    vcomb Δ σ behavior σ' ->
+    MapsTo id σ__id (compstore σ) ->
+    exists σ'__id, MapsTo id σ'__id (compstore σ').
+Proof.
+  induction 1; intros Hmaps.
+
+  (* CASE behavior is a quiescent process  *)
+  - simpl; exists σ__id; assumption.
+
+  (* CASE behavior is an eventful process, needs ind. on vseq. *)
+  - admit.
+
+  (* CASE behavior is an eventful component *)
+  - admit.
+
+  (* CASE behavior is a quiescent component *)
+  - admit.
+
+  (* CASE behavior is a sequence of concurrent statements. *)
+    
+  - unfold IsMergedDState in H2.
+    apply proj2, proj1 in H2.
+    unfold MapsTo.
+    unfold EqualDom in H2.
+    unfold common.NatMap.In, common.NatMap.Raw.PX.In in H2.
+    rewrite <- (H2 id).
+    exists σ__id. assumption.
+    
+Admitted.
+
+(*  *)
+
+Lemma comb_maps_id_rev :
+  forall Δ σ behavior σ' id σ'__id,
+    vcomb Δ σ behavior σ' ->
+    MapsTo id σ'__id (compstore σ') ->
+    exists σ__id, MapsTo id σ__id (compstore σ).
+Proof.
+Admitted.
