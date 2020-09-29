@@ -170,7 +170,7 @@ Section DecreasedList.
 
   Hint Constructors IsDecListCons : core.
   
-  (** Facts about IsDecListCons. *)
+  (** *** Facts about IsDecListCons. *)
   
   Lemma is_dec_list_cons_nil {A : Type} :
     forall (l : list A), IsDecListCons [] l.
@@ -279,6 +279,25 @@ Section DecreasedList.
     rewrite Heq_l'_ll''.
     rewrite concat_app.
     apply is_dec_list_cons_app_eq.
+  Qed.
+
+  (** Simpler definition of IsDecListCons. *)
+  
+  Inductive LeListCons {A: Type} : list A -> list A -> Prop :=
+  | LeListCons_refl : forall l : list A, LeListCons l l
+  | LeListCons_cons :
+      forall (a : A) (l l' : list A),
+        LeListCons l l' ->      
+        LeListCons l (a :: l').
+
+  Hint Constructors LeListCons : core.
+
+  Lemma lelistcons_nil {A : Type} :
+    forall (l : list A), LeListCons [] l.
+  Proof.
+    induction l.
+    - apply LeListCons_refl.
+    - apply LeListCons_cons; assumption.
   Qed.
   
   (** List l is a decreased or equal version of list l'. 

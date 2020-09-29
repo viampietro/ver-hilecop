@@ -64,6 +64,8 @@ Fixpoint create_list (n : nat) (v : value) {struct n} : lofvalues :=
   | S m => Vcons v (create_list m v)
   end.
 
+
+
 (** Defines the type of types used in the
     semantical world. *)
 

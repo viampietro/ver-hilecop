@@ -168,3 +168,13 @@ Lemma comb_maps_id_rev :
     exists σ__id, MapsTo id σ__id (compstore σ).
 Proof.
 Admitted.
+
+(*  *)
+
+Lemma comb_maps_sigid :
+  forall Δ σ behavior σ' s v,
+    vcomb Δ σ behavior σ' ->
+    MapsTo s v (sigstore σ) ->
+    exists v', MapsTo s v' (sigstore σ').
+Proof.
+Admitted.

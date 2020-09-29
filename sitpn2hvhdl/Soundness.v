@@ -156,32 +156,154 @@ Admitted.
 
 (*  *)
 
-Lemma quiescent_signal :
+(* All signals get a stable value at a certain point of the
+   stabilization trace. *)
+
+Lemma stable_value_signal :
   forall θ Δ σ behavior σ',
     stabilize Δ σ behavior θ σ' ->
-    forall s, exists σ__i θ',
-        IsDecListCons (σ__i :: θ') θ 
-        /\ (forall v,
-               MapsTo s v (sigstore σ__i) ->
-               forall σ__j, List.In σ__j θ' -> MapsTo s v (sigstore σ__j)).
+    forall s,
+      (exists v, MapsTo s v (sigstore σ)) ->
+      (exists θ' v,
+          (θ' <> [] \/ σ = σ') 
+          /\ LeListCons θ' θ 
+          /\ forall σ__j, List.In σ__j θ' -> MapsTo s v (sigstore σ__j)).
 Proof.
-  induction 1.
+  
+  induction 1; intros s Hx_sval.
 
-  - admit.
+  (* BASE CASE *)
+  - exists nil.
+    inversion_clear Hx_sval as (v, Hmaps).
+    exists v.
+    split; [ right; reflexivity |
+             split; [apply LeListCons_refl |
+                     contradiction
+                    ]
+           ].
 
-  - admit.
+  (* IND. CASE *)
+  - lazymatch goal with
+    | [ Hvcomb: vcomb _ _ _ _, H: (exists v, MapsTo s v (sigstore σ)) |- _ ] =>
+
+      (* s has a value at σ' *)
+      inversion_clear H as (v, Hmaps);
+        specialize (comb_maps_sigid Δ σ behavior σ' s v Hvcomb Hmaps) as Hex_v'
+    end.
+
+    specialize (IHstabilize s Hex_v').
+    inversion_clear IHstabilize as (θ', Hx); inversion_clear Hx as (v'', Hw).
+    decompose [and] Hw.
+
+    (* 2 CASES: θ' <> [] or σ' = σ'' *)
+    lazymatch goal with
+    | [ H: θ' <> [] \/ σ' = σ'' |- _ ] =>
+      inversion_clear H as [Hnotnil | Heq_σ']
+    end.
+
+    (* CASE θ' <> [] 
+       Instantiates θ' and v with the values coming from the IH, then trivial
+     *)
+    
+    + exists θ', v'';
+        split; [left; assumption |
+                split; [ apply LeListCons_cons; assumption | assumption]
+               ].
+
+    (* CASE σ' = σ''
+
+       Means that θ = [], otherwise contradicts the fact that σ' has
+       an empty event set. *)
+      
+    + lazymatch goal with
+      | [ H: stabilize _ _ _ _ _ |- _ ] =>
+        inversion H
+      end.
+
+      (* CASE θ = [] 
+         Then, there is but one non-empty trace θ' verifying
+         θ' <= [σ''], that is θ' = [σ'']
+       *)
+      -- exists [σ'']; inversion_clear Hex_v' as (v', Hmaps'); exists v'.
+         
+         (* Solves [σ''] <> [] \/ σ = σ'' *)
+         split; [ left; inversion 1 | auto].
+
+         (* Solves LeListCons [σ''] [σ''] *)
+         split; [ apply LeListCons_refl | auto].
+
+         (* Solves ∀ σj, σj ∈ [σ''] -> σj(s) = v' 
+            There's only one σj verifying σj ∈ [σ''].
+          *)
+         intros σ__j Hin; inversion_clear Hin as [Heq_σ'' | ];
+           [rewrite <- Heq_σ''; rewrite <- Heq_σ'; assumption |
+            contradiction].
+
+      (* CASE θ non-empty, then contradiction *)
+      -- lazymatch goal with
+         | [ H: events σ' <> _ |- _ ] =>
+           rewrite Heq_σ' in H; contradiction
+         end.
+Qed.
+
+(*  *)
+
+Lemma stabilize_compute_auth :
+  forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
+
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ (get_behavior d) θ σ' ->
+    
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+    
+    (* Conclusion *)
+    
+    forall id__t t m fired fset,
+
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+            
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
+      
+      MarkingSubPreSum (fun t' => List.In t' fired) (M s') m ->
+
+      (* [fset] is the list of fired transitions *)
+      IsFiredList s' fset ->
+      
+      (* fired ≡ { t' | t' ≻ t ∧ t' ∈ fired(s') } *)
+      (forall t', List.In t' fired -> t' >~ t = true /\ List.In t' fset) ->
+
+      (* t ∈ sens(m) *)
+      @Sens sitpn m t ->
+
+      forall s, exists θ' v,
+          LeListCons θ' θ 
+          /\ forall σ__j, List.In σ__j θ' -> MapsTo s v (sigstore σ__j) ->
+      
+      (* Conclusion *)
+      
+      exists θ',
+        LeListCons θ' θ
+        /\ forall σ__j σ__jt lofbool,
+          List.In σ__j θ' ->
+          MapsTo id__t σ__jt (compstore σ__j) ->
+          MapsTo Transition.priority_authorizations (Vlist lofbool) (sigstore σ__jt) ->
+          forall i v, get_at i lofbool = Some v -> v = Vbool true.
+Proof.
 Admitted.
 
 (*  *)
 
 Lemma stabilize_compute_priority :
   forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
-
-    (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
     
     (* Stabilize from σf to σ' *)
     stabilize Δ σ (get_behavior d) θ σ' ->
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
     
     (* Conclusion *)
     
@@ -206,40 +328,26 @@ Lemma stabilize_compute_priority :
       
       (* fired ≡ { t' | t' ≻ t ∧ t' ∈ fired(s') } *)
       (forall t', List.In t' fired -> t' >~ t = true /\ List.In t' fset) ->
-      
-      (* All transitions of the fired group have a "fired" port set to
-         true at σ, and these "fired" ports are quiescent. *)
-      
-      (forall t' id__t' σ__t',
-          List.In t' fired ->
-          γ (inr t') = id__t' ->
-          MapsTo id__t' σ__t' (compstore σ) ->
-          MapsTo Transition.fired (Vbool true) (sigstore σ__t')
-          /\ forall σ__j σt'__j, List.In σ__j θ ->
-                             MapsTo id__t' σt'__j (compstore σ__j) ->
-                             MapsTo Transition.fired (Vbool true) (sigstore σt'__j)) ->
-      
+
       (* t ∈ sens(m) *)
       @Sens sitpn m t ->
-
-      (* Signal σt("s_priority_combination") = true *)
-      MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ__t) ->
-
+      
       (* Signal σ't("s_priority_combination") = true *)
-      MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t).
+      exists θ',
+        LeListCons θ' θ
+        /\ forall σ__i σ__it,
+          List.In σ__i θ' ->
+          MapsTo id__t σ__it (compstore σ__i) ->
+          MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ__it).
 Proof.
-  intros *; intros Htransl Hstab.
-  dependent induction Hstab.
+  induction 1.
 
   (* BASE CASE, θ = [] *)
-  - intros;
-      lazymatch goal with
-      | [ H: @MapsTo DState _ _ _, H': @MapsTo DState _ _ _ |- _ ] =>
-        specialize (MapsTo_fun H H') as Heq; rewrite <- Heq; assumption
-      end.
-
+  - exists nil.
+    split; [apply LeListCons_refl | contradiction].
+    
   (* IND. CASE *)
-  - intros id__t σ__t σ''__t t m fired fset Hbind_t Hσ__t Hσ''__t Hresm Hfiredl Hprt Hfiredq Hsens Hσt_true.
+  - intros Htransl id__t σ__t σ''__t t m fired fset Hbind_t Hσ__t Hσ''__t Hresm Hfiredl Hprt Hsens.
 
     (** Need a lemma saying: 
         σ ⇝ σ' ⇒ σ(idt) = σt ⇒ ∃σ't, σ'(idt) = σ't 
@@ -248,51 +356,16 @@ Proof.
 
     lazymatch goal with
     | [ Hvcomb: vcomb _ _ _ _, Hσ__t: MapsTo id__t σ__t (compstore σ) |- _ ] =>
-      specialize (comb_maps_id Δ σ (get_behavior d) σ' id__t σ__t Hvcomb Hσ__t) as Hex_σ'__t;
-        inversion Hex_σ'__t as (σ'__t, Hσ'__t)
+      specialize (comb_maps_id Δ σ behavior σ' id__t σ__t Hvcomb Hσ__t) as Hex_σ'__t;
+        inversion_clear Hex_σ'__t as (σ'__t, Hσ'__t)
     end.
 
-    (* Apply induction hypothesis *)
-    eapply IHHstab with (id__t := id__t) (σ__t := σ'__t) (t := t) (m := m) (fired := fired) (fset := fset); eauto.
-
-    (* Then, deal with ind. hyp. premises that are not solved by eauto *)
-  
-    (* CASE ∀ t ∈ fired, t has a true-valued and quiescent fired port through θ *)
-    + do 2 intro; intros σ'__t' Hin_t'_fired Hbind_t' Hσ'__t'.
-
-      (* Need a lemma saying:  
-         σ ⇝ σ' ⇒ σ'(idt) = σ't ⇒ ∃σt, σ(idt) = σt 
-         where ⇝ is an "execution" relation between σ and σ'. *)
-
-      lazymatch goal with
-      | [ Hvcomb: vcomb _ _ _ _, Hσ'__t': MapsTo id__t' σ'__t' (compstore σ') |- _ ] =>
-        specialize (comb_maps_id_rev Δ σ (get_behavior d) σ' id__t' σ'__t' Hvcomb Hσ'__t') as Hex_σ__t';
-          inversion Hex_σ__t' as (σ__t', Hσ__t')
-      end.
-      
-      specialize (Hfiredq t' id__t' σ__t' Hin_t'_fired Hbind_t' Hσ__t').
-      inversion Hfiredq as (Ht'_true_at_σ, Ht'_quiescent).
-
-      split.
-
-      (* CASE t'.fired is true at σ' *)
-      -- apply (Ht'_quiescent σ' σ'__t' (in_eq σ' θ) Hσ'__t').
-
-      (* CASE quiescence through θ *)
-      -- do 3 intro; apply Ht'_quiescent; auto.
-         
-    (* CASE σ't("s_priority_combination") = true *)
-      
-    (* Must add another hypothesis to prove the subgoal: the
-       "s_priority_authorization" signal of t is true-valued at σt .
-       
-       Then, σ't("s_priority_combination") = true because it is
-       computed based on the value of "s_priority_authorization" at
-       state σt. *)
-         
-    + admit.
-      
-Admitted.
+    (* Specialize and use the induction hypothesis *)
+    
+    specialize (IHstabilize Htransl id__t σ'__t σ''__t t m fired fset Hbind_t Hσ'__t Hσ''__t Hresm Hfiredl Hprt Hsens).
+    inversion_clear IHstabilize as (θ', Hw); inversion_clear Hw as (Hle, Hprio_comb_true).
+    exists θ'; split; [ apply LeListCons_cons; assumption | assumption].
+Qed.
 
 (* All transitions that are in the list of transitions elected to be
    fired - at state [s'] and considering the residual marking [m] -
