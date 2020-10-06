@@ -1,4 +1,4 @@
-DIRS=common sitpn hvhdl sitpn2hvhdl
+DIRS=common sitpn hvhdl sitpn2hvhdl soundness
 
 COQINCLUDES=$(foreach d, $(DIRS), -R $(d) hilecop.$(d))
 
@@ -50,7 +50,11 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 # SITPN to H-VHDL transformation.
 
 SITPN2HVHDLFILES=Sitpn2HVhdlTypes.v GenerateArchitecture.v \
-	GeneratePorts.v	GenerateHVhdl.v
+		GeneratePorts.v	GenerateHVhdl.v
+
+# Soundness proof, theorems and lemmas.
+
+SOUNDNESSFILES=Soundness.v
 
 # Builds files with prefixes
 
@@ -59,6 +63,7 @@ SITPNSIMPL=$(foreach f, $(SITPNSIMPLFILES), sitpn/simpl/$f)
 SITPNDP=$(foreach f, $(SITPNDPFILES), sitpn/dp/$f)
 HVHDL=$(foreach f, $(HVHDLFILES), hvhdl/$f)
 SITPN2HVHDL=$(foreach f, $(SITPN2HVHDLFILES), sitpn2hvhdl/$f)
+SOUNDNESS=$(foreach f, $(SOUNDNESSFILES), soundness/$f)
 
 # All source files
 
@@ -73,6 +78,7 @@ sitpnsimpl: common $(SITPNSIMPL:.v=.vo)
 sitpndp: common $(SITPNDP:.v=.vo)
 hvhdl: sitpndp $(HVHDL:.v=.vo)
 sitpn2hvhdl: sitpndp hvhdl $(SITPN2HVHDL:.v=.vo)
+soundness: sitpn2hvhdl $(SOUNDNESS:.v=.vo)
 
 %.vo : %.v	
 	@echo "COQC $*.v"
@@ -110,5 +116,13 @@ cleansitpn2hvhdl:
 	rm -f $(patsubst %, %/*.vos, sitpn2hvhdl)
 	rm -f $(patsubst %, %/*~, sitpn2hvhdl)
 
-cleanall: cleancommon cleansitpn cleanhvhdl cleansitpn2hvhdl
+cleansoundness:
+	rm -f $(patsubst %, %/*.vo, soundness)
+	rm -f $(patsubst %, %/.*.aux, soundness)
+	rm -f $(patsubst %, %/*.glob, soundness)
+	rm -f $(patsubst %, %/*.vok, soundness)
+	rm -f $(patsubst %, %/*.vos, soundness)
+	rm -f $(patsubst %, %/*~, soundness)
+
+cleanall: cleancommon cleansitpn cleanhvhdl cleansitpn2hvhdl cleansoundness
 
