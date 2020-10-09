@@ -20,6 +20,7 @@ Require Import Stabilize.
 Require Import DesignElaboration.
 Require Import Initialization.
 Require Import HVhdlTypes.
+Require Import HilecopDesignStore.
 
 (** Defines the relation that computes a simulation cycle in the
     context of an elaborated design [ed], starting from a design
@@ -137,3 +138,39 @@ Inductive simwf
                     
       (* * Conclusion * *)
       simwf dstore Mg Pi τ d θ.
+
+(** Defines a simulation workflow for a H-VHDL design.
+    
+    What's changing compared to a general simulation workflow is that
+    the design store is the HILECOP design store (i.e, with the Place
+    and Transition components), and the dimensioning function is
+    always empty. *)
+
+Inductive hsimwf
+          (d : design)
+          (E__p : nat -> Clk -> IdMap value) :
+  nat -> list DState -> Prop :=
+| HSimWorkflow_0 : hsimwf d E__p 0 [] 
+| HSimWorkflow_cons :
+    forall τ θ Δ σ__e σ0 σ σ',
+      
+      (* * Premises * *)
+
+      (* Elaboration with HILECOP design store and
+         an empty dimensioning function.
+       *)
+      edesign hdstore (empty value) d Δ σ__e ->
+
+      (* Initialization *)
+      init Δ σ__e (get_behavior d) σ0 ->           
+
+      (* First simulation cycle, to match the execution workflow of an
+         SITPN. *)
+      simcycle E__p Δ (S τ) σ0 (get_behavior d) σ ->
+
+      (* Simulation loop *)
+      simloop E__p Δ σ (get_behavior d) τ θ σ' -> 
+                    
+      (* * Conclusion * *)
+      hsimwf d E__p (S τ) θ.
+

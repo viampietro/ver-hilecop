@@ -32,7 +32,7 @@ Require Import hvhdl.Stabilize.
     ports of design [d] that implements the conditions of [sitpn].
 *)
 
-Definition EnvEq sitpn (Ec : nat -> C sitpn -> bool) (Ep : nat -> Clk -> IdMap value) : Prop := False.
+Definition EnvEq sitpn (Ec : nat -> C sitpn -> bool) (Ep : nat -> Clk -> IdMap value) : Prop := True.
 
 (** Defines the state similarity relation between an SITPN state and
     a H-VHDL design state.
@@ -151,7 +151,5 @@ with PastSimFallingStab (D : IdMap design) (M : IdMap value) (d : design) (Δ : 
 
       (* Conclusion *)
       PastSimFallingStab D M d Δ (θ ++ [σ]) σ'.
-
-Scheme Induction for PastSimFalling Sort Prop.
 
 

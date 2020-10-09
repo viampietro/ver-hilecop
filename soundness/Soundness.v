@@ -40,6 +40,8 @@ Require Import SoundnessDefs.
 Require Import RisingEdgeFacts.
 Require Import FallingEdgeFacts.
 
+Local Unset Implicit Arguments.
+
 (** ** Step lemma
     
     States that starting from similar state, state are similar after
@@ -176,27 +178,20 @@ Qed.
 (** ** Semantic Preservation Theorem *)
 
 Theorem sitpn2vhdl_sound :
-  forall sitpn E__c τ θ__s s' d Mg E__p σ' mm Δ σ__e σ0 θ__σ γ,
+  forall sitpn E__c τ θ__s d E__p mm θ__σ γ,
       
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn mm = Success d ->
 
     (* (* Environments are similar. *) *)
     EnvEq sitpn E__c E__p ->
+    
+    (* SITPN [sitpn] yields execution trace θs after τ execution cycles. *)
+    
+    @SitpnExecWf sitpn E__c τ θ__s ->    
 
-    (* sitpn is in state s' after τ execution cycles and yields
-       exec. trace θs. *)
-    
-    SitpnExecute E__c (s0 sitpn) τ θ__s s' ->    
-    
-    (* Design elaboration *)
-    edesign hdstore Mg d Δ σ__e ->
-    
-    (* Initialization of design state *)
-    init Δ σ__e (get_behavior d) σ0 ->
-
-    (* Simulation of design *)
-    simloop E__p Δ σ0 (get_behavior d) τ θ__σ σ' ->
+    (* Design [d] yields simulation trace θσ after τ simulation cycles. *)
+    hsimwf d E__p τ θ__σ ->
     
     (* ** Conclusion: exec. traces are equal. ** *)
     SimTrace γ θ__s θ__σ.
@@ -207,16 +202,28 @@ Proof.
   | [
     Htransl: sitpn_to_hvhdl _ _ = Success _,
     Henveq: EnvEq _ _ _,
-    Hsitpnexec: SitpnExecute _ _ _ _ _,
-    Helab: edesign _ _ _ _ _,
-    Hinit: init _ _ _ _,
-    Hsimloop: simloop _ _ _ _ _ _ _
+    Hsitpnexecwf: @SitpnExecWf _ _ _ _,
+    Hsimwf: hsimwf _ _ _ _
     |- _ ] =>
-    specialize (init_states_sim sitpn mm d Mg Δ σ__e σ0 γ Htransl Helab Hinit) as Hinit_eq;
-      apply (simulation_lemma
-               sitpn E__c τ (s0 sitpn) θ__s s' Hsitpnexec d mm E__p Mg Δ σ__e θ__σ σ0 σ' γ
-               Htransl Henveq Helab Hinit_eq Hsimloop)
+    
+    (* CASE τ = 0, traces are empty. Trivial. *)
+    destruct τ; inversion_clear Hsitpnexecwf; inversion_clear Hsimwf; [
+      apply SimTraceInit |
+      auto
+    ]
   end.
 
+  (* CASE τ > 0. *)
+  
+  (* Asserts s0 ∼ σ0 *)
+  lazymatch goal with
+  | [ Htransl: sitpn_to_hvhdl _ _ = _, Helab: edesign _ _ _ _ _, Hinit: init _ _ _ _ |- _ ] =>
+    specialize (init_states_sim sitpn mm d (empty value) Δ σ__e σ0 γ Htransl Helab Hinit) as Hinit_eq
+  end.
+
+  (*   apply (simulation_lemma *)
+  (*            sitpn E__c τ s θ__s s' Hsitpnexec d mm E__p Mg Δ σ__e θ__σ σ0 σ' γ *)
+  (*            Htransl Henveq Helab Hinit_eq Hsimloop) *)
+  
 Qed.
     

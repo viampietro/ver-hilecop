@@ -18,11 +18,13 @@ Require Import hvhdl.Initialization.
 
 Require Import soundness.SoundnessDefs.
 
-(** ** Facts about the Transition Component Behavior on Falling Edge *)
+(** ** Facts about the Transition Component on Initialization *)
 
-(** ** Facts about the Transition Component Behavior on Stabilization *)
+(* ∀ transition component instance [idt], the output port "fired" a
+   [idt] equals "s_firable.s_priority_combination" after the
+   initialization phase.  *)
 
-Lemma s_fired_assign_on_init :
+Lemma fired_assign_on_init :
   forall id__t tg tip top Δ σ σ',
     vruninit Δ σ (cs_comp id__t transition_entid tg tip top) σ' ->
     
@@ -31,16 +33,29 @@ Lemma s_fired_assign_on_init :
       MapsTo id__t σ'__t (compstore σ') ->
       MapsTo s_firable (Vbool b) (sigstore σ'__t) ->
       MapsTo s_priority_combination (Vbool b') (sigstore σ'__t) ->
-      MapsTo s_fired (Vbool (andb b b')) (sigstore σ'__t).
+      MapsTo fired (Vbool (andb b b')) (sigstore σ'__t).
 Proof.
-  intros *;
-    intros Hruninit;
-    dependent induction Hruninit;
-    intros *;
-    intros H__Δ Hσ'__t Hs_firable Hs_prio_comb. 
-
-  - inversion_clear Hpast as [Hrising | Hfalling].
-    
-    + induction Hrising using PastSimRising_ind.
-      
 Admitted.
+
+(** ** Facts about the Transition Component Behavior on Falling Edge *)
+
+
+(** ** Facts about the Transition Component Behavior on Stabilization *)
+
+(* ∀ transition component instance [idt], the output port "fired" of
+   [idt] equals "s_firable.s_priority_combination" after a
+   stabilization phase.  *)
+
+Lemma fired_assign_on_stabilize :
+  forall id__t tg tip top Δ σ θ σ',
+    stabilize Δ σ (cs_comp id__t transition_entid tg tip top) θ σ' ->
+    
+    forall b σ'__t b' Δ__t,
+      MapsTo id__t (Component Δ__t transition_behavior) Δ ->
+      MapsTo id__t σ'__t (compstore σ') ->
+      MapsTo s_firable (Vbool b) (sigstore σ'__t) ->
+      MapsTo s_priority_combination (Vbool b') (sigstore σ'__t) ->
+      MapsTo fired (Vbool (andb b b')) (sigstore σ'__t).
+Proof.
+Admitted.
+

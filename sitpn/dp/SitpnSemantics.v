@@ -7,7 +7,7 @@ Require Import GlobalTypes.
 Require Import SitpnSemanticsDefs.
 Require Import Fired.
 
-Set Implicit Arguments.
+Local Set Implicit Arguments.
 
 Local Notation "| e |" := (exist _ e _) (at level 50).
 
@@ -106,6 +106,27 @@ Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn)
 Definition s0 sitpn : SitpnState sitpn :=
   BuildSitpnState (@M0 sitpn) (fun _ => Some 0) nullb nullb nullb nullb.
 
+(** Defines a complete execution process for an SITPN, i.e, starting
+    from the initial state of an SITPN. *)
 
+Inductive SitpnExecWf
+          (sitpn : Sitpn)
+          (E : nat -> C sitpn -> bool) :
+  nat -> list (SitpnState sitpn) -> Prop :=
+| SitpnExecWf_0 :
+    @SitpnExecWf sitpn E 0 []
+| SitpnExecWf_cons :
+    forall τ θ s s',
+
+      (* First cycle of execution. Only the falling edge is taken into
+         account, since on the first rising edge there are no fired
+         transitions. *)
+      SitpnStateTransition E (S τ) (s0 sitpn) s falling_edge ->
+
+      (* Executes τ cycles *)
+      SitpnExecute E s τ θ s' ->
+
+      (* Conclusion *)
+      @SitpnExecWf sitpn E (S τ) θ.
 
 
