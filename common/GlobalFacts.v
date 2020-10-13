@@ -1,5 +1,7 @@
 (** * Global facts used in the overall project. *)
 
+Require Import SetoidList.
+
 (** Completes the Coq standard library. *)
 
 Set Implicit Arguments.
@@ -21,6 +23,23 @@ Section SigEq.
   
   Definition seqdec (u v : {a : A | P a}) : {seq u v} + {~seq u v} :=
     Aeqdec (proj1_sig u) (proj1_sig v).
+
+  (** Equivalence relation between two transitions that are elements of
+    a subset of T. *)
+
+  Definition InA_seq_dec :
+    forall a lofA,
+      {SetoidList.InA seq a lofA} + {~SetoidList.InA seq a lofA}.
+  Proof.
+    intros; induction lofA.
+    
+    - right; inversion 1.
+    - inversion IHlofA.
+      + left; apply SetoidList.InA_cons; right; assumption.
+      + specialize (Aeqdec (proj1_sig a) (proj1_sig a0)) as Heqdec; inversion Heqdec;
+          [ left; apply SetoidList.InA_cons; left; assumption |
+            right; intro; inversion_clear H1; contradiction].
+  Defined.
   
 End SigEq.
 

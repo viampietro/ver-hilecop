@@ -9,6 +9,9 @@ Require Import FstSplit.
 
 Section InAndNoDupLemmas.
 
+  (* In tail of list *)
+  Lemma in_last {A : Type} : forall (a : A) l, In a (l ++ [a]). firstorder. Defined.
+  
   (** If a is in list l and l is in list of lists ll then a is in (concat ll).
       The result of (concat ll) is one list corresponding
       to the concatenation of all lists in ll. *)

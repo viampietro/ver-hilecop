@@ -19,14 +19,19 @@ Definition Peqdec sitpn (x y : P sitpn) : {Peq x y} + {~Peq x y} :=
   seqdec Nat.eq_dec x y.
 Arguments Peqdec {sitpn}.
 
+(* The [SetoidList.InA] predicate is decidable with [Peq] as the
+   equality relation. *)
+
+Definition InA_Peq_dec sitpn (p : P sitpn) (lofP : list (P sitpn)) : {SetoidList.InA Peq p lofP} + {~SetoidList.InA Peq p lofP} :=
+  InA_seq_dec (fun n => In n sitpn.(places)) Nat.eq_dec p lofP.
+
 (** For a given [sitpn], defines the equivalence relation [Teq]
     between two transitions as the equality between the first element
     of the [sig] type [T sitpn].  *)
 
 Definition Teq sitpn (t t' : T sitpn) : Prop := seq t t'.
 
-(** Equivalence relation between two transitions that are elements of
-    a subset of T. *)
+(* SetoidList InA predicate is decidable if eq = Teq *)
 
 Definition Teq' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : Prop :=
   Teq (proj1_sig t) (proj1_sig t').
@@ -37,12 +42,20 @@ Definition Teqdec sitpn (x y : T sitpn) : {Teq x y} + {~Teq x y} :=
   seqdec Nat.eq_dec x y.
 Arguments Teqdec {sitpn}.
 
+
 (** The equivalence relation [Teq'] is also decidable. *)
 
 Definition Teq'_dec sitpn {Q : T sitpn -> Prop}
            (x y : Tsubset Q) : {Teq' x y} + {~Teq' x y} :=
   Teqdec (proj1_sig x) (proj1_sig y).
 Arguments Teq'_dec {sitpn Q}.
+
+(* The [SetoidList.InA] predicate is decidable with [Teq] as the
+   equality relation. *)
+
+Definition InA_Teq_dec sitpn (t : T sitpn) (lofT : list (T sitpn)) :
+  {SetoidList.InA (@Teq sitpn) t lofT} + {~SetoidList.InA (@Teq sitpn) t lofT} :=
+  InA_seq_dec (fun n => In n sitpn.(transitions)) Nat.eq_dec t lofT.
 
 (** For a given [sitpn], defines the equivalence relation [Aeq]
     between two actions as the equality between the first element
