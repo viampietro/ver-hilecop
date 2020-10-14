@@ -14,6 +14,8 @@ Require Import HVhdlTypes.
 Open Scope natset_scope.
 Open Scope abss_scope.
 
+Local Definition i := local_var.
+
 (** ** Entity part of the Place design. *)
 
 (** *** Generic constants of the Place design. *)

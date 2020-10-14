@@ -19,6 +19,7 @@ Require Import PortElaboration.
 Require Import ArchitectureElaboration.
 Require Import ValidPortMap.
 Require Import HVhdlTypes.
+Require Import HilecopDesignStore.
 
 Import NatMap.
 
@@ -151,3 +152,8 @@ with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DSta
       
       (* Conclusion *)
       ebeh dstore ed dstate (cs_comp idc ide gmap ipmap opmap) ed dstate.
+
+(** ** Elaboration for a HILECOP design *)
+
+Definition ehdesign (d : design) (Δ : ElDesign) (σ__e : DState) :=
+  edesign hdstore (empty value) d Δ σ__e.

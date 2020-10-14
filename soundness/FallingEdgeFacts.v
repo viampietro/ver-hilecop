@@ -145,8 +145,145 @@ Admitted.
 
 (** *** Falling edge compute fired: [σ'__t(fired) = true ⇒ t ∈ fired(s')] *)
 
-(* All transitions that are elected to be fired, have an output fired
-   port equal to false. *)
+(* [∀ t ∈ T, p ∈ input(t), i, j ∈ N, s ∈ Internal(Δ),]
+
+      [<p.prior_auth(i) ⤳ s ⤳ t.prior_auth(j)>] ⇒
+      [σ'__p("prior_auth")(i) = true] ⇒
+      [pre(p,t) = (basic, n)] ⇒    
+      [m(p) - (∑ pre(p, t__i), ∀ t__i ∈ Pr(p,t)) ≥ n]
+
+ *)
+
+Require Import hvhdl.AbstractSyntaxDefs.
+Require Import hvhdl.Petri.
+Require Import hvhdl.DesignElaboration.
+
+Lemma stabilize_compute_sens_by_place_after_falling :
+  forall sitpn mm d Δ σ__e σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
+
+    (* [sitpn] translates into [d] *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* [d] elaborates into [Δ], [σ__e] *)
+    ehdesign d Δ σ__e ->
+    
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    
+    forall t id__t σ'__t tg tip top p id__p σ'__p pg pip pop s (i j : nat) pauths fset fired m n,
+
+      (** Component [id__t] implements place [p] *)
+      γ (inr t) = id__t ->
+      
+      (* [σ'__t] is the state of component [id__t] at design's state [σ'] *)
+      MapsTo id__t σ'__t (compstore σ') ->
+
+      (** Component [id__p] implements place [p] *)
+      γ (inl p) = id__p ->
+      
+      (* [σ'__p] is the state of component [id__p] at design's state [σ'] *)
+      MapsTo id__p σ'__p (compstore σ') ->
+
+      (* Components [id__t] and [id__p] are part of the design behavior *)
+      InCs (cs_comp id__t transition_entid tg tip top) (get_behavior d) ->
+      InCs (cs_comp id__p place_entid pg pip pop) (get_behavior d) ->
+
+      (* Signal [s] is an declared boolean signal of design [d] *)
+      MapsTo s (Declared Tbool) Δ ->
+
+      (* [<p.prior_auth(i) ⤳ s ⤳ t.prior_auth(j)>] *)
+      List.In (assocop_ (Transition.priority_authorizations $[[i]]) (Some ($s))) pop ->
+      List.In (associp_ (Transition.priority_authorizations $[[j]]) (#s)) tip ->
+
+      (* [σ'__p("prior_auth")(i) = true] *)
+      MapsTo Transition.priority_authorizations (Vlist pauths) (sigstore σ'__p) ->
+      get_at i pauths = Some (Vbool true) -> 
+      
+      (* [fset ≡ fired(s')] *)
+      IsFiredList s' fset ->
+      
+      (* [fired ≡ { t' | t' ≻ t ∧ t' ∈ fired(s') }] *)
+      (forall t', List.In t' fired -> t' >~ t = true /\ List.In t' fset) ->
+      
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
+      
+      MarkingSubPreSum (fun t__i => List.In t__i fired) (M s') m ->
+
+      (* [pre(p,t) = (basic, n) \/ pre(p,t) = (test, n)] *)
+      pre p t = Some (basic, n) \/ pre p t = Some (test, n) ->
+      
+      (* [t ∈ sens(m)] *)
+      m p >= n.
+Admitted.
+
+(* [∀ t ∈ T, σ'__t("s_priority_combination") = true ⇒ t ∈ sens(m)]
+   where [m] is a residual marking.
+ *)
+
+Lemma stabilize_compute_sens_by_residual_after_falling :
+  forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
+    
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ (get_behavior d) θ σ' ->
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+    
+    (* Conclusion *)
+    
+    forall id__t σ'__t t m fired fset,
+
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+      
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
+      
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
+      
+      MarkingSubPreSum (fun t__i => List.In t__i fired) (M s') m ->
+
+      (* [fset ≡ fired(s')] *)
+      IsFiredList s' fset ->
+      
+      (* [fired ≡ { t' | t' ≻ t ∧ t' ∈ fired(s') }] *)
+      (forall t', List.In t' fired -> t' >~ t = true /\ List.In t' fset) ->
+      
+      (* [σ'__t("s_priority_combination") = true] *)
+      MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t) ->
+      
+      (* [t ∈ sens(m)] *)
+      @Sens sitpn m t.
+Proof.
+  split; intros.
+  
+  (* CASE [pre(p, t) = (test, n) \/ pre(p, t) = (basic, n)] *)
+  - lazymatch goal with
+    | [ H: _ \/ _ |- _ ] =>
+      inversion_clear H as [Htest | Hbasic]
+    end.
+
+    (* CASE [pre(p, t) = (test, n)] *)
+    
+    + assert (Hxbind_p : exists id__p, γ (inl p) = id__p) by  (exists (γ (inl p)); reflexivity).
+      inversion_clear Hxbind_p as (id__p, Hbind_p).
+      assert (Hxσ'__p: exists σ'__p, MapsTo id__p σ'__p (compstore σ')) by admit.
+      inversion_clear Hxσ'__p as (σ'__p, Hσ'__p).      
+      assert (Hxpauths : exists pauths, MapsTo Transition.priority_authorizations (Vlist pauths) (sigstore σ'__p)) by admit.
+      inversion_clear Hxpauths as (pauths, Hpauths).
+      assert (Hpauth_true: forall i b, get_at i pauths = Some (Vbool b) -> b = true) by admit.
+      
+Admitted.
+
+(* [∀ t ∈ T, 
+      ElectFired(sitpn, s', m, fired, tp, (m', fired')) 
+      /\ t ∈ tp 
+      /\ [σ'__t]("fired") = true ⇒ 
+      t ∈ fired'] *)
 
 Lemma elect_fired_compute_fired :
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
@@ -241,7 +378,8 @@ Proof.
          eapply falling_edge_compute_firable; eauto.
 
       (* SUBGOAL [t ∈ sens(m)] *)
-      -- admit.
+      -- assert (Hspriocomb_true : MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t)) by admit.
+         admit.
       
     (* [t] in tail; need [elect_fired_compute_residual] to complete
        the goal. *)
@@ -728,9 +866,7 @@ Proof.
     end.
 Qed.
   
-(** *** Falling edge compute fired: t ∈ fired(s') ⇒ σ'__t(fired) = true *)
-
-
+(** *** Falling edge compute fired: [t ∈ fired(s') ⇒ σ'__t(fired) = true] *)
 
 (* All transitions that are sensitized by the residual marking have an
    input port "priority_authorizations" of type boolean vector with

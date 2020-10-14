@@ -40,7 +40,6 @@ Definition function_ps_id : ident := 7.
 
 Definition local_var : ident := 100.
 Definition loop_var  : ident := 150.
-Definition i : ident := loop_var.
 
 (** Defines the first fresh identifier. 
     Starts the available identifier range. *)
