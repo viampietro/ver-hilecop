@@ -11,6 +11,7 @@ Require Import dp.Fired.
 Require Import dp.SitpnSemantics.
 Require Import dp.SitpnTypes.
 Require Import dp.SitpnFacts.
+Require Import dp.FiredFacts.
 
 Require Import HVhdlTypes.
 Require Import SemanticalDomains.
@@ -28,9 +29,9 @@ Require Import SoundnessDefs.
 
 (** ** Facts about Falling Edge and Firable *)
 
-(* ∀ t ∈ firable(s') ⇒ σ't(s_firable) = true *)
+(* [∀ t ∈ firable(s') ⇒ σ'__t("s_firable") = true] *)
 
-Lemma falling_edge_compute_firable : 
+Lemma falling_edge_compute_s_firable_true : 
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ,
 
     (* sitpn translates into d. *)
@@ -56,27 +57,96 @@ Lemma falling_edge_compute_firable :
         MapsTo Transition.s_firable (Vbool true) (sigstore σ'__t)).
 Admitted.
 
+(* [∀ t ∉ firable(s') ⇒ σ'__t("s_firable") = false] *)
+
+Lemma falling_edge_compute_s_firable_false : 
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Similar starting states *)
+    γ ⊢ s ∼ σ ->
+    
+    (* Falling edge from s to s', s ⇝↓ s' *)
+    SitpnStateTransition Ec τ s s' falling_edge -> 
+
+    (* Falling edge from σ to σf *)
+    vfalling Δ σ (get_behavior d) σ__f -> 
+
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    (forall t id__t σ'__t,
+        γ (inr t) = id__t ->
+        MapsTo id__t σ'__t (compstore σ') ->
+        ~@Firable sitpn s' t ->
+        MapsTo Transition.s_firable (Vbool false) (sigstore σ'__t)).
+Admitted.
+
+(* [∀ σ'__t("s_firable") = true ⇒ t ∈ firable(s')] *)
+
+Lemma falling_edge_compute_firable : 
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Similar starting states *)
+    γ ⊢ s ∼ σ ->
+    
+    (* Falling edge from s to s', s ⇝↓ s' *)
+    SitpnStateTransition Ec τ s s' falling_edge -> 
+
+    (* Falling edge from σ to σf *)
+    vfalling Δ σ (get_behavior d) σ__f -> 
+
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    forall t id__t σ'__t,
+      γ (inr t) = id__t ->
+      MapsTo id__t σ'__t (compstore σ') ->
+      MapsTo Transition.s_firable (Vbool true) (sigstore σ'__t) ->
+      @Firable sitpn s' t.
+Admitted.
+
+(* [∀ σ'__t("s_firable") = false ⇒ t ∉ firable(s')] *)
+
+Lemma falling_edge_compute_nfirable : 
+  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ,
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+
+    (* Similar starting states *)
+    γ ⊢ s ∼ σ ->
+    
+    (* Falling edge from s to s', s ⇝↓ s' *)
+    SitpnStateTransition Ec τ s s' falling_edge -> 
+
+    (* Falling edge from σ to σf *)
+    vfalling Δ σ (get_behavior d) σ__f -> 
+
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ__f (get_behavior d) θ σ' ->
+    
+    (* Conclusion *)
+    forall t id__t σ'__t,
+      γ (inr t) = id__t ->
+      MapsTo id__t σ'__t (compstore σ') ->
+      MapsTo Transition.s_firable (Vbool false) (sigstore σ'__t) ->
+      ~@Firable sitpn s' t.
+Admitted.
+
 (** ** Facts about Falling Edge and Fired *)
 
-(** *** Falling edge compute fired: σ'__t(fired) = true ⇒ t ∈ fired(s') *)
+(** *** Falling edge compute fired: [σ'__t(fired) = true ⇒ t ∈ fired(s')] *)
 
 (* All transitions that are elected to be fired, have an output fired
    port equal to false. *)
-
-Lemma elect_fired_in_output :
-    forall sitpn s m fired lofT m' fired',
-      @ElectFired sitpn s m fired lofT (m', fired') ->
-      forall t, List.In t fired -> List.In t fired'.
-Proof.
-  intros *; intros Helectf.
-
-  dependent induction Helectf.
-
-  - auto.
-  - specialize (IHHelectf m' fired' eq_refl); intros; apply IHHelectf.
-    apply in_or_app; left; assumption.
-  - eapply IHHelectf; eauto.
-Qed.
 
 Lemma elect_fired_compute_fired :
   forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
@@ -145,7 +215,7 @@ Proof.
     end.
 
     (* [t] is hd element *)
-    + eapply (elect_fired_in_output sitpn s' msub (fired ++ [t0]) lofT m' fired' Helect).
+    + eapply (elect_fired_in_acc sitpn s' msub (fired ++ [t0]) lofT m' fired' Helect).
       lazymatch goal with
       | [ H: t0 = t |- _ ] => rewrite <- H; apply in_last
       end.
@@ -167,7 +237,8 @@ Proof.
       end.
 
       (* SUBGOAL [t ∈ firable(s')] *)
-      -- admit.
+      -- assert (Hsfirable_true : MapsTo Transition.s_firable (Vbool true) (sigstore σ'__t)) by admit.
+         eapply falling_edge_compute_firable; eauto.
 
       (* SUBGOAL [t ∈ sens(m)] *)
       -- admit.
@@ -275,10 +346,27 @@ Proof.
         inversion_clear Hv as [Hin_fired | Hin_lofT].
 
       (* [ElectFired(s', m, fired, tp, (m', fired')) /\ t ∈ fired ⇒ t ∈ fired'] *)
-      -- admit.
+      -- left;
+           lazymatch goal with
+           | [ H: ElectFired _ _ _ _ _ |- _ ] =>
+             apply (elect_fired_in_output sitpn s' m fired tp m' fired' H t Hin_fired)
+           end.
 
-      (*  *)
-      -- assert (Hin_lofT'_or_tp: List.In t lofT' \/ List.In t tp) by admit.
+      (* CASE [t ∈ lofT] *)
+         
+      -- lazymatch goal with
+         | [ H: IsTopPriorityList _ _, H': IsDiff _ _ _ |- _ ] =>
+           specialize (is_top_prio_diff_v sitpn lofT [] tp H lofT' t H' Hin_lofT)
+             as Hv;
+             inversion_clear Hv as [Hin_lofT' | Hin_tp]; [
+
+               (* CASE t ∈ lofT' *)
+               right; assumption |
+
+               (* CASE t ∈ tp *)
+               left; eapply elect_fired_compute_fired; eauto
+             ]
+         end.
          
 Admitted.  
 
@@ -366,51 +454,6 @@ Proof.
     
     intros t; intros; specialize (Hset t); right; assumption.
 
-Qed.
-
-(*  Corollary of the [falling_edge_compute_fired_list] lemma. *)
-
-Lemma falling_edge_compute_fired_port_true :
-  forall Δ σ__f d θ σ' σ sitpn Ec τ s s' mm γ id__t σ'__t,
-
-    (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
-
-    (* Similar starting states *)
-    γ ⊢ s ∼ σ ->
-    
-    (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
-
-    (* Falling edge from σ to σf *)
-    vfalling Δ σ (get_behavior d) σ__f -> 
-
-    (* Stabilize from σf to σ' *)
-    stabilize Δ σ__f (get_behavior d) θ σ' ->
-    
-    (* Conclusion *)
-    
-    forall fset t,
-      
-      (* t ∈ fired(s') *)
-      @Fired sitpn s' fset t ->
-        
-      (** Component idt implements transition t *)
-      γ (inr t) = id__t ->
-
-      (* σ't is the state of component idt at design's state σ'. *)
-      MapsTo id__t σ'__t (compstore σ') ->
-
-      (* Conclusion *)
-      MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
-Proof.
-  intros;
-    lazymatch goal with
-    | [ H: Fired _ _ _ |- _ ] =>
-      inversion H;
-        eapply falling_edge_compute_fired_port_true_list;
-        eauto
-    end.
 Qed.
 
 (** *** Falling edge compute fired: σ'__t(fired) = false ⇒ t ∉ fired(s') *)
@@ -1120,3 +1163,5 @@ Lemma falling_edge_states_equal :
     γ ⊢ s' ∼ σ'.
 Proof.
 Admitted.
+
+
