@@ -103,6 +103,17 @@ Structure StaticTimeInterval : Set :=
       lower_is_natstar : (a itval) > 0;
     }.
 
+(* Defines a predicate stating that two StaticTimeInterval do
+   not overlap, i.e, the intersection of the two is empty.
+ *)
+
+Definition NoOverlap (i i' : StaticTimeInterval) : Prop :=
+  match i, i' with
+  | MkSTimeItval <| a, ninat b |> _, MkSTimeItval <| a', ni |> _ => b < a'
+  | MkSTimeItval <| a, ni |> _, MkSTimeItval <| a', ninat b' |> _ => b' < a
+  | _, _ => False
+  end.
+
 (** Defines the type of dynamic time intervals ≡ I+ ⊔ {ψ} *)
 
 Inductive DynamicTimeInterval : Set :=

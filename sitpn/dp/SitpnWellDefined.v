@@ -4,8 +4,11 @@ Require Import Coqlib.
 Require Import GlobalTypes.
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
+Require Import dp.SitpnTypes.
 
 Set Implicit Arguments.
+
+(** ** Well-definition of the transition and place sets *)
 
 (** States that a given place [p] of [sitpn] is isolated.  *)
 
@@ -27,48 +30,55 @@ Definition TransitionIsIsolated (sitpn : Sitpn) (t : T sitpn) : Prop :=
 Definition HasNoIsolatedTransition (sitpn : Sitpn) : Prop :=
   forall (t : T sitpn), ~TransitionIsIsolated t.
 
-(** ** Priority relation as a strict total order for conflict groups. *)
+(** ** Well-definition of the priority relation *)
 
-(** States that two transition are in conflict through a group of
-    places. *)
+Definition PriorityRelIsWellDefined (sitpn : Sitpn) :=
+  IsStrictOrderBRel (@pr sitpn).
 
-Inductive AreInConflictThroughPlaces sitpn (t t' : T sitpn) : list (P sitpn) -> Prop :=
-| AreInCTPCommonPlace :
-    forall p,
-      pre p t <> None ->
-      pre p t' <> None ->
-      AreInConflictThroughPlaces t t' [p]
-| AreInCTPTrans :
-    forall Pc Pc' t'',
-      AreInConflictThroughPlaces t t'' Pc ->
-      AreInConflictThroughPlaces t'' t' Pc' ->
-      AreInConflictThroughPlaces t t' (Pc ++ Pc').
+(** ** Definitions about transitions in conflict *)
 
-(** Priority relation between two transitions that are elements
-    of a subset of T. *)
+(* Two different transitions are in structural confict if there exists
+   a common input place connecting them by mean of a basic arc.  *)
 
-Definition pr' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : bool :=
-  pr (proj1_sig t) (proj1_sig t').
+Definition InStructConflict {sitpn} (t t' : T sitpn) :=
+  ~Teq t t' /\ exists p ω ω', pre p t = Some (basic, ω) /\ pre p t' = Some (basic, ω').
 
-(** States that a group of transitions is a conflict group. *)
+(* Cases of mutual exclusion between two transitions *)
 
-Definition IsConflictGroup sitpn (Tc : list (T sitpn)) : Prop :=
-  exists Pc : list (P sitpn),
-    let InPc := (fun pc => List.In pc Pc) in
-    let InTc := (fun tc => List.In tc Tc) in
-    (forall p : Psubset InPc, forall t, pre p t <> None -> List.In t Tc)
-    /\ (forall t : Tsubset InTc, forall p, pre p t <> None -> List.In p Pc)
-    /\ (forall t t' : Tsubset InTc, ~Teq t t' -> AreInConflictThroughPlaces t t' Pc).
+Definition MutualExclByInhib {sitpn} (t t' : T sitpn) :=
+  exists p ω ω', pre p t = Some (basic, ω) /\ pre p t' = Some (inhibitor, ω')
+                 \/ pre p t = Some (inhibitor, ω) /\ pre p t' = Some (basic, ω').
 
-(** States that the priority relation of a given [sitpn] is
-    well-defined, that is, the priority relation is a strict total
-    order over the elements of each conflict group of transitions. *)
+Definition MutualExclByConds {sitpn} (t t' : T sitpn) :=
+  exists c, has_C t c = one /\ has_C t' c = mone
+            \/ has_C t c = mone /\ has_C t' c = one.
 
-Definition PriorityRelIsWellDefined (sitpn : Sitpn) : Prop :=
-  forall Tc : list (T sitpn),
-    IsConflictGroup Tc ->
-    let InTc := (fun tc => List.In tc Tc) in
-    @IsStrictTotalOrderBRel (Tsubset InTc) (@Teq' sitpn InTc) (@Teq'_dec sitpn InTc) (@pr' sitpn InTc).
+Definition MutualExclByTimeItvals {sitpn} (t t' : T sitpn) :=
+  exists i i', Is t = Some i /\ Is t' = Some i' /\ NoOverlap i i'.
+
+Definition MutualExcl {sitpn} (t t' : T sitpn) :=
+  MutualExclByInhib t t' \/ MutualExclByConds t t' \/ MutualExclByTimeItvals t t'.
+
+(* States that the conflict between two transitions is solved either
+   thanks to the priority relation, or by other means of mutual
+   execlusion. *)
+
+Definition ConflictSolved {sitpn} (t t' : T sitpn) (conflict : InStructConflict t t') :=
+  IsStrictOrderBRel (@pr sitpn) /\
+  (AreComparableWithBRel t t' (@pr sitpn) \/ ~AreComparableWithBRel t t' (@pr sitpn) /\ MutualExcl t t').
+
+(* [True] if transitions [t] and [t'] are not in structural conflict
+   or if the conflict is solved.  *)
+
+Definition NoConflictOrConflictSolved {sitpn} (t t' : T sitpn) :=
+  ~InStructConflict t t'
+  \/ forall (conflict : InStructConflict t t'), ConflictSolved conflict.
+
+(* For all couple of transitions of [sitpn], either the couple is not
+   in conflict or the conflict is solved *)
+
+Definition AllConflictsSolved (sitpn : Sitpn) :=
+  forall t t' : T sitpn, NoConflictOrConflictSolved t t'.
 
 (** Defines a predicate stating that the list of nat used in an
     [Sitpn] structure to implement finite sets respect the [Nodup]
@@ -99,6 +109,7 @@ Definition IsWellDefined (sitpn : Sitpn) :=
   /\ HasNoIsolatedPlace sitpn
   /\ HasNoIsolatedTransition sitpn
   /\ PriorityRelIsWellDefined sitpn
+  /\ AllConflictsSolved sitpn
                               
   (* Implementation-dependent property. *)
   /\ AreWellImplementedFiniteSets sitpn.

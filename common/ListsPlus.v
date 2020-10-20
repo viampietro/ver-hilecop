@@ -57,7 +57,7 @@ End MapAsListOfCouples.
 Arguments getv {A B eq}.
 Arguments setv {A B eq}.
 
-(** ** Map function with possible errors. *)
+(** ** Map function with possible errors (Option Map). *)
 
 Section OMap.
 
@@ -116,7 +116,7 @@ Arguments omap {A B}.
 Arguments oemap_aux {A B}.
 Arguments oemap {A B}.
 
-(** Fold left function with possible errors. *)
+(** Fold left function with possible errors (Option Fold left). *)
 
 Section OFold_left.
 
@@ -568,5 +568,19 @@ Section LastElt.
   
 End LastElt.
 
+(** ** Propositional version of Fold left *)
 
+Section Fold_left_prop.
+  Variables (A : Type) (B : Type).
+  Variable f : A -> B -> A.
+  
+  Inductive FoldL : list B -> A -> A -> Prop :=
+  | FoldL_nil : forall acc, FoldL nil acc acc
+  | FoldL_cons :
+      forall l b acc acc',
+        FoldL l (f acc b) acc' ->
+        FoldL (b :: l) acc acc'.
 
+End Fold_left_prop.
+
+Arguments FoldL {A B}.

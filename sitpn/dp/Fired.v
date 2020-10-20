@@ -102,7 +102,7 @@ Inductive IsFiredListAux sitpn (s : SitpnState sitpn) (m : P sitpn -> nat) (fire
 Inductive IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Prop :=
   IsFiredList_ :
     forall Tlist,
-      @Set_in_List (T sitpn) Tlist ->
+      Set_in_List (fun t => True) Tlist ->
       IsFiredListAux s (M s) [] Tlist fired ->
       IsFiredList s fired.
 

@@ -1,9 +1,10 @@
 (** * Misc. definitions for the SITPN semantics. *)
 
-Require Import Coqlib.
+Require Import common.Coqlib.
+Require Import common.GlobalTypes.
+Require Import common.ListsPlus.
 Require Import dp.Sitpn.
-Require Import SitpnTypes.
-Require Import GlobalTypes.
+Require Import dp.SitpnTypes.
 
 Set Implicit Arguments.
 
@@ -63,7 +64,8 @@ Definition Firable (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
 (** States that a given Set S is implemented by a list l.  As a side
     effect, states that a given set is finite and enumerable. *)
 
-Definition Set_in_List (S : Set) (l : list S) : Prop := (forall s : S, In s l) /\ NoDup l.
+Definition Set_in_List (A : Type) (P : A -> Prop) (l : list A) : Prop :=
+  (forall a : A, P a <-> In a l) /\ NoDup l.
 
 (** Sums the weight of the pre-edges between the place [p] 
     and the transitions of a list given in parameter.
@@ -71,13 +73,8 @@ Definition Set_in_List (S : Set) (l : list S) : Prop := (forall s : S, In s l) /
     ∑ pre(t, p), ∀ t ∈ some list of transitions.
  *)
 
-Inductive PreSumList (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : list {t | P t} -> nat -> Prop :=
-| PreSumListNil : PreSumList p P [] 0
-| PreSumListCons :
-    forall t l n m a gt_m_O,
-      PreSumList p P l n ->
-      pre p (proj1_sig t) = Some (a, exist _ m gt_m_O) ->
-      PreSumList p P (t :: l) (n + m).
+Definition PreSumList (sitpn : Sitpn) (p : P sitpn) (lofTs : list (T sitpn)) (sum : nat) : Prop :=
+  FoldL (fun acc t => match pre p t with | Some (basic, |ω|) => acc + ω | _ => acc end) lofTs 0 sum.
 
 (** For all list [l] and natural [n] such that: 
 
@@ -88,10 +85,10 @@ Inductive PreSumList (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : list 
 *)
 
 Inductive PreSum (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : nat -> Prop :=
-| PreSum_ : forall l n, @Set_in_List {t | P t} l -> PreSumList p P l n -> PreSum p P n.
+| PreSum_ : forall l n, Set_in_List P l -> PreSumList p l n -> PreSum p P n.
 
-Inductive MarkingSubPreSum (sitpn : Sitpn) (tSet : T sitpn -> Prop) (m m' : P sitpn -> nat) : Prop :=
-| MarkingSubPreSum_ : (forall p n, PreSum p tSet n -> m' p = m p - n) -> MarkingSubPreSum tSet m m'.
+Inductive MarkingSubPreSum (sitpn : Sitpn) (Q : T sitpn -> Prop) (m m' : P sitpn -> nat) : Prop :=
+| MarkingSubPreSum_ : (forall p sum__pre, PreSum p Q sum__pre -> m' p = m p - sum__pre) -> MarkingSubPreSum Q m m'.
 
 (** Sums the weight of the post-edges between the place [p] 
     and the transitions of a list given in parameter.
@@ -99,13 +96,8 @@ Inductive MarkingSubPreSum (sitpn : Sitpn) (tSet : T sitpn -> Prop) (m m' : P si
     ∑ post(t, p), ∀ t ∈ some list of transitions.
  *)
 
-Inductive PostSumList (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : list {t | P t} -> nat -> Prop :=
-| PostSumListNil : PostSumList p P [] 0
-| PostSumListCons :
-    forall t l n m gt_m_O,
-      PostSumList p P l n ->
-      post (proj1_sig t) p = Some (exist _ m gt_m_O) ->
-      PostSumList p P (t :: l) (n + m).
+Definition PostSumList (sitpn : Sitpn) (p : P sitpn) (lofTs : list (T sitpn)) (sum : nat) : Prop :=
+  FoldL (fun acc t => match post t p with | Some (exist _ ω _) => acc + ω | _ => acc end) lofTs 0 sum.
 
 (** For all list [l] and natural [n] such that: 
 
@@ -115,9 +107,13 @@ Inductive PostSumList (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : list
     then ∑ post(p, t) = n, ∀ t ∈ {t' | P t'}    
 *)
 
-Inductive PostSum (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : nat -> Prop :=
-| PostSum_ : forall l n, @Set_in_List {t | P t} l -> PostSumList p P l n -> PostSum p P n.
+Inductive PostSum (sitpn : Sitpn) (p : P sitpn) (Q : T sitpn -> Prop) : nat -> Prop :=
+| PostSum_ : forall l n, Set_in_List Q l -> PostSumList p l n -> PostSum p Q n.
 
-Inductive MarkingSubPreSumAddPostSum (sitpn : Sitpn) (tSet : T sitpn -> Prop) (m m' : P sitpn -> nat) : Prop :=
+Inductive MarkingSubPreSumAddPostSum (sitpn : Sitpn) (Q : T sitpn -> Prop) (m m' : P sitpn -> nat) : Prop :=
 | MarkingSubPreSumAddPostSum_ :
-    (forall p n n', PreSum p tSet n -> PostSum p tSet n' -> m' p = m p - n + n') -> MarkingSubPreSumAddPostSum tSet m m'.
+    (forall p sum__pre sum__post,
+        PreSum p Q sum__pre ->
+        PostSum p Q sum__post ->
+        m' p = m p - sum__pre + sum__post) ->
+    MarkingSubPreSumAddPostSum Q m m'.
