@@ -24,6 +24,16 @@ with lofvalues : Type :=
 | Vnil : lofvalues
 | Vcons : value -> lofvalues -> lofvalues.
 
+(* Conversion from [lofvalues] to [list value] *)
+
+Fixpoint lofvalues2list (lofv : lofvalues) {struct lofv} : list (value) :=
+  match lofv with
+  | Vnil => nil
+  | Vcons v tl => cons v (lofvalues2list tl)
+  end.
+
+Coercion lofvalues2list : lofvalues >-> list.
+
 (** Accesses the element at position [i] in lofvalues [lofv]. 
     
     Returns an error (i.e, None) if the index is greater

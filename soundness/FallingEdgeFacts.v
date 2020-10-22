@@ -605,9 +605,9 @@ Proof.
 
 Qed.
 
-(** *** Falling edge compute fired: σ'__t(fired) = false ⇒ t ∉ fired(s') *)
+(** *** Falling edge compute fired: [σ'__t(fired) = false ⇒ t ∉ fired(s')] *)
 
-(** *** Falling edge compute fired: t ∉ fired(s') ⇒ σ'__t(fired) = false *)
+(** *** Falling edge compute fired: [t ∉ fired(s') ⇒ σ'__t(fired) = false] *)
 
 (* All transitions that are elected to be fired, have an output fired
    port equal to false. *)
@@ -889,7 +889,7 @@ Proof.
     end.
 Qed.
   
-(** *** Falling edge compute fired: [t ∈ fired(s') ⇒ σ'__t(fired) = true] *)
+(** *** Falling edge compute fired port true: [t ∈ fired(s') ⇒ σ'__t(fired) = true] *)
 
 Definition add_out_arc_weight (σ__p : DState) :=
   fun sum i =>
@@ -1061,7 +1061,6 @@ Proof.
         
   }
     
-
 Admitted.
 
 (* All transitions that are sensitized by the residual marking have an
@@ -1077,7 +1076,7 @@ Admitted.
 
  *)
 
-Lemma stabilize_compute_auths_after_falling :
+Lemma stabilize_compute_input_prior_auth_true_after_falling :
   forall sitpn mm d Δ σ__e σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
 
     (* [sitpn] translates into [d] *)
@@ -1152,7 +1151,65 @@ Admitted.
 (* All transitions that are sensitized by the residual marking have a
    "s_priority_combination" signal of type boolean set to true. *)
 
-Lemma stabilize_compute_s_prio_comb_after_falling :
+Definition andb_if_vbool (asum : bool) (v : value) : bool :=
+  match v with
+  | Vbool b => andb b asum
+  | _ => asum
+  end.
+  
+Definition VBoolAndSum (lofv : lofvalues) (asum : bool) :=
+  FoldL andb_if_vbool lofv true asum.
+
+Lemma VBoolAndSum_xasum : forall lofv, exists asum, VBoolAndSum lofv asum.
+Proof. intros; apply FoldL_xres. Qed.
+ 
+Definition LOfVBoolTrue (lofv : lofvalues) :=
+  Forall (fun v => v = Vbool true) lofv.
+
+Require Import sitpn.dp.GenerateInfos.
+Require Import sitpn.dp.InfosTypes.
+
+Lemma stabilize_compute_prior_auths_true_after_falling :
+  forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
+    
+    (* Stabilize from σf to σ' *)
+    stabilize Δ σ (get_behavior d) θ σ' ->
+
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn mm = Success d ->
+    
+    (* Conclusion *)
+    
+    forall id__t σ'__t t m fired pauths,
+
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+      
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
+      
+      (* Marking [m] is the current residual marking computed from
+         start marking [M s'].  *)
+      
+      MarkingSubPreSum (fun t' => List.In t' fired) (M s') m ->
+      
+      (* All transitions of the fired list verify "fired" port
+         equals true at [σ'] *)
+      (forall t' id__t' σ'__t',
+          γ (inr t') = id__t' ->
+          MapsTo id__t' σ'__t' (compstore σ') ->
+          List.In t' fired ->
+          MapsTo Transition.fired (Vbool true) (sigstore σ'__t')) ->
+      
+      (* t ∈ sens(m) *)
+      @Sens sitpn m t ->
+      
+      (* σ't("priority_authorizations") = (true,...,true)  *)
+      MapsTo Transition.priority_authorizations (Vlist pauths) (sigstore σ'__t) ->
+      LOfVBoolTrue pauths.
+Admitted.
+
+Lemma stabilize_compute_s_prio_comb_true_after_falling :
   forall sitpn mm d Δ σ θ σ' s' (γ : P sitpn + T sitpn -> ident),
     
     (* Stabilize from σf to σ' *)
@@ -1175,7 +1232,7 @@ Lemma stabilize_compute_s_prio_comb_after_falling :
          start marking [M s'].  *)
       
       MarkingSubPreSum (fun t' => List.In t' fired) (M s') m ->
-
+      
       (* All transitions of the fired list verify "fired" port
          equals true at [σ'] *)
       (forall t' id__t' σ'__t',
@@ -1190,6 +1247,44 @@ Lemma stabilize_compute_s_prio_comb_after_falling :
       (* σ't("s_priority_combination") = true *)
       MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t).
 Proof.
+
+  intros.
+
+  (* [σ'__t("s_priority_combination") = ⋀i=0..n σ'__t("priority_authorizations")(i)] *)
+
+  assert (Hxpauths : exists pauths, MapsTo Transition.priority_authorizations (Vlist pauths) (sigstore σ'__t)) by admit.
+  inversion_clear Hxpauths as (pauths, Hpauths).
+  
+  assert (Hxasum : exists asum, VBoolAndSum pauths asum) by (apply (VBoolAndSum_xasum pauths)).
+  inversion_clear Hxasum as (asum, Hasum).
+  
+  assert (Heq_pcomb_asum : MapsTo Transition.s_priority_combination (Vbool asum) (sigstore σ'__t)) by admit.
+  specialize (stabilize_compute_prior_auths_true_after_falling
+                sitpn mm d Δ σ θ σ' s' γ H H0 id__t σ'__t t0 m fired pauths H1 H2 H3 H4 H5 Hpauths)
+    as Hlofbtrue.
+  
+  (* Reason on the input of [t0] *)
+
+  (* CASE [t0] has no input. 
+
+     Then, [priority_authorizations] has an only subelement at position [0]
+     that is set to [true].
+     
+   *)
+  
+  (* CASE [t0] has some input.
+     
+     We know:
+
+     - for all p ∈ input(t), exists i j sig,
+       <p.priority_authorizations(j) → sig → t.priority_authorizations(i)>
+
+     -                             
+     Then show, thanks to the "stabilize compute output priority
+     authorizations true after falling" lemma, that
+     [p.priority_authorizations(j) = true] and therefore that
+     [t.priority_authorizations(i)] *)
+
 Admitted.
 
 (* All transitions that are in the list of transitions elected to be
@@ -1343,9 +1438,9 @@ Lemma falling_edge_compute_fired_port_true_aux :
 
       (* All transitions of the fired list verify the conclusion *)
       (forall t id__t σ'__t,
-          List.In t fired ->
           γ (inr t) = id__t ->
           MapsTo id__t σ'__t (compstore σ') ->
+          List.In t fired ->
           MapsTo Transition.fired (Vbool true) (sigstore σ'__t)) ->
       
       (* [fset ≡ fired(s')] *)

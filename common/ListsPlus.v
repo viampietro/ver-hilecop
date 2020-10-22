@@ -581,6 +581,20 @@ Section Fold_left_prop.
         FoldL l (f acc b) acc' ->
         FoldL (b :: l) acc acc'.
 
+  (** *** Facts about FoldL *)
+
+  Lemma FoldL_xres :
+    forall (l : list B) (acc : A),
+    exists res, FoldL l acc res.
+  Proof.
+    intros l; induction l; intros.
+
+    - exists acc; apply FoldL_nil.
+    - specialize (IHl (f acc a)).
+      inversion_clear IHl as (res, IH); exists res.
+      apply FoldL_cons; assumption.
+  Qed.
+  
 End Fold_left_prop.
 
 Arguments FoldL {A B}.
