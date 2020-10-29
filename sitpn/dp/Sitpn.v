@@ -94,7 +94,7 @@ Record Sitpn  :=
 
       (* Priority relation between transitions. *)
 
-      pr : T -> T -> bool;
+      pr : T -> T -> Prop;
       
     }.
 

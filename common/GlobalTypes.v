@@ -22,35 +22,65 @@ Definition onens := exist _ 1 (gt_Sn_O 0).
 Definition twons := exist _ 2 (gt_Sn_O 1).
 Definition threens := exist _ 3 (gt_Sn_O 2).
 
-(** Defines the type of relation that are a strict order 
+(** ** Definitions and Facts about strict orders and boolean functions *)
+
+Section StrictOrders.
+
+  Variable A : Type.
+  Variable eqA : A -> A -> Prop.
+  Variable decEqA : forall x y, {eqA x y} + {~eqA x y}.
+
+  Variable rel : A -> A -> Prop.
+  Variable decRel : forall x y, {rel x y} + {~rel x y}.
+  
+  (** Defines the type of relation that are a strict order 
     over a type A.
- *)
+   *)
 
-Inductive IsStrictOrderBRel {A} (brel : A -> A -> bool) : Prop :=
-  MkStrictOrderB {
-      brel_irrefl : forall a, brel a a = false;
-      brel_trans : forall a b c, brel a b = true -> brel b c = true -> brel a c = true;
+  Inductive IsStrictOrder : Prop :=
+    MkStrictOrder {
+        rel_irrefl : forall a, ~rel a a;
+        rel_trans : forall a b c, rel a b -> rel b c -> rel a c;
 
-      (* Irreflexivity and transitivity entail anti-symmetry. *)
-      (* brel_antisym : forall a b, brel a b = true -> brel b a = false; *)
-    }.
+        (* Irreflexivity and transitivity entail anti-symmetry. *)
+        (* rel_antisym : forall a b, rel a b -> ~rel b a; *)
+      }.
 
-(** States that two elements of type A are comparable through
-    the boolean relation [brel]. *)
+  (** States that two elements of type A are comparable through
+      the boolean relation [rel]. *)
 
-Definition AreComparableWithBRel {A} (x y : A) (brel : A -> A -> bool) : Prop :=
-  brel x y <> false \/ brel y x <> false.
+  Definition AreComparable (x y : A) : Prop := rel x y \/ rel y x.
 
-(** States that [brel] is a strict total order over a type A, that is:  
-    - [brel] is a strict order over type A.
-    - all elements of A that are different are comparable with [brel].
- *)
+  (** States that [rel] is a strict total order over a type A, that is:  
+    - [rel] is a strict order over type A.
+    - all elements of A that are different are comparable with [rel].
+   *)
 
-Definition IsStrictTotalOrderBRel {A}
-           (eqA : A -> A -> Prop)
-           (decEqA : forall x y, {eqA x y} + {~eqA x y})
-           (brel : A -> A -> bool) :=
-  IsStrictOrderBRel brel /\ forall x y, ~eqA x y -> AreComparableWithBRel x y brel.
+  Definition IsStrictTotalOrder :=
+    IsStrictOrder /\ forall x y, ~eqA x y -> AreComparable x y.
+
+  (** States that [rel] is a strict order over the elements of a list
+      [l].  *)
+
+  Inductive IsStrictOrderOverList (l : list A) (nodupl : NoDup l) : Prop :=
+    MkStrictOrderOverList {
+        reloverl_irrefl : forall a, In a l -> ~rel a a;
+        reloverl_trans : forall a b c, In a l -> In b l -> In c l ->
+                                       rel a b -> rel b c -> rel a c;
+
+        (* Irreflexivity and transitivity entail anti-symmetry. *)
+        (* reloverl_antisym : forall a b, In a l -> In b l -> brel a b = true -> brel b a = false; *)
+      }.
+
+  (** States that [rel] is a strict total order over the elements of list [l], that is: 
+      - [rel] is a strict order over the elements of [l]
+      - all elements of [l] that are different are comparable with [rel].
+   *)
+
+  Definition IsStrictTotalOrderOverList (l : list A) (nodupl : NoDup l) :=
+    IsStrictOrderOverList l nodupl /\ forall x y, ~eqA x y -> AreComparable x y.
+  
+End StrictOrders.
 
 (** Defines the type of Petri net arcs. *)
 

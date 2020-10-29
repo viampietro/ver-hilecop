@@ -605,9 +605,9 @@ Proof.
 
 Qed.
 
-(** *** Falling edge compute fired: [σ'__t(fired) = false ⇒ t ∉ fired(s')] *)
+(** *** Falling edge compute not fired: [σ'__t(fired) = false ⇒ t ∉ fired(s')] *)
 
-(** *** Falling edge compute fired: [t ∉ fired(s') ⇒ σ'__t(fired) = false] *)
+(** *** Falling edge compute fired port false: [t ∉ fired(s') ⇒ σ'__t(fired) = false] *)
 
 (* All transitions that are elected to be fired, have an output fired
    port equal to false. *)
@@ -1147,7 +1147,6 @@ Lemma stabilize_compute_input_prior_auth_true_after_falling :
       get_at i pauths = Some (Vbool true).  
 Admitted.
 
-
 (* All transitions that are sensitized by the residual marking have a
    "s_priority_combination" signal of type boolean set to true. *)
 
@@ -1157,10 +1156,10 @@ Definition andb_if_vbool (asum : bool) (v : value) : bool :=
   | _ => asum
   end.
   
-Definition VBoolAndSum (lofv : lofvalues) (asum : bool) :=
-  FoldL andb_if_vbool lofv true asum.
+Definition ProdOfVBool (lofv : lofvalues) (prod : bool) :=
+  FoldL andb_if_vbool lofv true prod.
 
-Lemma VBoolAndSum_xasum : forall lofv, exists asum, VBoolAndSum lofv asum.
+Lemma ProdOfVBool_xprod : forall lofv, exists prod, ProdOfVBool lofv prod.
 Proof. intros; apply FoldL_xres. Qed.
  
 Definition LOfVBoolTrue (lofv : lofvalues) :=
@@ -1250,7 +1249,7 @@ Proof.
 
   intros.
 
-  (* [σ'__t("s_priority_combination") = ⋀i=0..n σ'__t("priority_authorizations")(i)] *)
+  (* [σ'__t("s_priority_combination") = ℿ 0 ≤ i ≤ n, σ'__t("priority_authorizations")(i)] *)
 
   assert (Hxpauths : exists pauths, MapsTo Transition.priority_authorizations (Vlist pauths) (sigstore σ'__t)) by admit.
   inversion_clear Hxpauths as (pauths, Hpauths).
