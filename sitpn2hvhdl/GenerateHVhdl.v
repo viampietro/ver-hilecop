@@ -298,12 +298,17 @@ End GenerateCompInsts.
 
 Arguments generate_comp_insts {sitpn}.
 
-(** ** Transformation from an SITPN to H-VHDL code. *)
+(** ** Transformation from an SITPN to an H-VHDL design *)
 
 Section Sitpn2HVhdl.
 
   Variable sitpn : Sitpn.
 
+  (* Proof of decidability for the priority relation of [sitpn].
+     Necessary to the [generate_sitpn_infos] function.
+   *)
+  Variable decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}.
+  
   (** Generates an H-VHDL design from the elements passed
       in parameter.
 
@@ -354,7 +359,7 @@ Section Sitpn2HVhdl.
   Definition sitpn_to_hvhdl (max_marking : nat) : optionE design :=
     (* Generates information from sitpn. *)
     let init_infos := (MkSitpnInfo sitpn [] [] [] [] []) in
-    match generate_sitpn_infos sitpn init_infos with
+    match generate_sitpn_infos sitpn decpr init_infos with
     | OK _ _ _ _ sitpn_info =>
       (* Generates the intermediate representation of the H-VHDL
          design's architecture. *)

@@ -8,16 +8,16 @@ Require Import dp.Fired.
 (** ** Facts about the [IsTopPriorityList] predicate *)
 
 Lemma is_top_prio_in_acc :
-  forall sitpn (lofT : list (T sitpn)) tp tp',
-    IsTopPriorityListAux lofT tp tp' ->
+  forall sitpn (lofT : list (T sitpn)) tp ntp tp',
+    IsTopPriorityListAux lofT tp ntp tp' ->
     forall t, List.In t tp -> List.In t tp'.
 Proof.
   induction 1; firstorder.
 Defined.
 
 Lemma is_top_prio_diff_v :
-  forall sitpn (lofT : list (T sitpn)) tp tp',
-    IsTopPriorityListAux lofT tp tp' ->
+  forall sitpn (lofT : list (T sitpn)) tp ntp tp',
+    IsTopPriorityListAux lofT tp ntp tp' ->
     forall lofT' t,
       IsDiff lofT tp' lofT' ->
       List.In t lofT ->
@@ -35,8 +35,8 @@ Proof.
     + right;
         rewrite Heq in *;
         lazymatch goal with
-        | [ H: IsTopPriorityListAux _ (tp ++ [?t]) _ |- _ ] =>
-          apply (is_top_prio_in_acc sitpn lofT (tp ++ [t]) tp' H t (in_last t tp))
+        | [ H: IsTopPriorityListAux _ (tp ++ [?t]) _ _ |- _ ] =>
+          apply (is_top_prio_in_acc sitpn lofT (tp ++ [t]) ntp tp' H t (in_last t tp))
         end.
 
     + unfold IsDiff in *. admit.

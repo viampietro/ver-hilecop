@@ -18,6 +18,10 @@ Section GenSitpnInfos.
 
   Variable sitpn : Sitpn.
 
+  (* Proof of decidability for the priority relation of [sitpn] *)
+  
+  Variable decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}.
+  
   (* The instantiated state type is [SitpnInfo sitpn] *)
 
   Definition GenInfosMon := @Mon (SitpnInfo sitpn).
@@ -94,11 +98,11 @@ Section GenSitpnInfos.
            as the head element of stranss, and returns the list.
          
          Otherwise, checks if x has a higher priority than t.  *)
-          if t >~ x then Ret (t :: stranss)
+          if decpr t x then Ret (t :: stranss)
           else
             (* If x has a higher priority than t, then tries to inject t
                in the list's tail.  *)
-            if x >~ t then
+            if decpr x t then
               do stranss' <- inject_t t tl; Ret (x :: stranss')
             else
               (* Error case: t and x are not comparable, the priority

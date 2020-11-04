@@ -17,27 +17,27 @@ Set Implicit Arguments.
     (i.e, [tp]) in a given list of transitions (i.e, [lofT]). *)
 
 Inductive IsTopPriorityListAux sitpn :
-  list (T sitpn) -> list (T sitpn) -> list (T sitpn) -> Prop :=
+  list (T sitpn) -> list (T sitpn) -> list (T sitpn) -> list (T sitpn) -> Prop :=
 | IsTopPriorityList_nil :
-    forall tp, IsTopPriorityListAux [] tp tp
+    forall tp ntp, IsTopPriorityListAux [] tp ntp tp
 | IsTopPriorityList_cons :
-    forall lofT tp t tp',
-      ~(exists t', In t' lofT -> t' >~ t = true) ->
-      IsTopPriorityListAux lofT (tp ++ [t]) tp' ->
-      IsTopPriorityListAux (t :: lofT) tp tp'
+    forall t lofT tp ntp tp',
+      ~(exists t', In t' (lofT ++ tp ++ ntp) /\ t' >~ t) ->
+      IsTopPriorityListAux lofT (tp ++ [t]) ntp tp' ->
+      IsTopPriorityListAux (t :: lofT) tp ntp tp'
 | IsTopPriorityList_not_top :
-    forall lofT tp t tp',
-      (exists t', In t' lofT -> t' >~ t = true) ->
-      IsTopPriorityListAux lofT tp tp' ->
-      IsTopPriorityListAux (t :: lofT) tp tp'.
+    forall t lofT tp ntp tp',
+      (exists t', In t' (lofT ++ tp ++ ntp) /\ t' >~ t) ->
+      IsTopPriorityListAux lofT tp (ntp ++ [t]) tp' ->
+      IsTopPriorityListAux (t :: lofT) tp ntp tp'.
 
 (** Wrapper around the IsTopPriorityListAux.  [tp] is the top-priority
     list of transitions of the list [lofT].  *)
 
 Definition IsTopPriorityList sitpn (lofT : list (T sitpn)) (tp : list (T sitpn)) : Prop :=
-  IsTopPriorityListAux lofT [] tp.
+  IsTopPriorityListAux lofT [] [] tp.
 
-(** Elects the fired transitions from a list of transitions [lofT];
+(** Elects the fired transitions from a list of transitions [tp];
     the election is based on the firability status of transitions at
     state [s] and their sensitization status at marking [m].
  *)
@@ -47,18 +47,18 @@ Inductive ElectFired sitpn (s : SitpnState sitpn) (m : (P sitpn) -> nat) (fired 
 | ElectFired_nil :
     ElectFired s m fired [] (m, fired)
 | ElectFired_cons :
-    forall lofT t msub m' fired',
+    forall tp t msub m' fired',
       Firable s t ->
       Sens m t ->
       (* Singleton set {t}. *)
       MarkingSubPreSum (fun t' => t' = t) m msub ->
-      ElectFired s msub (fired ++ [t]) lofT (m', fired') ->
-      ElectFired s m fired (t :: lofT) (m', fired')
+      ElectFired s msub (fired ++ [t]) tp (m', fired') ->
+      ElectFired s m fired (t :: tp) (m', fired')
 | ElectFired_not_fired :
-    forall lofT t m' fired',
+    forall tp t m' fired',
       ~(Firable s t /\ Sens m t) ->
-      ElectFired s m fired lofT (m', fired') ->
-      ElectFired s m fired (t :: lofT) (m', fired').
+      ElectFired s m fired tp (m', fired') ->
+      ElectFired s m fired (t :: tp) (m', fired').
 
 (** States that a list [d] is the result of the difference between two
     lists [l] and [m]; i.e, d = l\m is set theory notation. *)

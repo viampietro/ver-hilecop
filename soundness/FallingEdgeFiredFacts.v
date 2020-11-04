@@ -232,21 +232,19 @@ Lemma stabilize_compute_sens_by_residual_after_falling :
     
     (* Conclusion *)
     
-    forall id__t σ'__t t m fired lofT fset,
+    forall id__t σ'__t t m fired tp m' fired' lofT' fset,
 
       (** Component [id__t] implements transition [t] *)
       γ (inr t) = id__t ->
       
       (* [σ'__t] is the state of component [id__t] at design's state [σ']. *)
       MapsTo id__t σ'__t (compstore σ') ->
-      
-      (* Marking [m] is the current residual marking computed from
-         start marking [M s'].  *)
-      
-      MarkingSubPreSum (fun t__i => List.In t__i fired) (M s') m ->
 
+      (* Elect transitions to be fired from the [tp] list *)
+      @ElectFired sitpn s' m fired tp (m', fired') ->
+      
       (* [fset ≡ fired(s')] *)
-      IsFiredListAux s' m fired lofT fset ->
+      IsFiredListAux s' m' fired' lofT' fset ->
       
       (* [σ'__t("s_priority_combination") = true] *)
       MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t) ->
@@ -300,15 +298,10 @@ Lemma elect_fired_compute_fired :
     
     (* Conclusion *)
     
-    forall m fired tp m' fired' lofT fset,
-
-      (* Marking [m] is the current residual marking computed from
-         start marking [M s'].  *)
-      
-      MarkingSubPreSum (fun t => List.In t fired) (M s') m ->
+    forall m fired tp m' fired' lofT' fset,
 
       (* [fset ≡ fired(s')] *)
-      IsFiredListAux s' m fired lofT fset ->
+      IsFiredListAux s' m' fired' lofT' fset ->
       
       (* Elect transitions to be fired from the [tp] list *)
       @ElectFired sitpn s' m fired tp (m', fired') ->
@@ -333,7 +326,7 @@ Proof.
   intros *;
     intros Htransl Hsim Hfalling Hfall_hdl Hstab;
     intros m fired tp m' fired' lofT fset
-           Hresm Hfiredaux Helect;
+           Hfiredaux Helect;
 
     dependent induction Helect;
     
@@ -357,10 +350,9 @@ Proof.
         rewrite <- H; apply in_last
       end.
       
-    (* [t] in tail; need [elect_fired_compute_residual] to complete
-       the goal. *)
-    + eapply IHHelect with (lofT := lofT) (fset := fset); eauto; admit.
-
+    (* [t] in tail. *)
+    + eapply IHHelect with (lofT := lofT) (fset := fset); eauto.
+      
   (* CASE t ∉ firable(s') \/ t ∉ sens(m) *)
   - lazymatch goal with
     | [ H: List.In _ (_ :: _) |- _ ] =>
@@ -381,9 +373,8 @@ Proof.
       -- assert (Hspriocomb_true : MapsTo Transition.s_priority_combination (Vbool true) (sigstore σ'__t)) by admit.
          eapply stabilize_compute_sens_by_residual_after_falling; eauto.
          
-    (* [t] in tail; need [elect_fired_compute_residual] to complete
-       the goal. *)
-    + apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (lofT := lofT) (fset := fset); auto.      
+    (* [t] in tail. *)
+    + apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (lofT := lofT) (fset := fset); auto.
 Admitted.
 
 (* Starting from similar state, after the falling edge of the clock
@@ -410,21 +401,7 @@ Lemma falling_edge_compute_fired_aux :
     
     (* Conclusion *)
     
-    forall Tlist m fired lofT fset,
-
-      (* List [Tlist] implements the set of transitions [T sitpn] *)
-      Set_in_List (fun t => True) Tlist ->
-      
-      (* (fired ++ lofT) is included in [Tlist] *)
-      incl (fired ++ lofT) Tlist ->
-
-      (* No duplicate in [fired ++ lofT] *)
-      NoDup (fired ++ lofT) ->
-
-      (* Marking [m] is the current residual marking computed from
-         start marking [M s']  *)
-      
-      MarkingSubPreSum (fun t : T sitpn => List.In t fired) (M s') m -> 
+    forall m fired lofT fset,
 
       (* All transitions of the [fired] list verify the conclusion *)
 
@@ -458,8 +435,8 @@ Lemma falling_edge_compute_fired_aux :
 Proof.
   intros Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ id__t σ'__t
          Htransl Hsim Hfalling Hfall_hdl Hstab
-         Tlist m fired lofT fset
-         HTlist Hincl Hnodup Hresm Hin_fired_compute Hfired_aux.
+         m fired lofT fset
+         Hin_fired_compute Hfired_aux.
 
   dependent induction Hfired_aux.
 
@@ -474,42 +451,34 @@ Proof.
   (* IND. CASE *)
   - specialize (IsFiredListAux_cons H H0 H1 Hfired_aux) as Hfiredaux_cons. apply IHHfired_aux.
 
-    (* CASE incl in Tlist *)
-    + admit.
-
-    (* CASE no duplicate  *)
-    + admit.
-      
-    (* CASE elect fired compute residual *)
-    + admit.
-
     (* CASE elect fired compute fired port *)
-    + intros t Hbind Hmaps_comp Hmaps_fired;
-        specialize (Hin_fired_compute t Hbind Hmaps_comp Hmaps_fired) as Hv;
-        inversion_clear Hv as [Hin_fired | Hin_lofT].
+    
+    intros t Hbind Hmaps_comp Hmaps_fired;
+      specialize (Hin_fired_compute t Hbind Hmaps_comp Hmaps_fired) as Hv;
+      inversion_clear Hv as [Hin_fired | Hin_lofT].
 
-      (* [ElectFired(s', m, fired, tp, (m', fired')) /\ t ∈ fired ⇒ t ∈ fired'] *)
-      -- left;
-           lazymatch goal with
-           | [ H: ElectFired _ _ _ _ _ |- _ ] =>
-             apply (elect_fired_in_acc sitpn s' m fired tp m' fired' H t Hin_fired)
-           end.
+    (* [ElectFired(s', m, fired, tp, (m', fired')) /\ t ∈ fired ⇒ t ∈ fired'] *)
+    + left;
+        lazymatch goal with
+        | [ H: ElectFired _ _ _ _ _ |- _ ] =>
+          apply (elect_fired_in_acc sitpn s' m fired tp m' fired' H t Hin_fired)
+        end.
 
-      (* CASE [t ∈ lofT] *)
+    (* CASE [t ∈ lofT] *)
          
-      -- lazymatch goal with
-         | [ H: IsTopPriorityList _ _, H': IsDiff _ _ _ |- _ ] =>
-           specialize (is_top_prio_diff_v sitpn lofT [] [] tp H lofT' t H' Hin_lofT)
-             as Hv;
-             inversion_clear Hv as [Hin_lofT' | Hin_tp]; [
+    + lazymatch goal with
+      | [ H: IsTopPriorityList _ _, H': IsDiff _ _ _ |- _ ] =>
+        specialize (is_top_prio_diff_v sitpn lofT [] [] tp H lofT' t H' Hin_lofT)
+          as Hv;
+          inversion_clear Hv as [Hin_lofT' | Hin_tp]; [
 
-               (* CASE t ∈ lofT' *)
-               right; assumption |
+            (* CASE t ∈ lofT' *)
+            right; assumption |
 
-               (* CASE t ∈ tp *)
-               left; eapply elect_fired_compute_fired; eauto
-             ]
-         end.
+            (* CASE t ∈ tp *)
+            left; eapply elect_fired_compute_fired; eauto
+          ]
+      end.
          
 Admitted.  
 
@@ -566,37 +535,6 @@ Proof.
         eapply falling_edge_compute_fired_aux;
         eauto    
     end.
-
-  (* incl ([] ++ Tlist) Tlist *)
-  - apply incl_refl.
-
-  (* NoDup ([] ++ Tlist) *)
-  - lazymatch goal with
-    | [ H: Set_in_List _ Tlist |- _ ] =>
-      inversion H; assumption
-    end.
-    
-  (* M s' = M s' - ∑ pre(ti), ∀ ti ∈ [] *)
-  - apply MarkingSubPreSum_;
-      inversion_clear 1;
-      lazymatch goal with
-      | [ H: PreSumList _ _ _ |- _ ] =>
-        inversion H; [omega |
-                      lazymatch goal with
-                      | [ H: Set_in_List _ _, Heq: ?t :: ?tl = _ |- _ ] =>
-                        unfold Set_in_List in H;
-                        decompose [and] H;
-                        lazymatch goal with
-                        | [ Hset: forall _ : _, (List.In _ _ <-> List.In _ _) |- _ ] =>
-                          rewrite <- Heq in Hset;
-                          specialize (Hset t);
-                          specialize (in_eq t tl) as Hineq;
-                          rewrite <- Hset in Hineq;
-                          contradiction
-                        end
-                      end
-                     ]
-      end.
 
   (* ∀ t ∈ T, T ≡ Tlist ⇒ t ∈ Tlist *)
   - lazymatch goal with
@@ -1001,8 +939,8 @@ Lemma stabilize_compute_auth_after_falling :
       
       PreSum p (fun t__i => List.In t__i fired) n ->
 
-      (* [pre(p,t) = (basic, ω) \/ pre(p,t) = (test, ω)] *)
-      pre p t = Some (basic, exist _ ω pf) \/ pre p t = Some (test, exist _ ω pf) ->
+      (* [pre(p,t) = (basic, ω)] *)
+      pre p t = Some (basic, exist _ ω pf) ->
       
       (* [(M s')(p) - (∑ pre(p, t__i), ∀ t__i ∈ fired) >= pre(p,t)] *)
       M s' p - n >= ω ->
@@ -1330,7 +1268,7 @@ Lemma elect_fired_compute_fired_port_true :
     
     (* Conclusion *)
     
-    forall m fired lofT tp m' fired',
+    forall m fired lofT' tp m' fired' fset,
       
       (* All transitions of the [fired] list verify the conclusion,
          and all transitions that verify the conclusion are either
@@ -1341,10 +1279,12 @@ Lemma elect_fired_compute_fired_port_true :
           MapsTo id__t σ'__t (compstore σ') ->
           (List.In t fired -> MapsTo Transition.fired (Vbool true) (sigstore σ'__t))
           /\
-          (MapsTo Transition.fired (Vbool true) (sigstore σ'__t) -> List.In t fired \/ List.In t lofT)) ->
+          (MapsTo Transition.fired (Vbool true) (sigstore σ'__t) -> List.In t fired \/ List.In t tp \/ List.In t lofT')) ->
       
       (* Elect transitions to be fired from the [tp] list *)
       @ElectFired sitpn s' m fired tp (m', fired') ->
+
+      @IsFiredListAux sitpn s' m' fired' lofT' fset -> 
       
       forall t id__t σ'__t,
         (** Component idt implements transition t *)
@@ -1361,7 +1301,7 @@ Lemma elect_fired_compute_fired_port_true :
 Proof.
   intros *;
     intros Htransl Hsim Hfalling Hfall_hdl Hstab;
-    intros m fired lofT tp m' fired' Hin_fired_compute Helect;
+    intros m fired lofT' tp m' fired' fset Hin_fired_compute Helect;
     dependent induction Helect.
 
     (* BASE CASE *)
@@ -1371,22 +1311,22 @@ Proof.
         eapply (proj1 (Hin_fired_compute _ _ _ _ _)); eauto
       end.
 
-    (* IND. CASES *)
+  (* IND. CASES *)
 
-    (* CASE t ∈ firable(s) ∧ t ∈ sens(m) *)
+  (* CASE t ∈ firable(s) ∧ t ∈ sens(m) *)  
+  - eapply IHHelect;
+      eauto; intros t' id__t' σ'__t' Hbind_t' Hid__t; split.
     
-    - apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired') (lofT := lofT); auto.
-
-      (* ∀ t' ∈ fired ++ [t] → C *)
-      + intros t' id__t' σ'__t' Hbind_t' Hid__t Hin_app; destruct_in_app_or.
+    (* ∀ t' ∈ fired ++ [t] → C *)
+    + intros Hin_app; destruct_in_app_or.
       
-        (* Case t ∈ fired *)
-        -- eapply Hin_fired_compute with (σ'__t := σ'__t'); eauto.
+      (* Case t ∈ fired *)
+      -- eapply Hin_fired_compute with (σ'__t := σ'__t'); eauto.
            
-        (* Case t = t' *)
-           
-        (* Use [falling_edge_compute_firable] and [stabilize_compute_priority_after_falling] to solve the subgoal *)
-        -- singleton_eq; rewrite Heq in *.
+      (* Case t = t' *)
+         
+      (* Use [falling_edge_compute_firable] and [stabilize_compute_priority_after_falling] to solve the subgoal *)
+      -- singleton_eq; rewrite Heq in *.
 
            (* Specialize [falling_edge_compute_firable] *)
            lazymatch goal with
@@ -1398,22 +1338,29 @@ Proof.
            end.
 
            (* Specialize [stabilize_compute_priority_after_falling] *)
-           lazymatch goal with
-           | [ H: Sens _ _ |- _ ] =>
-             specialize (stabilize_compute_s_prio_comb_true_after_falling
-                           sitpn decpr mm d Δ σ__f θ σ' s' γ
-                           Hstab Htransl 
-                           id__t' σ'__t' t' m fired Hbind_t' Hid__t Hin_fired_compute H) as Hprio_comb
-           end.
+           (* lazymatch goal with *)
+           (* | [ H: Sens _ _ |- _ ] => *)
+           (*   specialize (stabilize_compute_s_prio_comb_true_after_falling *)
+           (*                 sitpn decpr mm d Δ σ__f θ σ' s' γ *)
+           (*                 Hstab Htransl  *)
+           (*                 id__t' σ'__t' t' m fired Hbind_t' Hid__t Hin_fired_compute H) as Hprio_comb *)
+           (* end. *)
 
            (* Specialize [fired_assign_on_stabilize] with [Hfirable] and [Hprio_comb] *)
-           assert (Hfired_assign: MapsTo Transition.fired (Vbool true) (sigstore σ'__t')) by admit.
+           (* assert (Hfired_assign: MapsTo Transition.fired (Vbool true) (sigstore σ'__t')) by admit. *)
 
-           assumption.
-           
-    (* CASE t ∉ firable(s) or t ∉ sens(m) *)
-    - apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired'); auto.
-    
+  (* assumption. *)
+           admit.
+
+    (* [σ'__t'("fired") = true ⇒ 
+        t ∈ fired ++ [t0] ∨ t ∈ (t0 :: tp) ∨ t ∈ lofT'] *)
+    + (* Specialize extra hypothesis, then long but trivial. *) admit.
+      
+  (* CASE t ∉ firable(s) or t ∉ sens(m) *)
+  - apply IHHelect with (lofT' := lofT') (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired'); auto.
+
+    (* [σ'__t'("fired") = true ⇒ t' ∈ fired ∨ t' ∈ tp ∨ t' ∈ lofT'] *)
+
 Admitted.
   
 (*  States that starting from similar state, after the falling edge of
