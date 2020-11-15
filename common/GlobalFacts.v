@@ -19,6 +19,20 @@ Section SigEq.
   Definition seq (u v : {a : A | P a}) : Prop :=
     proj1_sig u = proj1_sig v.
 
+  (* Relation [seq] is reflexive. *)
+  
+  Lemma seq_refl : forall x : {a : A | P a}, seq x x. reflexivity. Defined.
+  
+  (* Relation [seq] is symmetric. *)
+  
+  Lemma seq_sym :  forall x y : {a : A | P a}, seq x y -> seq y x. symmetry; assumption. Defined.
+
+  (* Relation [seq] is transitive. *)
+  
+  Lemma seq_trans :  forall x y z : {a : A | P a}, seq x y -> seq y z -> seq x z.
+    intros; transitivity (proj1_sig y); [assumption|assumption].
+  Defined.
+  
   (** Given that the equality is decidable for Set A, seq A is decidable. *)
   
   Definition seqdec (u v : {a : A | P a}) : {seq u v} + {~seq u v} :=

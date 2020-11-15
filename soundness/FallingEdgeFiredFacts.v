@@ -1268,8 +1268,15 @@ Lemma elect_fired_compute_fired_port_true :
     
     (* Conclusion *)
     
-    forall m fired lofT' tp m' fired' fset,
+    forall m fired tp m' fired' lofT' t id__t σ'__t fset,
+
+      @IsFiredListAux sitpn s' m' fired' lofT' fset ->
       
+      (* Elect transitions to be fired from the [tp] list *)
+      @ElectFired sitpn s' m fired tp (m', fired') ->
+
+      forall lofT,
+        
       (* All transitions of the [fired] list verify the conclusion,
          and all transitions that verify the conclusion are either
          in the [fired] list or in the [lofT] list. *)
@@ -1279,37 +1286,34 @@ Lemma elect_fired_compute_fired_port_true :
           MapsTo id__t σ'__t (compstore σ') ->
           (List.In t fired -> MapsTo Transition.fired (Vbool true) (sigstore σ'__t))
           /\
-          (MapsTo Transition.fired (Vbool true) (sigstore σ'__t) -> List.In t fired \/ List.In t tp \/ List.In t lofT')) ->
+          (MapsTo Transition.fired (Vbool true) (sigstore σ'__t) -> List.In t fired \/ List.In t lofT)) ->
       
-      (* Elect transitions to be fired from the [tp] list *)
-      @ElectFired sitpn s' m fired tp (m', fired') ->
+      @IsTopPriorityList sitpn lofT tp ->
 
-      @IsFiredListAux sitpn s' m' fired' lofT' fset -> 
+      IsDiff lofT tp lofT' ->
       
-      forall t id__t σ'__t,
-        (** Component idt implements transition t *)
-        γ (inr t) = id__t ->
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
 
-        (* σ't is the state of component idt at design's state σ'. *)
-        MapsTo id__t σ'__t (compstore σ') ->
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
 
-        (* [t] is elected to be fired *)
-        List.In t fired' ->
-      
-        (* Conclusion *)
-        MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+      (* Conclusion *)
+      (List.In t fired' -> MapsTo Transition.fired (Vbool true) (sigstore σ'__t))
+      /\
+      (MapsTo Transition.fired (Vbool true) (sigstore σ'__t) -> List.In t fired' \/ List.In t lofT').
 Proof.
-  intros *;
+  intros *.
     intros Htransl Hsim Hfalling Hfall_hdl Hstab;
-    intros m fired lofT' tp m' fired' fset Hin_fired_compute Helect;
-    dependent induction Helect.
+    intros until m; induction 2.
 
     (* BASE CASE *)
-  - intros;
-      lazymatch goal with
-      | [ Hbind: γ (inr ?t) = _, Hσ: MapsTo _ _ _ |- _ ] =>
-        eapply (proj1 (Hin_fired_compute _ _ _ _ _)); eauto
-      end.
+  - admit.
+    (* intros; *)
+    (*   lazymatch goal with *)
+    (*   | [ Hbind: γ (inr ?t) = _, Hσ: MapsTo _ _ _ |- _ ] => *)
+    (*     eapply (H _ _ _ _ _); eauto *)
+    (*   end. *)
 
   (* IND. CASES *)
 
@@ -1369,7 +1373,7 @@ Admitted.
     false otherwise). *)
 
 Lemma falling_edge_compute_fired_port_true_aux :
-  forall Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ id__t σ'__t,
+  forall Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ ,
 
     (* sitpn translates into d. *)
     sitpn_to_hvhdl sitpn decpr mm = Success d ->
@@ -1388,7 +1392,7 @@ Lemma falling_edge_compute_fired_port_true_aux :
     
     (* Conclusion *)
     
-    forall m fired lofT fset,
+    forall t id__t σ'__t m fired lofT fset,
       
       (* All transitions of the [fired] list verify the conclusion,
          and all transitions that verify the conclusion are either
@@ -1404,19 +1408,19 @@ Lemma falling_edge_compute_fired_port_true_aux :
       (* [fset ≡ fired(s')] *)
       @IsFiredListAux sitpn s' m fired lofT fset ->
       
-      forall t,
-        (** Component [id__t] implements transition [t] *)
-        γ (inr t) = id__t ->
 
-        (* [σ'__t] is the state of component [id__t] at design's state [σ'] *)
-        MapsTo id__t σ'__t (compstore σ') ->
+      (** Component [id__t] implements transition [t] *)
+      γ (inr t) = id__t ->
 
-        (* [t ∈ fired(s') ⇔ σ'__t("fired") = true] *)
-        List.In t fset <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+      (* [σ'__t] is the state of component [id__t] at design's state [σ'] *)
+      MapsTo id__t σ'__t (compstore σ') ->
+
+      (* [t ∈ fired(s') ⇔ σ'__t("fired") = true] *)
+      List.In t fset <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
-  intros Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ id__t σ'__t
+  intros Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ 
          Htransl Hsim Hfalling Hfall_hdl Hstab
-         m fired lofT fset
+         t id__t σ'__t m fired lofT fset
          Hin_fired_compute Hfired_aux. 
   induction Hfired_aux.
 
@@ -1480,20 +1484,19 @@ Lemma falling_edge_compute_fired_port_true_list :
     
     (* Conclusion *)
     
-    forall fset,
+    forall t fset,
       
       (* fset ≡ fired(s') *)
       @IsFiredList sitpn s' fset ->
       
-      forall t,
-        (** Component idt implements transition t *)
-        γ (inr t) = id__t ->
-
-        (* σ't is the state of component idt at design's state σ'. *)
-        MapsTo id__t σ'__t (compstore σ') ->
-
-        (* [t ∈ fired(s') ⇔ σ'__t("fired") = true] *)
-        List.In t fset <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+      (** Component idt implements transition t *)
+      γ (inr t) = id__t ->
+      
+      (* σ't is the state of component idt at design's state σ'. *)
+      MapsTo id__t σ'__t (compstore σ') ->
+      
+      (* [t ∈ fired(s') ⇔ σ'__t("fired") = true] *)
+      List.In t fset <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
   intros until t0;
     lazymatch goal with

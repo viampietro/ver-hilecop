@@ -1378,41 +1378,43 @@ Proof.
     - apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired') (lofT := lofT); auto.
 
       (* ∀ t' ∈ fired ++ [t] → C *)
-      + intros t' id__t' σ'__t' Hbind_t' Hid__t Hin_app; destruct_in_app_or.
+      + admit.
+    (* intros t' id__t' σ'__t' Hbind_t' Hid__t Hin_app; destruct_in_app_or. *)
       
-        (* Case t ∈ fired *)
-        -- eapply Hin_fired_compute with (σ'__t := σ'__t'); eauto.
+        (* (* Case t ∈ fired *) *)
+        (* -- eapply Hin_fired_compute with (σ'__t := σ'__t'); eauto. *)
            
-        (* Case t = t' *)
+        (* (* Case t = t' *) *)
            
-        (* Use [falling_edge_compute_firable] and [stabilize_compute_priority_after_falling] to solve the subgoal *)
-        -- singleton_eq; rewrite Heq in *.
+        (* (* Use [falling_edge_compute_firable] and [stabilize_compute_priority_after_falling] to solve the subgoal *) *)
+        (* -- singleton_eq; rewrite Heq in *. *)
 
-           (* Specialize [falling_edge_compute_firable] *)
-           lazymatch goal with
-           | [ H: Firable _ _ |- _ ] =>
-             specialize (falling_edge_compute_s_firable_true
-                           Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ
-                           Htransl Hsim Hfalling Hfall_hdl Hstab
-                           t' id__t' σ'__t' Hbind_t' Hid__t H) as Hfirable
-           end.
+        (*    (* Specialize [falling_edge_compute_firable] *) *)
+        (*    lazymatch goal with *)
+        (*    | [ H: Firable _ _ |- _ ] => *)
+        (*      specialize (falling_edge_compute_s_firable_true *)
+        (*                    Δ σ__f d θ σ' σ sitpn decpr Ec τ s s' mm γ *)
+        (*                    Htransl Hsim Hfalling Hfall_hdl Hstab *)
+        (*                    t' id__t' σ'__t' Hbind_t' Hid__t H) as Hfirable *)
+        (*    end. *)
 
-           (* Specialize [stabilize_compute_priority_after_falling] *)
-           lazymatch goal with
-           | [ H: Sens _ _ |- _ ] =>
-             specialize (stabilize_compute_s_prio_comb_true_after_falling
-                           sitpn decpr mm d Δ σ__f θ σ' s' γ
-                           Hstab Htransl 
-                           id__t' σ'__t' t' m fired Hbind_t' Hid__t Hin_fired_compute H) as Hprio_comb
-           end.
+        (*    (* Specialize [stabilize_compute_priority_after_falling] *) *)
+        (*    lazymatch goal with *)
+        (*    | [ H: Sens _ _ |- _ ] => *)
+        (*      specialize (stabilize_compute_s_prio_comb_true_after_falling *)
+        (*                    sitpn decpr mm d Δ σ__f θ σ' s' γ *)
+        (*                    Hstab Htransl  *)
+        (*                    id__t' σ'__t' t' m fired Hbind_t' Hid__t Hin_fired_compute H) as Hprio_comb *)
+        (*    end. *)
 
-           (* Specialize [fired_assign_on_stabilize] with [Hfirable] and [Hprio_comb] *)
-           assert (Hfired_assign: MapsTo Transition.fired (Vbool true) (sigstore σ'__t')) by admit.
+        (*    (* Specialize [fired_assign_on_stabilize] with [Hfirable] and [Hprio_comb] *) *)
+        (*    assert (Hfired_assign: MapsTo Transition.fired (Vbool true) (sigstore σ'__t')) by admit. *)
 
-           assumption.
+        (*    assumption. *)
            
     (* CASE t ∉ firable(s) or t ∉ sens(m) *)
-    - apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired'); auto.
+    - admit.
+      (* apply IHHelect with (decpr := decpr) (Ec := Ec) (s := s) (γ := γ) (m'0 := m') (fired'0 := fired'); auto. *)
     
 Admitted.
   
@@ -1501,9 +1503,8 @@ Proof.
     + intros; split.
 
       -- eapply (elect_fired_compute_fired_port_true); eauto.
-         eapply Hin_fired_compute; eauto.
-
-      -- 
+         
+      -- admit.
 Admitted.  
 
 (*  Corollary of the [falling_edge_compute_fired_aux] lemma.
@@ -1556,10 +1557,10 @@ Proof.
         eauto    
     end.
     
-  (* ∀ t ∈ [] ⇒ C *)
-  - contradiction.
+  (* ∀ t ∈ [] ⇒ C /\ [σ'__t("fired") = true ⇒ t ∈ [] ∨ t ∈ T] *)
+  - admit.
 
-Qed.
+Admitted.
 
 (*  Corollary of the [falling_edge_compute_fired_list] lemma. *)
 

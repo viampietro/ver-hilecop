@@ -43,16 +43,16 @@ Definition SimState {sitpn} (γ : P sitpn + T sitpn -> ident) (s : SitpnState si
   (* Markings are similar. *)
   
   forall (p : P sitpn) id__p σ__p,
-    (* [idp] is the identifier of the place component associated with
+    (* [id__p] is the identifier of the place component associated with
        place [p] by the [γ] binder. *)
     γ (inl p) = id__p ->
 
-    (* [σp] is the current state of component [idp] is the global design
+    (* [σ__p] is the current state of component [id__p] is the global design
        state [σ]. *)
     MapsTo id__p σ__p (compstore σ) ->
 
     (* Marking of place [p] at state [s] equals value of signal
-       [s_marking] at state [σp]. *)
+       [s_marking] at state [σ__p]. *)
     MapsTo Place.s_marking (Vnat (M s p)) (sigstore σ__p).
 
 Notation "γ ⊢ s '∼' σ" := (SimState γ s σ) (at level 50).

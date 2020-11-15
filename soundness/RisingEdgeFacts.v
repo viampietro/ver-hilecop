@@ -24,10 +24,10 @@ Require Import SoundnessDefs.
     after the rising edge of the clock signal.  *)
 
 Lemma rising_edge_marking_equal :
-  forall Δ σ__r d θ σ' σ sitpn Ec τ s s' mm γ,
+  forall Δ σ__r d θ σ' σ sitpn decpr Ec τ s s' mm γ,
 
     (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
+    sitpn_to_hvhdl sitpn decpr mm = Success d ->
 
     (* Similar starting states *)
     γ ⊢ s ∼ σ ->
@@ -62,10 +62,10 @@ Admitted.
     Utopic lemma; not sure it is provable. *)
 
 Lemma rising_edge_states_equal :
-  forall Δ σ__r d θ σ' σ sitpn E__c τ s s' mm (γ : P sitpn + T sitpn -> ident),
+  forall Δ σ__r d θ σ' σ sitpn decpr E__c τ s s' mm (γ : P sitpn + T sitpn -> ident),
 
     (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn mm = Success d ->
+    sitpn_to_hvhdl sitpn decpr mm = Success d ->
 
     (* Similar starting states *)
     γ ⊢ s ∼ σ ->

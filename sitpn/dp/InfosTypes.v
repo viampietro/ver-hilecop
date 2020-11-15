@@ -8,7 +8,7 @@ Require Import NatSet.
 Section SitpnInfoTypes.
 
   Variable sitpn : Sitpn.
-
+  
   (** Defines the type of PlaceInfo, gathering informations about a
     given place of an SITPN. *)
 
