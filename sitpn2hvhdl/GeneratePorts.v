@@ -523,7 +523,7 @@ Section GenerateAndConnectCondPorts.
     (* Creates a new input port representing condition c. *)
     let condports := condports ++ [pdecl_in cportid tind_boolean] in
 
-    (* Retrieves the list of transitions associated to c. *)
+    (* Retrieves The List Of transitions associated to c. *)
     match getv Ceqdec c (cinfos sitpn_info) with
     | Some transs =>
       (* Connects cportid to the input_conditions port of Transition

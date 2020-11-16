@@ -204,14 +204,29 @@ Section GenerateTransMap.
   (** Generates a part of the input map (static part) for the transition
       component representing transition [t]. *)
 
-  Definition generate_trans_input_map (t : T sitpn) : InputMap :=
+  Definition generate_trans_input_map (t : T sitpn) (tinfo : TransInfo sitpn) : InputMap :=
+    (* If [|conds(t)| = 0], adds [input_conditions, [true]] in [t]'s
+       input map entry, to generate [input_conditions(0)⇒true]
+       later. *)
+    let in_conds_lofexprs := ( if conds tinfo then [e_bool true] else []) in
+    let input_conditions := (Transition.input_conditions, inr in_conds_lofexprs) in
+
+    
     match Is t with
     | Some (MkSTimeItval <| a, ninat b |> _) =>
-      [(Transition.time_A_value, inl (e_nat a)); (Transition.time_B_value, inl (e_nat b))]
+      [(Transition.time_A_value, inl (e_nat a));
+      (Transition.time_B_value, inl (e_nat b));
+      input_conditions]
+        
     | Some (MkSTimeItval <| a, i+ |> _) =>
-      [(Transition.time_A_value, inl (e_nat a)); (Transition.time_B_value, inl (e_nat 0))]
+      [(Transition.time_A_value, inl (e_nat a));
+      (Transition.time_B_value, inl (e_nat 0));
+      input_conditions]
+        
     | None =>
-      [(Transition.time_A_value, inl (e_nat 0)); (Transition.time_B_value, inl (e_nat 0))]
+      [(Transition.time_A_value, inl (e_nat 0));
+      (Transition.time_B_value, inl (e_nat 0));
+      input_conditions]
     end.
 
   (** Builds a TransMap entry for transition t. *)
@@ -224,7 +239,7 @@ Section GenerateTransMap.
       let gmap := generate_trans_gen_map t tinfo in
 
       (* Retrieves p's static input map part. *)
-      let tipmap := generate_trans_input_map t in
+      let tipmap := generate_trans_input_map t tinfo in
 
       (* Builds TransMap entry. *)
       [| (t, (gmap, tipmap, [])) |]
