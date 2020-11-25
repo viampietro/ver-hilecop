@@ -305,7 +305,7 @@ Section GenerateFunPortsAndPs.
       | Err msg => Err msg
       end
     (* Error case. *)
-    | None => Err ("Action $$a is not referenced in the SitpnInfo structure.")%string
+    | None => Err ("Function $$f is not referenced in the SitpnInfo structure.")%string
     end.
   
   (** Returns the ActionMap built out the list of actions of [sitpn]. *)
@@ -379,13 +379,13 @@ Section GenerateFunPortsAndPs.
          and ps. *)
       match generate_fun_map arch nextid with
       | Success (arch', nextid', fmap) =>
-        (* Wrapper around the generate_fun_port_and_ss function. *)
+        (* Wrapper around the [generate_fun_port_and_ss] function. *)
         let gen_fun_pandss_fun :=
             (fun params f =>
                let '(fports, stmts, nextid) := params in
                generate_fun_port_and_ss fmap f fports stmts nextid)
         in
-        (* Calls generate_fun_port_and_ss on each action
+        (* Calls [generate_fun_port_and_ss] on each function
            of the sitpn's function list. *)
         match topte_fold_left gen_fun_pandss_fun (F2List sitpn) ([], None, nextid') nat_to_F with
         | Success (fports, stmts, nextid'') =>
@@ -425,20 +425,20 @@ Section GenerateAndConnectCondPorts.
   (** Builds the expression that will result in the connection of the
       input port representing condition [c] to the input port map of
       the component representing transition [t] (i.e, via the
-      "input_conditions" composite port.
+      ["input_conditions"] composite port).
 
       Raises an error if condition [c] and transition [t] are not
       associated in [sitpn].  *)
   
-  Definition build_cond_expr (condportid : ident) (c : C sitpn) (t : T sitpn) :
+  Definition build_cond_expr (id__c : ident) (c : C sitpn) (t : T sitpn) :
     optionE expr :=
     match has_C t c with
-    | one => Success (#condportid)
-    | mone => Success (e_not (#condportid))
+    | one => Success (#id__c)
+    | mone => Success (e_not (#id__c))
     | zero => Err ("build_cond_expr: Condition c is not associated with transition t.")%string
     end.
   
-  (** Connects the input port [condportid] that represents condition
+  (** Connects the input port [id__c] that represents condition
       [c] to the input port map of the component representing
       transition [t] relatively to the association relation existing
       between [c] and [t].
@@ -450,7 +450,7 @@ Section GenerateAndConnectCondPorts.
 
   Definition connect_in_cond_port
              (arch : Architecture sitpn)
-             (condportid : ident)
+             (id__c : ident)
              (c : C sitpn)
              (t : T sitpn) :
     optionE (Architecture sitpn) :=
@@ -464,7 +464,7 @@ Section GenerateAndConnectCondPorts.
       let '(tgmap, tipmap, topmap) := thcomp in
       (* Builds the expression that will be tha actual part of the
          port association. *)
-      match build_cond_expr condportid c t with
+      match build_cond_expr id__c c t with
       | Success conde =>
         (* Builds the port association between "input_conditions" and
            expression conde. *)
@@ -492,14 +492,13 @@ Section GenerateAndConnectCondPorts.
   
   Definition connect_in_cond_ports
              (arch : Architecture sitpn)
-             (condportid : ident)
+             (id__c : ident)
              (c : C sitpn)
              (transs : list (T sitpn)) :
     optionE (Architecture sitpn) :=
     (* Wrapper around the connect_in_cond_port function. *)
     let conn_inc_port_fun :=
-        (fun arch t =>
-           connect_in_cond_port arch condportid c t)
+        (fun arch t => connect_in_cond_port arch id__c c t)
     in
     (* Calls connect_in_cond_port on each transition of the transs
        list and returns the new architecture (or an error).  *)

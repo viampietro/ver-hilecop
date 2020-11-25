@@ -101,76 +101,62 @@ Inductive simloop
 | SimLoopEnd :
     simloop Pi Δ σ behavior 0 [] σ.
 
-(** Defines the whole workflow necessary to simulate a H-VHDL
-    description (elaboration + simulation).
+(** Defines the full simulation (elaboration + simulation from initial
+    state) relation that establish a link between a H-VHDL design and
+    its simulation trace .
 
     - [dstore], the design store that maps design identifiers (i.e,
       the identifier of the entity part of the design) to their
       description in abstract syntax.
 
-    - [Mg], the dimensioning (partial) function that yields the
-      values attached to the generic constant of the design.
+    - [Mg], the dimensioning (partial) function that yields the values
+      attached to the generic constant of the design.
 
-    - [Pi], the function that yields the values for the input
-      ports of the design at a certain time and clock event.
+    - [E__p], the input port environment function that yields the values
+      for the input ports of the design at a certain time and clock
+      event during the simulation.
 
-    - [τ], the number of simulation cycle to be performed after
-      the initialization.
+    - [τ], the number of simulation cycles to be performed after the
+      initialization.
 
-    - [d], the design that will elaborated and simulated.
-*)
+    - [d], the design that will elaborated and simulated.  
 
-Inductive simwf
+    - [Δ], a given elaborated version of design [d].
+ *)
+
+Inductive fullsim
           (dstore : IdMap design)
           (Mg : IdMap value)
-          (Pi : nat -> Clk -> IdMap value)
+          (E__p : nat -> Clk -> IdMap value)
           (τ : nat)
+          (Δ : ElDesign) 
           (d : design) : list DState -> Prop :=
   
-| SimWorkflow :
-    forall {Δ σ__e σ0 σ' θ},
+| FullSim :
+    forall σ__e σ0 σ' θ,
       
       (* * Premises * *)
 
       edesign dstore Mg d Δ σ__e ->                (* Elaboration *)
       init Δ σ__e (get_behavior d) σ0 ->           (* Initialization *)
-      simloop Pi Δ σ0 (get_behavior d) τ θ σ' -> (* Simulation loop *)
+      simloop E__p Δ σ0 (get_behavior d) τ θ σ' -> (* Simulation loop *)
                     
       (* * Conclusion * *)
-      simwf dstore Mg Pi τ d θ.
+      fullsim dstore Mg E__p τ Δ d (σ0 :: θ).
 
-(** Defines a simulation workflow for a H-VHDL design.
+(** Defines the full simulation relation for a H-VHDL design, in the
+    HILECOP presets.
     
-    What's changing compared to a general simulation workflow is that
-    the design store is the HILECOP design store (i.e, with the Place
-    and Transition components), and the dimensioning function is
-    always empty. *)
+    What's changing compared to a standard full simulation is that the
+    design store is the HILECOP design store (i.e, with the Place and
+    Transition components), and the dimensioning function is always
+    empty. *)
 
-Inductive hsimwf
+Definition hfullsim
+          (E__p : nat -> Clk -> IdMap value)
+          (τ : nat)
+          (Δ : ElDesign)
           (d : design)
-          (E__p : nat -> Clk -> IdMap value) :
-  nat -> list DState -> Prop :=
-| HSimWorkflow_0 : hsimwf d E__p 0 [] 
-| HSimWorkflow_cons :
-    forall τ θ Δ σ__e σ0 σ σ',
-      
-      (* * Premises * *)
-
-      (* Elaboration with HILECOP design store and
-         an empty dimensioning function.
-       *)
-      edesign hdstore (empty value) d Δ σ__e ->
-
-      (* Initialization *)
-      init Δ σ__e (get_behavior d) σ0 ->           
-
-      (* First simulation cycle, to match the execution workflow of an
-         SITPN. *)
-      simcycle E__p Δ (S τ) σ0 (get_behavior d) σ ->
-
-      (* Simulation loop *)
-      simloop E__p Δ σ (get_behavior d) τ θ σ' -> 
-                    
-      (* * Conclusion * *)
-      hsimwf d E__p (S τ) θ.
+          (θ__σ : list DState) : Prop :=
+  fullsim hdstore (empty value) E__p τ Δ d θ__σ.
 

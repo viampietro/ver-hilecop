@@ -173,9 +173,10 @@ Section GenerateTransMap.
     match Is t with
     (* Maximal time counter is equal to the upper bound value. *)
     | Some (MkSTimeItval <| a, ninat b |> _)  => b
-    (* Or to one, if static time itval is of the form [a,∞] or if
-       no itval is associated to t. *)
-    | _ => 1
+    (* Or to the lower bound, if static time itval is of the form [a,∞] . *)
+    | Some (MkSTimeItval <| a, i+ |> _)  => a
+    (* Or to 1 if no itval is associated to t. *)
+    | None => 1
     end.
   
   (** Returns the generic map (abstract syntax) of the transition
@@ -285,16 +286,16 @@ Section GenerateInterconnections.
     (* Destructs the architecture. *)
     let '(adecls, plmap, trmap, fmap, amap) := arch in
     
-    (* Retrieves the component associated to transtion t in TransMap
-       trmap.  *)
+    (* Retrieves the component associated to transtion [t] in
+       [TransMap trmap].  *)
     match getv Teqdec t trmap with
     | Some (tgmap, tipmap, topmap) =>
-    (* Checks if the "fired" port already belongs to the input port map
+    (* Checks if the "fired" port already belongs to the output port map
        of the component. *)
-      match getv Nat.eq_dec Transition.fired tipmap with
+      match getv Nat.eq_dec Transition.fired topmap with
       (* Case where fired is connected to an expression.  Then, adds
-         the expression e at the end of lofexprs, and returns the
-         triplet (architecture, lofexprs, nextid). *)
+         the expression [e] at the end of lofexprs, and returns the
+         triplet [(architecture, lofexprs, nextid)]. *)
       | Some (inl e) => [| (arch, nextid, lofexprs ++ [e]) |]
       (* Error case, in the output port map [topmap], fired is
          connected to a list of expressions, albeit it must be of
@@ -330,14 +331,14 @@ Section GenerateInterconnections.
     optionE (Architecture sitpn * ident * list expr) :=
     
     (* Destructs the architecture. *)
-    let '(adecls, plmap, trmap) := arch in
+    let '(adecls, plmap, trmap, fmap, amap) := arch in
         
     (* Local variable storing the list of expressions, that is the
        list of internal signal identifiers connected to the fired port
        of transitions of the transs list.
        
        If the transs list is nil, then the list of expressions
-       contains the singleton expression false.  *)
+       contains the singleton expression [false].  *)
     let lofexprs := (if transs then [e_bool false] else []) in
 
     (* Wrapper around the connect_fired_port function. *)

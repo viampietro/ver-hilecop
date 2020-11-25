@@ -19,7 +19,7 @@ Notation "i+" := niinf (at level 0).
 (** Equality is decidable for natinf. *)
 
 Definition eq_natinf_dec : forall x y : natinf, {x = y} + {x <> y}. do 2 (decide equality). Defined.
-
+  
 (** Decrements a natinf. Does nothing if [ni] is +∞. *)
 
 Lemma neqinf : i+ <> i+ -> False. congruence. Defined.

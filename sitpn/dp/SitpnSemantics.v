@@ -94,29 +94,29 @@ Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s'' : Sit
 
 (** Defines the SITPN Execution Relation. *)
 
-Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> list (SitpnState sitpn) -> SitpnState sitpn -> Prop :=
-| SitpnExecute_end : SitpnExecute E s 0 [] s
-| SitpnExecute_loop: forall τ θ s' s'',
+Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> list (SitpnState sitpn) -> Prop :=
+| SitpnExecute_end : SitpnExecute E s 0 []
+| SitpnExecute_loop: forall τ θ s',
     SitpnCycle E (S τ) s s' ->
-    SitpnExecute E s' τ θ s'' ->
-    SitpnExecute E s (S τ) (s' :: θ) s''.
+    SitpnExecute E s' τ θ ->
+    SitpnExecute E s (S τ) (s' :: θ).
 
 (** Defines the initial state of an SITPN. *)
 
 Definition s0 sitpn : SitpnState sitpn :=
   BuildSitpnState (@M0 sitpn) (fun _ => Some 0) nullb nullb nullb nullb.
 
-(** Defines a complete execution process for an SITPN, i.e, starting
-    from the initial state of an SITPN. *)
+(** Defines a full execution relation for an SITPN, i.e, starting from
+    the initial state of an SITPN. *)
 
-Inductive SitpnExecWf
+Inductive SitpnFullExec
           (sitpn : Sitpn)
           (E : nat -> C sitpn -> bool) :
   nat -> list (SitpnState sitpn) -> Prop :=
-| SitpnExecWf_0 :
-    @SitpnExecWf sitpn E 0 []
-| SitpnExecWf_cons :
-    forall τ θ s s',
+| SitpnFullExec_0 :
+    @SitpnFullExec sitpn E 0 [s0 sitpn]
+| SitpnFullExec_cons :
+    forall τ θ s,
 
       (* First cycle of execution. Only the falling edge is taken into
          account, since on the first rising edge there are no fired
@@ -124,9 +124,9 @@ Inductive SitpnExecWf
       SitpnStateTransition E (S τ) (s0 sitpn) s falling_edge ->
 
       (* Executes τ cycles *)
-      SitpnExecute E s τ θ s' ->
+      SitpnExecute E s τ θ ->
 
       (* Conclusion *)
-      @SitpnExecWf sitpn E (S τ) θ.
+      @SitpnFullExec sitpn E (S τ) ((s0 sitpn) :: s :: θ).
 
 
