@@ -18,61 +18,108 @@ Require Import GlobalTypes.
 Inductive value : Type :=
 | Vbool : bool -> value
 | Vnat : nat -> value
-| Vlist : lofvalues -> value
+| Varr : arrofvalues -> value
                          
-with lofvalues : Type :=
-| Vnil : lofvalues
-| Vcons : value -> lofvalues -> lofvalues.
+with arrofvalues : Type :=
+| Arr_one : value -> arrofvalues
+| Arr_cons : value -> arrofvalues -> arrofvalues.
 
-(* Conversion from [lofvalues] to [list value] *)
+(* Conversion from [arrofvalues] to [list value] *)
 
-Fixpoint lofvalues2list (lofv : lofvalues) {struct lofv} : list (value) :=
-  match lofv with
-  | Vnil => nil
-  | Vcons v tl => cons v (lofvalues2list tl)
+Fixpoint aofv2list (aofv : arrofvalues) {struct aofv} : list (value) :=
+  match aofv with
+  | Arr_one v => [v]
+  | Arr_cons v tl => v :: aofv2list tl
   end.
 
-Coercion lofvalues2list : lofvalues >-> list.
+Coercion aofv2list : arrofvalues >-> list.
 
-(** Accesses the element at position [i] in lofvalues [lofv]. 
+(** Accesses the element at position [i] in arrofvalues [aofv]. 
     
     Returns an error (i.e, None) if the index is greater
     than the list length.
  *)
 
-Fixpoint get_at (i : nat) (lofv : lofvalues) {struct i} : option value :=
-  match i, lofv with
-  (* Error, cannot access elements in an empty lofvalues. *)
-  | _, Vnil => None
-  | 0, Vcons a l => Some a
-  | (S j), Vcons a l' => get_at j l'
+Fixpoint oget_at (i : nat) (aofv : arrofvalues) {struct i} : option value :=
+  match i, aofv with
+  (* Error, index out of bounds. *)
+  | (S _), Arr_one v => None
+  | 0, Arr_one v => Some v
+  | 0, Arr_cons v aofv' => Some v
+  | (S j), Arr_cons a aofv' => oget_at j aofv'
   end.
+
+(** Given a proof that index [i] is strictly less than the size of
+    arrofvalues [aofv], accesses the value at position [i] in [aofv].
+ *)
+
+Fixpoint get_at (i : nat) (aofv : arrofvalues) {struct i} : i < length aofv -> value.
+  refine (
+      match i, aofv with
+      (* Error, index out of bounds. *)
+      | (S j) as i, Arr_one v => fun _ => _
+      | 0, Arr_one v => fun _ => v
+      | 0, Arr_cons v aofv' => fun pf => v
+      | (S j) as i, Arr_cons a aofv' => fun pf => get_at j aofv' _
+      end);
+    [apply lt_pred in l; simpl in l; apply Nat.nlt_0_r in l; contradiction
+    | apply (lt_S_n j (length aofv') pf)].
+Defined.
 
 (** Stores value [v] at position [i] in list of values [lofv]. 
     
     Returns an error (i.e, None) if the index is greater than 
     the list length. *)
 
-Fixpoint set_at (v : value) (i : nat) (lofv : lofvalues) {struct i} : option lofvalues :=
-  match i, lofv with
-  (* Error, cannot access elements in an empty lofvalues. *)
-  | _, Vnil => None
-  | 0, Vcons a tl => Some (Vcons v tl)
-  | (S j), Vcons a tl =>
+Fixpoint oset_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : option arrofvalues :=
+  match i, aofv with
+  (* Error, index out of bounds. *)
+  | S j, Arr_one _ => None
+  | 0, Arr_one v' => Some (Arr_one v)
+  | 0, Arr_cons v' tl => Some (Arr_cons v tl)
+  | (S j), Arr_cons v' tl =>
     (* Inductive step. *)
-    match set_at v j tl with
-    | Some lofv' => Some (Vcons a lofv')
+    match oset_at v j tl with
+    | Some aofv' => Some (Arr_cons v' aofv')
     | None => None
     end
   end.
 
-(** Creates a list of length [n] filled with value [v]. *)
+(** Given a proof that index [i] is strictly less than the size of
+    [aofv], stores value [v] at position [i] in [aofv], and returns
+    the new [arrofvalues].  *)
 
-Fixpoint create_list (n : nat) (v : value) {struct n} : lofvalues :=
-  match n with
-  | 0 => Vnil
-  | S m => Vcons v (create_list m v)
-  end.
+Fixpoint set_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : i < length aofv -> arrofvalues.
+  refine (match i, aofv with
+          (* Error, index out of bounds. *)
+          | S j, Arr_one _ => fun _ => _
+          | 0, Arr_one _ => fun _ => Arr_one v
+          | 0, Arr_cons _ tl => fun _ => Arr_cons v tl
+          | (S j), Arr_cons v' tl => fun _ => set_at v j tl _
+          end).
+  apply lt_pred in l; simpl in l; apply Nat.nlt_0_r in l; contradiction.
+  apply (lt_S_n j (length tl) l).
+Defined.
+
+(** Given a proof that [n > 0], returns an arrofvalues of length [n]
+    filled with value [v]. *)
+
+Fixpoint create_arr (n : nat) (v : value) {struct n} : n > 0 -> arrofvalues :=
+  match n as n0 return (n0 > 0 -> arrofvalues) with
+  (* Absurd case, 0 > 0. *)
+  | 0 => fun H : 0 > 0 => False_rect arrofvalues (Nat.nlt_0_r 0 H)
+  (* Case n > 0 *)
+  | S m =>
+    fun _ =>
+      (* Internal fixpoint definition, returns [Arr_one v] when size
+         is zero. *)
+      let fix create_arrm (m : nat) (v : value) {struct m} :=
+          match m return arrofvalues with
+          | 0 => Arr_one v
+          | S o => Arr_cons v (create_arrm o v)
+          end
+      in create_arrm m v
+  end.  
 
 (** Defines the type of types used in the
     semantical world. *)
@@ -90,28 +137,50 @@ Inductive is_of_type : value -> type -> Prop :=
 (** Value n must satisfy the index constraint, i.e n ∈ [l,u]. *)
 | IsNat : forall (n l u : nat), l <= n <= u -> is_of_type (Vnat n) (Tnat l u)
 
-(** All elements of the value list [lv] must be of type [t],
-    and the length of [lv] must satisfy the index constraint.
+(** All elements of the array of values [aofv] must be of type [t],
+    and the length of [aofv] must satisfy the index constraint.
  *)
-| IsListOfT :
-    forall (lofv : lofvalues) (t : type) (l u : nat),
-      lis_of_type lofv ((u - l) + 1) t ->
-      is_of_type (Vlist lofv) (Tarray t l u)
+| IsArrOfT (l u : nat) :
+    forall (aofv : arrofvalues) (t : type),
+      arris_of_type aofv ((u - l) + 1) t ->
+      is_of_type (Varr aofv) (Tarray t l u)
                  
-(** Defines the typing relation over list of values. 
+(** Defines the typing relation over array of values. 
     
-    By construction, checks that the list length
+    By construction, checks that the array size
     is equal to the second argument (of type [nat]). *)
                  
-with lis_of_type : lofvalues -> nat -> type -> Prop :=
-| LIsOfTypeNil : forall {t}, lis_of_type Vnil 0 t
-| LIsOfTypeCons :
-    forall {lofv size t v},
+with arris_of_type : arrofvalues -> nat -> type -> Prop :=
+| ArrIsOfTypeOne : forall t v, arris_of_type (Arr_one v) 1 t
+| ArrIsOfTypeCons :
+    forall aofv size t v,
       is_of_type v t ->
-      lis_of_type lofv size t ->
-      lis_of_type (Vcons v lofv) (S size) t.
+      arris_of_type aofv size t ->
+      arris_of_type (Arr_cons v aofv) (S size) t.
 
-(** Specifies the equality relation between two values. 
+(** Specifies the equality relation between two values without
+    describing the error cases.
+ *)
+
+Inductive VEq : value -> value -> Prop :=
+| VEq_bool : forall b b', b = b' -> VEq (Vbool b) (Vbool b')
+| VEq_nat  : forall n n', n = n' -> VEq (Vnat n) (Vnat n')
+| VEq_arr : forall a a', ArrOfVEq a a' -> VEq (Varr a) (Varr a')
+
+with ArrOfVEq : arrofvalues -> arrofvalues -> Prop :=
+
+| ArrOfVEq_one : forall v v', VEq v v' -> ArrOfVEq (Arr_one v) (Arr_one v')
+| ArrOfVEq_cons :
+    forall v v' aofv aofv',
+      VEq v v' ->
+      ArrOfVEq aofv aofv' ->
+      ArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv').
+
+
+(** Specifies the equality relation between two values,
+    and the result of the equality evaluation;
+    result can either be an error (i.e, [None]), or
+    some boolean value.
 
     Not possible to distinguish errors from "falsity":
 
@@ -120,35 +189,43 @@ with lis_of_type : lofvalues -> nat -> type -> Prop :=
       false are not comparable, however it is an error case.
  *)
 
-Inductive VEq : value -> value -> option bool -> Prop :=
-| VEqBoolT : forall {b b'}, b = b' -> VEq (Vbool b) (Vbool b') (Some true)
-| VEqBoolF : forall {b b'}, b <> b' -> VEq (Vbool b) (Vbool b') (Some false)
-| VEqNatT  : forall {n n'}, n = n' -> VEq (Vnat n) (Vnat n') (Some true)
-| VEqNatF  : forall {n n'}, n <> n' -> VEq (Vnat n) (Vnat n') (Some false)
-| VEqListT : forall {l l'}, LOfVEq l l' (Some true) -> VEq (Vlist l) (Vlist l') (Some true)
-| VEqListF : forall {l l'}, LOfVEq l l' (Some false) -> VEq (Vlist l) (Vlist l') (Some false)
-| VEqListErr : forall {l l'}, LOfVEq l l' None -> VEq (Vlist l) (Vlist l') None
+Inductive OVEq : value -> value -> option bool -> Prop :=
+| OVEq_BoolT : forall b b', b = b' -> OVEq (Vbool b) (Vbool b') (Some true)
+| OVEq_BoolF : forall b b', b <> b' -> OVEq (Vbool b) (Vbool b') (Some false)
+| OVEq_NatT  : forall n n', n = n' -> OVEq (Vnat n) (Vnat n') (Some true)
+| OVEq_NatF  : forall n n', n <> n' -> OVEq (Vnat n) (Vnat n') (Some false)
+| OVEq_ArrT : forall a a', OArrOfVEq a a' (Some true) -> OVEq (Varr a) (Varr a') (Some true)
+| OVEq_ArrF : forall a a', OArrOfVEq a a' (Some false) -> OVEq (Varr a) (Varr a') (Some false)
+| VEqArr_Err : forall a a', OArrOfVEq a a' None -> OVEq (Varr a) (Varr a') None
                                                             
-(* Error if there does not exist a common type for value v and v'. *)
-| VEqErr : forall {v v'}, (forall {t}, ~is_of_type v t \/ ~is_of_type v' t) -> VEq v v' None
+(* Error if there is no common type for value [v] and [v'], i.e, [v]
+   and [v'] are not comparable. *)
+| OVEq_Err : forall v v', (forall t, ~is_of_type v t \/ ~is_of_type v' t) -> OVEq v v' None
                                                                                                                                    
-(** Specifies the equality relation between two lists of values. *)
-with LOfVEq : lofvalues -> lofvalues -> option bool -> Prop :=
-| LOfVEqNil : LOfVEq Vnil Vnil (Some true)
-
+(** Specifies the equality relation between two arrays of values. *)
+with OArrOfVEq : arrofvalues -> arrofvalues -> option bool -> Prop :=
 (* Convenient to detect errors due to the comparison of two
-   lofvalues of different lengths. *)
-| LOfVEqLengthErr1 : forall {v l}, LOfVEq Vnil (Vcons v l) None
-| LOfVEqLengthErr2 : forall {v l}, LOfVEq (Vcons v l) Vnil None
-| LOfVEqConsT :
-    forall {v v' l l'},
-      VEq v v' (Some true) -> LOfVEq l l' (Some true) -> LOfVEq (Vcons v l) (Vcons v' l') (Some true)
-| LOfVEqConsF :
-    forall {v v' l l'},
-      VEq v v' (Some false) -> LOfVEq l l' (Some false) -> LOfVEq (Vcons v l) (Vcons v' l') (Some false)
-| LOfVEqConsErr :
-    forall {v v' l l' optb},
-      VEq v v' None -> LOfVEq l l' optb -> LOfVEq (Vcons v l) (Vcons v' l') None.
+   arrofvalues of different lengths. *)
+| OArrOfVEq_LengthErr1 : forall v v' aofv, OArrOfVEq (Arr_one v) (Arr_cons v' aofv) None
+| OArrOfVEq_LengthErr2 : forall v v' aofv, OArrOfVEq (Arr_cons v aofv) (Arr_one v') None
+| OArrOfVEq_OneT : forall v v', OVEq v v' (Some true) -> OArrOfVEq (Arr_one v) (Arr_one v') (Some true)
+| OArrOfVEq_OneF : forall v v', OVEq v v' (Some false) -> OArrOfVEq (Arr_one v) (Arr_one v') (Some false)
+| OArrOfVEq_ConsT :
+    forall v v' aofv aofv',
+      OVEq v v' (Some true) ->
+      OArrOfVEq aofv aofv' (Some true) ->
+      OArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv') (Some true)
+| OArrOfVEq_ConsF :
+    forall v v' aofv aofv',
+      OVEq v v' (Some false) ->
+      OArrOfVEq aofv aofv' (Some false) ->
+      OArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv') (Some false)
+                
+| OArrOfVEqCons_Err :
+    forall v v' aofv aofv' optb,
+      OVEq v v' None ->
+      OArrOfVEq aofv aofv' optb ->
+      OArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv') None.
 
 (** Implements the equality operator between two values.
     
@@ -164,30 +241,30 @@ Fixpoint veq (v v' : value) {struct v} : option bool :=
   match v, v' with
   | Vbool b, Vbool b' => Some (Bool.eqb b b')
   | Vnat n, Vnat n' => Some (Nat.eqb n n')
-  | Vlist l, Vlist l' => lofveq l l'
+  | Varr aofv, Varr aofv' => arrofveq aofv aofv'
 
   (* Error, cannot compare two values of different domains. *)
   | _, _ => None
   end                              
 
-(** Implements the equality operator between list of values.
+(** Implements the equality operator between arrays of values.
       
-   Returns [Some true] if values of [l] and [l'] are equal pair-wise.
+   Returns [Some true] if values of [aofv] and [aofv'] are equal pair-wise.
       
    Returns an error if a pair-wise comparison returns an error or if
-   the lists are of different length. *)
+   the arrays are of different length. *)
     
-with lofveq (l l' : lofvalues) {struct l} : option bool :=
-       match l, l' with
+with arrofveq (aofv aofv' : arrofvalues) {struct aofv} : option bool :=
+       match aofv, aofv' with
        (* Two empty lists are v-equal. *)
-       | Vnil, Vnil => Some true
+       | Arr_one v, Arr_one v' => veq v v'
                             
        (* Checks that a and b are v-equal. *)
-       | (Vcons v m), (Vcons v' m') =>
+       | (Arr_cons v a), (Arr_cons v' a') =>
          match veq v v' with
          (* Pair-wise comparison returned a boolean value. *)
          | Some false => Some false
-         | Some true => lofveq m m'
+         | Some true => arrofveq a a'
          (* Error, pair-wise comparison failed. *)
          | None => None
          end

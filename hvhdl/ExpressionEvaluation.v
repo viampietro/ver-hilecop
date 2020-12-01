@@ -15,129 +15,117 @@ Open Scope abss_scope.
 (** Defines the expression evaluation relation. 
     
     The environment is composed of:
-    - [ed], the design environment (Δ).
-    - [dstate], the design state (σ).
-    - [lenv], a local environment (process environment) (Λ).
+    - [Δ], the design environment (Δ).
+    - [σ], the design state.
+    - [Λ], a local environment (process environment).
+    - [outmode], [true] when output port identifiers
+      are allowed to be read (which normally is not the case since
+      output ports are write-only signals).
     
  *)
 
-Inductive vexpr (ed : ElDesign) (dstate : DState) (lenv : LEnv) :
-  expr -> value -> Prop :=
+Inductive vexpr (Δ : ElDesign) (dstate : DState) (lenv : LEnv) :
+  bool -> expr -> value -> Prop :=
 
 (** Evaluates nat constant. *) 
-| VExprNat (n : nat) : n <= NATMAX -> vexpr ed dstate lenv (e_nat n) (Vnat n)
+| VExprNat (outmode : bool) (n : nat) : n <= NATMAX -> vexpr Δ dstate lenv outmode (e_nat n) (Vnat n) 
 
 (** Evaluates bool constant. *)
-| VExprBool (b : bool) : vexpr ed dstate lenv (e_bool b) (Vbool b)
+| VExprBool (outmode : bool) (b : bool) : vexpr Δ dstate lenv outmode (e_bool b) (Vbool b)
                                          
 (** Evaluates aggregate expression.
     
     The list of expressions [lofexprs] and the list of values
     [lofvalues] in parameter must be of the same length. *)
-| VExprAggreg (lofe : list expr) (lofv : lofvalues) :
-    vlofexprs ed dstate lenv lofe lofv ->
-    vexpr ed dstate lenv (e_aggreg lofe) (Vlist lofv)
+| VExprAggreg (outmode : bool) (agofe : agofexprs) (arrofv : arrofvalues) :
+    vagofexprs Δ dstate lenv outmode agofe arrofv ->
+    vexpr Δ dstate lenv outmode (e_aggreg agofe) (Varr arrofv)
 
 (** Evaluates a declared signal identifier . *)
           
-| VExprSig (id : ident) (v : value) :
-    forall (t : type),
-      MapsTo id (Declared t) ed ->   (* id ∈ Sigs(Δ) and Δ(id) = t *)
+| VExprSig (outmode : bool) (id : ident) (t : type) (v : value) :
+    (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ) -> (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = t *)
+    MapsTo id v (sigstore dstate) ->   (* id ∈ σ and σ(id) = v *)
+    vexpr Δ dstate lenv outmode (#id) v
+
+(** Evaluates a simple out port identifier. 
+    Only possible when outmode is true.
+ *)
+  
+| VEXprOut (id : ident) (t : type) (v : value) :
+
+      (* * Side conditions * *)
+      MapsTo id (Output t) Δ ->        (* id ∈ Outs(Δ) and Δ(id) = t *)
       MapsTo id v (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
-      vexpr ed dstate lenv (#id) v
-
-(** Evaluates an input signal identifier. *)
-
-| VExprIn (id : ident) (v : value) :
-    forall (t : type),
-      MapsTo id (Input t) ed ->      (* id ∈ In(Δ) and Δ(id) = t *)
-      MapsTo id v (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
-      vexpr ed dstate lenv (#id) v
-
+      
+      (* * Conclusion * *)
+      vexpr Δ dstate lenv true (#id) v
+            
 (** Evaluates a variable identifier. *)
             
-| VExprVar (id : ident) (t : type) (v : value) :
+| VExprVar (outmode : bool) (id : ident) (t : type) (v : value) :
     MapsTo id (t, v) lenv ->      (* id ∈ Λ and Λ(id) = (t,v) *)
-    vexpr ed dstate lenv (#id) v
+    vexpr Δ dstate lenv outmode (#id) v
           
-(** Evaluates a constant identifier. *)
-          
-| VExprConst (id : ident) (t : type) (v : value) :
-    MapsTo id (Constant t v) ed ->      (* id ∈ Consts(Δ) and Δ(id) = (t,v) *)
-    vexpr ed dstate lenv (#id) v
-
 (** Evaluates a generic constant identifier. *)
           
-| VExprGen (id : ident) (t : type) (v : value) :
-    MapsTo id (Generic t v) ed ->      (* id ∈ Gens(Δ) and Δ(id) = (t,v) *)
-    vexpr ed dstate lenv (#id) v
+| VExprGen (outmode : bool) (id : ident) (t : type) (v : value) :
+    MapsTo id (Generic t v) Δ ->      (* id ∈ Gens(Δ) and Δ(id) = (t,v) *)
+    vexpr Δ dstate lenv outmode (#id) v
+
+(** Evaluates an indexed out port identifier. *)
+  
+| VEXprIdxOut (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
+           (idx_in_bounds : i - l < length aofv),
+
+      (* Premises *)
+      vexpr Δ dstate lenv true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
+      is_of_type (Vnat i) (Tnat l u) ->
+      
+      (* Side conditions *)
+
+      (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
+      (MapsTo id (Output (Tarray t l u)) Δ) -> 
+      MapsTo id (Varr aofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = aofv *)
+
+      (* Conclusion *)
+      vexpr Δ dstate lenv true (id [[ei]]) (get_at (i - l) aofv idx_in_bounds)
 
 (** Evaluates an indexed declared signal identifier. *)
           
-| VExprIdxSig (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v v' : value) (lofv : lofvalues),
+| VExprIdxSig (outmode : bool) (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
+           (idx_in_bounds : i - l < length aofv),
 
       (* Premises *)
-      vexpr ed dstate lenv ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
+      vexpr Δ dstate lenv outmode ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
       is_of_type (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
-      MapsTo id (Declared (Tarray t l u)) ed ->      (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
-      MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofvalues *)
-      get_at (i - l) lofv = Some v' ->
-      
-      (* Conclusion *)
-      vexpr ed dstate lenv (id [[ei]]) v'
 
-(** Evaluates an indexed input signal identifier. *)
-            
-| VExprIdxIn (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v v' : value) (lofv : lofvalues),
+      (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = array(t, l, u) *)
+      (MapsTo id (Declared (Tarray t l u)) Δ \/ MapsTo id (Input (Tarray t l u)) Δ) -> 
+      MapsTo id (Varr aofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = aofv *)
 
-      (* Premises *)
-      vexpr ed dstate lenv ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->
-      
-      (* Side conditions *)
-      MapsTo id (Input (Tarray t l u)) ed ->         (* id ∈ Ins(Δ) and Δ(id) = array(t, l, u) *)
-      MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = lofvalues *)
-      get_at (i - l) lofv = Some v' ->
-             
       (* Conclusion *)
-      
-      vexpr ed dstate lenv (id [[ei]]) v'
+      vexpr Δ dstate lenv outmode (id [[ei]]) (get_at (i - l) aofv idx_in_bounds)
 
 (** Evaluates an indexed variable identifier. *)
 
-| VExprIdxVar (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v v' : value) (lofv : lofvalues),
+| VExprIdxVar (outmode : bool) (id : ident) (ei : expr):
+    forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
+           (idx_in_bounds : i - l < length aofv),
 
       (* Premises *)
-      vexpr ed dstate lenv ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->             (* index value is in array bounds. *)
+      vexpr Δ dstate lenv outmode ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
+      is_of_type (Vnat i) (Tnat l u) ->   (* index value is in array bounds. *)
       
       (* Side conditions *)
-      MapsTo id ((Tarray t l u), (Vlist lofv)) lenv -> (* id ∈ Λ(Δ) and Λ(id) = (array(t, l, u), lofvalues) *)
-      get_at (i - l) lofv = Some v' ->
+      MapsTo id ((Tarray t l u), (Varr aofv)) lenv -> (* id ∈ Λ(Δ) and Λ(id) = (array(t, l, u), lofvalues) *)
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (id [[ei]]) v'
-
-(** Evaluates an indexed constant identifier. *)
-
-| VExprIdxConst (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v v' : value) (lofv : lofvalues),
-
-      (* Premises *)
-      vexpr ed dstate lenv ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->      (* index value is in array bounds. *)
-      
-      (* Side conditions *)
-      MapsTo id (Constant (Tarray t l u) (Vlist lofv)) ed -> (* id ∈ Consts(Δ) and Δ(id) = (array(t, l, u), lofvalues) *)
-      get_at (i - l) lofv = Some v' ->
-      
-      (* Conclusion *)      
-      vexpr ed dstate lenv (id [[ei]]) v'
+      vexpr Δ dstate lenv outmode (id [[ei]]) (get_at (i - l) aofv idx_in_bounds)
 
 (** Evaluates expression with addition operator. 
     
@@ -145,19 +133,19 @@ Inductive vexpr (ed : ElDesign) (dstate : DState) (lenv : LEnv) :
     is done in the [vadd] function.
  *)
 
-| VExprAdd (e e' : expr):
+| VExprAdd (outmode : bool) (e e' : expr):
     forall (n n' : nat),
 
       (* Premises:
          - Checks that operands evaluate to nat.
          - Checks that the addition does not cause nat overflow.
        *)
-      vexpr ed dstate lenv e (Vnat n) -> 
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr Δ dstate lenv outmode e (Vnat n) -> 
+      vexpr Δ dstate lenv outmode e' (Vnat n') ->
       n + n' <= NATMAX ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_add e e') (Vnat (n + n'))
+      vexpr Δ dstate lenv outmode (e_binop bo_add e e') (Vnat (n + n'))
 
 (** Evaluates expression with substraction operator. 
     
@@ -165,7 +153,7 @@ Inductive vexpr (ed : ElDesign) (dstate : DState) (lenv : LEnv) :
     is done in the [vsub] function.
  *)
 
-| VExprSub (e e' : expr):
+| VExprSub (outmode : bool) (e e' : expr):
     forall (n n' : nat),
 
       (* Premises:
@@ -173,165 +161,142 @@ Inductive vexpr (ed : ElDesign) (dstate : DState) (lenv : LEnv) :
          - Checks that the substraction does not go out of
            nat scope.
        *)
-      vexpr ed dstate lenv e (Vnat n) ->
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr Δ dstate lenv outmode e (Vnat n) ->
+      vexpr Δ dstate lenv outmode e' (Vnat n') ->
       n > n' ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_sub e e') (Vnat (n - n'))
+      vexpr Δ dstate lenv outmode (e_binop bo_sub e e') (Vnat (n - n'))
 
 (** Evaluates expression with the "less or equal" operator. *)
 
-| VExprLE (e e' : expr):
+| VExprLE (outmode : bool) (e e' : expr):
     forall (n n' : nat),
 
       (* Premises: checks that operands evaluate to nat. *)
-      vexpr ed dstate lenv e (Vnat n) -> 
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr Δ dstate lenv outmode e (Vnat n) -> 
+      vexpr Δ dstate lenv outmode e' (Vnat n') ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_le e e') (Vbool (n <=? n'))
+      vexpr Δ dstate lenv outmode (e_binop bo_le e e') (Vbool (n <=? n'))
 
 (** Evaluates expression with the "strictly less" operator. *)
 
-| VExprLT (e e' : expr):
+| VExprLT (outmode : bool) (e e' : expr):
     forall (n n' : nat),
 
       (* Premises: checks that operands evaluate to nat. *)
-      vexpr ed dstate lenv e (Vnat n) -> 
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr Δ dstate lenv outmode e (Vnat n) -> 
+      vexpr Δ dstate lenv outmode e' (Vnat n') ->
         
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_lt e e') (Vbool (n <? n'))
+      vexpr Δ dstate lenv outmode (e_binop bo_lt e e') (Vbool (n <? n'))
 
 (** Evaluates expression with the "greater or equal" operator. *)
 
-| VExprGE (e e' : expr):
+| VExprGE (outmode : bool) (e e' : expr):
     forall (n n' : nat),
 
       (* Premises: checks that operands evaluate to nat. *)
-      vexpr ed dstate lenv e (Vnat n) -> 
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr Δ dstate lenv outmode e (Vnat n) -> 
+      vexpr Δ dstate lenv outmode e' (Vnat n') ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_ge e e') (Vbool (n' <=? n))
+      vexpr Δ dstate lenv outmode (e_binop bo_ge e e') (Vbool (n' <=? n))
 
 (** Evaluates expression with the "strictly greater" operator. *)
 
-| VExprGT (e e' : expr):
+| VExprGT (outmode : bool) (e e' : expr):
     forall (n n' : nat),
 
       (* Premises: checks that operands evaluate to nat. *)
-      vexpr ed dstate lenv e (Vnat n) -> 
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr Δ dstate lenv outmode e (Vnat n) -> 
+      vexpr Δ dstate lenv outmode e' (Vnat n') ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_gt e e') (Vbool (n' <? n))
+      vexpr Δ dstate lenv outmode (e_binop bo_gt e e') (Vbool (n' <? n))
 
 (** Evaluates expression with the "and" operator. *)
 
-| VExprAnd (e e' : expr):
+| VExprAnd (outmode : bool) (e e' : expr):
     forall (b b' : bool),
 
       (* Premises: checks that the operands evaluate to bool. *)
-      vexpr ed dstate lenv e (Vbool b) -> 
-      vexpr ed dstate lenv e' (Vbool b') ->
+      vexpr Δ dstate lenv outmode e (Vbool b) -> 
+      vexpr Δ dstate lenv outmode e' (Vbool b') ->
             
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_and e e') (Vbool (b && b'))
+      vexpr Δ dstate lenv outmode (e_binop bo_and e e') (Vbool (b && b'))
 
 (** Evaluates expression with the or operator. *)
 
-| VExprOr (e e' : expr):
+| VExprOr (outmode : bool) (e e' : expr):
     forall (b b' : bool),
 
       (* Premises: checks that the operands evaluate to bool. *)
-      vexpr ed dstate lenv e (Vbool b) ->
-      vexpr ed dstate lenv e' (Vbool b') ->
+      vexpr Δ dstate lenv outmode e (Vbool b) ->
+      vexpr Δ dstate lenv outmode e' (Vbool b') ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_or e e') (Vbool (b || b'))
+      vexpr Δ dstate lenv outmode (e_binop bo_or e e') (Vbool (b || b'))
 
 (** Evaluates expression with the not operator. *)
 
-| VExprNot (e : expr):
+| VExprNot (outmode : bool) (e : expr):
     forall (b : bool),
 
       (* Premises: checks that the operand evaluates to bool. *)
-      vexpr ed dstate lenv e (Vbool b) ->
+      vexpr Δ dstate lenv outmode e (Vbool b) ->
             
       (* Conclusion. *)
-      vexpr ed dstate lenv (e_not e) (Vbool (negb b))
+      vexpr Δ dstate lenv outmode (e_not e) (Vbool (negb b))
             
 (** Evaluates expression with the equality operator (bool). *)
             
-| VExprEq (e e' : expr):
+| VExprEq_true (outmode : bool) (e e' : expr):
     forall (v v' : value) (b : bool),
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
-      vexpr ed dstate lenv e' v' ->
-      VEq v v' (Some b) ->
+      vexpr Δ dstate lenv outmode e v ->
+      vexpr Δ dstate lenv outmode e' v' ->
+      VEq v v' ->
       
       (* Conclusion: Δ,σ,Λ ⊢ e = e' ⇝ b *)      
-      vexpr ed dstate lenv (e_binop bo_eq e e') (Vbool b)
+      vexpr Δ dstate lenv outmode (e_binop bo_eq e e') (Vbool true)
+
+| VExprEq_false (outmode : bool) (e e' : expr):
+    forall (v v' : value) (b : bool),
+
+      (* Premises *)
+      vexpr Δ dstate lenv outmode e v ->
+      vexpr Δ dstate lenv outmode e' v' ->
+      ~VEq v v' ->
+      
+      (* Conclusion: Δ,σ,Λ ⊢ e = e' ⇝ b *)      
+      vexpr Δ dstate lenv outmode (e_binop bo_eq e e') (Vbool false)
 
 (** Evaluates expression with difference operator. *)
 
-| VExprNEq (e e' : expr):
+| VExprNEq (outmode : bool) (e e' : expr):
     forall (b : bool),
 
       (* Premises *)
-      vexpr ed dstate lenv (e_binop bo_eq e e') (Vbool b) ->
+      vexpr Δ dstate lenv outmode (e_binop bo_eq e e') (Vbool b) ->
       
       (* Conclusion *)      
-      vexpr ed dstate lenv (e_binop bo_neq e e') (Vbool (negb b))
+      vexpr Δ dstate lenv outmode (e_binop bo_neq e e') (Vbool (negb b))
     
-(** Defines the evaluation relation for lists of expressions.  *)
+(** Defines the evaluation relation for aggregates of expressions.  *)
             
-with vlofexprs (ed : ElDesign) (dstate : DState) (lenv : LEnv) :
-  list expr -> lofvalues -> Prop :=
-| VLOfExprsNil : vlofexprs ed dstate lenv [] Vnil
-| VLOfExprsCons :
-    forall {lofexprs lofvalues e v},
-      vlofexprs ed dstate lenv lofexprs lofvalues ->
-      vexpr ed dstate lenv e v ->
-      vlofexprs ed dstate lenv (e :: lofexprs) (Vcons v lofvalues).
+with vagofexprs (Δ : ElDesign) (dstate : DState) (lenv : LEnv) :
+  bool -> agofexprs -> arrofvalues -> Prop :=
+| VAgOfExprs_one :
+    forall outmode e v,
+      vexpr Δ dstate lenv outmode e v ->
+      vagofexprs Δ dstate lenv outmode (agofe_one e) (Arr_one v) 
+| VAgOfExprs_cons :
+    forall outmode agofe arrofv e v,
+      vexpr Δ dstate lenv outmode e v ->
+      vagofexprs Δ dstate lenv outmode agofe arrofv ->
+      vagofexprs Δ dstate lenv outmode (agofe_cons e agofe) (Arr_cons v arrofv).
 
-(** Defines the relation that evaluates names qualifying simple or
-    indexed "out" port identifiers.  
-    
-    Basically, reads the value associated to an out port identifier
-    at a certain design state σ.
- *)
-
-Inductive vexpro (ed : ElDesign) (dstate : DState) : name -> value -> Prop :=
-
-(** Evaluates a simple out port identifier. *)
-  
-| VEXprOut :
-    forall {id t v},
-
-      (* * Side conditions * *)
-      MapsTo id (Output t) ed ->     (* id ∈ Outs(Δ) and Δ(id) = t *)
-      MapsTo id v (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
-      
-      (* * Conclusion * *)
-      vexpro ed dstate (n_id id) v
-
-(** Evaluates an indexed out port identifier. *)
-  
-| VEXprIdxOut :
-    forall {id ei t l u i lofv v},
-
-      (* * Premises * *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv ei (Vnat i) ->
-      l <= i <= u ->
-      
-      (* * Side conditions * *)
-      MapsTo id (Output (Tarray t l u)) ed ->     (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
-      MapsTo id (Vlist lofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = v *)
-      get_at i lofv = Some v ->                   (* Current value at index [i] of [lofv] is [v] *)
-      
-      (* * Conclusion * *)
-      vexpro ed dstate (n_xid id ei) v.

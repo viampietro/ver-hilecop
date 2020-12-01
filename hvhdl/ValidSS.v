@@ -18,7 +18,7 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {id e v t},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
+      vexpr ed dstate lenv false e v ->
       is_of_type v t ->
 
       (* Side conditions *)
@@ -32,7 +32,7 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {id e v t},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
+      vexpr ed dstate lenv false e v ->
       is_of_type v t ->
 
       (* Side conditions *)
@@ -47,8 +47,8 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {id e ei v vi t l u},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
-      vexpr ed dstate lenv ei vi ->
+      vexpr ed dstate lenv false e v ->
+      vexpr ed dstate lenv false ei vi ->
       is_of_type v t ->
       is_of_type vi (Tnat l u) ->
                  
@@ -64,8 +64,8 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {id e ei v vi t l u},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
-      vexpr ed dstate lenv ei vi ->
+      vexpr ed dstate lenv false e v ->
+      vexpr ed dstate lenv false ei vi ->
       is_of_type v t ->
       is_of_type vi (Tnat l u) ->
       
@@ -80,7 +80,7 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {id e t v val},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
+      vexpr ed dstate lenv false e v ->
       is_of_type v t ->
             
       (* Side conditions *)
@@ -94,8 +94,8 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {id e ei t v vi val l u},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
-      vexpr ed dstate lenv ei vi ->
+      vexpr ed dstate lenv false e v ->
+      vexpr ed dstate lenv false ei vi ->
       is_of_type v t ->
       is_of_type vi (Tnat l u) ->
       
@@ -110,7 +110,7 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {e stmt v},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
+      vexpr ed dstate lenv false e v ->
       is_of_type v Tbool ->
       validss ed dstate lenv stmt ->
       
@@ -122,7 +122,7 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
     forall {e stmt stmt' v},
 
       (* Premises *)
-      vexpr ed dstate lenv e v ->
+      vexpr ed dstate lenv false e v ->
       is_of_type v Tbool ->
       validss ed dstate lenv stmt ->
       validss ed dstate lenv stmt' ->
@@ -139,8 +139,8 @@ Inductive validss (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> Prop :
       (** If [vexpr] interprets [e] and [e'] into [nat] values then it
          implies [is_of_type (Vnat n) nat(0,NATMAX)] and [is_of_type
          (Vnat n') nat(0,NATMAX)].  *)
-      vexpr ed dstate lenv e (Vnat n) ->
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv false e (Vnat n) ->
+      vexpr ed dstate lenv false e' (Vnat n') ->
       validss ed dstate lenv' stmt ->
       
       (* Side conditions *)

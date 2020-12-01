@@ -31,8 +31,8 @@ Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
  *)
 
 Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
-  (forall {id}, NatSet.In id idset -> forall {v v'}, MapsTo id v m -> MapsTo id v' m' -> VEq v v' (Some false)) /\
-  (forall {id v v'}, (MapsTo id v m /\ MapsTo id v' m' /\ VEq v v' (Some false)) -> NatSet.In id idset).
+  (forall id, NatSet.In id idset -> forall v v', MapsTo id v m -> MapsTo id v' m' -> ~VEq v v') /\
+  (forall id v v', (MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') -> NatSet.In id idset).
 
 (** Defines the relation stating that a map [ovunion] results of the
     overriding union of two maps [ovridden] and [ovriding].
@@ -71,7 +71,6 @@ Local Unset Positivity Checking.
                                                      
 Inductive SemanticalObject : Type :=
 | Generic (t : type) (v : value)
-| Constant (t : type) (v : value)
 | Input (t : type)
 | Output (t : type)
 | Declared (t : type)

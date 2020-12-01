@@ -25,7 +25,7 @@ Inductive binop : Set :=
     - a boolean constant
     - an identifier
     - an identifier with index (e.g "myvar(3)")
-    - an aggregate, i.e list of expressions
+    - an aggregate, i.e a non-empty list of expressions
     - e op e'    
     - not e   
  *)
@@ -34,10 +34,16 @@ Inductive expr : Type :=
 | e_nat : nat -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
 | e_name : name -> expr (** Name constant *)
-| e_aggreg : list expr -> expr (** Aggregate of expressions *)
+| e_aggreg : agofexprs -> expr (** Aggregate of expressions *)
 | e_binop : binop -> expr -> expr -> expr (** Binary operator expression *)
 | e_not : expr -> expr (** Not expression *)
 
+(** Aggregate of expressions (non-empty list of expressions) *)
+
+with agofexprs : Type :=
+| agofe_one : expr -> agofexprs
+| agofe_cons : expr -> agofexprs -> agofexprs
+                    
 (** Names *)
                     
 with name : Type :=
@@ -73,6 +79,16 @@ Notation " x @&& y @&& .. @&& z " := (e_binop bo_and .. (e_binop bo_and x y) .. 
 Coercion e_nat : nat >-> expr.
 Coercion e_bool : bool >-> expr.
 
+(** Converts an aggregate of expressions into a list. *)
+
+Fixpoint agofe2list (ag : agofexprs) {struct ag} : list expr :=
+  match ag with
+  | agofe_one e => [e]
+  | agofe_cons e ag' => e :: agofe2list ag'
+  end.
+
+Coercion agofe2list : agofexprs >-> list.
+
 (** Subtype indications.
 
     Subtype indications are used in the declarative parts of a H-VHDL
@@ -95,7 +111,8 @@ Inductive ss : Type :=
 | ss_loop (id : ident) (e : expr) (e' : expr) (stmt : ss) (** Loop statement. *)
 | ss_falling (stmt : ss)                                  (** Falling edge block statement. *)
 | ss_rising (stmt : ss)                                   (** Rising edge block statement. *)
-| ss_seq (stmt : ss) (stmt' : ss).                        (** Composition of seq. statements. *)
+| ss_seq (stmt : ss) (stmt' : ss)                         (** Composition of seq. statements. *)
+| ss_null.                                                (** Null statement. *)
 
 (** Notations for sequential statements. *)
 
@@ -183,7 +200,10 @@ Inductive cs : Type :=
           (opmap : outputmap) (** Out port map *)
 
 (** Composition of concurrent statements. *)
-| cs_par (cstmt : cs) (cstmt' : cs).
+| cs_par (cstmt : cs) (cstmt' : cs)
+
+(** Null statement *)
+| cs_null.
 
 Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z) (at level 100) : abss_scope.
 Notation "pid ':' 'Process' sl vars 'Begin' stmt" :=
@@ -227,7 +247,7 @@ Inductive adecl : Type :=
        [behavior] 
      end [archid];" 
 
-   - Abstract syntax = "design_ entid archid gens ports adecls behavior"
+   - Abstract syntax = "[design_ entid archid gens ports adecls behavior]"
 
 *)
 

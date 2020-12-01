@@ -26,7 +26,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e newv t currv dstate'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e newv -> (* e ⇝ newv *)
+      vexpr ed dstate lenv false e newv -> (* e ⇝ newv *)
       is_of_type newv t ->             (* newv ∈c t *)
 
       (* * Side conditions * *)
@@ -35,7 +35,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       (NatMap.MapsTo id (Declared t) ed \/ NatMap.MapsTo id (Output t) ed) -> 
       NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
 
-      VEq newv currv (Some false) -> (* new value <> current value *)
+      ~VEq newv currv -> (* new value <> current value *)
 
       (* dstate=<S,C,E>, S' = S(id) ← v, E' = E ∪ {id}, dstate'=<S',C,E'>  *)
       dstate' = (events_add id (sstore_add id newv dstate)) -> 
@@ -53,7 +53,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e newv t currv},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e newv ->
+      vexpr ed dstate lenv false e newv ->
       is_of_type newv t ->
 
       (* * Side conditions * *)
@@ -61,7 +61,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
       (NatMap.MapsTo id (Declared t) ed \/ NatMap.MapsTo id (Output t) ed) ->
       NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
-      VEq newv currv (Some true) -> (* new value = current value *)
+      VEq newv currv -> (* new value = current value *)
       
       (* * Conclusion * *)
       vseq ed dstate lenv ($id @<== e) dstate lenv
@@ -74,14 +74,15 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     value). *)
            
 | VSeqIdxSigAssignEvent :
-    forall {id e ei newv i t l u currlofv currv newlofv dstate'},
+    forall id e ei newv i t l u (curraofv newaofv : arrofvalues) dstate'
+           (idx_in_bounds : i - l < length curraofv),
       
       (*  * Premises * *)
-      vexpr ed dstate lenv e newv ->
+      vexpr ed dstate lenv false e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr ed dstate lenv ei (Vnat i) ->
+      vexpr ed dstate lenv false ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
@@ -89,16 +90,14 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
       (NatMap.MapsTo id (Declared (Tarray t l u)) ed \/
        NatMap.MapsTo id (Output (Tarray t l u)) ed) -> 
-      NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
+      NatMap.MapsTo id (Varr curraofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
 
-      get_at i currlofv = Some currv -> (* Retrieves current value at index i of currlofv *)
-      VEq newv currv (Some false) ->                (* new value <> current value *)
+      ~VEq newv (get_at (i - l) curraofv idx_in_bounds) -> (* new value <> current value *)
 
       (* - dstate = <S,C,E>, dstate' = <S',C,E'>
          - S' = S(id) ← set_at(newv, i, currlofv), E' = E ∪ {id} 
        *)
-      set_at newv i currlofv = Some newlofv ->
-      dstate' = (events_add id (sstore_add id (Vlist newlofv) dstate)) ->
+      dstate' = (events_add id (sstore_add id (Varr (set_at newv (i - l) curraofv idx_in_bounds)) dstate)) ->
       
       (* Conclusion *)
       vseq ed dstate lenv (id $[[ei]] @<== e) dstate' lenv
@@ -113,11 +112,11 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e ei newv i t l u currlofv currv},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e newv ->
+      vexpr ed dstate lenv false e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr ed dstate lenv ei (Vnat i) ->
+      vexpr ed dstate lenv false ei (Vnat i) ->
       l <= i <= u ->
       
       (* Side conditions *)
@@ -128,7 +127,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
 
       get_at i currlofv = Some currv -> (* Current value at index [i] of [currlofv] is [currv] *)
-      VEq newv currv (Some true) -> (* new value = current value *)
+      VEq newv currv -> (* new value = current value *)
             
       (* Conclusion *)
       vseq ed dstate lenv (id $[[ei]] @<== e) dstate lenv
@@ -141,7 +140,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e newv t currv},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e newv ->
+      vexpr ed dstate lenv false e newv ->
       is_of_type newv t ->
 
       (* * Side conditions * *)
@@ -158,11 +157,11 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e ei newv i t l u currlofv newlofv},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e newv ->
+      vexpr ed dstate lenv false e newv ->
       is_of_type newv t ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr ed dstate lenv ei (Vnat i) ->
+      vexpr ed dstate lenv false ei (Vnat i) ->
       l <= i <= u ->      
 
       (* * Side conditions * *)
@@ -180,7 +179,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool true) ->
+      vexpr ed dstate lenv false e (Vbool true) ->
       vseq ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -192,7 +191,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv false e (Vbool false) ->
       
       (* * Conclusion * *)
       vseq ed dstate lenv (If e Then stmt) dstate lenv
@@ -203,7 +202,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool true) ->
+      vexpr ed dstate lenv false e (Vbool true) ->
       vseq ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -215,7 +214,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv false e (Vbool false) ->
       vseq ed dstate lenv stmt' dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -230,8 +229,8 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e e' stmt n n' lenvi dstate' lenv'},
 
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vnat n) ->
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv false e (Vnat n) ->
+      vexpr ed dstate lenv false e' (Vnat n') ->
       
       vseq ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
 
@@ -254,7 +253,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr ed dstate lenvi (#id @= e') (Vbool false) ->
+      vexpr ed dstate lenv falsei (#id @= e') (Vbool false) ->
       vseq ed dstate lenvi stmt dstate' lenv' ->
       vseq ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
 
@@ -275,7 +274,7 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     forall {id e e' stmt t n lenvi},
 
       (* * Premises * *)
-      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
@@ -349,7 +348,7 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool true) ->
+      vexpr ed dstate lenv false e (Vbool true) ->
       vseqre ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -361,7 +360,7 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv false e (Vbool false) ->
       
       (* * Conclusion * *)
       vseqre ed dstate lenv (ss_if e stmt) dstate lenv
@@ -372,7 +371,7 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool true) ->
+      vexpr ed dstate lenv false e (Vbool true) ->
       vseqre ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -384,7 +383,7 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv false e (Vbool false) ->
       vseqre ed dstate lenv stmt' dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -400,8 +399,8 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {id e e' stmt n n' lenvi dstate' lenv'},
 
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vnat n) ->
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv false e (Vnat n) ->
+      vexpr ed dstate lenv false e' (Vnat n') ->
       
       vseqre ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
 
@@ -424,7 +423,7 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
+      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
       vseqre ed dstate lenvi stmt dstate' lenv' ->
       vseqre ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
 
@@ -445,7 +444,7 @@ Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {id e e' stmt t n lenvi},
 
       (* * Premises * *)
-      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->
@@ -519,7 +518,7 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool true) ->
+      vexpr ed dstate lenv false e (Vbool true) ->
       vseqfe ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -531,7 +530,7 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv false e (Vbool false) ->
       
       (* * Conclusion * *)
       vseqfe ed dstate lenv (ss_if e stmt) dstate lenv
@@ -542,7 +541,7 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool true) ->
+      vexpr ed dstate lenv false e (Vbool true) ->
       vseqfe ed dstate lenv stmt dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -554,7 +553,7 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {e stmt stmt' dstate' lenv'},
       
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vbool false) ->
+      vexpr ed dstate lenv false e (Vbool false) ->
       vseqfe ed dstate lenv stmt' dstate' lenv' ->
       
       (* * Conclusion * *)
@@ -570,8 +569,8 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {id e e' stmt n n' lenvi dstate' lenv'},
 
       (* * Premises * *)
-      vexpr ed dstate lenv e (Vnat n) ->
-      vexpr ed dstate lenv e' (Vnat n') ->
+      vexpr ed dstate lenv false e (Vnat n) ->
+      vexpr ed dstate lenv false e' (Vnat n') ->
       
       vseqfe ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
 
@@ -594,7 +593,7 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
+      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
       vseqfe ed dstate lenvi stmt dstate' lenv' ->
       vseqfe ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
 
@@ -615,7 +614,7 @@ Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState 
     forall {id e e' stmt t n lenvi},
 
       (* * Premises * *)
-      vexpr ed dstate lenvi (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) lenv ->

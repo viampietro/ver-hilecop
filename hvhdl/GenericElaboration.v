@@ -44,7 +44,7 @@ with egen (ed : ElDesign) (dimen : IdMap value) : gdecl -> ElDesign -> Prop :=
       (* Premises *)
       etypeg tau t ->
       is_lstatic_expr e ->
-      vexpr EmptyElDesign EmptyDState EmptyLEnv e dv ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
 
       (* Side conditions *)
       ~NatMap.In idg ed ->           (* idg ∉ Δ *)
@@ -60,7 +60,7 @@ with egen (ed : ElDesign) (dimen : IdMap value) : gdecl -> ElDesign -> Prop :=
       (* Premises *)
       etypeg tau t ->
       is_lstatic_expr e ->
-      vexpr EmptyElDesign EmptyDState EmptyLEnv e dv ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
 
       (* Side conditions *)
       ~NatMap.In idg ed ->      (* idg ∉ Δ *)

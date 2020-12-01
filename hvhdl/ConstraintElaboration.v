@@ -23,8 +23,8 @@ Inductive econstr (ed : ElDesign) (e e' : expr) (n n' : nat) : Prop :=
     
     (* vexpr checks that the bounds are nat values comprised in the
        interval [0, NATMAX]. *)
-    vexpr ed EmptyDState EmptyLEnv e (Vnat n) -> (* e evaluates to (Vnat n) *)
-    vexpr ed EmptyDState EmptyLEnv e' (Vnat n') -> (* e' evaluates to (Vnat n') *)
+    vexpr ed EmptyDState EmptyLEnv false e (Vnat n) -> (* e evaluates to (Vnat n) *)
+    vexpr ed EmptyDState EmptyLEnv false e' (Vnat n') -> (* e' evaluates to (Vnat n') *)
 
     n <= n' -> (* Upper bound must be greater or equal to lower bound *)
 
@@ -39,8 +39,8 @@ Inductive econstrg (e e' : expr) (n n' : nat) : Prop :=
     is_lstatic_expr e ->   (* Expression e must be globally static. *)
     is_lstatic_expr e' ->  (* Expression e' must be globally static. *)
     
-    vexpr EmptyElDesign EmptyDState EmptyLEnv e (Vnat n) -> (* e evaluates to (Vnat n) *)
-    vexpr EmptyElDesign EmptyDState EmptyLEnv e' (Vnat n') -> (* e' evaluates to (Vnat n') *)
+    vexpr EmptyElDesign EmptyDState EmptyLEnv false e (Vnat n) -> (* e evaluates to (Vnat n) *)
+    vexpr EmptyElDesign EmptyDState EmptyLEnv false e' (Vnat n') -> (* e' evaluates to (Vnat n') *)
 
     n <= n' -> (* Upper bound must be greater or equal to lower bound *)
 

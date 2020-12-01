@@ -9,6 +9,7 @@
  
  *)
 
+Require Import common.Coqlib.
 Require Import GlobalTypes.
 Require Import SemanticalDomains.
 
@@ -18,8 +19,10 @@ Require Import SemanticalDomains.
 Inductive defaultv : type -> value -> Prop :=
   
 | DefaultVBool : defaultv Tbool (Vbool false)
-| DefaultVNat : forall {l u}, defaultv (Tnat l u) (Vnat l)
+| DefaultVNat : forall l u, defaultv (Tnat l u) (Vnat l)
 | DefaultVArray :
-    forall {t l u v},
+    forall t l u v,
+      (* Proof that (u - l) + 1 is greater than zero *)
+      let plus1_gt_O := (gt_Sn_O (u - l)) in
       defaultv t v ->
-      defaultv (Tarray t l u) (Vlist (create_list (u - l + 1) v)).
+      defaultv (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).

@@ -1,4 +1,4 @@
-DIRS=common sitpn hvhdl sitpn2hvhdl soundness
+DIRS=common sitpn hvhdl sitpn2hvhdl # soundness
 
 COQINCLUDES=$(foreach d, $(DIRS), -R $(d) hilecop.$(d))
 
@@ -11,6 +11,7 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 COMMONFILES=NatMap.v NatSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
+	StateAndErrorMonad.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -45,7 +46,7 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 	Petri.v \
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \
 	Initialization.v Simulation.v \
-	Place.v Transition.v
+	Place.v Transition.v HilecopDesignStore.v 
 
 # SITPN to H-VHDL transformation.
 

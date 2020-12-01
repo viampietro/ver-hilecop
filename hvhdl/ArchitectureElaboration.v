@@ -49,20 +49,4 @@ with edecl (ed : ElDesign) (dstate : DState)  : adecl -> ElDesign -> DState -> P
       ~InSStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecl ed dstate (adecl_sig id tau) (add id (Declared t) ed) (sstore_add id v dstate)
-
-(** Constant declaration elaboration. *)
-             
-| EDeclConst :
-    forall {id tau e t v},
-      
-      (* Premises. *)
-      etype ed tau t ->
-      is_gstatic_expr ed e ->
-      vexpr ed dstate EmptyLEnv e v ->  
-      
-      (* Side conditions. *)
-      ~NatMap.In id ed -> (* id ∉ Δ *)
-
-      (* Conclusion *)
-      edecl ed dstate (adecl_const id tau e) (add id (Constant t v) ed) dstate.
+      edecl ed dstate (adecl_sig id tau) (add id (Declared t) ed) (sstore_add id v dstate).

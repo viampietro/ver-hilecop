@@ -60,7 +60,7 @@ with eassocip (ed cenv : ElDesign) (dstate : DState) (formals : list (ident * op
     forall {id e v t},
 
       (* Premises *)
-      vexpr ed dstate EmptyLEnv e v ->
+      vexpr ed dstate EmptyLEnv false e v ->
       is_of_type v t ->
 
       (* Side conditions *)
@@ -76,8 +76,8 @@ with eassocip (ed cenv : ElDesign) (dstate : DState) (formals : list (ident * op
 
       (* Premises *)
       is_gstatic_expr ed ei ->
-      vexpr ed dstate EmptyLEnv e v ->
-      vexpr ed dstate EmptyLEnv ei vi ->
+      vexpr ed dstate EmptyLEnv false e v ->
+      vexpr ed dstate EmptyLEnv false ei vi ->
       is_of_type v t ->
       is_of_type vi (Tnat l u) ->
       
@@ -179,7 +179,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 
       (* Premises *)
       is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -204,7 +204,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 
       (* Premises *)
       is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -240,7 +240,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 
       (* Premises *)
       is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -260,7 +260,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 
       (* Premises *)
       is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -282,7 +282,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 
       (* Premises *)
       is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
@@ -305,8 +305,8 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
       (* Premises *)
       is_gstatic_expr ed ei ->
       is_gstatic_expr ed ei' ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
-      vexpr ed EmptyDState EmptyLEnv ei' vi' ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei' vi' ->
       is_of_type vi (Tnat l u) ->
       is_of_type vi' (Tnat l' u') ->
       
@@ -331,8 +331,8 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
       (* Premises *)
       is_gstatic_expr ed ei ->
       is_gstatic_expr ed ei' ->
-      vexpr ed EmptyDState EmptyLEnv ei vi ->
-      vexpr ed EmptyDState EmptyLEnv ei' vi' ->
+      vexpr ed EmptyDState EmptyLEnv false ei vi ->
+      vexpr ed EmptyDState EmptyLEnv false ei' vi' ->
       is_of_type vi (Tnat l u) ->
       is_of_type vi' (Tnat l' u') ->
       
