@@ -9,7 +9,7 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 # General-purpose utilities (in common/)
 
-COMMONFILES=NatMap.v NatSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
+COMMONFILES=NatMap.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
 	StateAndErrorMonad.v
 
@@ -45,8 +45,9 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 	SSEvaluation.v PortMapEvaluation.v \
 	Petri.v \
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \
-	Initialization.v Simulation.v \
-	Place.v Transition.v HilecopDesignStore.v 
+	Place.v Transition.v \
+	Initialization.v HilecopDesignStore.v Simulation.v
+
 
 # SITPN to H-VHDL transformation.
 

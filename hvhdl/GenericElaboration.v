@@ -14,7 +14,7 @@ Require Import StaticExpressions.
 Require Import TypeElaboration.
 Require Import HVhdlTypes.
 
-Import NatMap.
+Import NMap.
 
 (** The generic constant elaboration relation.
     
@@ -47,7 +47,7 @@ with egen (ed : ElDesign) (dimen : IdMap value) : gdecl -> ElDesign -> Prop :=
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
 
       (* Side conditions *)
-      ~NatMap.In idg ed ->           (* idg ∉ Δ *)
+      ~NMap.In idg ed ->           (* idg ∉ Δ *)
       MapsTo idg v dimen ->     (* idg ∈ M and M(idg) = v *)
       
       (* Conclusion *)
@@ -63,8 +63,8 @@ with egen (ed : ElDesign) (dimen : IdMap value) : gdecl -> ElDesign -> Prop :=
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
 
       (* Side conditions *)
-      ~NatMap.In idg ed ->      (* idg ∉ Δ *)
-      ~NatMap.In idg dimen ->     (* idg ∉ M *)
+      ~NMap.In idg ed ->      (* idg ∉ Δ *)
+      ~NMap.In idg dimen ->     (* idg ∉ M *)
       
       (* Conclusion *)
       egen ed dimen (gdecl_ idg tau e) (add idg (Generic t dv) ed).

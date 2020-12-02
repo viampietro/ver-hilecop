@@ -13,7 +13,9 @@ Open Scope abss_scope.
     [vseq] does not define error cases.
  *)
 
-Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
+Inductive seqflag : Set := fe | re | stab.
+
+Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DState -> LEnv -> Prop :=
 
 (** Evaluates a signal assignment statement.
 
@@ -23,25 +25,26 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     value). *)
   
 | VSeqSigAssignEvent :
-    forall {id e newv t currv dstate'},
+    forall flag id e newv t currv σ',
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e newv -> (* e ⇝ newv *)
+      vexpr Δ σ Λ false e newv -> (* e ⇝ newv *)
       is_of_type newv t ->             (* newv ∈c t *)
 
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      (NatMap.MapsTo id (Declared t) ed \/ NatMap.MapsTo id (Output t) ed) -> 
-      NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = currv *)
+      (NMap.MapsTo id (Declared t) Δ \/ NMap.MapsTo id (Output t) Δ) -> 
+      NMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = currv *)
 
-      ~VEq newv currv -> (* new value <> current value *)
-
-      (* dstate=<S,C,E>, S' = S(id) ← v, E' = E ∪ {id}, dstate'=<S',C,E'>  *)
-      dstate' = (events_add id (sstore_add id newv dstate)) -> 
+      (* new value <> current value, then an event must be registered on signal [id] *)
+      OVEq newv currv (Some false) -> 
+      
+      (* σ=<S,C,E>, S' = S(id) ← v, E' = E ∪ {id}, σ'=<S',C,E'>  *)
+      σ' = (events_add id (sstore_add id newv σ)) -> 
       
       (* * Conclusion: Δ,σ,Λ ⊢ id ⇐ e ⇝ σ',Λ * *)
-      vseq ed dstate lenv ($id @<== e) dstate' lenv
+      vseq Δ σ Λ flag ($id @<== e) σ' Λ
 
 (** Evaluates a signal assignment statement.
 
@@ -50,21 +53,21 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     Case where the assignment generates no event. *)
   
 | VSeqSigAssignNoEvent :
-    forall {id e newv t currv},
+    forall flag id e newv t currv,
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e newv ->
+      vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
 
       (* * Side conditions * *)
 
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      (NatMap.MapsTo id (Declared t) ed \/ NatMap.MapsTo id (Output t) ed) ->
-      NatMap.MapsTo id currv (sigstore dstate) -> (* id ∈ σ and σ(id) = v' *)
-      VEq newv currv -> (* new value = current value *)
+      (NMap.MapsTo id (Declared t) Δ \/ NMap.MapsTo id (Output t) Δ) ->
+      NMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = v' *)
+      OVEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
-      vseq ed dstate lenv ($id @<== e) dstate lenv
+      vseq Δ σ Λ flag ($id @<== e) σ Λ
 
 (** Evaluates a signal assignment statement.
 
@@ -74,33 +77,38 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     value). *)
            
 | VSeqIdxSigAssignEvent :
-    forall id e ei newv i t l u (curraofv newaofv : arrofvalues) dstate'
-           (idx_in_bounds : i - l < length curraofv),
+    forall flag id e ei newv i t l u σ'
+           (curraofv newaofv : arrofvalues)
+           idx_in_bounds,
+      
+      let idx := i - l in
       
       (*  * Premises * *)
-      vexpr ed dstate lenv false e newv ->
+      vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr ed dstate lenv false ei (Vnat i) ->
+      vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
       
-      (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
-      (NatMap.MapsTo id (Declared (Tarray t l u)) ed \/
-       NatMap.MapsTo id (Output (Tarray t l u)) ed) -> 
-      NatMap.MapsTo id (Varr curraofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
+      (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t,l,u) *)
+      (NMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NMap.MapsTo id (Output (Tarray t l u)) Δ) ->
+      
+      (* id ∈ σ and σ(id) = currlofv *)
+      NMap.MapsTo id (Varr curraofv) (sigstore σ) ->
 
-      ~VEq newv (get_at (i - l) curraofv idx_in_bounds) -> (* new value <> current value *)
+      (* new value <> current value *)
+      OVEq newv (get_at idx curraofv idx_in_bounds) (Some false) -> 
 
-      (* - dstate = <S,C,E>, dstate' = <S',C,E'>
+      (* - σ = <S,C,E>, σ' = <S',C,E'>
          - S' = S(id) ← set_at(newv, i, currlofv), E' = E ∪ {id} 
        *)
-      dstate' = (events_add id (sstore_add id (Varr (set_at newv (i - l) curraofv idx_in_bounds)) dstate)) ->
+      σ' = (events_add id (sstore_add id (Varr (set_at newv idx curraofv idx_in_bounds)) σ)) ->
       
       (* Conclusion *)
-      vseq ed dstate lenv (id $[[ei]] @<== e) dstate' lenv
+      vseq Δ σ Λ flag (id $[[ei]] @<== e) σ' Λ
 
 (** Evaluates a signal assignment statement.
 
@@ -109,116 +117,118 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     Case where the assignment generates no event. *)
            
 | VSeqIdxSigAssignNoEvent :
-    forall {id e ei newv i t l u currlofv currv},
+    forall flag id e ei newv i t l u curraofv idx_in_bounds,
+
+      let idx := i - l in
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e newv ->
+      vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr ed dstate lenv false ei (Vnat i) ->
+      vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
       
       (* Side conditions *)
       
-      (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = array(t,l,u) *)
-      (NatMap.MapsTo id (Declared (Tarray t l u)) ed \/
-       NatMap.MapsTo id (Output (Tarray t l u)) ed) -> 
-      NatMap.MapsTo id (Vlist currlofv) (sigstore dstate) -> (* id ∈ σ and σ(id) = currlofv *)
+      (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t,l,u) *)
+      (NMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NMap.MapsTo id (Output (Tarray t l u)) Δ) -> 
+      NMap.MapsTo id (Varr curraofv) (sigstore σ) -> (* id ∈ σ and σ(id) = curraofv *)
 
-      get_at i currlofv = Some currv -> (* Current value at index [i] of [currlofv] is [currv] *)
-      VEq newv currv -> (* new value = current value *)
+      OVEq newv (get_at idx curraofv idx_in_bounds) (Some true) -> (* new value = current value *)
             
       (* Conclusion *)
-      vseq ed dstate lenv (id $[[ei]] @<== e) dstate lenv
+      vseq Δ σ Λ flag (id $[[ei]] @<== e) σ Λ
            
 (** Evaluates a variable assignment statement.
 
     The target must be a variable identifier. *)
            
 | VSeqVarAssign :
-    forall {id e newv t currv},
+    forall flag id e newv t currv,
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e newv ->
+      vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
 
       (* * Side conditions * *)
-      NatMap.MapsTo id (t, currv) lenv -> (* id ∈ Λ and Λ(id) = (t, currv) *)
+      NMap.MapsTo id (t, currv) Λ -> (* id ∈ Λ and Λ(id) = (t, currv) *)
       
       (* * Conclusion * *)
-      vseq ed dstate lenv ($id @:= e) dstate (NatMap.add id (t, newv) lenv)
+      vseq Δ σ Λ flag ($id @:= e) σ (NMap.add id (t, newv) Λ)
 
 (** Evaluates a variable assignment statement.
 
     The target must be a variable identifier with an index. *)
            
 | VSeqIdxVarAssign :
-    forall {id e ei newv i t l u currlofv newlofv},
+    forall flag id e ei newv i t l u curraofv newaofv idx_in_bounds,
+
+      let idx := i - l in
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e newv ->
+      vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr ed dstate lenv false ei (Vnat i) ->
+      vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->      
 
       (* * Side conditions * *)
       
-      (* id ∈ Λ and Λ(id) = (array(t, l, u), currlofv) *)
-      NatMap.MapsTo id (Tarray t l u, (Vlist currlofv)) lenv ->
-      set_at newv i currlofv = Some newlofv ->
+      (* id ∈ Λ and Λ(id) = (array(t, l, u), curraofv) *)
+      NMap.MapsTo id (Tarray t l u, (Varr curraofv)) Λ ->
+      set_at newv i curraofv idx_in_bounds = newaofv ->
       
       (* * Conclusion * *)
-      vseq ed dstate lenv (id $[[ei]] @:= e) dstate (NatMap.add id (Tarray t l u, (Vlist newlofv)) lenv)
+      vseq Δ σ Λ flag (id $[[ei]] @:= e) σ (NMap.add id (Tarray t l u, (Varr newaofv)) Λ)
 
 (** Evaluates a simple if statement with a true condition. *)
 
 | VSeqIfTrue :
-    forall {e stmt dstate' lenv'},
+    forall flag e stmt σ' Λ',
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool true) ->
-      vseq ed dstate lenv stmt dstate' lenv' ->
+      vexpr Δ σ Λ false e (Vbool true) ->
+      vseq Δ σ Λ flag stmt σ' Λ' ->
       
       (* * Conclusion * *)
-      vseq ed dstate lenv (If e Then stmt) dstate' lenv'
+      vseq Δ σ Λ flag (If e Then stmt) σ' Λ'
 
 (** Evaluates a simple if statement with a false condition. *)
 
 | VSeqIfFalse :
-    forall {e stmt},
+    forall flag e stmt,
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool false) ->
+      vexpr Δ σ Λ false e (Vbool false) ->
       
       (* * Conclusion * *)
-      vseq ed dstate lenv (If e Then stmt) dstate lenv
+      vseq Δ σ Λ flag (If e Then stmt) σ Λ
 
 (** Evaluates a if-else statement with a true condition. *)
 
 | VSeqIfElseTrue :
-    forall {e stmt stmt' dstate' lenv'},
+    forall flag e stmt stmt' σ' Λ',
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool true) ->
-      vseq ed dstate lenv stmt dstate' lenv' ->
+      vexpr Δ σ Λ false e (Vbool true) ->
+      vseq Δ σ Λ flag stmt σ' Λ' ->
       
       (* * Conclusion * *)
-      vseq ed dstate lenv (If e Then stmt Else stmt') dstate' lenv'
+      vseq Δ σ Λ flag (If e Then stmt Else stmt') σ' Λ'
 
 (** Evaluates a if-else statement with a false condition. *)
 
 | VSeqIfElseFalse :
-    forall {e stmt stmt' dstate' lenv'},
+    forall flag e stmt stmt' σ' Λ',
       
       (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool false) ->
-      vseq ed dstate lenv stmt' dstate' lenv' ->
+      vexpr Δ σ Λ false e (Vbool false) ->
+      vseq Δ σ Λ flag stmt' σ' Λ' ->
       
       (* * Conclusion * *)
-      vseq ed dstate lenv (If e Then stmt Else stmt') dstate' lenv'
+      vseq Δ σ Λ flag (If e Then stmt Else stmt') σ' Λ'
 
 (** Evaluates a loop statement.
     
@@ -226,20 +236,20 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     with initial value.  *)
 
 | VSeqLoopInit :
-    forall {id e e' stmt n n' lenvi dstate' lenv'},
+    forall flag id e e' stmt n n' Λi σ' Λ',
 
       (* * Premises * *)
-      vexpr ed dstate lenv false e (Vnat n) ->
-      vexpr ed dstate lenv false e' (Vnat n') ->
+      vexpr Δ σ Λ false e (Vnat n) ->
+      vexpr Δ σ Λ false e' (Vnat n') ->
       
-      vseq ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
+      vseq Δ σ Λi flag (For id In e To e' Loop stmt) σ' Λ' ->
 
       (* * Side conditions * *)
-      ~NatMap.In id lenv ->     (* id ∉ Λ *)
-      lenvi = NatMap.add id (Tnat n n', Vnat n) lenv -> (* lenvi = lenv ∪ (id, (nat(n,n'), n)) *)
+      ~NMap.In id Λ ->     (* id ∉ Λ *)
+      Λi = NMap.add id (Tnat n n', Vnat n) Λ -> (* Λi = Λ ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
-      vseq ed dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
+      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ' Λ'
 
 (** Evaluates a loop statement.
     
@@ -248,21 +258,21 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     reached yet.  *)
 
 | VSeqLoopFalse :
-    forall {id e e' stmt t n lenvi dstate' lenv' dstate'' lenv''},
+    forall flag id e e' stmt t n Λi σ' Λ' σ'' Λ'',
 
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr ed dstate lenv falsei (#id @= e') (Vbool false) ->
-      vseq ed dstate lenvi stmt dstate' lenv' ->
-      vseq ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
+      vexpr Δ σ Λi false (#id @= e') (Vbool false) ->
+      vseq Δ σ Λi flag stmt σ' Λ' ->
+      vseq Δ σ' Λ' flag (For id In e To e' Loop stmt) σ'' Λ'' ->
 
       (* * Side conditions * *)
-      NatMap.MapsTo id (t, Vnat n) lenv ->
-      lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
+      NMap.MapsTo id (t, Vnat n) Λ ->
+      Λi = NMap.add id (t, Vnat (n + 1)) Λ ->
 
       (* * Conclusion * *)
-      vseq ed dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
+      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ'' Λ''
            
 (** Evaluates a loop statement.
     
@@ -271,382 +281,73 @@ Inductive vseq (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState ->
     reached.  *)
 
 | VSeqLoopTrue :
-    forall {id e e' stmt t n lenvi},
+    forall flag id e e' stmt t n Λi,
 
       (* * Premises * *)
-      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      vexpr Δ σ Λi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
-      NatMap.MapsTo id (t, Vnat n) lenv ->
-      lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
+      NMap.MapsTo id (t, Vnat n) Λ ->
+      Λi = NMap.add id (t, Vnat (n + 1)) Λ ->
 
       (* * Conclusion * *)
       (* Removes the binding of id from the local environment. *)
-      vseq ed dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
+      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ (NMap.remove id Λ)
            
-(** Evaluates a rising edge block statement.
+(** Evaluates a rising edge block statement when the [stab] or the [fe] flag is
+    raised (i.e, during a stabilization or a ↓ phase).
 
-    Does nothing because [vseq] does not handle synchronous statement
-    blocks. See [vseqfe] and [vseqre] for evaluation of synchronous
-    statement blocks. *)
+    Does nothing; ↑ blocks do not respond during stabilization or ↓. *)
            
-| VSeqRising : forall {stmt}, vseq ed dstate lenv (Rising stmt) dstate lenv
+| VSeqRisingIdleOnStabAndFalling :
+    forall flag stmt, flag = stab \/ flag = fe -> vseq Δ σ Λ flag (Rising stmt) σ Λ
 
-(** Evaluates a falling edge block statement.
+(** Evaluates a rising edge block statement when the [re] flag is raised. 
+    Evaluates the inner block of the rising edge statement.
+ *)
+           
+| VSeqRising :
+    forall stmt σ' Λ',
+      
+      (* * Premises * *)
+      vseq Δ σ Λ re stmt σ' Λ' ->
 
-    Does nothing because [vseq] does not handle synchronous statement
-    blocks. See [vseqfe] and [vseqre] for evaluation of synchronous
-    statement blocks. *)
+      (* * Conclusion * *)
+      vseq Δ σ Λ re (ss_rising stmt) σ' Λ'
+           
+(** Evaluates a falling edge block statement when the [stab] flag or the [re] flag is
+    raised (i.e, during a stabilization or a ↑ phase).
+
+    Does nothing; ↓ blocks do not respond during stabilization or ↑. *)
+           
+| VSeqFallingIdleOnStabAndRising :
+    forall flag stmt, flag = stab \/ flag = re -> vseq Δ σ Λ flag (Rising stmt) σ Λ
+           
+(** Evaluates a falling edge block statement when the [fe] flag is
+    raised. Evaluates the inner block of the falling edge statement. *)
                                    
-| VSeqFalling : forall {stmt}, vseq ed dstate lenv (Falling stmt) dstate lenv
+| VSeqFalling :
+    forall stmt σ' Λ',
+      
+      (* * Premises * *)
+      vseq Δ σ Λ fe stmt σ' Λ' ->
 
+      (* * Conclusion * *)
+      vseq Δ σ Λ fe (Falling stmt) σ' Λ'
+
+(** Evaluates the null statement. *)
+| VSeqNull :
+    forall flag, vseq Δ σ Λ flag (ss_null) σ Λ
+                      
 (** Evaluates a sequence of statements. *)
 
 | VSeqSeq :
-    forall {stmt stmt' dstate' lenv' dstate'' lenv''},
+    forall flag stmt stmt' σ' Λ' σ'' Λ'',
       
       (* * Premises * *)
-      vseq ed dstate lenv stmt dstate' lenv' ->
-      vseq ed dstate' lenv' stmt dstate'' lenv'' ->
+      vseq Δ σ Λ flag stmt σ' Λ' ->
+      vseq Δ σ' Λ' flag stmt σ'' Λ'' ->
 
       (* * Conclusion * *)
-      vseq ed dstate lenv (stmt ;; stmt') dstate'' lenv''.
-  
-(** Defines the relation that evaluates the sequential statements of
-    H-VHDL, including the rising edge block statements (only executed
-    at the rising edge of the clock signal).  *)
+      vseq Δ σ Λ flag (stmt ;; stmt') σ'' Λ''.
 
-Inductive vseqre (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
-
-(** Evaluates a signal assignment statement. *)
-  
-| VSeqRESigAssign :
-    forall {sname e dstate' lenv'},
-      
-      (* Premises *)
-      vseq ed dstate lenv (ss_sig sname e) dstate' lenv' ->
-           
-      (* Conclusion *)
-      vseqre ed dstate lenv (ss_sig sname e) dstate' lenv'
-           
-(** Evaluates a variable assignment statement.
-
-    The target must be a variable identifier. *)
-           
-| VSeqREVarAssign :
-    forall {vname e dstate' lenv'},
-      
-      (* Premises *)
-      vseq ed dstate lenv (ss_sig vname e) dstate' lenv' ->
-      
-      (* Conclusion *)
-      vseqre ed dstate lenv (ss_var vname e) dstate' lenv'
-
-(** Evaluates a simple if statement with a true condition. *)
-
-| VSeqREIfTrue :
-    forall {e stmt dstate' lenv'},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool true) ->
-      vseqre ed dstate lenv stmt dstate' lenv' ->
-      
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (ss_if e stmt) dstate' lenv'
-
-(** Evaluates a simple if statement with a false condition. *)
-
-| VSeqREIfFalse :
-    forall {e stmt},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool false) ->
-      
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (ss_if e stmt) dstate lenv
-
-(** Evaluates a if-else statement with a true condition. *)
-
-| VSeqREIfElseTrue :
-    forall {e stmt stmt' dstate' lenv'},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool true) ->
-      vseqre ed dstate lenv stmt dstate' lenv' ->
-      
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
-
-(** Evaluates a if-else statement with a false condition. *)
-
-| VSeqREIfElseFalse :
-    forall {e stmt stmt' dstate' lenv'},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool false) ->
-      vseqre ed dstate lenv stmt' dstate' lenv' ->
-      
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
-           
-
-(** Evaluates a loop statement.
-    
-    Initialization, add the loop variable to the local environment
-    with initial value.  *)
-
-| VSeqRELoopInit :
-    forall {id e e' stmt n n' lenvi dstate' lenv'},
-
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vnat n) ->
-      vexpr ed dstate lenv false e' (Vnat n') ->
-      
-      vseqre ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
-
-      (* * Side conditions * *)
-      ~NatMap.In id lenv ->     (* id ∉ Λ *)
-      lenvi = NatMap.add id (Tnat n n', Vnat n) lenv -> (* lenvi = lenv ∪ (id, (nat(n,n'), n)) *)
-
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
-
-(** Evaluates a loop statement.
-    
-    Case where the loop variable is already in the local environment
-    (it is not the first iteration), but the upper bound value is not
-    reached yet.  *)
-
-| VSeqRELoopFalse :
-    forall {id e e' stmt t n lenvi dstate' lenv' dstate'' lenv''},
-
-      (* * Premises * *)
-      
-      (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
-      vseqre ed dstate lenvi stmt dstate' lenv' ->
-      vseqre ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
-
-      (* * Side conditions * *)
-      NatMap.MapsTo id (t, Vnat n) lenv ->
-      lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
-
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
-           
-(** Evaluates a loop statement.
-    
-    Case where the loop variable is already in the local environment
-    (it is not the first iteration), and the upper bound value is
-    reached.  *)
-
-| VSeqRELoopTrue :
-    forall {id e e' stmt t n lenvi},
-
-      (* * Premises * *)
-      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
-
-      (* * Side conditions * *)
-      NatMap.MapsTo id (t, Vnat n) lenv ->
-      lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
-
-      (* * Conclusion * *)
-      (* Remove the binding of id from the local environment. *)
-      vseqre ed dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
-           
-(** Evaluates a rising edge block statement. 
-    Contrary to [vseq], [vseqre] evaluates rising edge blocks.
- *)
-           
-| VSeqRERising :
-    forall {stmt dstate' lenv'},
-      (* * Premises * *)
-      vseqre ed dstate lenv stmt dstate' lenv' ->
-
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (ss_rising stmt) dstate' lenv'
-
-(** Evaluates a falling edge block statement (do nothing). *)
-                                   
-| VSeqREFalling : forall {stmt}, vseqre ed dstate lenv (ss_falling stmt) dstate lenv
-
-(** Evaluates a sequence of statements. *)
-
-| VSeqRESeq :
-    forall {stmt stmt' dstate' lenv' dstate'' lenv''},
-      
-      (* * Premises * *)
-      vseqre ed dstate lenv stmt dstate' lenv' ->
-      vseqre ed dstate' lenv' stmt dstate'' lenv'' ->
-
-      (* * Conclusion * *)
-      vseqre ed dstate lenv (ss_seq stmt stmt') dstate'' lenv''.
-
-(** Defines the relation that evaluates the sequential statements of
-    H-VHDL, including the falling edge block statements (only executed
-    at the falling edge of the clock signal).  *)
-
-Inductive vseqfe (ed : ElDesign) (dstate : DState) (lenv : LEnv) : ss -> DState -> LEnv -> Prop :=
-
-(** Evaluates a signal assignment statement. *)
-  
-| VSeqFESigAssign :
-    forall {sname e dstate' lenv'},
-      
-      (* Premises *)
-      vseq ed dstate lenv (ss_sig sname e) dstate' lenv' ->
-           
-      (* Conclusion *)
-      vseqfe ed dstate lenv (ss_sig sname e) dstate' lenv'
-           
-(** Evaluates a variable assignment statement.
-
-    The target must be a variable identifier. *)
-           
-| VSeqFEVarAssign :
-    forall {vname e dstate' lenv'},
-      
-      (* Premises *)
-      vseq ed dstate lenv (ss_sig vname e) dstate' lenv' ->
-      
-      (* Conclusion *)
-      vseqfe ed dstate lenv (ss_var vname e) dstate' lenv'
-
-(** Evaluates a simple if statement with a true condition. *)
-
-| VSeqFEIfTrue :
-    forall {e stmt dstate' lenv'},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool true) ->
-      vseqfe ed dstate lenv stmt dstate' lenv' ->
-      
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (ss_if e stmt) dstate' lenv'
-
-(** Evaluates a simple if statement with a false condition. *)
-
-| VSeqFEIfFalse :
-    forall {e stmt},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool false) ->
-      
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (ss_if e stmt) dstate lenv
-
-(** Evaluates a if-else statement with a true condition. *)
-
-| VSeqFEIfElseTrue :
-    forall {e stmt stmt' dstate' lenv'},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool true) ->
-      vseqfe ed dstate lenv stmt dstate' lenv' ->
-      
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
-
-(** Evaluates a if-else statement with a false condition. *)
-
-| VSeqFEIfElseFalse :
-    forall {e stmt stmt' dstate' lenv'},
-      
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vbool false) ->
-      vseqfe ed dstate lenv stmt' dstate' lenv' ->
-      
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (ss_ifelse e stmt stmt') dstate' lenv'
-           
-
-(** Evaluates a loop statement.
-    
-    Initialization, add the loop variable to the local environment
-    with initial value.  *)
-
-| VSeqFELoopInit :
-    forall {id e e' stmt n n' lenvi dstate' lenv'},
-
-      (* * Premises * *)
-      vexpr ed dstate lenv false e (Vnat n) ->
-      vexpr ed dstate lenv false e' (Vnat n') ->
-      
-      vseqfe ed dstate lenvi (For id In e To e' Loop stmt) dstate' lenv' ->
-
-      (* * Side conditions * *)
-      ~NatMap.In id lenv ->     (* id ∉ Λ *)
-      lenvi = NatMap.add id (Tnat n n', Vnat n) lenv -> (* lenvi = lenv ∪ (id, (nat(n,n'), n)) *)
-
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (For id In e To e' Loop stmt) dstate' lenv'
-
-(** Evaluates a loop statement.
-    
-    Case where the loop variable is already in the local environment
-    (it is not the first iteration), but the upper bound value is not
-    reached yet.  *)
-
-| VSeqFELoopFalse :
-    forall {id e e' stmt t n lenvi dstate' lenv' dstate'' lenv''},
-
-      (* * Premises * *)
-      
-      (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool false) ->
-      vseqfe ed dstate lenvi stmt dstate' lenv' ->
-      vseqfe ed dstate' lenv' (For id In e To e' Loop stmt) dstate'' lenv'' ->
-
-      (* * Side conditions * *)
-      NatMap.MapsTo id (t, Vnat n) lenv ->
-      lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
-
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (For id In e To e' Loop stmt) dstate'' lenv''
-           
-(** Evaluates a loop statement.
-    
-    Case where the loop variable is already in the local environment
-    (it is not the first iteration), and the upper bound value is
-    reached.  *)
-
-| VSeqFELoopTrue :
-    forall {id e e' stmt t n lenvi},
-
-      (* * Premises * *)
-      vexpr ed dstate lenvi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
-
-      (* * Side conditions * *)
-      NatMap.MapsTo id (t, Vnat n) lenv ->
-      lenvi = NatMap.add id (t, Vnat (n + 1)) lenv ->
-
-      (* * Conclusion * *)
-      (* Remove the binding of id from the local environment. *)
-      vseqfe ed dstate lenv (For id In e To e' Loop stmt) dstate (NatMap.remove id lenv)
-           
-(** Evaluates a falling edge block statement.  Contrary to [vseq] and
-    [vseqre], [vseqfe] evaluates falling edge blocks.  *)
-           
-| VSeqFEFalling :
-    forall {stmt dstate' lenv'},
-      (* * Premises * *)
-      vseqfe ed dstate lenv stmt dstate' lenv' ->
-
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (ss_falling stmt) dstate' lenv'
-
-(** Evaluates a rising edge block statement (does nothing). *)
-                                   
-| VSeqFERising : forall {stmt}, vseqfe ed dstate lenv (ss_rising stmt) dstate lenv
-
-(** Evaluates a sequence of statements. *)
-
-| VSeqFESeq :
-    forall {stmt stmt' dstate' lenv' dstate'' lenv''},
-      
-      (* * Premises * *)
-      vseqfe ed dstate lenv stmt dstate' lenv' ->
-      vseqfe ed dstate' lenv' stmt dstate'' lenv'' ->
-
-      (* * Conclusion * *)
-      vseqfe ed dstate lenv (ss_seq stmt stmt') dstate'' lenv''.

@@ -1,6 +1,6 @@
 (** * Facts about the H-VHDL Transition Component *)
 
-Require Import common.NatMap.
+Require Import common.NMap.
 Require Import common.Coqlib.
 
 Require Import hvhdl.AbstractSyntax.

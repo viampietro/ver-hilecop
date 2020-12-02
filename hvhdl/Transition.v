@@ -11,7 +11,7 @@ Require Import SemanticalDomains.
 Require Import Petri.
 Require Import HVhdlTypes.
 
-Open Scope natset_scope.
+Open Scope nset_scope.
 Open Scope abss_scope.
 
 Local Definition i := local_var.

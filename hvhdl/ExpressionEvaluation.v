@@ -9,7 +9,7 @@ Require Import Environment.
 Require Import SemanticalDomains.
 Require Import HVhdlTypes.
 
-Import NatMap.
+Import NMap.
 Open Scope abss_scope.
 
 (** Defines the expression evaluation relation. 

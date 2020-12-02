@@ -4,8 +4,8 @@
     statements; used in the stabilization phases. *)
 
 Require Import Coqlib.
-Require Import NatMap.
-Require Import NatSet.
+Require Import NMap.
+Require Import NSet.
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SSEvaluation.
@@ -15,35 +15,35 @@ Require Import PortMapEvaluation.
     concurrent statements.
  *)
 
-Inductive vcomb (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
+Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a stable process (no event are related to signals of the
     process sensitivity list). *)
 
 | VCombStablePs :
-    forall {pid sl vars stmt},
+    forall pid sl vars stmt,
       
       (* * Side conditions * *)
-      NatSet.Equal (NatSet.inter sl (events dstate)) NatSet.empty -> (* sl ∩ E = ∅ *)
+      NSet.Equal (NSet.inter sl (events σ)) NSet.empty -> (* sl ∩ E = ∅ *)
       
       (* * Conclusion * *)
-      vcomb ed dstate (cs_ps pid sl vars stmt) (NoEvDState dstate)
+      vcomb Δ σ (cs_ps pid sl vars stmt) (NoEvDState σ)
             
 (** Evaluates an unstable process (signals of the process sensitivity
     list generated events). Then, the process body is evaluated. *)
 
 | VCombUnstablePs :
-    forall {pid sl vars stmt lenv dstate' lenv'},
+    forall pid sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq ed (NoEvDState dstate) lenv stmt dstate' lenv' ->
+      vseq Δ (NoEvDState σ) Λ stab stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      NatSet.Equal (NatSet.inter sl (events dstate)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
-      NatMap.MapsTo pid (Process lenv) ed ->         (* pid ∈ Δ and Δ(pid) = Λ *)
+      NSet.Equal (NSet.inter sl (events σ)) NSet.empty -> (* sl ∩ E ≠ ∅ *)
+      NMap.MapsTo pid (Process Λ) Δ ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
-      vcomb ed dstate (cs_ps pid sl vars stmt) dstate'
+      vcomb Δ σ (cs_ps pid sl vars stmt) σ'
 
 (** Evaluates a component instance. The new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -53,28 +53,28 @@ Inductive vcomb (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 | VCombCompEvents :
     forall {compid entid gmap ipmap opmap cstmt
-                   cenv cstate cstate' cstate'' dstate'},
+                   cenv cstate cstate' cstate'' σ'},
       
       (* * Premises * *)
-      mapip ed cenv dstate cstate ipmap cstate' ->
+      mapip Δ cenv σ cstate ipmap cstate' ->
       vcomb cenv cstate' cstmt cstate'' ->
-      mapop ed cenv dstate cstate'' opmap dstate' ->
+      mapop Δ cenv σ cstate'' opmap σ' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) ed ->
+      NMap.MapsTo compid (Component cenv cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore dstate) ->
+      NMap.MapsTo compid cstate (compstore σ) ->
 
       (* Events registered in cstate''. *)
-      NatSet.Equal (events cstate'') NatSet.empty ->
+      NSet.Equal (events cstate'') NSet.empty ->
       
       (* * Conclusion * *)
-      (* Add compid to the events field of dstate' because compid
+      (* Add compid to the events field of σ' because compid
          registered some events in its internal state. *)
-      vcomb ed dstate (cs_comp compid entid gmap ipmap opmap) (events_add compid dstate')
+      vcomb Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
 
 (** Evaluates a component instance. The new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -82,48 +82,52 @@ Inductive vcomb (ed : ElDesign) (dstate : DState) : cs -> DState -> Prop :=
 
 | VCombCompNoEvent :
     forall {compid entid gmap ipmap opmap cstmt
-                   cenv cstate cstate' cstate'' dstate'},
+                   cenv cstate cstate' cstate'' σ'},
       
       (* * Premises * *)
-      mapip ed cenv dstate cstate ipmap cstate' ->
+      mapip Δ cenv σ cstate ipmap cstate' ->
       vcomb cenv cstate' cstmt cstate'' ->
-      mapop ed cenv dstate cstate'' opmap dstate' ->
+      mapop Δ cenv σ cstate'' opmap σ' ->
       
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) ed ->
+      NMap.MapsTo compid (Component cenv cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore dstate) ->
+      NMap.MapsTo compid cstate (compstore σ) ->
 
       (* No event registered in cstate''. *)
-      NatSet.Equal (events cstate'') NatSet.empty ->
+      NSet.Equal (events cstate'') NSet.empty ->
       
       (* * Conclusion * *)
-      vcomb ed dstate (cs_comp compid entid gmap ipmap opmap) dstate'
+      vcomb Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
+(** Evaluates the null concurrent statement. *)
+
+| VCombNull : vcomb Δ σ cs_null σ 
+            
 (** Evaluates the parallel execution of two combinational concurrent
     statements.  *)
             
 | VCombPar :
-    forall {cstmt cstmt' dstate' dstate'' merged},
+    forall {cstmt cstmt' σ' σ'' merged},
 
       (* * Premises * *)
-      vcomb ed dstate cstmt dstate' ->
-      vcomb ed dstate cstmt' dstate'' ->
+      vcomb Δ σ cstmt σ' ->
+      vcomb Δ σ cstmt' σ'' ->
 
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NatSet.Equal (NatSet.inter (events dstate') (events dstate'')) NatSet.empty ->
+      NSet.Equal (NSet.inter (events σ') (events σ'')) NSet.empty ->
 
       (* States that merged is the result of the merging 
-         of states dstate, dstate' and dstate''. *)
-      IsMergedDState dstate dstate' dstate'' merged ->
+         of states σ, σ' and σ''. *)
+      IsMergedDState σ σ' σ'' merged ->
       
       (* * Conclusion * *)
-      vcomb ed dstate (cs_par cstmt cstmt') merged.
+      vcomb Δ σ (cs_par cstmt cstmt') merged.
 
 (** ** Facts about [vcomb] *)
 
@@ -147,13 +151,16 @@ Proof.
   (* CASE behavior is a quiescent component *)
   - admit.
 
+  (* CASE null statement. *)
+  - exists σ__id; assumption.
+    
   (* CASE behavior is a sequence of concurrent statements. *)
     
   - unfold IsMergedDState in H2.
     apply proj2, proj1 in H2.
     unfold MapsTo.
     unfold EqualDom in H2.
-    unfold common.NatMap.In, common.NatMap.Raw.PX.In in H2.
+    unfold common.NMap.In, common.NMap.Raw.PX.In in H2.
     rewrite <- (H2 id).
     exists σ__id. assumption.
     

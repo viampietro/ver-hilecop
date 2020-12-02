@@ -7,8 +7,8 @@
  *)
 
 Require Import Coqlib.
-Require Import NatMap.
-Require Import NatSet.
+Require Import NMap.
+Require Import NSet.
 Require Import Environment.
 Require Import AbstractSyntax.
 Require Import CombinationalEvaluation.
@@ -23,7 +23,7 @@ Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState 
 
 | StabilizeEnd :
     (* * Side conditions * *)
-    events σ = NatSet.empty ->
+    events σ = NSet.empty ->
     
     (* * Conclusion * *)
     stabilize Δ σ behavior [] σ 
@@ -44,10 +44,10 @@ Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState 
       (* * Side conditions * *)
       
       (* Some events are registered in σ. *)
-      events σ <> NatSet.empty ->
+      events σ <> NSet.empty ->
 
       (* σ'' is a quiet state (i.e, no events) *)
-      events σ'' = NatSet.empty ->
+      events σ'' = NSet.empty ->
       
       (* * Conclusion * *)
       stabilize Δ σ behavior (σ' :: θ) σ''.

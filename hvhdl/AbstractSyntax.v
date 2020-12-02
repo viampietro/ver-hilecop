@@ -31,7 +31,7 @@ Inductive binop : Set :=
  *)
 
 Inductive expr : Type :=
-| e_nat : nat -> expr (** Natural constant *)
+| e_nat : N -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
 | e_name : name -> expr (** Name constant *)
 | e_aggreg : agofexprs -> expr (** Aggregate of expressions *)
@@ -52,7 +52,7 @@ with name : Type :=
 
 (** Notations and coercions for names. *)
 
-Notation " $ x " := (n_id x) (at level 100) : abss_scope.
+Notation " '$' x " := (n_id x) (at level 100) : abss_scope.
 Notation " x $[[ i ]] " := (n_xid x i) (at level 100) : abss_scope.
 
 Coercion n_id : ident >-> name.
@@ -76,7 +76,7 @@ Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : abss_scope.
 Notation " x @|| y @|| .. @|| z " := (e_binop bo_or .. (e_binop bo_or x y) .. z) (at level 100) : abss_scope.
 Notation " x @&& y @&& .. @&& z " := (e_binop bo_and .. (e_binop bo_and x y) .. z) (at level 100) : abss_scope.
 
-Coercion e_nat : nat >-> expr.
+Coercion e_nat : N >-> expr.
 Coercion e_bool : bool >-> expr.
 
 (** Converts an aggregate of expressions into a list. *)
@@ -172,11 +172,18 @@ Inductive associp : Type :=
 
 Definition inputmap := list associp.
 
-(** Port map entry ("out" mode port). *)
+(** Port map entry ("out" mode port). 
+    [None] represents the [open] port keyword
+    in the actual part of the output port association.
+
+    We forbid the association of an indexed formal part
+    with the open keyword, i.e:
+    "myport(0) ⇒ open"
+ *)
 
 Inductive assocop : Type :=
-  (** None for the "open" keyword. *)
-  assocop_ (n : name) (n' : option name). 
+| assocop_simpl :  ident -> option name -> assocop
+| assocop_idx   : ident -> expr -> name -> assocop. 
 
 (** Type of output port map. *)
 

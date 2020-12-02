@@ -133,49 +133,31 @@ Inductive listopm (ed cenv : ElDesign) (formals actuals : list (ident * option v
 with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value)) :
   assocop -> list (ident * option value) -> list (ident * option value) -> Prop :=
 
-(** Checks an "out" port map association of the form "idf => ida", where 
-    the actual part refers to a declared signal identifier.
- *)
-| EAssocopSimpleToSimpleDecl :
-    forall {idf ida t},
+(** Checks an "out" port map association of the form "idf => ida",
+    where [ida] refers to a declared signal or an output port
+    identifier of the embedding elaborated design.  *)
+| EAssocopSimpleToSimple :
+    forall idf ida t,
       
       (* Side conditions *)
-      (forall {optv}, ~List.In (idf, optv) formals) -> 
-      (forall {optv}, ~List.In (ida, optv) actuals) ->
+      (forall optv, ~List.In (idf, optv) formals) -> 
+      (forall optv, ~List.In (ida, optv) actuals) ->
 
       (* idf and ida have the same type. *)
-      MapsTo idf (Output t) cenv ->
-      MapsTo ida (Declared t) ed ->
+      MapsTo idf (Output t) cenv -> (* [idf ∈ Outs(Δ__c)] *)
+      (* [ida ∈ Sigs(Δ) ∪ Outs(Δ)] *)
+      MapsTo ida (Declared t) ed \/ MapsTo ida (Output t) ed ->
 
       (* Conclusion *)
       eassocop ed cenv formals actuals
-               (assocop_ (n_id idf) (Some (n_id ida)))
-               (formals ++ [(idf, None)]) (actuals ++ [(ida, None)])
-
-(** Checks an "out" port map association of the form "idf => ida", where 
-    the actual part refers to an output port identifier.
- *)
-| EAssocopSimpleToSimpleOut :
-    forall {idf ida t},
-      
-      (* Side conditions *)
-      (forall {optv}, ~List.In (idf, optv) formals) -> 
-      (forall {optv}, ~List.In (ida, optv) actuals) ->
-
-      (* idf and ida have the same type. *)
-      MapsTo idf (Output t) cenv ->
-      MapsTo ida (Output t) ed ->
-
-      (* Conclusion *)
-      eassocop ed cenv formals actuals
-               (assocop_ (n_id idf) (Some (n_id ida)))
+               (assocop_simpl idf (Some (n_id ida)))
                (formals ++ [(idf, None)]) (actuals ++ [(ida, None)])
 
 (** Checks an "out" port map association of the form "idf => ida(ei)", where 
     the actual part refers to a declared signal identifier.
  *)
-| EAssocopSimpleToPartialDecl :
-    forall {idf ida ei vi t l u},
+| EAssocopSimpleToPartial :
+    forall idf ida ei vi t l u,
 
       (* Premises *)
       is_gstatic_expr ed ei ->
@@ -183,80 +165,36 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
       is_of_type vi (Tnat l u) ->
       
       (* Side conditions *)
-      (forall {optv}, ~List.In (idf, optv) formals) -> 
+      (forall optv, ~List.In (idf, optv) formals) -> 
       ~List.In (ida, None) actuals ->
       ~List.In (ida, Some vi) actuals ->
 
       (* idf and ida(ei) have the same type. *)
       MapsTo idf (Output t) cenv ->
-      MapsTo ida (Declared (Tarray t l u)) ed ->
+      MapsTo ida (Declared (Tarray t l u)) ed \/ MapsTo ida (Output (Tarray t l u)) ed ->
 
       (* Conclusion *)
       eassocop ed cenv formals actuals
-               (assocop_ (n_id idf) (Some (n_xid ida ei)))
-               (formals ++ [(idf, None)]) (actuals ++ [(ida, Some vi)])
-
-(** Checks an "out" port map association of the form "idf => ida(ei)", where 
-    the actual part refers to a declared signal identifier.
- *)
-| EAssocopSimpleToPartialOut :
-    forall {idf ida ei vi t l u},
-
-      (* Premises *)
-      is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv false ei vi ->
-      is_of_type vi (Tnat l u) ->
-      
-      (* Side conditions *)
-      (forall {optv}, ~List.In (idf, optv) formals) -> 
-      ~List.In (ida, None) actuals ->
-      ~List.In (ida, Some vi) actuals ->
-
-      (* idf and ida(ei) have the same type. *)
-      MapsTo idf (Output t) cenv ->
-      MapsTo ida (Output (Tarray t l u)) ed ->
-
-      (* Conclusion *)
-      eassocop ed cenv formals actuals
-               (assocop_ (n_id idf) (Some (n_xid ida ei)))
+               (assocop_simpl idf (Some (n_xid ida ei)))
                (formals ++ [(idf, None)]) (actuals ++ [(ida, Some vi)])
 
 (** Checks an "out" port map association of the form "idf => open". *)
 | EAssocopSimpleToOpen :
-    forall {idf t},
+    forall idf t,
       
       (* Side conditions *)
-      (forall {optv}, ~List.In (idf, optv) formals) -> 
+      (forall optv, ~List.In (idf, optv) formals) -> 
       MapsTo idf (Output t) cenv ->
 
       (* Conclusion *)
       eassocop ed cenv formals actuals
-               (assocop_ (n_id idf) None)
+               (assocop_simpl idf None)
                (formals ++ [(idf,None)]) actuals
 
-(** Checks an "out" port map association of the form "idf(ei) => open". *)
-| EAssocopPartialToOpen :
-    forall {idf ei vi t l u},
-
-      (* Premises *)
-      is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv false ei vi ->
-      is_of_type vi (Tnat l u) ->
-      
-      (* Side conditions *)
-      ~List.In (idf, None) formals ->
-      ~List.In (idf, Some vi) formals ->
-      MapsTo idf (Output (Tarray t l u)) cenv ->
-
-      (* Conclusion *)
-      eassocop ed cenv formals actuals
-               (assocop_ (n_xid idf ei) None)
-               (formals ++ [(idf, Some vi)]) actuals
-
 (** Checks an "out" port map association of the form "idf(ei) => ida",
-    where ida refers to a declared signal identifier. *)
-| EAssocopPartialToSimpleDecl :
-    forall {idf ei ida vi t l u},
+    where [ida] refers to a declared signal or an output port identifier. *)
+| EAssocopPartialToSimple :
+    forall idf ei ida vi t l u,
 
       (* Premises *)
       is_gstatic_expr ed ei ->
@@ -266,39 +204,17 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
       (* Side conditions *)
       ~List.In (idf, None) formals ->
       ~List.In (idf, Some vi) formals ->
-      (forall {optv}, ~List.In (ida, optv) actuals) ->
+      (forall optv, ~List.In (ida, optv) actuals) ->
       MapsTo idf (Output (Tarray t l u)) cenv ->
-      MapsTo ida (Declared t) ed ->
+      MapsTo ida (Declared t) ed \/ MapsTo ida (Output t) ed ->
 
       (* Conclusion *)
       eassocop ed cenv formals actuals
-               (assocop_ (n_xid idf ei) (Some (n_id ida)))
-               (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, None)])
-
-(** Checks an "out" port map association of the form "idf(ei) => ida",
-    where ida refers to an output port identifier. *)
-| EAssocopPartialToSimpleOut :
-    forall {idf ei ida vi t l u},
-
-      (* Premises *)
-      is_gstatic_expr ed ei ->
-      vexpr ed EmptyDState EmptyLEnv false ei vi ->
-      is_of_type vi (Tnat l u) ->
-      
-      (* Side conditions *)
-      ~List.In (idf, None) formals ->
-      ~List.In (idf, Some vi) formals ->
-      (forall {optv}, ~List.In (ida, optv) actuals) ->
-      MapsTo idf (Output (Tarray t l u)) cenv ->
-      MapsTo ida (Output t) ed ->
-
-      (* Conclusion *)
-      eassocop ed cenv formals actuals
-               (assocop_ (n_xid idf ei) (Some (n_id ida)))
+               (assocop_idx idf ei ($ida))
                (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, None)])
                
 (** Checks an "out" port map association of the form "idf(ei) => ida(ei')",
-    where ida refers to a declared signal identifier. *)
+    where [ida] refers to a declared signal or an output port identifier. *)
 | EAssocopPartialToPartialDecl :
     forall {idf ei ida ei' vi vi' t l u l' u'},
 
@@ -316,37 +232,11 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
       ~List.In (ida, None) actuals ->
       ~List.In (ida, Some vi') actuals ->
       MapsTo idf (Output (Tarray t l u)) cenv ->
-      MapsTo ida (Declared (Tarray t l' u')) ed ->
+      MapsTo ida (Declared (Tarray t l' u')) ed \/ MapsTo ida (Output (Tarray t l' u')) ed ->
 
       (* Conclusion *)
       eassocop ed cenv formals actuals
-               (assocop_ (n_xid idf ei) (Some (n_xid ida ei')))
-               (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, Some vi')])
-               
-(** Checks an "out" port map association of the form "idf(ei) => ida(ei')",
-    where ida refers to an output port identifier. *)
-| EAssocopPartialToPartialOut :
-    forall {idf ei ida ei' vi vi' t l u l' u'},
-
-      (* Premises *)
-      is_gstatic_expr ed ei ->
-      is_gstatic_expr ed ei' ->
-      vexpr ed EmptyDState EmptyLEnv false ei vi ->
-      vexpr ed EmptyDState EmptyLEnv false ei' vi' ->
-      is_of_type vi (Tnat l u) ->
-      is_of_type vi' (Tnat l' u') ->
-      
-      (* Side conditions *)
-      ~List.In (idf, None) formals ->
-      ~List.In (idf, Some vi) formals ->
-      ~List.In (ida, None) actuals ->
-      ~List.In (ida, Some vi') actuals ->
-      MapsTo idf (Output (Tarray t l u)) cenv ->
-      MapsTo ida (Output (Tarray t l' u')) ed ->
-
-      (* Conclusion *)
-      eassocop ed cenv formals actuals
-               (assocop_ (n_xid idf ei) (Some (n_xid ida ei')))
+               (assocop_idx idf ei (ida$[[ei']]))
                (formals ++ [(idf, Some vi)]) (actuals ++ [(ida, Some vi')]).
 
 (** Defines the relation that checks the validity of an "out" port
@@ -354,7 +244,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 
 Inductive validopm (ed cenv : ElDesign) (opmap : list assocop) : Prop :=
 | ValidOPM :
-    forall {formals actuals},
+    forall formals actuals,
       listopm ed cenv [] [] opmap formals actuals ->
       validopm ed cenv opmap.
     

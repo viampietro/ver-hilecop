@@ -6,10 +6,11 @@ Require Import Coqlib.
 Require Import ListsPlus.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
-Require Import SemanticalDomains.
-Require Import HVhdlTypes.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.HVhdlTypes.
 
-Open Scope natset_scope.
+Open Scope nset_scope.
+Open Scope N_scope.
 
 (** Defines the design environment describing H-VHDL design instances
     in the semantical world. The design environment maps identifiers
@@ -20,7 +21,8 @@ Open Scope natset_scope.
 (** Definition of the [dom] function that yields a list of identifiers
     corresponding to the definition domain of an IdMap. *)
 
-Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
+Definition EqualDom {A} (m m' : t A) : Prop := forall (k : N), NMap.In k m <-> NMap.In k m'.
+Definition dom {A : Type} (f : IdMap A) : list ident := fs (elements f).
 
 (** Defines the relation stating that a set [idset] is the
     differentiated intersection of two maps [m] and [m'] mapping
@@ -31,8 +33,8 @@ Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
  *)
 
 Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
-  (forall id, NatSet.In id idset -> forall v v', MapsTo id v m -> MapsTo id v' m' -> ~VEq v v') /\
-  (forall id v v', (MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') -> NatSet.In id idset).
+  (forall id, NSet.In id idset -> forall v v', MapsTo id v m -> MapsTo id v' m' -> ~VEq v v') /\
+  (forall id v v', (MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') -> NSet.In id idset).
 
 (** Defines the relation stating that a map [ovunion] results of the
     overriding union of two maps [ovridden] and [ovriding].
@@ -47,7 +49,7 @@ Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
 Definition IsOverrUnion (ovridden ovriding ovunion : IdMap value) :=
   EqualDom ovridden ovunion /\
   (forall {id v}, MapsTo id v ovriding -> MapsTo id v ovunion) /\
-  (forall {id v}, ~NatMap.In id ovriding -> MapsTo id v ovridden -> MapsTo id v ovunion).
+  (forall {id v}, ~NMap.In id ovriding -> MapsTo id v ovridden -> MapsTo id v ovunion).
 
 (** Defines a local environment of a process
     as a map from id to couples (type * value).
@@ -57,7 +59,7 @@ Definition LEnv := IdMap (type * value).
 
 (** Defines an empty local environment. *)
 
-Definition EmptyLEnv := NatMap.empty (type * value).
+Definition EmptyLEnv := NMap.empty (type * value).
 
 (* Needed because [SemanticalObject] as a recurvise definition that
    does not respect the strict positivity requirement.
@@ -88,7 +90,7 @@ Definition ElDesign := IdMap SemanticalObject.
 
 (** Defines an empty design environment. *)
 
-Definition EmptyElDesign := NatMap.empty SemanticalObject.
+Definition EmptyElDesign := NMap.empty SemanticalObject.
 
 (** Defines the structure of design state. *)
 
@@ -101,9 +103,9 @@ Inductive DState : Type :=
 
 (** Defines an empty design state. *)
 
-Definition EmptyDState := MkDState (NatMap.empty value)
-                                   (NatMap.empty DState)
-                                   (NatSet.empty).
+Definition EmptyDState := MkDState (NMap.empty value)
+                                   (NMap.empty DState)
+                                   (NSet.empty).
 
 (** Returns a DState with an empty event set, i.e, a record
     <S,C,∅>. *)
@@ -111,20 +113,20 @@ Definition EmptyDState := MkDState (NatMap.empty value)
 Definition NoEvDState (dstate : DState) :=
   MkDState (sigstore dstate)
            (compstore dstate)
-           (NatSet.empty).
+           (NSet.empty).
 
 (** Macro to add a new mapping id ⇒ value in the [sigstore] of the
     design state [dstate].  *)
 
 Definition sstore_add (id : ident) (v : value) (dstate : DState) : DState :=
-  MkDState (NatMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
+  MkDState (NMap.add id v (sigstore dstate)) (compstore dstate) (events dstate).
 
 (** Returns a new DState where identifier [id] has been added to
     the [events] field.
  *)
 
 Definition events_add (id : ident) (dstate : DState) :=
-  MkDState (sigstore dstate) (compstore dstate) (NatSet.add id (events dstate)).
+  MkDState (sigstore dstate) (compstore dstate) (NSet.add id (events dstate)).
 
 (** Defines the [InSStore] predicate that states that
     [id] is mapped in the [sigstore] of design state [dstate].
@@ -133,7 +135,7 @@ Definition events_add (id : ident) (dstate : DState) :=
  *)
 
 Definition InSStore (id : ident) (dstate : DState) :=
-  NatMap.In id (sigstore dstate).
+  NMap.In id (sigstore dstate).
 
 (** Predicate stating that a DState [merged] results from the
     interleaving of an origin DState [origin], and two DState
@@ -153,33 +155,33 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
   
   (* Describes the content of (sigstore merged) *)
 
-  (forall {id v}, NatSet.In id (events dstate') ->
-                  NatMap.MapsTo id v (sigstore dstate') ->
-                  NatMap.MapsTo id v (sigstore merged)) /\
-  (forall {id v}, NatSet.In id (events dstate'') ->
-                  NatMap.MapsTo id v (sigstore dstate'') ->
-                  NatMap.MapsTo id v (sigstore merged)) /\
+  (forall {id v}, NSet.In id (events dstate') ->
+                  NMap.MapsTo id v (sigstore dstate') ->
+                  NMap.MapsTo id v (sigstore merged)) /\
+  (forall {id v}, NSet.In id (events dstate'') ->
+                  NMap.MapsTo id v (sigstore dstate'') ->
+                  NMap.MapsTo id v (sigstore merged)) /\
   (forall {id v},
-      ~NatSet.In id ((events dstate') U (events dstate'')) ->
-      NatMap.MapsTo id v (sigstore origin) ->
-      NatMap.MapsTo id v (sigstore merged)) /\
+      ~NSet.In id ((events dstate') U (events dstate'')) ->
+      NMap.MapsTo id v (sigstore origin) ->
+      NMap.MapsTo id v (sigstore merged)) /\
 
   (* Describes the content of (compstore merged) *)
 
-  (forall {id cstate}, NatSet.In id (events dstate') ->
-                       NatMap.MapsTo id cstate (compstore dstate') ->
-                       NatMap.MapsTo id cstate (compstore merged)) /\
-  (forall {id cstate}, NatSet.In id (events dstate'') ->
-                       NatMap.MapsTo id cstate (compstore dstate'') ->
-                       NatMap.MapsTo id cstate (compstore merged)) /\
+  (forall {id cstate}, NSet.In id (events dstate') ->
+                       NMap.MapsTo id cstate (compstore dstate') ->
+                       NMap.MapsTo id cstate (compstore merged)) /\
+  (forall {id cstate}, NSet.In id (events dstate'') ->
+                       NMap.MapsTo id cstate (compstore dstate'') ->
+                       NMap.MapsTo id cstate (compstore merged)) /\
   (forall {id cstate},
-      ~NatSet.In id ((events dstate') U (events dstate'')) ->
-      NatMap.MapsTo id cstate (compstore origin) ->
-      NatMap.MapsTo id cstate (compstore merged)) /\
+      ~NSet.In id ((events dstate') U (events dstate'')) ->
+      NMap.MapsTo id cstate (compstore origin) ->
+      NMap.MapsTo id cstate (compstore merged)) /\
 
   (* Describes the content of (events merged) *)
   
-  NatSet.Equal (events merged) ((events dstate') U (events dstate'')).
+  NSet.Equal (events merged) ((events dstate') U (events dstate'')).
 
 (** Defines the relation stating that a design state [injected] is the
     result of the "injection" of the values of map [m] in the
@@ -188,6 +190,6 @@ Definition IsMergedDState (origin dstate' dstate'' merged : DState) : Prop :=
 Definition IsInjectedDState (origin : DState) (m : IdMap value) (injected : DState) : Prop :=
   IsOverrUnion (sigstore origin) m (sigstore injected) /\
   forall {idset}, IsDiffInter (sigstore origin) m idset ->
-                  NatSet.Equal (events injected) ((events origin) U idset).
+                  NSet.Equal (events injected) ((events origin) U idset).
 
 

@@ -21,7 +21,7 @@ Require Import Stabilize.
 Require Import SemanticalDomains.
 Require Import GlobalTypes.
 Require Import Petri.
-Require Import NatSet.
+Require Import NSet.
 
 (** Defines the [runinit] relation that computes all concurrent
     statements once, regardless of sensitivity lists or events on
@@ -33,15 +33,15 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     sensitivity list. *)
 
 | VRunInitPs :
-    forall {pid sl vars stmt Λ σ' Λ'},
+    forall pid sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ Λ stmt σ' Λ' ->
+      vseq Δ σ Λ stab stmt σ' Λ' ->
       
       (* * Side conditions * *)
       
       (* Process id maps to the local environment Λ in elaborated design Δ *)
-      NatMap.MapsTo pid (Process Λ) Δ ->
+      NMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
       vruninit Δ σ (cs_ps pid sl vars stmt) σ'
@@ -70,13 +70,13 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δc, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = σc *)
-      NatMap.MapsTo compid σ__c (compstore σ) ->
+      NMap.MapsTo compid σ__c (compstore σ) ->
 
       (* Events registered in σc''. *)
-      events σ__c'' <> NatSet.empty ->
+      events σ__c'' <> NSet.empty ->
       
       (* * Conclusion * *)
       
@@ -101,17 +101,21 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = \sigma__c *)
-      NatMap.MapsTo compid σ__c (compstore σ) ->
+      NMap.MapsTo compid σ__c (compstore σ) ->
 
       (* No event registered in \sigma__c''. *)
-      events σ__c'' = NatSet.empty ->
+      events σ__c'' = NSet.empty ->
       
       (* * Conclusion * *)
       vruninit Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
+(** Evaluates the null concurrent statement.  *)
+
+| VRunInitNull : vruninit Δ σ cs_null σ
+                          
 (** Evaluates the parallel execution of two concurrent
     statements computed with the [runinit] relation.  *)
                
@@ -125,7 +129,7 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NatSet.inter (events σ') (events σ'') = NatSet.empty ->
+      NSet.inter (events σ') (events σ'') = NSet.empty ->
 
       (* States that merged is the result of the merging 
          of states \sigma, \sigma' and \sigma''. *)
@@ -140,7 +144,7 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 Inductive init (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
-    forall {σ behavior σ' σ'' θ},
+    forall σ behavior σ' σ'' θ,
 
       (* * Premises * *)
 

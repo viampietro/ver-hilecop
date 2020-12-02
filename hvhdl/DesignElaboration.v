@@ -20,7 +20,7 @@ Require Import ArchitectureElaboration.
 Require Import ValidPortMap.
 Require Import HVhdlTypes.
 
-Import NatMap.
+Import NMap.
 
 (** ** Process elaboration. *)
 
@@ -49,8 +49,8 @@ with evar (ed : ElDesign) (lenv : LEnv) : vdecl -> LEnv -> Prop :=
       defaultv t v ->
 
       (* Side conditions *)
-      ~NatMap.In id lenv ->            (* id ∉ Λ *)
-      ~NatMap.In id ed ->            (* id ∉ Δ *)
+      ~NMap.In id lenv ->            (* id ∉ Λ *)
+      ~NMap.In id ed ->            (* id ∉ Δ *)
 
       (* Conclusion *)
       evar ed lenv (vdecl_ id tau) (add id (t, v) lenv).
@@ -85,7 +85,7 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
 
       (* Side conditions *)
-      ~NatMap.In id dimen ->
+      ~NMap.In id dimen ->
 
       (* Conclusion *)
       eassocg dimen (assocg_ id e) (add id v dimen).
@@ -123,14 +123,14 @@ with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DSta
       validss ed dstate lenv stmt ->
 
       (* Side conditions *)
-      ~NatMap.In id ed ->
+      ~NMap.In id ed ->
       (* sl ⊆ Ins(Δ) ∪ Sigs(Δ) *)
       (forall {s},
-          NatSet.In s sl ->
+          NSet.In s sl ->
           exists {t}, MapsTo s (Declared t) ed \/ MapsTo s (Input t) ed) ->
 
       (* Conclusion *)
-      ebeh dstore ed dstate (cs_ps id sl vars stmt) (NatMap.add id (Process lenv) ed) dstate
+      ebeh dstore ed dstate (cs_ps id sl vars stmt) (NMap.add id (Process lenv) ed) dstate
 
 (** Elaborates and type-checks a component instantiation statement. *)
 | EBehComp :
@@ -139,7 +139,7 @@ with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DSta
                  dimen cenv cstate cdesign},
 
       (* Premises *)
-      emapg (NatMap.empty value) gmap dimen ->
+      emapg (NMap.empty value) gmap dimen ->
       edesign dstore dimen cdesign cenv cstate ->
       validipm ed cenv dstate ipmap ->
       validopm ed cenv opmap ->
@@ -147,7 +147,7 @@ with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DSta
       (* Side conditions *)
       cdesign = design_ entid archid gens ports adecls behavior ->
       MapsTo ide cdesign dstore ->
-      (forall {g}, NatMap.In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
+      (forall {g}, NMap.In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
       
       (* Conclusion *)
       ebeh dstore ed dstate (cs_comp idc ide gmap ipmap opmap) ed dstate.

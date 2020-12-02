@@ -6,7 +6,7 @@ Require Import Environment.
 Require Import ExpressionEvaluation.
 Require Import SemanticalDomains.
 
-Import NatMap.
+Import NMap.
 
 (** Defines the validss predicate that states the well-formedness and
     well-typedness of sequential statements in an H-VHDL program. *)

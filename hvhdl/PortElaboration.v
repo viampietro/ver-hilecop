@@ -15,7 +15,7 @@ Require Import ExpressionEvaluation.
 Require Import TypeElaboration.
 Require Import DefaultValue.
 
-Import NatMap.
+Import NMap.
 
 (** The port elaboration relation. *)
 
@@ -43,7 +43,7 @@ with eport (ed : ElDesign) (dstate : DState) : pdecl -> ElDesign -> DState -> Pr
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NatMap.In id ed ->           (* id ∉ Δ *)
+      ~NMap.In id ed ->           (* id ∉ Δ *)
       ~InSStore id dstate -> (* id ∉ σ *)
 
       (* Conclusion *)
@@ -58,7 +58,7 @@ with eport (ed : ElDesign) (dstate : DState) : pdecl -> ElDesign -> DState -> Pr
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NatMap.In id ed ->           (* id ∉ Δ *)
+      ~NMap.In id ed ->           (* id ∉ Δ *)
       ~InSStore id dstate -> (* id ∉ σ *)
 
       (* Conclusion *)

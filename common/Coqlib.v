@@ -10,4 +10,4 @@ Require Export Coq.Program.Equality.
 Require Export Omega.
 Require Export FunInd.
 Require Export Permutation.
-
+Require Export NArith.
