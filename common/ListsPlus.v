@@ -7,7 +7,7 @@ Require Import Coqlib.
 Require Import Omega.
 Require Import Classical_Prop.
 Require Import GlobalTypes.
-
+Require Import SetoidList.
 Require Export FstSplit.
 Require Export InAndNoDup.
 
@@ -20,6 +20,13 @@ Section ListPlusMisc.
   Variable A : Type.
   
   Definition is_empty (l : list A) : bool := if l then true else false.
+
+  (* Given that the equality between elements of type A is
+         decidable, computes the intersection between two lists of
+         As. *)
+
+  Definition inter (eq : A -> A -> Prop) (Aeqdec : forall x y : A, {eq x y} + {~eq x y}) (l m : list A) :=
+    filter (fun a => if InA_dec Aeqdec a m then true else false) l. 
   
 End ListPlusMisc.
 

@@ -1,5 +1,8 @@
 (** * Types of Sitpn information structures. *)
 
+Require Import common.Coqlib.
+Require Import common.ListsPlus.
+Require Import common.GlobalFacts.
 Require Import dp.Sitpn.
 Require Import SitpnTypes.
 Require Import GlobalTypes.
@@ -14,6 +17,7 @@ Section SitpnInfoTypes.
 
   Inductive PlaceInfo : Type :=
     MkPlaceInfo { tinputs : list (T sitpn);
+                  tconflict : list (T sitpn);
                   toutputs : list (T sitpn) }.
   
   (** Defines the type of TransInfo, gathering informations about a
@@ -33,6 +37,16 @@ Section SitpnInfoTypes.
         finfos : list (F sitpn * list (T sitpn));
       }.
 
+  (** ** Getters *)
+  
+  Definition get_tinfo (t : T sitpn) (sitpninfo : SitpnInfo) : option TransInfo :=
+    let check_t_in_tinfos := (fun params => let '(t', _) := params in
+                                            if seqdec Nat.eq_dec t t' then true else false) in
+    match find check_t_in_tinfos (tinfos sitpninfo) with
+    | Some (_, tinfo) => Some tinfo
+    | None => None
+    end.
+  
   (** ** Setters *)
   
   (* Adds a new place info entry to the pinfos list *)

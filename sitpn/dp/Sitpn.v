@@ -64,7 +64,7 @@ Record Sitpn  :=
        * For a given sitpn : Sitpn, and a transition t : Trans, 
        * Is sitpn t = None if no time interval
        * is associated with t in sitpn. *)
-      Is : T -> option StaticTimeInterval;
+      Is : T -> option TimeInterval;
 
       (* Finite sets of conditions, actions and functions. *)
       conditions : list nat;
