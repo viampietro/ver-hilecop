@@ -2,9 +2,8 @@
     syntactical and semantical part of H-VHDL. *)
 
 Require Import Coqlib.
-Require Export NMap.
-Require Export NSet.
-Require Import NArith.
+Require Export NatMap.
+Require Export NatSet.
 
 (** Defines the maximum value taken by a natural number
     in H-VHDL.
@@ -13,21 +12,21 @@ Require Import NArith.
     =~ 2147483647
  *)
 
-Definition NATMAX : N := 2147483647.
+Definition NATMAX : nat := 2147483647.
 
 (** Type of identifiers, defined as natural. *)
 
-Definition ident := N.
+Definition ident := nat.
 
-(** Defines IdMap ∈ ident → A, as NMap.
+(** Defines IdMap ∈ ident → A, as NatMap.
     
     Useful to implement partial functions of type ident → A as mutable
     structures (addition, removal, lookup of values). *)
 
-Definition IdMap (A : Type) := NMap.t A.
+Definition IdMap (A : Type) := NatMap.t A.
 
-(** Defines IdSet ≡ NSet.t *)
+(** Defines IdSet ≡ NatSet.t *)
 
-Definition IdSet := NSet.t.
+Definition IdSet := NatSet.t.
 
 

@@ -16,7 +16,7 @@ Require Import StaticExpressions.
 Require Import TypeElaboration.
 Require Import DefaultValue.
 
-Import NMap.
+Import NatMap.
 
 (** The architecture declarative part elaboration relation. *)
 
@@ -45,7 +45,7 @@ with edecl (ed : ElDesign) (dstate : DState)  : adecl -> ElDesign -> DState -> P
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NMap.In id ed -> (* id ∉ Δ *)
+      ~NatMap.In id ed -> (* id ∉ Δ *)
       ~InSStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)

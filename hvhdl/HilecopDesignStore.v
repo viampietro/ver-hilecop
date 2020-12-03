@@ -11,4 +11,4 @@ Require Import Transition.
 
 Definition hdstore : IdMap design :=
   (add transition_entid transition_design
-       (add place_entid place_design (NMap.empty design))).
+       (add place_entid place_design (NatMap.empty design))).

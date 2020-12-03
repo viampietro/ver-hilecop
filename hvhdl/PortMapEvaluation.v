@@ -8,8 +8,8 @@
 
 Require Import Coqlib.
 Require Import GlobalTypes.
-Require Import NSet.
-Require Import NMap.
+Require Import NatSet.
+Require Import NatMap.
 Require Import SemanticalDomains.
 Require Import Environment.
 Require Import AbstractSyntax.
@@ -52,12 +52,12 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       is_of_type newv t ->
 
       (* * Side conditions (where σc = <S,C,E>) * *)
-      NMap.MapsTo id (Input t) Δ__c ->         (* id ∈ Ins(Δc) and Δc(id) = t *)
-      NMap.MapsTo id currv (sigstore σ__c) -> (* id ∈ σc and σc(id) = v' *)
+      NatMap.MapsTo id (Input t) Δ__c ->         (* id ∈ Ins(Δc) and Δc(id) = t *)
+      NatMap.MapsTo id currv (sigstore σ__c) -> (* id ∈ σc and σc(id) = v' *)
 
       OVEq newv currv (Some false) -> (* new value <> current value *)
-      sigstore' = (NMap.add id newv (sigstore σ__c)) -> (* S' = S(id) ← v  *)
-      events' = (NSet.add id (events σ__c)) -> (* E' = E ∪ {id} *)
+      sigstore' = (NatMap.add id newv (sigstore σ__c)) -> (* S' = S(id) ← v  *)
+      events' = (NatSet.add id (events σ__c)) -> (* E' = E ∪ {id} *)
       
       (* * Conclusion * *)
       vassocip Δ Δ__c σ σ__c (associp_ ($id) e) (MkDState sigstore' (compstore σ__c) events')
@@ -75,8 +75,8 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       is_of_type newv t ->
 
       (* * Side conditions (where [σ__c = <S,C,E>]) * *)
-      NMap.MapsTo id (Input t) Δ__c ->        (* [id ∈ Ins(Δ__c) and Δ__c(id) = t] *)
-      NMap.MapsTo id currv (sigstore σ__c) -> (* [id ∈ σ__c and σ__c(id) = v'] *)
+      NatMap.MapsTo id (Input t) Δ__c ->        (* [id ∈ Ins(Δ__c) and Δ__c(id) = t] *)
+      NatMap.MapsTo id currv (sigstore σ__c) -> (* [id ∈ σ__c and σ__c(id) = v'] *)
 
       OVEq newv currv (Some true) -> (* new value = current value *)
             
@@ -103,14 +103,14 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       l <= i <= u ->
         
       (* * Side conditions * *)
-      NMap.MapsTo id (Input (Tarray t l u)) Δ__c -> (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
-      NMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
+      NatMap.MapsTo id (Input (Tarray t l u)) Δ__c -> (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
+      NatMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value ≠ current value *)
-      events' = NSet.add id (events σ) ->                     (* E' = E ∪ {id} *)
+      events' = NatSet.add id (events σ) ->                     (* E' = E ∪ {id} *)
       
       (* S' = S(id) ← set_at(v, i, aofv) *)
-      sigstore' = NMap.add id (Varr (set_at newv idx aofv idx_in_bounds)) (sigstore σ) ->
+      sigstore' = NatMap.add id (Varr (set_at newv idx aofv idx_in_bounds)) (sigstore σ) ->
       
       (* * Conclusion * *)
       vassocip Δ Δ__c σ σ__c (associp_ (id $[[ei]]) e) (MkDState sigstore' (compstore σ__c) events')
@@ -134,8 +134,8 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       l <= i <= u ->
       
       (* * Side conditions * *)
-      NMap.MapsTo id (Input (Tarray t l u)) Δ__c ->    (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
-      NMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
+      NatMap.MapsTo id (Input (Tarray t l u)) Δ__c ->    (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
+      NatMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some true) -> (* new value = current value *)
             
@@ -192,8 +192,8 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       MapsTo id__a currv (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
       
       OVEq newv currv (Some false) -> (* new value <> current value *)
-      sigstore' = NMap.add id__a newv (sigstore σ) -> (* S' = S(id) ← newv *)
-      events' = NSet.add id__a (events σ) -> (* E' = E ∪ {id} *)
+      sigstore' = NatMap.add id__a newv (sigstore σ) -> (* S' = S(id) ← newv *)
+      events' = NatSet.add id__a (events σ) -> (* E' = E ∪ {id} *)
       σ' = (MkDState sigstore' (compstore σ) events') -> (* σ' = <S',C,E'> *)
       
       (* * Conclusion * *)
@@ -248,11 +248,11 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       MapsTo id__a (Varr aofv) (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value <> current value *)
-      events' = NSet.add id__a (events σ) ->                    (* [E' = E ∪ {id__a}] *)
+      events' = NatSet.add id__a (events σ) ->                    (* [E' = E ∪ {id__a}] *)
       
       (* [S' = S(id__a) ← set_at(v, i, aofv)] *)
       set_at newv idx aofv idx_in_bounds = aofv' ->
-      sigstore' = NMap.add id__a (Varr aofv') (sigstore σ) ->
+      sigstore' = NatMap.add id__a (Varr aofv') (sigstore σ) ->
 
       (* σ' = <S',C,E'> *)
       σ' = MkDState sigstore' (compstore σ) events' ->
@@ -316,11 +316,11 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       MapsTo id__a (Varr aofv) (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value <> current value *)
-      events' = NSet.add id__a (events σ) ->                    (* [E' = E ∪ {id__a}] *)
+      events' = NatSet.add id__a (events σ) ->                    (* [E' = E ∪ {id__a}] *)
       
       (* [S' = S(id__a) ← set_at(v, i, aofv)] *)
       set_at newv idx aofv idx_in_bounds = aofv' ->
-      sigstore' = NMap.add id__a (Varr aofv') (sigstore σ) ->
+      sigstore' = NatMap.add id__a (Varr aofv') (sigstore σ) ->
 
       (* σ' = <S',C,E'> *)
       σ' = MkDState sigstore' (compstore σ) events' ->
@@ -379,8 +379,8 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       MapsTo id__a currv (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
       
       OVEq newv currv (Some false) -> (* new value <> current value *)
-      sigstore' = NMap.add id__a newv (sigstore σ) -> (* S' = S(id) ← newv *)
-      events' = NSet.add id__a (events σ) -> (* E' = E ∪ {id} *)
+      sigstore' = NatMap.add id__a newv (sigstore σ) -> (* S' = S(id) ← newv *)
+      events' = NatSet.add id__a (events σ) -> (* E' = E ∪ {id} *)
       σ' = (MkDState sigstore' (compstore σ) events') -> (* σ' = <S',C,E'> *)
       
       (* * Conclusion * *)

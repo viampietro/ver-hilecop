@@ -40,29 +40,29 @@ Coercion aofv2list : arrofvalues >-> list.
     than the list length.
  *)
 
-Fixpoint oget_at (i : nat) (aofv : arrofvalues) {struct i} : option value :=
+Fixpoint oget_at (i : nat) (aofv : arrofvalues) {struct aofv} : option value :=
   match i, aofv with
   (* Error, index out of bounds. *)
-  | (S _), Arr_one v => None
+  | S _, Arr_one v => None
   | 0, Arr_one v => Some v
   | 0, Arr_cons v aofv' => Some v
-  | (S j), Arr_cons a aofv' => oget_at j aofv'
+  | S j, Arr_cons a aofv' => oget_at j aofv'
   end.
 
 (** Given a proof that index [i] is strictly less than the size of
     arrofvalues [aofv], accesses the value at position [i] in [aofv].
  *)
 
-Fixpoint get_at (i : nat) (aofv : arrofvalues) {struct i} : i < length aofv -> value.
+Fixpoint get_at (i : nat) (aofv : arrofvalues) {struct aofv} : i < length aofv -> value.
   refine (
       match i, aofv with
       (* Error, index out of bounds. *)
-      | (S j) as i, Arr_one v => fun _ => _
+      | S _, Arr_one v => fun _ => _
       | 0, Arr_one v => fun _ => v
       | 0, Arr_cons v aofv' => fun pf => v
-      | (S j) as i, Arr_cons a aofv' => fun pf => get_at j aofv' _
+      | (S j), Arr_cons a aofv' => fun pf => get_at j aofv' _
       end);
-    [apply lt_pred in l; simpl in l; apply Nat.nlt_0_r in l; contradiction
+    [apply lt_S_n in l; apply Nat.nlt_0_r in l; contradiction
     | apply (lt_S_n j (length aofv') pf)].
 Defined.
 

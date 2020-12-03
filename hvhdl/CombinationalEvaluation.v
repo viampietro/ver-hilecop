@@ -4,8 +4,8 @@
     statements; used in the stabilization phases. *)
 
 Require Import Coqlib.
-Require Import NMap.
-Require Import NSet.
+Require Import NatMap.
+Require Import NatSet.
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import SSEvaluation.
@@ -24,7 +24,7 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall pid sl vars stmt,
       
       (* * Side conditions * *)
-      NSet.Equal (NSet.inter sl (events σ)) NSet.empty -> (* sl ∩ E = ∅ *)
+      NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E = ∅ *)
       
       (* * Conclusion * *)
       vcomb Δ σ (cs_ps pid sl vars stmt) (NoEvDState σ)
@@ -39,8 +39,8 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       vseq Δ (NoEvDState σ) Λ stab stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      NSet.Equal (NSet.inter sl (events σ)) NSet.empty -> (* sl ∩ E ≠ ∅ *)
-      NMap.MapsTo pid (Process Λ) Δ ->         (* pid ∈ Δ and Δ(pid) = Λ *)
+      NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
+      NatMap.MapsTo pid (Process Λ) Δ ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
       vcomb Δ σ (cs_ps pid sl vars stmt) σ'
@@ -63,13 +63,13 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NMap.MapsTo compid (Component cenv cstmt) Δ ->
+      NatMap.MapsTo compid (Component cenv cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
-      NMap.MapsTo compid cstate (compstore σ) ->
+      NatMap.MapsTo compid cstate (compstore σ) ->
 
       (* Events registered in cstate''. *)
-      NSet.Equal (events cstate'') NSet.empty ->
+      NatSet.Equal (events cstate'') NatSet.empty ->
       
       (* * Conclusion * *)
       (* Add compid to the events field of σ' because compid
@@ -92,13 +92,13 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NMap.MapsTo compid (Component cenv cstmt) Δ ->
+      NatMap.MapsTo compid (Component cenv cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = cstate *)
-      NMap.MapsTo compid cstate (compstore σ) ->
+      NatMap.MapsTo compid cstate (compstore σ) ->
 
       (* No event registered in cstate''. *)
-      NSet.Equal (events cstate'') NSet.empty ->
+      NatSet.Equal (events cstate'') NatSet.empty ->
       
       (* * Conclusion * *)
       vcomb Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
@@ -120,7 +120,7 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NSet.Equal (NSet.inter (events σ') (events σ'')) NSet.empty ->
+      NatSet.Equal (NatSet.inter (events σ') (events σ'')) NatSet.empty ->
 
       (* States that merged is the result of the merging 
          of states σ, σ' and σ''. *)
@@ -160,7 +160,7 @@ Proof.
     apply proj2, proj1 in H2.
     unfold MapsTo.
     unfold EqualDom in H2.
-    unfold common.NMap.In, common.NMap.Raw.PX.In in H2.
+    unfold common.NatMap.In, common.NatMap.Raw.PX.In in H2.
     rewrite <- (H2 id).
     exists σ__id. assumption.
     

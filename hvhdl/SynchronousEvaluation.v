@@ -14,7 +14,7 @@ Require Import PortMapEvaluation.
 Require Import GlobalTypes.
 Require Import SSEvaluation.
 Require Import Petri.
-Require Import NSet.
+Require Import NatSet.
 
 (** Defines the relation that evaluates concurrent statement in
     reaction to the rising edge event of the clock signal. *)
@@ -29,7 +29,7 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall {pid sl vars stmt},
       
       (* * Side conditions * *)
-      ~NSet.In clk sl ->
+      ~NatSet.In clk sl ->
       
       (* * Conclusion * *)
       vrising Δ σ (cs_ps pid sl vars stmt) σ
@@ -48,8 +48,8 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       vseq Δ σ Λ re stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      NSet.In clk sl ->
-      NMap.MapsTo pid (Process Λ) Δ ->
+      NatSet.In clk sl ->
+      NatMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
       vrising Δ σ (cs_ps pid sl vars stmt) σ'
@@ -72,13 +72,13 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = σ__c *)
-      NMap.MapsTo compid σ__c (compstore σ) ->
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
       (* Events registered in σ__c''. *)
-      events σ__c'' <> NSet.empty ->
+      events σ__c'' <> NatSet.empty ->
       
       (* * Conclusion * *)
       (* Add compid to the events field of σ' because compid
@@ -101,13 +101,13 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = σ__c *)
-      NMap.MapsTo compid σ__c (compstore σ) ->
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
       (* No event registered in σ__c''. *)
-      events σ__c'' = NSet.empty ->
+      events σ__c'' = NatSet.empty ->
       
       (* * Conclusion * *)
       vrising Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
@@ -129,7 +129,7 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NSet.inter (events σ') (events σ'') = NSet.empty ->
+      NatSet.inter (events σ') (events σ'') = NatSet.empty ->
 
       (* States that merged is the result of the merging 
          of states σ, σ' and σ''. *)
@@ -151,7 +151,7 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall pid sl vars stmt,
       
       (* * Side conditions * *)
-      ~NSet.In clk sl ->
+      ~NatSet.In clk sl ->
       
       (* * Conclusion * *)
       vfalling Δ σ (cs_ps pid sl vars stmt) σ
@@ -170,8 +170,8 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       vseq Δ σ Λ fe stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      NSet.In clk sl ->
-      NMap.MapsTo pid (Process Λ) Δ ->
+      NatSet.In clk sl ->
+      NatMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
       vfalling Δ σ (cs_ps pid sl vars stmt) σ'
@@ -194,13 +194,13 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = σ__c *)
-      NMap.MapsTo compid σ__c (compstore σ) ->
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
       (* Events registered in σ__c''. *)
-      events σ__c'' <> NSet.empty ->
+      events σ__c'' <> NatSet.empty ->
       
       (* * Conclusion * *)
       (* Add compid to the events field of σ' because compid
@@ -223,13 +223,13 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
 
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
       (* compid ∈ σ and σ(compid) = σ__c *)
-      NMap.MapsTo compid σ__c (compstore σ) ->
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
       (* No event registered in σ__c''. *)
-      events σ__c'' = NSet.empty ->
+      events σ__c'' = NatSet.empty ->
       
       (* * Conclusion * *)
       vfalling Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
@@ -251,7 +251,7 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* * Side conditions * *)
       
       (* E ∩ E' = ∅ ⇒ enforces the "no multiply-driven signals" condition. *)
-      NSet.inter (events σ') (events σ'') = NSet.empty ->
+      NatSet.inter (events σ') (events σ'') = NatSet.empty ->
 
       (* States that merged is the result of the merging 
          of states σ, σ' and σ''. *)

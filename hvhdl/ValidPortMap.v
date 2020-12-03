@@ -13,6 +13,8 @@ Require Import ExpressionEvaluation.
 Require Import StaticExpressions.
 Require Import HVhdlTypes.
 
+Local Open Scope nat_scope.
+
 (** ** Valid port map for "in" mode ports. *)
 
 (** Defines the relation that lists the connection of ports in a given

@@ -18,7 +18,7 @@ Require Import HVhdlTypes.
  *)
 
 Inductive is_lstatic_expr : expr -> Prop :=
-| IsLStaticNat (n : N) : is_lstatic_expr (e_nat n)
+| IsLStaticNat (n : nat) : is_lstatic_expr (e_nat n)
 | IsLStaticBool (b : bool) : is_lstatic_expr (e_bool b)
 | IsLStaticNot (e : expr) : is_lstatic_expr e -> is_lstatic_expr (e_not e)
 | IsLStaticBinOp (e e' : expr) (bop : binop) :

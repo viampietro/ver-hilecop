@@ -34,8 +34,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      (NMap.MapsTo id (Declared t) Δ \/ NMap.MapsTo id (Output t) Δ) -> 
-      NMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = currv *)
+      (NatMap.MapsTo id (Declared t) Δ \/ NatMap.MapsTo id (Output t) Δ) -> 
+      NatMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = currv *)
 
       (* new value <> current value, then an event must be registered on signal [id] *)
       OVEq newv currv (Some false) -> 
@@ -62,8 +62,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Side conditions * *)
 
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
-      (NMap.MapsTo id (Declared t) Δ \/ NMap.MapsTo id (Output t) Δ) ->
-      NMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = v' *)
+      (NatMap.MapsTo id (Declared t) Δ \/ NatMap.MapsTo id (Output t) Δ) ->
+      NatMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = v' *)
       OVEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
@@ -94,10 +94,10 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t,l,u) *)
-      (NMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NMap.MapsTo id (Output (Tarray t l u)) Δ) ->
+      (NatMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) ->
       
       (* id ∈ σ and σ(id) = currlofv *)
-      NMap.MapsTo id (Varr curraofv) (sigstore σ) ->
+      NatMap.MapsTo id (Varr curraofv) (sigstore σ) ->
 
       (* new value <> current value *)
       OVEq newv (get_at idx curraofv idx_in_bounds) (Some false) -> 
@@ -132,8 +132,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* Side conditions *)
       
       (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t,l,u) *)
-      (NMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NMap.MapsTo id (Output (Tarray t l u)) Δ) -> 
-      NMap.MapsTo id (Varr curraofv) (sigstore σ) -> (* id ∈ σ and σ(id) = curraofv *)
+      (NatMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) -> 
+      NatMap.MapsTo id (Varr curraofv) (sigstore σ) -> (* id ∈ σ and σ(id) = curraofv *)
 
       OVEq newv (get_at idx curraofv idx_in_bounds) (Some true) -> (* new value = current value *)
             
@@ -152,10 +152,10 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       is_of_type newv t ->
 
       (* * Side conditions * *)
-      NMap.MapsTo id (t, currv) Λ -> (* id ∈ Λ and Λ(id) = (t, currv) *)
+      NatMap.MapsTo id (t, currv) Λ -> (* id ∈ Λ and Λ(id) = (t, currv) *)
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag ($id @:= e) σ (NMap.add id (t, newv) Λ)
+      vseq Δ σ Λ flag ($id @:= e) σ (NatMap.add id (t, newv) Λ)
 
 (** Evaluates a variable assignment statement.
 
@@ -177,11 +177,11 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Side conditions * *)
       
       (* id ∈ Λ and Λ(id) = (array(t, l, u), curraofv) *)
-      NMap.MapsTo id (Tarray t l u, (Varr curraofv)) Λ ->
+      NatMap.MapsTo id (Tarray t l u, (Varr curraofv)) Λ ->
       set_at newv i curraofv idx_in_bounds = newaofv ->
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (id $[[ei]] @:= e) σ (NMap.add id (Tarray t l u, (Varr newaofv)) Λ)
+      vseq Δ σ Λ flag (id $[[ei]] @:= e) σ (NatMap.add id (Tarray t l u, (Varr newaofv)) Λ)
 
 (** Evaluates a simple if statement with a true condition. *)
 
@@ -245,8 +245,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vseq Δ σ Λi flag (For id In e To e' Loop stmt) σ' Λ' ->
 
       (* * Side conditions * *)
-      ~NMap.In id Λ ->     (* id ∉ Λ *)
-      Λi = NMap.add id (Tnat n n', Vnat n) Λ -> (* Λi = Λ ∪ (id, (nat(n,n'), n)) *)
+      ~NatMap.In id Λ ->     (* id ∉ Λ *)
+      Λi = NatMap.add id (Tnat n n', Vnat n) Λ -> (* Λi = Λ ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
       vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ' Λ'
@@ -268,8 +268,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vseq Δ σ' Λ' flag (For id In e To e' Loop stmt) σ'' Λ'' ->
 
       (* * Side conditions * *)
-      NMap.MapsTo id (t, Vnat n) Λ ->
-      Λi = NMap.add id (t, Vnat (n + 1)) Λ ->
+      NatMap.MapsTo id (t, Vnat n) Λ ->
+      Λi = NatMap.add id (t, Vnat (n + 1)) Λ ->
 
       (* * Conclusion * *)
       vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ'' Λ''
@@ -287,12 +287,12 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vexpr Δ σ Λi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
-      NMap.MapsTo id (t, Vnat n) Λ ->
-      Λi = NMap.add id (t, Vnat (n + 1)) Λ ->
+      NatMap.MapsTo id (t, Vnat n) Λ ->
+      Λi = NatMap.add id (t, Vnat (n + 1)) Λ ->
 
       (* * Conclusion * *)
       (* Removes the binding of id from the local environment. *)
-      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ (NMap.remove id Λ)
+      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ (NatMap.remove id Λ)
            
 (** Evaluates a rising edge block statement when the [stab] or the [fe] flag is
     raised (i.e, during a stabilization or a ↓ phase).
