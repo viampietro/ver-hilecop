@@ -6,11 +6,12 @@ Require Import common.ListsPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import dp.SitpnFacts.
-Require Import ListsDep.
-Require Import InfosTypes.
-Require Import GlobalTypes.
+Require Import common.ListsDep.
+Require Import common.GlobalTypes.
 Require Import String.
-Require Import StateAndErrorMonad.
+Require Import common.StateAndErrorMonad.
+Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+
 
 Local Open Scope string_scope.
 
@@ -26,7 +27,7 @@ Section GenSitpnInfos.
   
   (* The instantiated state type is [SitpnInfo sitpn] *)
 
-  Definition GenInfosMon := @Mon (SitpnInfo sitpn).
+  Definition CompileTimeState := @Mon (Sitpn2HVhdlState sitpn).
 
   (** ** Informations about transitions. *)
 
@@ -43,7 +44,7 @@ Section GenSitpnInfos.
     
      *)
 
-    Definition get_inputs_of_t (t : T sitpn) : GenInfosMon (list (P sitpn)) :=    
+    Definition get_inputs_of_t (t : T sitpn) : CompileTimeState (list (P sitpn)) :=    
       (* Tests if a place is an input of t. *)
       let is_input_of_t := (fun p => if (pre p t) then true else false) in
       Ret (tfilter is_input_of_t (P2List sitpn) nat_to_P).
@@ -53,7 +54,7 @@ Section GenSitpnInfos.
     Correctness: Correct iff all conditions associated to [t] are in the
     returned list, and the returned has no duplicates.  *)
 
-    Definition get_conds_of_t (t : T sitpn) : GenInfosMon (list (C sitpn)) :=
+    Definition get_conds_of_t (t : T sitpn) : CompileTimeState (list (C sitpn)) :=
       (* Tests if a condition is associated to t. *)
       let is_cond_of_t := (fun c => (match has_C t c with one | mone => true | zero => false end)) in
       Ret (tfilter is_cond_of_t (C2List sitpn) nat_to_C).
@@ -61,19 +62,24 @@ Section GenSitpnInfos.
     (** Computes the information about transition t, and adds it to
         the current state. *)
 
-    Definition add_tinfo (t : T sitpn) : GenInfosMon unit :=
+    Definition add_tinfo (t : T sitpn) : CompileTimeState unit :=
       do inputs_of_t <- get_inputs_of_t t;
       do conds_of_t <- get_conds_of_t t;
-      do sitpninfo <- Get;
-      Put (set_tinfo (t, MkTransInfo _ inputs_of_t conds_of_t) sitpninfo).
+      set_tinfo (t, MkTransInfo _ inputs_of_t conds_of_t).
 
     (** Calls the function [add_tinfo] for each transition of [sitpn], thus
         modifying the current state. *)
 
-    Definition generate_trans_infos : GenInfosMon unit :=
+    Definition generate_trans_infos : CompileTimeState unit :=
       titer add_tinfo (T2List sitpn) nat_to_T.
-    
+
   End TransitionInfos.
+
+End GenSitpnInfos.
+
+Require Import test.sitpn.dp.WellDefinedSitpns.
+
+Compute (RedS (generate_trans_infos sitpn_simpl (init_infos sitpn_simpl))).
   
   (** ** Informations about places. *)
 

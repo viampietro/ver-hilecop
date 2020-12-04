@@ -3,14 +3,10 @@
 Require Import Coqlib.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
-Require Import NatSet.
 Require Import GlobalTypes.
-Require Import InfosTypes.
-Require Import GenerateInfos.
 Require Import String.
-Require Import HexString.
 Require Import StateAndErrorMonad.
-Require Import GenerateHVhdl.
+Require Import Sitpn2HVhdlTypes.
 
 Import ErrMonadNotations.
 
@@ -126,30 +122,30 @@ Definition init_infos sitpn := MkSitpnInfo sitpn [] [] [] [] [].
 
 (*! ** Tests ** !*)
 
-Definition mbyinhib (x y : Tsimpl) := 
-  do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-  mutex_by_inhib sitpn_simpl x y.
+(* Definition mbyinhib (x y : Tsimpl) :=  *)
+(*   do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*   mutex_by_inhib sitpn_simpl x y. *)
 
-Definition mbycconds (x y : Tsimpl) :=
-  do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-  mutex_by_cconds sitpn_simpl x y.
+(* Definition mbycconds (x y : Tsimpl) := *)
+(*   do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*   mutex_by_cconds sitpn_simpl x y. *)
 
-Definition mbyditvals (x y : Tsimpl) :=
-  do sitpninfos <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-  mutex_by_disjoint_itval sitpn_simpl x y.
+(* Definition mbyditvals (x y : Tsimpl) := *)
+(*   do sitpninfos <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*   mutex_by_disjoint_itval sitpn_simpl x y. *)
 
-Definition nexists_mutex (x y : Tsimpl) :=
-  do sitpninfos <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-  not_exists_mutex sitpn_simpl x y.
+(* Definition nexists_mutex (x y : Tsimpl) := *)
+(*   do sitpninfos <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*   not_exists_mutex sitpn_simpl x y. *)
   
-Definition all_conflicts_of_t_solved (t : Tsimpl) (cgoft : list Tsimpl) :=
-  do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-  all_conflicts_of_t_solved sitpn_simpl t cgoft.
+(* Definition all_conflicts_of_t_solved (t : Tsimpl) (cgoft : list Tsimpl) := *)
+(*   do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*   all_conflicts_of_t_solved sitpn_simpl t cgoft. *)
 
-Definition all_conflicts_solved (cg : list (Tsimpl)) :=
-  do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-  all_conflicts_solved_by_mutex sitpn_simpl cg.
+(* Definition all_conflicts_solved (cg : list (Tsimpl)) := *)
+(*   do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*   all_conflicts_solved_by_mutex sitpn_simpl cg. *)
 
-Compute (RedV (generate_sitpn_infos sitpn_simpl prio_simpl_dec (init_infos sitpn_simpl))).
+(* Compute (RedV (generate_sitpn_infos sitpn_simpl prio_simpl_dec (init_infos sitpn_simpl))). *)
 
-sitpn_2_hvhdl
+

@@ -9,12 +9,12 @@ Require Import String.
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
 Require Import dp.SitpnTypes.
-Require Import dp.InfosTypes.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 Require Import hvhdl.Transition.
+Require Import sitpn2hvhdl.InfosTypes.
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 
 Import ErrMonadNotations.
@@ -44,10 +44,10 @@ Section GeneratePlaceMap.
    *)
 
   Definition generate_place_gen_map (p : P sitpn) (pinfo : PlaceInfo sitpn) (max_marking : nat) :
-    optionE genmap :=
+    Sitpn2HVhdlMon genmap :=
  
     (* Error case: p has no input or output transitions. *)
-    if is_empty (tinputs pinfo) && is_empty (toutputs pinfo) then
+    if ListsPlus.is_empty (tinputs pinfo) && ListsPlus.is_empty (toutputs pinfo) then
       Err ("generate_place_gen_map: "
              ++ "Place " ++ $$p
              ++ " is an isolated place.")%string
@@ -58,13 +58,13 @@ Section GeneratePlaceMap.
       let p_out_arcs_nb := ( if toutputs pinfo then 1 else List.length (toutputs pinfo) ) in
 
       (* Builds the generic map of p. *)
-      [| [assocg_ Place.input_arcs_number p_in_arcs_nb;
-         assocg_ Place.output_arcs_number p_out_arcs_nb;
-         assocg_ Place.maximal_marking max_marking] |].
+      Ret [assocg_ Place.input_arcs_number p_in_arcs_nb;
+          assocg_ Place.output_arcs_number p_out_arcs_nb;
+          assocg_ Place.maximal_marking max_marking].
 
   (** Returns the list of input arcs weights of place [p]. *)
 
-  Definition get_input_arcs_weights (p : P sitpn) (pinfo : PlaceInfo sitpn) : optionE (list expr) :=
+  Definition get_input_arcs_weights (p : P sitpn) (pinfo : PlaceInfo sitpn) : Sitpn2HVhdlMon (list expr) :=
 
     (* If p has no inputs, creates one input with a weight of zero. *)
     let p_in_arcs_weights := (if List.length (tinputs pinfo) =? 0 then [e_nat 0] else []) in
@@ -75,7 +75,7 @@ Section GeneratePlaceMap.
     let get_in_arc_weight :=
         (fun lofexprs t =>
            match post t p with
-           | Some (exist _ w _) => [| lofexprs ++ [e_nat w] |]
+           | Some (exist _ w _) => Ret (lofexprs ++ [e_nat w])
            | _ => Err ("get_input_arcs_weights: Transition "
                          ++ $$t ++ " is not an input of place "
                          ++ $$p ++ ".")%string
@@ -84,12 +84,12 @@ Section GeneratePlaceMap.
 
     (* Iterates and calls get_in_arc_weight over all input transitions
        of p. *)
-    oefold_left get_in_arc_weight (tinputs pinfo) p_in_arcs_weights.
+    fold_left get_in_arc_weight (tinputs pinfo) p_in_arcs_weights.
 
   (** Returns the list of output arc weights and types of place [p]. *)
   
   Definition get_output_arcs_weights_and_types (p : P sitpn) (pinfo : PlaceInfo sitpn) :
-    optionE (list expr * list expr) :=
+    Sitpn2HVhdlMon (list expr * list expr) :=
 
     (* If p has no output, creates one output with a weight of zero
        and type basic. *)
@@ -104,7 +104,7 @@ Section GeneratePlaceMap.
         (fun params t =>
            let '(weights, types) := params in
            match pre p t with
-           | Some (a, (exist _ w _) ) => [| (weights ++ [e_nat w], types ++ [e_nat a]) |]
+           | Some (a, (exist _ w _) ) => Ret (weights ++ [e_nat w], types ++ [e_nat a])
            | _ => Err ("get_output_arcs_weights_and_types: Transition "
                       ++ $$t ++ " is not an output of place " ++ $$p ++ ".")%string
            end)
@@ -112,37 +112,40 @@ Section GeneratePlaceMap.
 
     (* Iterates and calls get_in_arc_weight over all input transitions
        of p. *)
-    oefold_left get_out_arc_wandt (toutputs pinfo) p_out_arcs_wandt.
+    fold_left get_out_arc_wandt (toutputs pinfo) p_out_arcs_wandt.
     
   (** Generates a part of the input map (static part) for the place
       component representing place [p]. *)
 
   Definition generate_place_input_map (p : P sitpn) (pinfo : PlaceInfo sitpn) :
-    optionE InputMap :=
+    Sitpn2HVhdlMon InputMap :=
     (* Retrieves the list of input arc weights. *)
-    in_arcs_weights <- get_input_arcs_weights p pinfo;
+    do in_arcs_weights <- get_input_arcs_weights p pinfo;
 
     (* Retrieves the list of output arcs weights and types. *)
-    |(out_arcs_weights, out_arcs_types)| <- get_output_arcs_weights_and_types p pinfo;
-
-    [| [(Place.initial_marking, inl (e_nat (M0 p)));
-       (Place.input_arcs_weights, inr in_arcs_weights);
-       (Place.output_arcs_weights, inr out_arcs_weights);
-       (Place.output_arcs_types, inr out_arcs_types)] |].
+    do out_arcs_wandt <- get_output_arcs_weights_and_types p pinfo;
+    let (out_arcs_weights, out_arcs_types) := out_arcs_wandt in
+    
+    Ret [(Place.initial_marking, inl (e_nat (M0 p)));
+        (Place.input_arcs_weights, inr in_arcs_weights);
+        (Place.output_arcs_weights, inr out_arcs_weights);
+        (Place.output_arcs_types, inr out_arcs_types)] .
   
   (** Builds a PlaceMap entry for place p. *)
 
   Definition generate_place_map_entry (p : P sitpn) (max_marking : nat) :
-    optionE (P sitpn * HComponent) :=
+    Sitpn2HVhdlMon (P sitpn * HComponent) :=
+    
     (* Retrieves information about p. *)
     match getv Peqdec p (pinfos sitpn sitpn_info) with
     | Some pinfo =>
+      do pinfo <- get_pinfo p;
       (* Retrieves p's generic map. *)
-      gmap <- generate_place_gen_map p pinfo max_marking;
+      do gmap <- generate_place_gen_map p pinfo max_marking;
       (* Retrieves p's static input map part. *)
-      pipmap <- generate_place_input_map p pinfo;
+      do pipmap <- generate_place_input_map p pinfo;
       (* Returns a place map entry *)
-      [| (p, (gmap, pipmap, [])) |]
+      Ret (p, (gmap, pipmap, []))
     (* Error case. *)
     | None => Err ("generate_place_map_entry: Place "
                      ++ $$p ++ " is not referenced in SitpnInfo structure.")%string

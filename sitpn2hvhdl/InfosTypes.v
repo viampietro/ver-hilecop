@@ -60,12 +60,13 @@ Section SitpnInfoTypes.
   
   (* Adds a new transition info entry to the tinfos list *)
   
-  Definition set_tinfo (tinfo : (T sitpn * TransInfo)) (sitpninfo : SitpnInfo) : SitpnInfo :=
-    MkSitpnInfo (pinfos sitpninfo)
-                (tinfo :: (tinfos sitpninfo))
-                (cinfos sitpninfo)
-                (ainfos sitpninfo)
-                (finfos sitpninfo).
+  Definition set_tinfo (tinfo : (T sitpn * TransInfo)) : @Mon SitpnInfo unit :=
+    do sitpninfo <- Get;
+    Put (MkSitpnInfo (pinfos sitpninfo)
+                     (tinfo :: (tinfos sitpninfo))
+                     (cinfos sitpninfo)
+                     (ainfos sitpninfo)
+                     (finfos sitpninfo)).
 
   (* Adds a new condition info entry to the cinfos list *)
   

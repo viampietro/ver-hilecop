@@ -62,6 +62,8 @@ Notation "'RedV' r" := match r with
                      | Error _ _ _ msg => inr msg
                      end (at level 0).
 
+(* State-and-error monad version of lists function. *)
+
 Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
   (forall a, In a lofAs -> B) -> @Mon C unit :=
   match lofAs with
@@ -75,6 +77,14 @@ Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
       let pf_tl := in_T_in_sublist_T a tl pf in
       
       do _ <- titer f tl pf_tl; f b
+  end.
+
+Fixpoint fold_left {A B C} (f : C -> B -> @Mon A C) (l : list B) (c : C) {struct l} : @Mon A C :=
+  match l with
+  | nil => Ret c
+  | b :: tl =>
+    do c' <- f c b;
+    fold_left f tl c'
   end.
 
 Fixpoint iter {A B} (f : B -> @Mon A unit) (l : list B) {struct l} : @Mon A unit :=

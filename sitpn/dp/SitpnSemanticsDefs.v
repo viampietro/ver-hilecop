@@ -27,10 +27,10 @@ Definition Sens (sitpn : Sitpn) (M : (P sitpn) -> nat) (t : (T sitpn)) :=
 
 (** ∀ optn ∈ N ⊔ {ψ}, n ∈ i iff n ≠ ψ ∧ i = [a; b] ∧ a ≤ n ≤ b *)
 
-Definition InItval (optn : option nat) (i : StaticTimeInterval) : Prop :=
+Definition InItval (optn : option nat) (i : TimeInterval) : Prop :=
   match optn with
   | None => False
-  | Some n =>   (a (itval i)) <= n /\ forall bnotinf, le_nat_natinf n (b (itval i)) bnotinf
+  | Some n => (a i) <= n /\ forall bnotinf, le_nat_natinf n (b i) bnotinf
   end.
   
 (** t ∉ Ti ∨ 0 ∈ I(t) *)
@@ -46,12 +46,14 @@ Definition HasReachedTimeWindow (sitpn : Sitpn) (s : SitpnState sitpn) (t : T si
 Definition HasReachedUpperBound sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
   refine (fun tex => (let '(exist _ t pf) := tex in _));
   destruct Is;
-    [ refine (match I s tex with
-              | None => True
-              | Some n => forall pf_bnotinf, eq_nat_natinf n (b (itval s0)) pf_bnotinf
-              end)
-    |
-    contradiction].
+    [ match goal with
+      | [ i: TimeInterval |- _ ] =>
+        refine (match I s tex with
+                | None => True
+                | Some n => forall pf_bnotinf, eq_nat_natinf n (b i) pf_bnotinf
+                end)
+      end
+    | contradiction].
 Defined.
 
 (** ∀ t ∈ T, ∀ s ∈ S, t ∈ firable(s) iff
