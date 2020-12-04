@@ -8,7 +8,7 @@ Section StateAndErrMonad.
 
   (* A state type *)
   
-  Variable state : Set.
+  Variable state : Type.
 
   (* The value returned by a state-and-error monad can either
      be an error with a message or a couple state-value.
@@ -55,7 +55,12 @@ Notation "'do' X <- A ; B" := (Bind A (fun X => B))
 Notation "'RedS' r" := match r with
                      | OK _ _ _ _ s => s
                      | Error _ _ _ _ => _
-                     end (at level 0). 
+                       end (at level 0).
+
+Notation "'RedV' r" := match r with
+                     | OK _ _ _ v _ => inl v
+                     | Error _ _ _ msg => inr msg
+                     end (at level 0).
 
 Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
   (forall a, In a lofAs -> B) -> @Mon C unit :=
@@ -75,7 +80,13 @@ Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
 Fixpoint iter {A B} (f : B -> @Mon A unit) (l : list B) {struct l} : @Mon A unit :=
   match l with
   | nil => Ret tt
-  | a :: tl => do _ <- iter f tl; f a
+  | b :: tl => do _ <- iter f tl; f b
   end.
 
-
+Fixpoint find {A B} (f : B -> @Mon A bool) (l : list B) {struct l} : @Mon A (option B) :=
+  match l with
+  | nil => Ret None
+  | b :: tl =>
+    do res <- f b;
+    if res then Ret (Some b) else find f tl
+  end.

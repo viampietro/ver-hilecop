@@ -136,14 +136,16 @@ Section GenSitpnInfos.
         | _, _ => Ret false
         end.
 
-      (*  *)
+      (* Returns [true] if there exists a condition [c] in [conds]
+         s.t. [c] is associated [t] and [not c] to [t'], or the other
+         way around. Returns [false] otherwise.  *)
       
-      Definition exists_ccond (t t' : T sitpn) (cconds : list (C sitpn)) : bool :=
+      Definition exists_ccond (t t' : T sitpn) (conds : list (C sitpn)) : bool :=
         let check_ccond_of_tt' := (fun c => match has_C t c, has_C t' c with
                                               one, mone | mone, one => true
                                             | _, _ => false
                                             end) in
-        if (find check_ccond_of_tt' cconds) then true else false.
+        if (List.find check_ccond_of_tt' conds) then true else false.
       
       (** Returns [true] if there exists a condition [c] in the
           intersection of the list of conditions of [t] and [t'] that
@@ -154,9 +156,71 @@ Section GenSitpnInfos.
       Definition mutex_by_cconds (t t' : T sitpn) : GenInfosMon bool :=
         do sitpninfo <- Get;
         match get_tinfo sitpn t sitpninfo, get_tinfo sitpn t' sitpninfo with
-        | Some tinfo, Some tinfo' => Ret (exists_ccond t t' (inter seq (seqdec Nat.eq_dec) (conds tinfo) (conds tinfo')))
+        | Some tinfo, Some tinfo' =>
+          Ret (exists_ccond t t' (inter seq (seqdec Nat.eq_dec) (conds tinfo) (conds tinfo')))
         | _, _ => Err ("No information on transition " ++ $$t ++ " or " ++ $$t')
         end.      
+      
+      (* Returns [true] if there exists a place [p] in [places]
+         s.t. there exists a [basic] or [test] arc between [p] and
+         [t], and an [inhib] arc between [p] and [t'], or the other
+         way around. If such arcs exist, the weight of the inhib arc
+         must be lower or equal to the weight of the basic or test
+         arc. Returns [false] otherwise. *)
+
+      Definition exists_inhib (t t' : T sitpn) (pls : list (P sitpn)) : bool :=
+        let check_inhib_mutex :=
+            (fun p => match pre p t, pre p t' with
+                      | Some ((basic|test), ω), Some (inhibitor, ω')
+                      | Some (inhibitor, ω'), Some ((basic|test), ω) =>
+                        ω' <=? ω
+                      | _, _ => false
+                      end)
+        in if (List.find check_inhib_mutex pls) then true else false.
+
+      (* Returns [true] if there exists a place [p] in the
+         intersection of the list of input places of [t] and [t']
+         that mutually exclude [t] and [t'] by mean of an inhibitor
+         arc. *)
+
+      Definition mutex_by_inhib (t t' : T sitpn) : GenInfosMon bool :=
+        do sitpninfo <- Get;
+        match get_tinfo sitpn t sitpninfo, get_tinfo sitpn t' sitpninfo with
+        | Some tinfo, Some tinfo' =>
+          Ret (exists_inhib t t' (inter seq (seqdec Nat.eq_dec) (pinputs tinfo) (pinputs tinfo')))
+        | _, _ => Err ("No information on transition " ++ $$t ++ " or " ++ $$t')
+        end.
+
+      (* Returns [true] is there exists no means of mutual exclusion
+         between transitions [t] and [t']. Returns [false]
+         otherwise.  *)
+      
+      Definition not_exists_mutex (t t' : T sitpn) : GenInfosMon bool :=
+        do mbyinhib <- mutex_by_inhib t t';
+        do mbycconds <- mutex_by_cconds t t';
+        do mbyditvals <- mutex_by_disjoint_itval t t';
+        Ret (negb (mbyinhib || mbycconds || mbyditvals)).
+
+      (* Returns [true] if there exists at least one mean of mutual
+         exclusion between [t] and all transitions in [cgoft]
+         (conflict group of [t]). Returns [false] otherwise.  *)
+      
+      Definition all_conflicts_of_t_solved (t : T sitpn) (cgoft : list (T sitpn)) : GenInfosMon bool :=
+        do sitpninfo <- Get;
+        do res <- find (not_exists_mutex t) cgoft;
+        if res then Ret false else Ret true.
+
+      (* Returns [true] if all conflicts in the conflict group [cg]
+         are solved by means of mutual exclusion. Returns [false]
+         otherwise.  *)
+      
+      Fixpoint all_conflicts_solved_by_mutex (cg : list (T sitpn)) {struct cg} : GenInfosMon bool :=
+        match cg with
+        | nil => Ret true
+        | t :: tl =>
+          do b <- all_conflicts_of_t_solved t tl;
+          if b then all_conflicts_solved_by_mutex tl else Ret false
+        end.
       
       (** Injects transition [t] in the list [stranss] depending on
           the level of priority of [t] compared to the elements of the
@@ -176,38 +240,33 @@ Section GenSitpnInfos.
         GenInfosMon (list (T sitpn)) :=
         match stranss with
         (* If the list of priority-ordered transitions is empty, then
-       returns a singleton list where t is the element with the highest
-       priority. *)
+           returns a singleton list where [t] is the element with the
+           highest priority. *)
         | [] => Ret [t]
 
         (* If there is a head element, compares the head element with t
            priority-wise. *)
         | x :: tl =>
 
-          (* If t and x are the same, then t has already been injected in
-       stranss, then stranss is returned. That case does not happen
-       given a proof of [~In t stranss], that is, t is not among 
-       the first elements of stranss.
-
-       Otherwise, checks if t has a higher firing priority than x. *)
-          if Teqdec t x then Ret stranss
-          else
-            (* If t is the element with the highest priority, then puts it
-           as the head element of stranss, and returns the list.
+          (* If t is the element with the highest priority, then puts it
+               as the head element of stranss, and returns the list.
          
-         Otherwise, checks if x has a higher priority than t.  *)
-            if decpr t x then Ret (t :: stranss)
-            else
-              (* If x has a higher priority than t, then tries to inject t
-               in the list's tail.  *)
-              if decpr x t then
-                do stranss' <- inject_t t tl; Ret (x :: stranss')
-              else
-                (* Error case: t and x are not comparable, the priority
-                 relation is ill-formed (i.e, not a total order on
-                 group of transitions with a input place in
-                 common). *)
-                Err ("Transitions " ++ $$t ++ " and " ++ $$x ++ " are not comparable with the priority relation.")
+               Otherwise, checks if x has a higher priority than t.  *)
+          match decpr t x, decpr x t with
+          | left _, left _ =>
+            Err ("inject_t: found a reflexive priority relation.")
+          | right _, right _ =>
+            Err ("inject_t: transitions "
+                   ++ $$t ++ " and "
+                   ++ $$x ++ " are not comparable with the priority relation.")
+          (* [t] has a higher priority than [x], then puts [t] as the
+             head element of [stranss], and returns the list. *)
+          | left _, right _ => Ret (t :: stranss)
+          (* [x] has a higher priority than [t], then tries to inject
+             [t] in the list's tail.  *)
+          | right _, left _ =>
+            do stranss' <- inject_t t tl; Ret (x :: stranss')
+          end
         end.
 
       (** Injects all transitions of the [transs] list in the list [stranss]
@@ -232,11 +291,10 @@ Section GenSitpnInfos.
           in relation to the priority order.  *)
 
       Definition sort_by_priority (cgroup : list (T sitpn)) :
-        GenInfosMon (list (T sitpn)) := sort_by_priority_aux cgroup [].
+        GenInfosMon (list (T sitpn)) :=
+        sort_by_priority_aux cgroup [].
 
-      
     End ConflictResolution.
-    
 
     (** Returns a PlaceInfo structure containing the information related
       to place [p], a place of [sitpn].
@@ -252,19 +310,28 @@ Section GenSitpnInfos.
 
     Definition add_pinfo (p : P sitpn) : GenInfosMon unit :=
 
-      (* Gets the input and output transitions list of place p. 
-       Error: p is an isolated place.
+      (* Gets the input, conflicting, and output transitions of place p. 
+         Error: p is an isolated place.
        *)
       do tin_tc_tout <- get_neighbors_of_p p;
-      (* Sorts the output transitions of p by decreasing level of
-         firing priority.
+      
+      let '(tin, tc, tout) := tin_tc_tout in
+
+      (* If all conflicts in [tc] are not solved by means of mutual
+         exclusion, then transitions in [tc] must be sorted out by
+         increasing order of priority before setting the PlaceInfo
+         structure for place [p].
          
          Error: the priority relation is not a strict total order over
          the output transitions of p.  *)
-      let '(tin, tc, tout) := tin_tc_tout in
-      do stc <- sort_by_priority tc;
+      
+      do b <- all_conflicts_solved_by_mutex tc;
       do sitpninfo <- Get;
-      Put (set_pinfo (p, MkPlaceInfo _ tin stc tout) sitpninfo).
+      if b then
+        Put (set_pinfo (p, MkPlaceInfo _ tin tc tout) sitpninfo)
+      else
+        do stc <- sort_by_priority tc;
+        Put (set_pinfo (p, MkPlaceInfo _ tin stc tout) sitpninfo).
     
     (** Computes information for all p ∈ P, and adds the infos to the
         current state. *)
@@ -350,9 +417,12 @@ Section GenSitpnInfos.
       if (transitions sitpn) then Err "Found an empty set of transitions."
       else
         (* Otherwise, generates information about sitpn. *)
-        
+
+        (* Call to [generate_trans_infos] must precede the call to
+           [generate_place_infos] because the latter uses transition
+           informations.  *)
+        do _ <- generate_trans_infos;        
         do _ <- generate_place_infos;
-        do _ <- generate_trans_infos;
         do _ <- generate_cond_infos; 
         do _ <- generate_action_infos;
         do _ <- generate_fun_infos;

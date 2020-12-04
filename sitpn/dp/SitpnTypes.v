@@ -90,6 +90,8 @@ Defined.
 
 Definition it11 := MkTItval onens (ninat onens) (or_introl (le_nat_le_natinf 1 onens (le_n 1))).
 Definition it1inf := MkTItval onens niinf (or_intror (eq_refl niinf)).
+Definition it12 := MkTItval onens (ninat twons) (or_introl (le_nat_le_natinf 1 twons (le_n_Sn 1))).
+Definition it34 := MkTItval threens (ninat fourns) (or_introl (le_nat_le_natinf 3 fourns (le_n_Sn 3))).
 
 (* Defines a predicate stating that two StaticTimeInterval do
    not overlap, i.e, the intersection of the two is empty.
@@ -101,6 +103,14 @@ Definition NoOverlap (i i' : TimeInterval) : Prop :=
   | MkTItval a niinf _, MkTItval a' (ninat b') _ => b' < a
   | MkTItval a (ninat b) _, MkTItval a' (ninat b') _ => b' < a \/ b < a' 
   | _, _ => False
+  end.
+
+Definition nooverlap (i i' : TimeInterval) : bool :=
+  match i, i' with
+  | MkTItval a (ninat b) _, MkTItval a' niinf _ => b <? a'
+  | MkTItval a niinf _, MkTItval a' (ninat b') _ => b' <? a
+  | MkTItval a (ninat b) _, MkTItval a' (ninat b') _ => (b' <? a) || (b <? a') 
+  | _, _ => false
   end.
 
 Definition dec_nooverlap : forall i i', {NoOverlap i i'} + {~NoOverlap i i'}.

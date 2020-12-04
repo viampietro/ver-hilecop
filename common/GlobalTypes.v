@@ -1,4 +1,4 @@
- (** * Global type definitions. *)
+(** * Global type definitions. *)
 
 Require Import Coqlib.
 Require Import String.
@@ -21,6 +21,12 @@ Coercion natstar_to_nat : natstar >-> nat.
 Definition onens := exist _ 1 (gt_Sn_O 0).
 Definition twons := exist _ 2 (gt_Sn_O 1).
 Definition threens := exist _ 3 (gt_Sn_O 2).
+Definition fourns := exist _ 4 (gt_Sn_O 3).
+Definition fivens := exist _ 5 (gt_Sn_O 4).
+Definition sixns := exist _ 6 (gt_Sn_O 5).
+Definition sevenns := exist _ 7 (gt_Sn_O 6).
+Definition eightns := exist _ 8 (gt_Sn_O 7).
+Definition ninens := exist _ 9 (gt_Sn_O 8).
 
 (** ** Definitions and Facts about strict orders and boolean functions *)
 

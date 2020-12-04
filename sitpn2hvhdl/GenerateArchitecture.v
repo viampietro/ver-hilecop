@@ -1,20 +1,21 @@
 (** * Generation of the architecture body of a H-VHDL design. *)
 
-Require Import Coqlib.
-Require Import GlobalTypes.
-Require Import HVhdlTypes.
-Require Import ListsPlus.
-Require Import ListsDep.
+Require Import common.Coqlib.
+Require Import common.GlobalTypes.
+Require Import common.ListsPlus.
+Require Import common.ListsDep.
+Require Import common.StateAndErrorMonad.
 Require Import String.
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
-Require Import SitpnTypes.
-Require Import InfosTypes.
-Require Import AbstractSyntax.
-Require Import Petri.
-Require Import Place.
-Require Import Transition.
-Require Import Sitpn2HVhdlTypes.
+Require Import dp.SitpnTypes.
+Require Import dp.InfosTypes.
+Require Import hvhdl.HVhdlTypes.
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.Petri.
+Require Import hvhdl.Place.
+Require Import hvhdl.Transition.
+Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 
 Import ErrMonadNotations.
 
@@ -27,6 +28,14 @@ Section GeneratePlaceMap.
   Variable sitpn : Sitpn.
   Variable sitpn_info : SitpnInfo sitpn.
 
+  (* Proof of decidability for the priority relation of [sitpn] *)
+  
+  Variable decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}.
+  
+  (* The instantiated state type is [SitpnInfo sitpn] *)
+
+  Definition Sitpn2HVhdlMon := @Mon (Sitpn2HVhdlState sitpn).
+  
   (** Returns the generic map (abstract syntax) of the place component
       describing place [p]. 
  
@@ -159,9 +168,9 @@ Section GenerateTransMap.
 
   Definition get_trans_type (t : T sitpn) : TransitionT :=
     match Is t with
-    | Some (MkSTimeItval <| a, ninat b |> _)  =>
+    | Some (MkTItval a (ninat b) _)  =>
       if a =? b then temporal_a_a else temporal_a_b
-    | Some (MkSTimeItval <| a, i+ |> _) => temporal_a_inf
+    | Some (MkTItval a i+ _) => temporal_a_inf
     | None => not_temporal
     end.
 
@@ -172,9 +181,9 @@ Section GenerateTransMap.
   Definition get_max_time_counter (t : T sitpn) : nat :=
     match Is t with
     (* Maximal time counter is equal to the upper bound value. *)
-    | Some (MkSTimeItval <| a, ninat b |> _)  => b
+    | Some (MkTItval a (ninat b) _)  => b
     (* Or to the lower bound, if static time itval is of the form [a,∞] . *)
-    | Some (MkSTimeItval <| a, i+ |> _)  => a
+    | Some (MkTItval a i+ _)  => a
     (* Or to 1 if no itval is associated to t. *)
     | None => 1
     end.
@@ -214,12 +223,12 @@ Section GenerateTransMap.
 
     
     match Is t with
-    | Some (MkSTimeItval <| a, ninat b |> _) =>
+    | Some (MkTItval a (ninat b) _) =>
       [(Transition.time_A_value, inl (e_nat a));
       (Transition.time_B_value, inl (e_nat b));
       input_conditions]
         
-    | Some (MkSTimeItval <| a, i+ |> _) =>
+    | Some (MkTItval a i+ _) =>
       [(Transition.time_A_value, inl (e_nat a));
       (Transition.time_B_value, inl (e_nat 0));
       input_conditions]
@@ -300,7 +309,9 @@ Section GenerateInterconnections.
       (* Error case, in the output port map [topmap], fired is
          connected to a list of expressions, albeit it must be of
          scalar type (boolean).  *)
-      | Some (inr _) => Err ("The fired port of transition " ++ $$t ++ " must be of scalar type.")%string
+      | Some (inr _) =>
+        Err ("connect_fired_port: the fired port of transition "
+               ++ $$t ++ " must be of scalar type.")%string
       (* Case where fired is not connected yet. Then, adds a new
          interconnection signal to the arch's declaration list and at
          the end of the lofexprs, modifies the output port map of

@@ -5,7 +5,9 @@ Require Import String.
 Require Import HVhdlTypes.
 Require Import AbstractSyntax.
 Require Import dp.Sitpn.
+Require Import dp.InfosTypes.
 Require Import StateAndErrorMonad.
+
 
 (** ** Types used in the Sitpn2HVhdl transformation. *)
 
@@ -20,7 +22,7 @@ Definition InputMap := list (ident * (expr + list expr)).
 (** Intermediary representation of a H-VHDL component output port
     map. *)
 
-Definition OutputMap := list (ident * (name + list name)).
+Definition OutputMap := list (ident * ((option name) + list name)).
 
 (** Intermediary representation of a H-VHDL component. *)
 
@@ -61,7 +63,7 @@ Definition Architecture sitpn := (list adecl * PlaceMap sitpn * TransMap sitpn *
 Record Sitpn2HVhdlMap sitpn : Type :=
   BuildMap {
       p2pcomp : list (P sitpn * ident);
-      t2pcomp : list (T sitpn * ident);
+      t2tcomp : list (T sitpn * ident);
       a2out   : list (A sitpn * ident);
       f2out   : list (F sitpn * ident);
       c2in    : list (C sitpn * ident);
@@ -69,11 +71,15 @@ Record Sitpn2HVhdlMap sitpn : Type :=
 
 (** ** Compile-time state *)
 
-Record Sitpn2HVhdlState sitpn : Type :=
-  BuildState {
+Inductive Sitpn2HVhdlState sitpn : Type :=
+  MkState {
 
       (* Next id *)
       nextid : ident;
+
+      (* Sitpn information structure *)
+
+      sitpninfos : SitpnInfo sitpn;
       
       (* Architecture in intermediary format *)
       arch : Architecture sitpn;
