@@ -88,16 +88,16 @@ Definition s_time_counter : ident := s_reinit_time_counter + 1.
 
 (** Architecture declaration list. *)
 
-Definition transition_adecls : list adecl :=
+Definition transition_sigs : list sdecl :=
   [
-  adecl_sig s_condition_combination tind_boolean;
-  adecl_sig s_enabled               tind_boolean;
-  adecl_sig s_firable               tind_boolean;
-  adecl_sig s_fired                 tind_boolean;
-  adecl_sig s_firing_condition      tind_boolean;
-  adecl_sig s_priority_combination  tind_boolean;
-  adecl_sig s_reinit_time_counter   tind_boolean;
-  adecl_sig s_time_counter          (tind_natural 0 (#maximal_time_counter))
+  sdecl_ s_condition_combination tind_boolean;
+  sdecl_ s_enabled               tind_boolean;
+  sdecl_ s_firable               tind_boolean;
+  sdecl_ s_fired                 tind_boolean;
+  sdecl_ s_firing_condition      tind_boolean;
+  sdecl_ s_priority_combination  tind_boolean;
+  sdecl_ s_reinit_time_counter   tind_boolean;
+  sdecl_ s_time_counter          (tind_natural 0 (#maximal_time_counter))
   ].
 
 (** *** Architecture behavioral part of the Transition design. *)
@@ -389,6 +389,6 @@ Definition transition_design : design :=
           transition_archid
           transition_gens
           transition_ports
-          transition_adecls
+          transition_sigs
           transition_behavior.
 

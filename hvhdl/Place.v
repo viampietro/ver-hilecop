@@ -100,11 +100,11 @@ Definition s_output_token_sum : ident := s_marking + 1.
 
 (** Architecture declaration list. *)
 
-Definition place_adecls : list adecl :=
+Definition place_sigs : list sdecl :=
   [
-  adecl_sig s_input_token_sum  local_weight_t;
-  adecl_sig s_marking          local_weight_t;
-  adecl_sig s_output_token_sum local_weight_t
+  sdecl_ s_input_token_sum  local_weight_t;
+  sdecl_ s_marking          local_weight_t;
+  sdecl_ s_output_token_sum local_weight_t
   ].
 
 (** *** Architecture behavioral part of the Place design. *)
@@ -322,6 +322,6 @@ Definition place_design : design :=
           place_archid
           place_gens
           place_ports
-          place_adecls
+          place_sigs
           place_behavior.
 

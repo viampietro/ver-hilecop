@@ -236,11 +236,10 @@ Inductive pdecl : Type :=
 | pdecl_in (portid : ident) (t : tind)  (** Declaration of port in "in" mode. *)
 | pdecl_out (portid : ident) (t : tind). (** Declaration of port in "out" mode. *)
             
-(** Architecture declarations. *)
+(** Signal declaration. *)
 
-Inductive adecl : Type :=
-| adecl_sig (sigid : ident) (t : tind)                (** Signal declaration. *)
-| adecl_const (constid : ident) (t : tind) (v : expr). (** Constant declaration. *)
+Inductive sdecl : Type :=
+  sdecl_ (sigid : ident) (t : tind).
 
 (** Design declaration, i.e the entity-architecture couple; e.g:
     
@@ -249,12 +248,12 @@ Inductive adecl : Type :=
     "entity [entid] is [gens]; [ports]; end [entid];
     
      architecture [archid] of [entid] is 
-       [adecls]; 
+       [sigs]; 
      begin 
        [behavior] 
      end [archid];" 
 
-   - Abstract syntax = "[design_ entid archid gens ports adecls behavior]"
+   - Abstract syntax = "[design_ entid archid gens ports sigs behavior]"
 
 *)
 
@@ -263,7 +262,7 @@ Inductive design : Type :=
           (archid   : ident)      (** Architecture id *)
           (gens     : list gdecl) (** Generic constant clause *)
           (ports    : list pdecl) (** Port clause *)
-          (adecls   : list adecl) (** Architecture declarative part *)
+          (sigs   : list sdecl) (** Architecture declarative part *)
           (behavior : cs).        (** Concurrent statement part *)
 
 (** Projection functions for [design] *)

@@ -97,17 +97,17 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
 
 Inductive edesign (dstore : IdMap design) : IdMap value -> design -> ElDesign -> DState -> Prop :=
 | EDesign :
-    forall {dimen entid archid gens ports adecls behavior
+    forall {dimen entid archid gens ports sigs behavior
                   ed ed' ed'' ed''' dstate dstate' dstate''},
 
       (* Premises *)
       egens EmptyElDesign dimen gens ed ->
       eports ed EmptyDState ports ed' dstate ->
-      edecls ed' dstate adecls ed'' dstate' ->
+      edecls ed' dstate sigs ed'' dstate' ->
       ebeh dstore ed'' dstate' behavior ed''' dstate'' ->
       
       (* Conclusion *)
-      edesign dstore dimen (design_ entid archid gens ports adecls behavior) ed''' dstate''    
+      edesign dstore dimen (design_ entid archid gens ports sigs behavior) ed''' dstate''    
 
 (** Defines the relation that elaborates the concurrent statements
     defining the behavior of a design.  *)
@@ -135,7 +135,7 @@ with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DSta
 (** Elaborates and type-checks a component instantiation statement. *)
 | EBehComp :
     forall {ed dstate idc ide gmap ipmap opmap
-                 entid archid gens ports adecls behavior
+                 entid archid gens ports sigs behavior
                  dimen cenv cstate cdesign},
 
       (* Premises *)
@@ -145,7 +145,7 @@ with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DSta
       validopm ed cenv opmap ->
       
       (* Side conditions *)
-      cdesign = design_ entid archid gens ports adecls behavior ->
+      cdesign = design_ entid archid gens ports sigs behavior ->
       MapsTo ide cdesign dstore ->
       (forall {g}, NatMap.In g dimen -> exists {t v}, MapsTo g (Generic t v) cenv) ->
       

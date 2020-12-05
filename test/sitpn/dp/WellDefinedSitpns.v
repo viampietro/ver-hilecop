@@ -116,10 +116,6 @@ Definition prio_simpl_dec : forall x y : T sitpn_simpl, {x >~ y} + {~x >~ y}.
     case b; [auto | intros m; case m; auto]. 
 Defined.
 
-(* Initial SitpnInfo structure *)
-
-Definition init_infos sitpn := MkSitpnInfo sitpn [] [] [] [] [].
-
 (*! ** Tests ** !*)
 
 (* Definition mbyinhib (x y : Tsimpl) :=  *)

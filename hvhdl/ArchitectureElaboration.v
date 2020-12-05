@@ -20,20 +20,20 @@ Import NatMap.
 
 (** The architecture declarative part elaboration relation. *)
 
-Inductive edecls (ed : ElDesign) (dstate : DState)  : list adecl -> ElDesign -> DState -> Prop :=
+Inductive edecls (ed : ElDesign) (dstate : DState)  : list sdecl -> ElDesign -> DState -> Prop :=
 
 (** Empty list of architecture declarations. *)
 | EDeclsNil : edecls ed dstate [] ed dstate
   
 (** Sequence of architecture declaration. *)
 | EDeclsCons :
-    forall {ad lofadecls ed' dstate' ed'' dstate''},
+    forall {ad lofsigs ed' dstate' ed'' dstate''},
       edecl ed dstate ad ed' dstate' ->
-      edecls ed' dstate' lofadecls ed'' dstate'' ->
-      edecls ed dstate (ad :: lofadecls) ed'' dstate''
+      edecls ed' dstate' lofsigs ed'' dstate'' ->
+      edecls ed dstate (ad :: lofsigs) ed'' dstate''
 
 (** Defines the elaboration relation for single architecture declaration. *)
-with edecl (ed : ElDesign) (dstate : DState)  : adecl -> ElDesign -> DState -> Prop :=
+with edecl (ed : ElDesign) (dstate : DState)  : sdecl -> ElDesign -> DState -> Prop :=
   
 (** Signal declaration elaboration. *)
   
@@ -49,4 +49,4 @@ with edecl (ed : ElDesign) (dstate : DState)  : adecl -> ElDesign -> DState -> P
       ~InSStore id dstate ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecl ed dstate (adecl_sig id tau) (add id (Declared t) ed) (sstore_add id v dstate).
+      edecl ed dstate (sdecl_ id tau) (add id (Declared t) ed) (sstore_add id v dstate).

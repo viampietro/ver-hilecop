@@ -1,14 +1,15 @@
-(** * Sitpn2HVhdhl intermediary types.  *)
+(** * Sitpn-to-HVhdhl Types.  *)
 
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.ListsDep.
+Require Import common.StateAndErrorMonad.
+Require Import common.ListsMonad.
 Require Import String.
+Require Import dp.Sitpn.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
-Require Import dp.Sitpn.
-Require Import StateAndErrorMonad.
 
 Import ErrMonadNotations.
 
@@ -17,6 +18,8 @@ Import ErrMonadNotations.
 Section CompileTimeTypes.
 
   Variable sitpn : Sitpn.
+
+  (** *** Information structure for a given [Sitpn] *)
   
   (** Defines the type of PlaceInfo, gathering informations about a
     given place of an SITPN. *)
@@ -34,8 +37,8 @@ Section CompileTimeTypes.
   
   (** Defines the record type that stores information about an Sitpn. *)
 
-  Inductive SitpnInfo : Type :=
-    MkSitpnInfo {
+  Inductive SitpnInfos : Type :=
+    MkSitpnInfos {
         pinfos : list (P sitpn * PlaceInfo);
         tinfos : list (T sitpn * TransInfo);
         cinfos : list (C sitpn * list (T sitpn));
@@ -43,11 +46,14 @@ Section CompileTimeTypes.
         finfos : list (F sitpn * list (T sitpn));
       }.
 
-  (** Aliases to types, used as intermediary data representation between
-    Sitpn and H-VHDL abstract syntax.  *)
+  (** Empty [SitpnInfo] structure *)
 
+  Definition EmptySitpnInfos := MkSitpnInfos [] [] [] [] [].
+
+  (** *** Intermediary representation of an H-VHDL architecture *)
+  
   (** Intermediary representation of a H-VHDL component input port
-    map. *)
+      map. *)
 
   Definition InputMap := list (ident * (expr + list expr)).
 
@@ -85,32 +91,40 @@ Section CompileTimeTypes.
     of list of declarations (list adecl), a mapping from P to
     HComponent and a mapping from T to HComponent.  *)
 
-  Definition Architecture := (list adecl * PlaceMap * TransMap * FunMap * ActionMap)%type.
+  Definition Architecture := (list sdecl * PlaceMap * TransMap * FunMap * ActionMap)%type.
 
-  (** **  Source to target binder *)
+  (** Empty architecture structure *)
+
+  Definition EmptyArch : Architecture := ([], [], [], [], []).
+  
+  (** *** Source to target binder *)
 
   (** Maps the elements of an SITPN to their signal or component
     identifiers on the VHDL side. *)
 
-  Record Sitpn2HVhdlMap : Type :=
-    BuildMap {
+  Inductive Sitpn2HVhdlMap : Type :=
+    MkS2HMap {
         p2pcomp : list (P sitpn * ident);
         t2tcomp : list (T sitpn * ident);
         a2out   : list (A sitpn * ident);
         f2out   : list (F sitpn * ident);
         c2in    : list (C sitpn * ident);
       }.
+  
+  (** Empty [Sitpn2HVhdlMap] structure *)
 
-  (** ** Compile-time state *)
+  Definition EmptyS2HMap := MkS2HMap [] [] [] [] [].
+  
+  (** *** Compile-time state *)
 
   Inductive Sitpn2HVhdlState : Type :=
-    MkState {
+    MkS2HState {
 
         (* Next id *)
         nextid : ident;
 
         (* Sitpn information structure *)
-        sitpninfos : SitpnInfo;
+        sitpninfos : SitpnInfos;
         
         (* Architecture in intermediary format *)
         arch : Architecture;
@@ -121,6 +135,14 @@ Section CompileTimeTypes.
         (* Architecture body in VHDL abstract syntax *)
         behavior : cs;
       }.
+
+  (** Empty compile-time state
+
+      Given a first fresh id [ffid], returns an empty compile-time
+      state. *)
+  
+  Definition InitS2HState (ffid : ident) :=
+    MkS2HState ffid EmptySitpnInfos EmptyArch EmptyS2HMap cs_null.
 
 End CompileTimeTypes.
 
@@ -148,25 +170,37 @@ Section CompileTimeStateOpers.
 
   (** *** Compile-time state getters *)
 
-  Definition get_infos : @Mon (Sitpn2HVhdlState sitpn) (SitpnInfo sitpn) :=
+  Definition get_infos : @Mon (Sitpn2HVhdlState sitpn) (SitpnInfos sitpn) :=
     do s <- Get; Ret (sitpninfos s).
 
-  Definition set_infos (infos : SitpnInfo sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+  Definition set_infos (infos : SitpnInfos sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkState sitpn (nextid s) infos (arch s) (γ s) (behavior s)).
+    Put (MkS2HState sitpn (nextid s) infos (arch s) (γ s) (behavior s)).
   
-  (** *** Getters for SitpnInfo structure *)
+  (** *** Getters for SitpnInfos structure *)
 
   Definition get_tinfo (t : T sitpn) : @Mon (Sitpn2HVhdlState sitpn) (TransInfo sitpn) :=
     let check_t_in_tinfos :=
         (fun params => let '(t', _) := params in
                        if seqdec Nat.eq_dec t t' then Ret true else Ret false) in
     do sitpninfos <- get_infos;
-    do opt_ttinfo <- find check_t_in_tinfos (tinfos sitpninfos);
+    do opt_ttinfo <- ListsMonad.find check_t_in_tinfos (tinfos sitpninfos);
     match opt_ttinfo with
     | None => Err ("get_tinfo: transition "
                      ++ $$t ++ " is not referenced in the SITPN information structure.")
     | Some ttinfo => Ret (snd ttinfo)
+    end.
+
+  Definition get_pinfo (p : P sitpn) : @Mon (Sitpn2HVhdlState sitpn) (PlaceInfo sitpn) :=
+    let check_p_in_pinfos :=
+        (fun params => let '(p', _) := params in
+                       if seqdec Nat.eq_dec p p' then Ret true else Ret false) in
+    do sitpninfos <- get_infos;
+    do opt_ppinfo <- ListsMonad.find check_p_in_pinfos (pinfos sitpninfos);
+    match opt_ppinfo with
+    | None => Err ("get_pinfo: transition "
+                     ++ $$p ++ " is not referenced in the SITPN information structure.")
+    | Some ppinfo => Ret (snd ppinfo)
     end.
 
   (** *** Setters *)
@@ -175,7 +209,7 @@ Section CompileTimeStateOpers.
 
   Definition set_pinfo (ppinfo : (P sitpn * PlaceInfo sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do sitpninfo <- get_infos;
-    set_infos (MkSitpnInfo sitpn
+    set_infos (MkSitpnInfos sitpn
                            (ppinfo :: (pinfos sitpninfo))
                            (tinfos sitpninfo)
                            (cinfos sitpninfo)
@@ -186,7 +220,7 @@ Section CompileTimeStateOpers.
 
   Definition set_tinfo (ttinfo : (T sitpn * TransInfo sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do sitpninfos <- get_infos;
-    set_infos (MkSitpnInfo sitpn
+    set_infos (MkSitpnInfos sitpn
                            (pinfos sitpninfos)
                            (ttinfo :: (tinfos sitpninfos))
                            (cinfos sitpninfos)
@@ -198,7 +232,7 @@ Section CompileTimeStateOpers.
   Definition set_cinfo (cinfo : (C sitpn * list (T sitpn))) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
     do sitpninfos <- get_infos;
-    set_infos (MkSitpnInfo sitpn
+    set_infos (MkSitpnInfos sitpn
                            (pinfos sitpninfos)
                            (tinfos sitpninfos)
                            (cinfo :: cinfos sitpninfos)
@@ -210,7 +244,7 @@ Section CompileTimeStateOpers.
   Definition set_ainfo (ainfo : (A sitpn * list (P sitpn))) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
     do sitpninfos <- get_infos;
-    set_infos (MkSitpnInfo sitpn
+    set_infos (MkSitpnInfos sitpn
                            (pinfos sitpninfos)
                            (tinfos sitpninfos)
                            (cinfos sitpninfos)
@@ -222,7 +256,7 @@ Section CompileTimeStateOpers.
   Definition set_finfo (finfo : (F sitpn * list (T sitpn))) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
     do sitpninfos <- get_infos;
-    set_infos (MkSitpnInfo sitpn
+    set_infos (MkSitpnInfos sitpn
                            (pinfos sitpninfos)
                            (tinfos sitpninfos)
                            (cinfos sitpninfos)
@@ -240,6 +274,7 @@ Arguments set_finfo {sitpn}.
 (** Set implicit arguments for PlaceInfo fields. *)
 
 Arguments tinputs {sitpn}.
+Arguments tconflict {sitpn}.
 Arguments toutputs {sitpn}.
 
 (** Set implicit arguments for TransInfo fields. *)
@@ -247,6 +282,6 @@ Arguments toutputs {sitpn}.
 Arguments pinputs {sitpn}.
 Arguments conds {sitpn}.
 
-(** Set implicit arguments for SitpnInfo fields. *)
+(** Set implicit arguments for SitpnInfos fields. *)
 
 Arguments cinfos {sitpn}.
