@@ -147,10 +147,14 @@ Section GenArch.
       (* Returns a place map entry *)
       Ret (p, (gmap, pipmap, [])).
     
-    (** Returns the PlaceMap built out the list of places of [sitpn]. *)
+    (** Builds a PlaceMap out the list of places of [sitpn], and
+        sets it in the architecture of the compile-time state. *)
 
-    Definition generate_place_map (max_marking : nat) : CompileTimeState (PlaceMap sitpn) :=
-      ListsMonad.tmap (fun p => generate_place_map_entry p max_marking) (P2List sitpn) nat_to_P.
+    Definition generate_place_map (max_marking : nat) : CompileTimeState unit :=
+      do plmap <- ListsMonad.tmap (fun p => generate_place_map_entry p max_marking) (P2List sitpn) nat_to_P;
+      do arch <- get_arch sitpn;
+      let '(sigs, _, trmap, fmap, amap) := arch in
+      set_arch sitpn (sigs, plmap, trmap, fmap, amap).
     
   End GeneratePlaceMap.
 
@@ -251,8 +255,11 @@ Section GenArch.
     
     (** Returns the TransMap built out the list of transitions of [sitpn]. *)
 
-    Definition generate_trans_map : CompileTimeState (TransMap sitpn) :=
-      ListsMonad.tmap generate_trans_map_entry (T2List sitpn) nat_to_T.
+    Definition generate_trans_map : CompileTimeState unit :=
+      do trmap <- ListsMonad.tmap generate_trans_map_entry (T2List sitpn) nat_to_T;
+      do arch <- get_arch sitpn;
+      let '(sigs, plmap, _, fmap, amap) := arch in
+      set_arch sitpn (sigs, plmap, trmap, fmap, amap).
     
   End GenerateTransMap.
 
@@ -260,10 +267,20 @@ Section GenArch.
 
   Section GenerateInterconnections.
 
-    Variable sitpn : Sitpn.
-    Variable sitpn_info : SitpnInfo sitpn.
-
     Local Open Scope abss_scope.
+
+    Definition get_actual_of_out_port (opid : ident) (comp : HComponent) :
+      CompileTimeState (option (option name + list name)) :=
+      let '(gmap, ipmap, opmap) := comp in
+      Ret (getv Nat.eq_dec opid opmap).
+
+    Definition connect_out_port
+               (opid : ident)
+               (actual : option name + list name)
+               (comp : HComponent) :
+      CompileTimeState (HComponent) :=
+      let '(gmap, ipmap, opmap) := comp in
+      Ret (gmap, ipmap, setv Nat.eq_dec opid actual opmap).
     
     (** (1) Connects the "fired" output port of the component
       representing transition [t] to another composite port via the
@@ -276,48 +293,45 @@ Section GenArch.
       (3) Returns the new architecture, the next available identifier,
       and the new list of expressions. *)
     
-    Definition connect_fired_port
-               (arch : Architecture sitpn)
-               (nextid : ident)
-               (lofexprs : list expr)
-               (t : T sitpn) :
-      optionE (Architecture sitpn * ident * list expr) :=
-      (* Destructs the architecture. *)
-      let '(adecls, plmap, trmap, fmap, amap) := arch in
+    Definition connect_fired_port (lofexprs : list expr) (t : T sitpn) :
+      CompileTimeState (list expr) :=
       
       (* Retrieves the component associated to transtion [t] in
-       [TransMap trmap].  *)
-      match getv Teqdec t trmap with
-      | Some (tgmap, tipmap, topmap) =>
-        (* Checks if the "fired" port already belongs to the output port map
-       of the component. *)
-        match getv Nat.eq_dec Transition.fired topmap with
-        (* Case where fired is connected to an expression.  Then, adds
-         the expression [e] at the end of lofexprs, and returns the
-         triplet [(architecture, lofexprs, nextid)]. *)
-        | Some (inl e) => [| (arch, nextid, lofexprs ++ [e]) |]
-        (* Error case, in the output port map [topmap], fired is
+         [TransMap trmap].  *)
+      do tcomp <- get_tcomp sitpn t;
+      do opt_fired_actual <- get_actual_of_out_port Transition.fired tcomp;
+      
+      (* Checks if the "fired" port already belongs to the output port map
+         of [tcomp]. *)
+      match opt_fired_actual with
+      (* Case where fired is connected to an [option name].         
+         Error, if fired port is open (i.e, connected to None).
+         Otherwise, adds a new expression to [lofexprs]. *)
+      | Some (inl optn) =>
+        match optn with
+        | Some n => Ret (lofexprs ++ [e_name n])
+        | _ => Err ("connect_fired_port: the fired port of T component "
+                      ++ $$t ++ " is open.")
+        end
+      (* Error case, in the output port map [topmap], fired is
          connected to a list of expressions, albeit it must be of
          scalar type (boolean).  *)
-        | Some (inr _) =>
-          Err ("connect_fired_port: the fired port of transition "
-                 ++ $$t ++ " must be of scalar type.")%string
-        (* Case where fired is not connected yet. Then, adds a new
-         interconnection signal to the arch's declaration list and at
-         the end of the lofexprs, modifies the output port map of
-         transition t, and returns the resulting triplet. *)
-        | None =>
-          let adecls' := adecls ++ [adecl_sig nextid tind_boolean] in
-          let topmap' := setv Nat.eq_dec Transition.fired (inl ($nextid)) topmap in
-          let thcomp := (tgmap, tipmap, topmap') in
-          let trmap' := setv Teqdec t thcomp trmap in
-          let arch' := (adecls', plmap, trmap', fmap, amap) in
-          (* Increments nextid to return the next available identifier. *)
-          [| (arch', nextid + 1, lofexprs ++ [#nextid]) |]
-        end
-      (* Error case. *)
-      | None => Err ("connect_fired_port: Transition "
-                       ++ $$t ++ " is not referenced in the TransMap.")%string
+      | Some (inr _) =>
+        Err ("connect_fired_port: the fired port of transition "
+               ++ $$t ++ " must be of scalar type.")%string
+      (* Case where [fired] is not connected yet. Then, adds a new
+         interconnection signal to the [arch]'s internal signal
+         declaration list and at the end of the [lofexprs], modifies
+         the output port map of component [tcomp], and returns . *)
+      | None =>
+
+        do id <- get_nextid sitpn;
+        do tcomp' <- connect_out_port Transition.fired (inl (Some ($id))) tcomp;
+        do _ <- set_tcomp sitpn t tcomp';
+        do _ <- add_sig_decl sitpn (sdecl_ id tind_boolean);
+        
+        (* Increments nextid to return the next available identifier. *)
+        Ret (lofexprs ++ [#id])
       end.
 
     (** Returns a new architecture where the fired ports of all the
@@ -325,71 +339,52 @@ Section GenArch.
       internal signal; the list of all such signals is returned
       alongside the next available identifier.  *)
     
-    Definition connect_fired_ports
-               (arch : Architecture sitpn)
-               (nextid : ident)
-               (transs : list (T sitpn)) :
-      optionE (Architecture sitpn * ident * list expr) :=
-      
-      (* Destructs the architecture. *)
-      let '(adecls, plmap, trmap, fmap, amap) := arch in
+    Definition connect_fired_ports (transs : list (T sitpn)) :
+      CompileTimeState (list expr) :=
       
       (* Local variable storing the list of expressions, that is the
-       list of internal signal identifiers connected to the fired port
-       of transitions of the transs list.
+         list of internal signal identifiers connected to the fired port
+         of transitions of the transs list.
        
-       If the transs list is nil, then the list of expressions
-       contains the singleton expression [false].  *)
+        If the transs list is nil, then the list of expressions
+        contains the singleton expression [false].  *)
       let lofexprs := (if transs then [e_bool false] else []) in
-
-      (* Wrapper around the connect_fired_port function. *)
-      let wconn_fired_port :=
-          (fun params t =>
-             let '(arch, nextid, lofexprs) := params in
-             connect_fired_port arch nextid lofexprs t)
-      in
+      
       (* Calls the connect_fired function over all transitions
          of the transs list. *)
-      oefold_left wconn_fired_port transs (arch, nextid, lofexprs).
+      ListsMonad.fold_left connect_fired_port transs lofexprs.
 
+    Definition connect_in_port
+               (ipid : ident)
+               (actual : expr + list expr)
+               (comp : HComponent) :
+      CompileTimeState (HComponent) :=
+      let '(gmap, ipmap, opmap) := comp in
+      Ret (gmap, setv Nat.eq_dec ipid actual ipmap, opmap).
+    
     (** Connects the input port map of a component [phcomp],
-      representing some place p, to the output port map of the
-      components representing the input transitions (resp. output
-      transitions) of p. *)
+        representing some place p, to the output port map of the
+        components representing the input transitions (resp. output
+        transitions) of p. *)
 
     Definition connect_place_inputs
-               (arch : Architecture sitpn)
-               (nextid : ident)
                (pinfo : PlaceInfo sitpn)
-               (phcomp : HComponent) :
-      optionE (Architecture sitpn * ident * HComponent) :=
+               (pcomp : HComponent) :
+      CompileTimeState (HComponent) :=
 
-      (* Destructs phcomp. *)
-      let '(pgmap, pipmap, popmap) := phcomp in
-      
-      (* Calls connect_transitions_fired on the input transitions of p. *)
-      match connect_fired_ports arch nextid (tinputs pinfo) with
-      | [| (arch', nextid', in_trans_fired) |] =>
-        (* Calls connect_transitions_fired on the output transitions of p. *)
-        match connect_fired_ports arch' nextid' (toutputs pinfo) with
-        | [| (arch'', nextid'', out_trans_fired) |] =>
-          (* Connects ports input_transitions_fired and
-           output_transitions_fired to the list of expressions
-           in_trans_fired and out_trans_fired.  *)
-          let pipmap' := setv Nat.eq_dec Place.input_transitions_fired (inr in_trans_fired) pipmap in
-          let pipmap'' := setv Nat.eq_dec Place.output_transitions_fired (inr out_trans_fired) pipmap' in
-          
-          (* Modifies the phcomp HComponent. *)
-          let phcomp' := (pgmap, pipmap'', popmap) in
-          [| (arch'', nextid'', phcomp') |]
-            
-        (* Error case. *)
-        | Err msg => Err msg
-        end
-      (* Error case. *)
-      | Err msg => Err msg
-      end.
-
+      (* Lists the signals connected to the [fired] port of the input
+         transitions of [p]. *)
+      do in_trans_fired <- connect_fired_ports (tinputs pinfo);
+      (* Lists the signals connected to the [fired] port of the output
+         transitions of [p]. *)
+      do out_trans_fired <- connect_fired_ports (toutputs pinfo);
+      (* Connects composite port [input_transitions_fired] of [pcomp]
+         to the [fired] ports of its input transitions.  *)
+      do pcomp' <- connect_in_port Place.input_transitions_fired (inr in_trans_fired) pcomp;
+      (* Connects, and returns, composite port [output_transitions_fired] of [pcomp]
+         to the [fired] ports of its output transitions.  *)      
+      connect_in_port Place.output_transitions_fired (inr out_trans_fired) pcomp'.
+    
     (** Adds an association between the composite port [cportid] and the
       expression [e] in the input port map [ipmap]. *)
 
@@ -436,20 +431,20 @@ Section GenArch.
         [| (setv Nat.eq_dec cportid (inr [n]) opmap) |]
       end.
     
-    (** Creates an interconnection signal (adds it to [adecls]) and
+    (** Creates an interconnection signal (adds it to [sigs]) and
       connects [xoport] (in the output port map of [hcompx]) to
       [yiport] (in the input port map of [hcompy]) through this newly
       created signal.  *)
     
     Definition connect
-               (adecls : list adecl)
+               (sigs : list sdecl)
                (nextid : ident)
                (hcompx hcompy : HComponent)
                (xoport yiport : ident) :
-      optionE (list adecl * ident * HComponent * HComponent) :=
+      optionE (list sdecl * ident * HComponent * HComponent) :=
       
-      (* Adds a new interconnection signal at the end of adecls. *)
-      let adecls := adecls ++ [adecl_sig nextid tind_boolean] in
+      (* Adds a new interconnection signal at the end of sigs. *)
+      let sigs := sigs ++ [sdecl_ nextid tind_boolean] in
 
       (* Destructs component x and y. *)
       let '(xgmap, xipmap, xopmap) := hcompx in
@@ -469,7 +464,7 @@ Section GenArch.
           let hcompy' := (ygmap, yipmap', yopmap) in
           
           (* Returns the resulting 4-uplet. *)
-          [| (adecls, nextid + 1, hcompx', hcompy') |]
+          [| (sigs, nextid + 1, hcompx', hcompy') |]
         | Err msg => Err msg
         end
       | Err msg => Err msg
@@ -487,28 +482,28 @@ Section GenArch.
       optionE (Architecture sitpn * ident * HComponent) :=
 
       (* Destructs the architecture. *)
-      let '(adecls, plmap, trmap, fmap, amap) := arch in
+      let '(sigs, plmap, trmap, fmap, amap) := arch in
       
       (* Retrieves the component associated to transition t in trmap. *)
       match getv Teqdec t trmap with
       | Some thcomp =>
         (* Connects output_arcs_valid to input_arcs_valid. *)
-        s' <- connect adecls nextid phcomp thcomp Place.output_arcs_valid Transition.input_arcs_valid;
-  let '(adecls', nextid', phcomp', thcomp') := s' in
+        s' <- connect sigs nextid phcomp thcomp Place.output_arcs_valid Transition.input_arcs_valid;
+  let '(sigs', nextid', phcomp', thcomp') := s' in
 
   (* Connects priority_authorizations to priority_authorizations. *)
-  s'' <- connect adecls' nextid' phcomp' thcomp' Place.priority_authorizations Transition.priority_authorizations;
-  let '(adecls'', nextid'', phcomp'', thcomp'') := s'' in
+  s'' <- connect sigs' nextid' phcomp' thcomp' Place.priority_authorizations Transition.priority_authorizations;
+  let '(sigs'', nextid'', phcomp'', thcomp'') := s'' in
 
   (* Connects reinit_transitions_time to reinit_time. *)
-  s''' <- connect adecls'' nextid'' phcomp'' thcomp'' Place.reinit_transitions_time Transition.reinit_time;
-  let '(adecls''', nextid''', phcomp''', thcomp''') := s''' in
+  s''' <- connect sigs'' nextid'' phcomp'' thcomp'' Place.reinit_transitions_time Transition.reinit_time;
+  let '(sigs''', nextid''', phcomp''', thcomp''') := s''' in
 
   (* Overrides the association of t to thcomp in trmap. *)
   let trmap' := setv Teqdec t thcomp''' trmap in
   
-  (* Creates a new architecture, i.e, with new adecls and trmap. *)
-  let arch' := (adecls''', plmap, trmap', fmap, amap) in
+  (* Creates a new architecture, i.e, with new sigs and trmap. *)
+  let arch' := (sigs''', plmap, trmap', fmap, amap) in
 
   (* Returns a triplet with a new archictecture, fresh id, and an HComponent. *)
   [| (arch', nextid''', phcomp) |]
@@ -557,7 +552,7 @@ Section GenArch.
       optionE (Architecture sitpn * ident) :=
       
       (* Destructs the architecture. *)
-      let '(adecls, plmap, trmap, fmap, amap) := arch in
+      let '(sigs, plmap, trmap, fmap, amap) := arch in
       
       (* Retrieves information about p. *)
       match getv Peqdec p (pinfos sitpn sitpn_info) with
@@ -574,11 +569,11 @@ Section GenArch.
   let '(arch'', nextid'', phcomp'') := s'' in
 
   (* Associates p to phcomp'' in the PlaceMap of arch''. *)
-  let '(adecls'', plmap'', trmap'', fmap, amap) := arch'' in
+  let '(sigs'', plmap'', trmap'', fmap, amap) := arch'' in
   let plmap''' := setv Peqdec p phcomp'' plmap'' in
   
   (* Creates an new architecture, and returns the resulting couple. *)
-  let arch''' := (adecls'', plmap''', trmap'', fmap, amap) in
+  let arch''' := (sigs'', plmap''', trmap'', fmap, amap) in
 
   (* Returns a couple new architecture and fresh id. *)
   [| (arch''', nextid'') |]
@@ -649,15 +644,22 @@ Section GenArch.
 
 End GenArch.
 
+Require Import test.sitpn.dp.WellDefinedSitpns.
+Require Import GenerateInfos.
+
+Local Notation "[ e ]" := (exist _ e _).
+
 Arguments generate_place_map {sitpn}.
 Arguments generate_trans_map {sitpn}.
 
-(* Require Import test.sitpn.dp.WellDefinedSitpns. *)
-(* Require Import GenerateInfos. *)
+Compute (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
+                do _ <- generate_place_map 255;
+                do _ <- generate_trans_map;
+                @connect_fired_ports sitpn_simpl [t0; t1; t2])
+                 (InitS2HState sitpn_simpl 10))).
 
-(* Local Notation "[ e ]" := (exist _ e _). *)
-
-(* Compute (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
-(*                 generate_place_map 255) *)
-(*                  (InitS2HState sitpn_simpl 2))). *)
-
+Compute (RedS ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
+                do _ <- generate_place_map 255;
+                do _ <- generate_trans_map;
+                @connect_fired_ports sitpn_simpl [t0; t1; t2])
+                 (InitS2HState sitpn_simpl 10))).

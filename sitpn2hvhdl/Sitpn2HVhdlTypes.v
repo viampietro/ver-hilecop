@@ -5,9 +5,11 @@ Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.ListsDep.
 Require Import common.StateAndErrorMonad.
+Require Import common.ListsPlus.
 Require Import common.ListsMonad.
 Require Import String.
 Require Import dp.Sitpn.
+Require Import dp.SitpnFacts.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 
@@ -176,6 +178,56 @@ Section CompileTimeStateOpers.
   Definition set_infos (infos : SitpnInfos sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (nextid s) infos (arch s) (γ s) (behavior s)).
+
+  Definition get_arch : @Mon (Sitpn2HVhdlState sitpn) (Architecture sitpn) :=
+    do s <- Get; Ret (arch s).
+
+  Definition set_arch (arch : Architecture sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s) arch (γ s) (behavior s)).
+
+  (* Returns the next available identifier, and increments the
+     [nextid] value in the compile-time state. *)
+
+  Definition get_nextid : @Mon (Sitpn2HVhdlState sitpn) ident :=
+    do s <- Get;
+    do _ <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (arch s) (γ s) (behavior s));
+    Ret (nextid s).
+  
+  (** *** Getters for Architecture structure *)
+
+  Definition get_tcomp (t : T sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
+
+    (* Retrieves the architecture from the compile-time state. *)
+    do arch <- get_arch;
+    
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    let check_t_in_trmap :=
+        (fun params => let '(t', _) := params in
+                       if seqdec Nat.eq_dec t t' then Ret true else Ret false) in
+    do opt_ttcomp <- ListsMonad.find check_t_in_trmap trmap;
+    match opt_ttcomp with
+    | None => Err ("get_tcomp: transition "
+                     ++ $$t ++ " is not referenced in the Architecture structure.")
+    | Some ttcomp => Ret (snd ttcomp)
+    end.
+  
+  Definition set_tcomp (t : T sitpn) (tcomp : HComponent) :
+    @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do arch <- get_arch;
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    (* Sets the couple [(t, tcomp)] in [trmap]. *)
+    let trmap' := setv Teqdec t tcomp trmap in
+    (* Updates the new archictecture. *)
+    set_arch (sigs, plmap, trmap', fmap, amap).
+
+  Definition add_sig_decl (sd : sdecl) :
+    @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do arch <- get_arch;
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    set_arch (sigs ++ [sd], plmap, trmap, fmap, amap).
   
   (** *** Getters for SitpnInfos structure *)
 

@@ -22,7 +22,8 @@ Arguments Peqdec {sitpn}.
 (* The [SetoidList.InA] predicate is decidable with [Peq] as the
    equality relation. *)
 
-Definition InA_Peq_dec sitpn (p : P sitpn) (lofP : list (P sitpn)) : {SetoidList.InA Peq p lofP} + {~SetoidList.InA Peq p lofP} :=
+Definition InA_Peq_dec sitpn (p : P sitpn) (lofP : list (P sitpn)) :
+  {SetoidList.InA Peq p lofP} + {~SetoidList.InA Peq p lofP} :=
   InA_seq_dec (fun n => In n sitpn.(places)) Nat.eq_dec p lofP.
 
 (** For a given [sitpn], defines the equivalence relation [Teq]

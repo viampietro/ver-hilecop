@@ -48,7 +48,7 @@ Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
       do _ <- titer f tl pf_tl; f b
   end.
 
-(** ** State-and-error monadic map function *)
+(** ** State-and-error monad version of map *)
 
 Section Map.
 
@@ -78,7 +78,7 @@ End Map.
 Arguments map_aux {state B C}.
 Arguments map {state B C}.
 
-(** ** Transform and map elements of a list. *)
+(** ** State-and-error monad version of transform and map *)
 
 Section TMap.
 
@@ -117,3 +117,5 @@ Section TMap.
 End TMap.
 
 Arguments tmap {state A B C}.
+
+(** ** State-and-error monad version of setv *)
