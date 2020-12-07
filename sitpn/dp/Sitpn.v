@@ -106,17 +106,20 @@ Notation "a '>~' b" := (pr a b) (at level 0).
 
 Definition Psubset sitpn Q := { p : P sitpn | Q p }.
 Definition Psubset_in_P sitpn (Q : P sitpn -> Prop) (p : Psubset Q) := proj1_sig p.
-Definition P_in_nat sitpn (p : P sitpn) : nat := proj1_sig p.
-Definition nat_to_P {sitpn} p := (fun (pf : InP sitpn p) => exist _ p pf).
 
 Definition Tsubset sitpn Q := { t : T sitpn | Q t }.
 Definition Tsubset_in_T sitpn (Q : T sitpn -> Prop) (t : Tsubset Q) := proj1_sig t.
-Definition T_in_nat sitpn (t : T sitpn) : nat := proj1_sig t.
-Definition nat_to_T {sitpn} t := (fun (pf : InT sitpn t) => exist _ t pf).
-
 Definition Ti (sitpn : Sitpn) := Tsubset (fun t : T sitpn => (Is t) <> None).
 Definition Ti_in_T (sitpn : Sitpn) (t : Ti sitpn) := proj1_sig t.
 
+Definition T_in_nat sitpn (t : T sitpn) : nat := proj1_sig t.
+Definition P_in_nat sitpn (p : P sitpn) : nat := proj1_sig p.
+Definition C_in_nat sitpn (c : C sitpn) : nat := proj1_sig c.
+Definition A_in_nat sitpn (a : A sitpn) : nat := proj1_sig a.
+Definition F_in_nat sitpn (f : F sitpn) : nat := proj1_sig f.
+
+Definition nat_to_P {sitpn} p := (fun (pf : InP sitpn p) => exist _ p pf).
+Definition nat_to_T {sitpn} t := (fun (pf : InT sitpn t) => exist _ t pf).
 Definition nat_to_C {sitpn} c := (fun (pf : InC sitpn c) => exist _ c pf).
 Definition nat_to_A {sitpn} a := (fun (pf : InA sitpn a) => exist _ a pf).
 Definition nat_to_F {sitpn} f := (fun (pf : InF sitpn f) => exist _ f pf).
@@ -124,10 +127,14 @@ Definition nat_to_F {sitpn} f := (fun (pf : InF sitpn f) => exist _ f pf).
 (** Coercions for Sitpn. *)
 
 Coercion P_in_nat : P >-> nat.
+Coercion T_in_nat : T >-> nat.
+Coercion C_in_nat : C >-> nat.
+Coercion A_in_nat : A >-> nat.
+Coercion F_in_nat : F >-> nat.
+
 Coercion Psubset_in_P : Psubset >-> P.
 Coercion Tsubset_in_T : Tsubset >-> T.
 Coercion Ti_in_T : Ti >-> T. 
-Coercion T_in_nat : T >-> nat.
 
 (** Macro functions for Sitpn. *)
 

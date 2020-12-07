@@ -557,12 +557,12 @@ Arguments generate_trans_map {sitpn}.
 Arguments generate_interconnections {sitpn}.
 Arguments generate_architecture {sitpn}.
 
-Require Import test.sitpn.dp.WellDefinedSitpns.
-Require Import GenerateInfos.
+(* Require Import test.sitpn.dp.WellDefinedSitpns. *)
+(* Require Import GenerateInfos. *)
 
-Local Notation "[ e ]" := (exist _ e _).
+(* Local Notation "[ e ]" := (exist _ e _). *)
 
-Compute (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-                do _ <- generate_architecture 255;
-                get_arch)
-                 (InitS2HState sitpn_simpl 10))).
+(* Eval vm_compute in (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*                            do _ <- generate_architecture 255; *)
+(*                            get_arch) *)
+(*                             (InitS2HState sitpn_simpl 10))). *)

@@ -36,6 +36,10 @@ Section StateAndErrMonad.
         | OK y s3 => OK y s3
         end
       end.
+
+  Definition Bind2 {A B C: Type} (f: Mon (A * B)) (g: A -> B -> Mon C) : Mon C :=
+    Bind f (fun xy => g (fst xy) (snd xy)).
+  
   Definition Get : Mon state := fun s => OK s s.
   Definition Put : state -> Mon unit := fun s _ => OK tt s.
 
@@ -51,6 +55,9 @@ Arguments Put {state}.
 
 Notation "'do' X <- A ; B" := (Bind A (fun X => B))
                                 (at level 200, X ident, A at level 100, B at level 200).
+
+Notation "'do' '|(' X , Y ')|' <- A ; B" := (Bind2 A (fun X Y => B))
+   (at level 200, X ident, Y ident, A at level 100, B at level 200).
 
 Notation "'RedS' r" := match r with
                      | OK _ _ _ _ s => s

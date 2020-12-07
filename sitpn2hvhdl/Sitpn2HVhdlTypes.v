@@ -127,15 +127,22 @@ Section CompileTimeTypes.
 
         (* Sitpn information structure *)
         sitpninfos : SitpnInfos;
+
+        (* Input port list *)
+        iports : list pdecl;
+
+        (* Output port list *)
+        oports : list pdecl;
         
         (* Architecture in intermediary format *)
         arch : Architecture;
 
+        (* Architecture body in VHDL abstract syntax *)
+        behavior : cs;
+
         (* Source-to-target binder *)
         γ : Sitpn2HVhdlMap;
 
-        (* Architecture body in VHDL abstract syntax *)
-        behavior : cs;
       }.
 
   (** Empty compile-time state
@@ -144,7 +151,7 @@ Section CompileTimeTypes.
       state. *)
   
   Definition InitS2HState (ffid : ident) :=
-    MkS2HState ffid EmptySitpnInfos EmptyArch EmptyS2HMap cs_null.
+    MkS2HState ffid EmptySitpnInfos [] [] EmptyArch cs_null EmptyS2HMap.
 
 End CompileTimeTypes.
 
@@ -156,10 +163,20 @@ Arguments cinfos {sitpn}.
 Arguments ainfos {sitpn}.
 Arguments finfos {sitpn}.
 
+(* Set implicit arguments for Sitpn2HVhdlMap *)
+
+Arguments p2pcomp {sitpn}.
+Arguments t2tcomp {sitpn}.
+Arguments a2out {sitpn}.
+Arguments f2out {sitpn}.
+Arguments c2in {sitpn}.
+
 (* Set implicit arguments for compile-time state *)
 
 Arguments nextid {sitpn}.
 Arguments sitpninfos {sitpn}.
+Arguments iports {sitpn}.
+Arguments oports {sitpn}.
 Arguments γ {sitpn}.
 Arguments arch {sitpn}.
 Arguments behavior {sitpn}.
@@ -170,31 +187,77 @@ Section CompileTimeStateOpers.
 
   Variable sitpn : Sitpn.
 
-  (** *** Compile-time state getters *)
+  (** *** Operations for compile-time state *)
 
   Definition get_infos : @Mon (Sitpn2HVhdlState sitpn) (SitpnInfos sitpn) :=
     do s <- Get; Ret (sitpninfos s).
 
   Definition set_infos (infos : SitpnInfos sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) infos (arch s) (γ s) (behavior s)).
+    Put (MkS2HState sitpn (nextid s) infos (iports s) (oports s) (arch s) (behavior s) (γ s)).
 
   Definition get_arch : @Mon (Sitpn2HVhdlState sitpn) (Architecture sitpn) :=
     do s <- Get; Ret (arch s).
 
   Definition set_arch (arch : Architecture sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s) arch (γ s) (behavior s)).
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) arch (behavior s) (γ s)).
 
+  Definition get_beh : @Mon (Sitpn2HVhdlState sitpn) cs :=
+    do s <- Get; Ret (behavior s).
+
+  Definition set_beh (beh : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) beh (γ s)).
+  
+  Definition get_binder : @Mon (Sitpn2HVhdlState sitpn) (Sitpn2HVhdlMap sitpn) :=
+    do s <- Get; Ret (γ s).
+
+  Definition set_binder (γ : Sitpn2HVhdlMap sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) (behavior s) γ).
+  
   (* Returns the next available identifier, and increments the
      [nextid] value in the compile-time state. *)
 
   Definition get_nextid : @Mon (Sitpn2HVhdlState sitpn) ident :=
     do s <- Get;
-    do _ <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (arch s) (γ s) (behavior s));
+    do _  <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (behavior s) (γ s));
     Ret (nextid s).
+
+  (** *** Operations for list of output ports *)
+
+  Definition add_out_port (oport_decl : pdecl) :=
+    do s <- Get;
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s)
+                    (iports s) ((oports s) ++ [oport_decl])
+                    (arch s) (behavior s) (γ s)).
+
+  (** *** Operations for SITPN-to-H-VHDL map *)
+
+  Definition bind_action (a : A sitpn) (id : ident) :=
+    do γ <- get_binder;
+    (* Sets the couple [(a, id)] in the [a2out] field of [γ]. *)
+    let a2out' := setv Aeqdec a id (a2out γ) in
+    (* Updates the new archictecture. *)
+    set_binder (MkS2HMap sitpn (p2pcomp γ) (t2tcomp γ) a2out' (f2out γ) (c2in γ)).
+
+  Definition bind_function (f : F sitpn) (id : ident) :=
+    do γ <- get_binder;
+    (* Sets the couple [(f, id)] in the [f2out] field of [γ]. *)
+    let f2out' := setv Feqdec f id (f2out γ) in
+    (* Updates the new archictecture. *)
+    set_binder (MkS2HMap sitpn (p2pcomp γ) (t2tcomp γ) (a2out γ) f2out' (c2in γ)).
+
+  (** *** Operations for behavior *)
+
+  Definition add_cs (cstmt : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s)
+                    (iports s) (oports s)
+                    (arch s) (cs_par cstmt (behavior s)) (γ s)).
   
-  (** *** Getters for Architecture structure *)
+  (** *** Operations for Architecture structure *)
 
   Definition get_tcomp (t : T sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
 
@@ -249,6 +312,60 @@ Section CompileTimeStateOpers.
     let plmap' := setv Peqdec p pcomp plmap in
     (* Updates the new archictecture. *)
     set_arch (sigs, plmap', trmap, fmap, amap).
+
+  Definition get_aport (a : A sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list expr) := 
+
+    (* Retrieves the architecture from the compile-time state. *)
+    do arch <- get_arch;
+    
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    let check_a_in_amap :=
+        (fun params => let '(a', _) := params in
+                       if seqdec Nat.eq_dec a a' then Ret true else Ret false) in
+    do opt_alofexprs <- ListsMonad.find check_a_in_amap amap;
+    match opt_alofexprs with
+    | None => Err ("get_aport: action "
+                     ++ $$a ++ " is not referenced in the Architecture structure.")
+    | Some alofexprs => Ret (snd alofexprs)
+    end.
+
+  Definition set_aport (a : A sitpn) (lofexprs : list expr) :
+    @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do arch <- get_arch;
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    (* Sets the couple [(a, lofexprs)] in [amap]. *)
+    let amap' := setv Aeqdec a lofexprs amap in
+    (* Updates the new archictecture. *)
+    set_arch (sigs, plmap, trmap, fmap, amap').
+
+  Definition get_fport (f : F sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list expr) := 
+
+    (* Retrieves the architecture from the compile-time state. *)
+    do arch <- get_arch;
+    
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    let check_f_in_fmap :=
+        (fun params => let '(f', _) := params in
+                       if seqdec Nat.eq_dec f f' then Ret true else Ret false) in
+    do opt_flofexprs <- ListsMonad.find check_f_in_fmap fmap;
+    match opt_flofexprs with
+    | None => Err ("get_fport: function "
+                     ++ $$f ++ " is not referenced in the Architecture structure.")
+    | Some flofexprs => Ret (snd flofexprs)
+    end.
+
+  Definition set_fport (f : F sitpn) (lofexprs : list expr) :
+    @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do arch <- get_arch;
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    (* Sets the couple [(a, lofexprs)] in [amap]. *)
+    let fmap' := setv Feqdec f lofexprs fmap in
+    (* Updates the new archictecture. *)
+    set_arch (sigs, plmap, trmap, fmap', amap).
   
   Definition add_sig_decl (sd : sdecl) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
@@ -282,6 +399,42 @@ Section CompileTimeStateOpers.
     | Some ppinfo => Ret (snd ppinfo)
     end.
 
+  Definition get_ainfo (a : A sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list (P sitpn)) :=
+    let check_a_in_ainfos :=
+        (fun params => let '(a', _) := params in
+                       if seqdec Nat.eq_dec a a' then Ret true else Ret false) in
+    do sitpninfos <- get_infos;
+    do opt_aainfo <- ListsMonad.find check_a_in_ainfos (ainfos sitpninfos);
+    match opt_aainfo with
+    | None => Err ("get_ainfo: action "
+                     ++ $$a ++ " is not referenced in the SITPN information structure.")
+    | Some aainfo => Ret (snd aainfo)
+    end.
+
+  Definition get_finfo (f : F sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list (T sitpn)) :=
+    let check_f_in_finfos :=
+        (fun params => let '(f', _) := params in
+                       if seqdec Nat.eq_dec f f' then Ret true else Ret false) in
+    do sitpninfos <- get_infos;
+    do opt_ffinfo <- ListsMonad.find check_f_in_finfos (finfos sitpninfos);
+    match opt_ffinfo with
+    | None => Err ("get_finfo: function "
+                     ++ $$f ++ " is not referenced in the SITPN information structure.")
+    | Some ffinfo => Ret (snd ffinfo)
+    end.
+
+  Definition get_cinfo (c : C sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list (T sitpn)) :=
+    let check_c_in_cinfos :=
+        (fun params => let '(c', _) := params in
+                       if seqdec Nat.eq_dec c c' then Ret true else Ret false) in
+    do sitpninfos <- get_infos;
+    do opt_ccinfo <- ListsMonad.find check_c_in_cinfos (cinfos sitpninfos);
+    match opt_ccinfo with
+    | None => Err ("get_finfo: function "
+                     ++ $$c ++ " is not referenced in the SITPN information structure.")
+    | Some ccinfo => Ret (snd ccinfo)
+    end.
+  
   (** *** Setters *)
 
   (* Adds a new place info entry to the pinfos list *)
@@ -365,12 +518,17 @@ Arguments get_arch {sitpn}.
 Arguments set_arch {sitpn}.
 Arguments get_infos {sitpn}.
 Arguments set_infos {sitpn}.
+Arguments get_beh {sitpn}.
+Arguments set_beh {sitpn}.
 Arguments get_nextid {sitpn}.
 
 (** Set implicit arguments for SitpnInfos monadic functions. *)
 
 Arguments get_tinfo {sitpn}.
 Arguments get_pinfo {sitpn}.
+Arguments get_cinfo {sitpn}.
+Arguments get_ainfo {sitpn}.
+Arguments get_finfo {sitpn}.
 Arguments set_pinfo {sitpn}.
 Arguments set_tinfo {sitpn}.
 Arguments set_ainfo {sitpn}.
@@ -383,6 +541,21 @@ Arguments get_pcomp {sitpn}.
 Arguments set_pcomp {sitpn}.
 Arguments get_tcomp {sitpn}.
 Arguments set_tcomp {sitpn}.
+Arguments get_aport {sitpn}.
+Arguments set_aport {sitpn}.
+Arguments get_fport {sitpn}.
+Arguments set_fport {sitpn}.
 Arguments add_sig_decl {sitpn}.
 
+(* Set implicit arguments for SITPN-to-H-VHDL map monadic functions. *)
 
+Arguments bind_action {sitpn}.
+Arguments bind_function {sitpn}.
+
+(* Set implicit arguments for list of output port monadic functions. *)
+
+Arguments add_out_port {sitpn}.
+
+(* Set implicit arguments for behavior monadic functions. *)
+
+Arguments add_cs {sitpn}.
