@@ -223,6 +223,33 @@ Section CompileTimeStateOpers.
     (* Updates the new archictecture. *)
     set_arch (sigs, plmap, trmap', fmap, amap).
 
+  Definition get_pcomp (p : P sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
+
+    (* Retrieves the architecture from the compile-time state. *)
+    do arch <- get_arch;
+    
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    let check_p_in_plmap :=
+        (fun params => let '(p', _) := params in
+                       if seqdec Nat.eq_dec p p' then Ret true else Ret false) in
+    do opt_ppcomp <- ListsMonad.find check_p_in_plmap plmap;
+    match opt_ppcomp with
+    | None => Err ("get_pcomp: place "
+                     ++ $$p ++ " is not referenced in the Architecture structure.")
+    | Some ppcomp => Ret (snd ppcomp)
+    end.
+
+  Definition set_pcomp (p : P sitpn) (pcomp : HComponent) :
+    @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do arch <- get_arch;
+    (* Destructs the architecture. *)
+    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    (* Sets the couple [(p, pcomp)] in [plmap]. *)
+    let plmap' := setv Peqdec p pcomp plmap in
+    (* Updates the new archictecture. *)
+    set_arch (sigs, plmap', trmap, fmap, amap).
+  
   Definition add_sig_decl (sd : sdecl) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
     do arch <- get_arch;
@@ -250,7 +277,7 @@ Section CompileTimeStateOpers.
     do sitpninfos <- get_infos;
     do opt_ppinfo <- ListsMonad.find check_p_in_pinfos (pinfos sitpninfos);
     match opt_ppinfo with
-    | None => Err ("get_pinfo: transition "
+    | None => Err ("get_pinfo: place "
                      ++ $$p ++ " is not referenced in the SITPN information structure.")
     | Some ppinfo => Ret (snd ppinfo)
     end.
@@ -317,12 +344,6 @@ Section CompileTimeStateOpers.
   
 End CompileTimeStateOpers.
 
-Arguments set_pinfo {sitpn}.
-Arguments set_tinfo {sitpn}.
-Arguments set_ainfo {sitpn}.
-Arguments set_cinfo {sitpn}.
-Arguments set_finfo {sitpn}.
-
 (** Set implicit arguments for PlaceInfo fields. *)
 
 Arguments tinputs {sitpn}.
@@ -337,3 +358,31 @@ Arguments conds {sitpn}.
 (** Set implicit arguments for SitpnInfos fields. *)
 
 Arguments cinfos {sitpn}.
+
+(* Set implicit arguments for Sitpn2HVhdlState monadic functions. *)
+
+Arguments get_arch {sitpn}.
+Arguments set_arch {sitpn}.
+Arguments get_infos {sitpn}.
+Arguments set_infos {sitpn}.
+Arguments get_nextid {sitpn}.
+
+(** Set implicit arguments for SitpnInfos monadic functions. *)
+
+Arguments get_tinfo {sitpn}.
+Arguments get_pinfo {sitpn}.
+Arguments set_pinfo {sitpn}.
+Arguments set_tinfo {sitpn}.
+Arguments set_ainfo {sitpn}.
+Arguments set_cinfo {sitpn}.
+Arguments set_finfo {sitpn}.
+
+(* Set implicit arguments for Architecture monadic functions. *)
+
+Arguments get_pcomp {sitpn}.
+Arguments set_pcomp {sitpn}.
+Arguments get_tcomp {sitpn}.
+Arguments set_tcomp {sitpn}.
+Arguments add_sig_decl {sitpn}.
+
+

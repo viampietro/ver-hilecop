@@ -118,4 +118,36 @@ End TMap.
 
 Arguments tmap {state A B C}.
 
-(** ** State-and-error monad version of setv *)
+(** ** State-and-error monad version of transform and fold left.  *)
+
+Section TFold_Left_Recursor.
+
+  Variable State : Type.
+  Variable A B C : Type.
+  Variable f : C -> B -> @Mon State C.
+
+  (** Given a proof that all elements in [lofAs] can yield a term of
+      [B], transform each element of [lofAs] into a term [b] of [B], then
+      calls [f] on [c] and [b] to build a new term of [C]. *)
+  
+  Fixpoint tfold_left (lofAs : list A) (c : C) : 
+    (forall a, In a lofAs -> B) -> @Mon State C :=
+    match lofAs with
+    | nil => fun _ => Ret c
+    | a :: tl =>
+      fun pf : _ =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
+
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
+
+        (* Builds a new term of C by calling f on b and c and
+           continues. *)
+        do c' <- f c b;
+        tfold_left tl c' pf_tl
+    end.
+  
+End TFold_Left_Recursor.
+
+Arguments tfold_left {State A B C}.

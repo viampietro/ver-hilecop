@@ -119,7 +119,7 @@ Section GenSitpnInfos.
       (* Iterates over the list of transitions, and builds the couple of
          lists (tinputs, touputs) of p along the way by applying
          function is_neighbor_of_p.  *)
-      match tfold_left get_neighbor_of_p (T2List sitpn) (nil, nil, nil) nat_to_T with
+      match ListsDep.tfold_left get_neighbor_of_p (T2List sitpn) (nil, nil, nil) nat_to_T with
       | (nil, nil, nil) => Err ("Place " ++ $$p ++ " is an isolated place.")
       | tin_tc_tout => Ret tin_tc_tout 
       end.
@@ -157,8 +157,8 @@ Section GenSitpnInfos.
           to [t] and [t']). *)
 
       Definition mutex_by_cconds (t t' : T sitpn) : CompileTimeState bool :=
-        do tinfo <- get_tinfo sitpn t;
-        do tinfo' <- get_tinfo sitpn t';
+        do tinfo <- get_tinfo t;
+        do tinfo' <- get_tinfo t';
         Ret (exists_ccond t t' (inter seq (seqdec Nat.eq_dec) (conds tinfo) (conds tinfo'))).      
       
       (* Returns [true] if there exists a place [p] in [places]
@@ -184,8 +184,8 @@ Section GenSitpnInfos.
          arc. *)
 
       Definition mutex_by_inhib (t t' : T sitpn) : CompileTimeState bool :=
-        do tinfo <- get_tinfo sitpn t;
-        do tinfo' <- get_tinfo sitpn t';
+        do tinfo <- get_tinfo t;
+        do tinfo' <- get_tinfo t';
         Ret (exists_inhib t t' (inter seq (seqdec Nat.eq_dec) (pinputs tinfo) (pinputs tinfo'))).
 
       (* Returns [true] is there exists no means of mutual exclusion

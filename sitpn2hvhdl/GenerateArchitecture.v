@@ -139,7 +139,7 @@ Section GenArch.
     Definition generate_place_map_entry (p : P sitpn) (max_marking : nat) :
       CompileTimeState (P sitpn * HComponent) :=
       (* Retrieves information about p. *)
-      do pinfo <- get_pinfo sitpn p;
+      do pinfo <- get_pinfo p;
       (* Retrieves p's generic map. *)
       do gmap <- generate_place_gen_map p pinfo max_marking;
       (* Retrieves p's static input map part. *)
@@ -152,10 +152,10 @@ Section GenArch.
 
     Definition generate_place_map (max_marking : nat) : CompileTimeState unit :=
       do plmap <- ListsMonad.tmap (fun p => generate_place_map_entry p max_marking) (P2List sitpn) nat_to_P;
-      do arch <- get_arch sitpn;
+      do arch <- get_arch;
       let '(sigs, _, trmap, fmap, amap) := arch in
       (* Sets the architecture with a new [PlaceMap] *)
-      set_arch sitpn (sigs, plmap, trmap, fmap, amap).
+      set_arch (sigs, plmap, trmap, fmap, amap).
     
   End GeneratePlaceMap.
 
@@ -242,7 +242,7 @@ Section GenArch.
     Definition generate_trans_map_entry (t : T sitpn) :
       CompileTimeState (T sitpn * HComponent) :=
       (* Retrieves information about p. *)
-      do tinfo <- get_tinfo sitpn t;
+      do tinfo <- get_tinfo t;
 
       (* Retrieves t's generic map. *)
       do gmap <- generate_trans_gen_map t tinfo;
@@ -257,9 +257,9 @@ Section GenArch.
 
     Definition generate_trans_map : CompileTimeState unit :=
       do trmap <- ListsMonad.tmap generate_trans_map_entry (T2List sitpn) nat_to_T;
-      do arch <- get_arch sitpn;
+      do arch <- get_arch;
       let '(sigs, plmap, _, fmap, amap) := arch in
-      set_arch sitpn (sigs, plmap, trmap, fmap, amap).
+      set_arch (sigs, plmap, trmap, fmap, amap).
     
   End GenerateTransMap.
 
@@ -303,7 +303,7 @@ Section GenArch.
       
       (* Retrieves the component associated to transtion [t] in
          [TransMap trmap].  *)
-      do tcomp <- get_tcomp sitpn t;
+      do tcomp <- get_tcomp t;
       do opt_fired_actual <- get_actual_of_out_port Transition.fired tcomp;
       
       (* Checks if the "fired" port already belongs to the output port map
@@ -330,10 +330,10 @@ Section GenArch.
          the output port map of component [tcomp], and returns . *)
       | None =>
 
-        do id <- get_nextid sitpn;
+        do id <- get_nextid;
         do tcomp' <- connect_out_port Transition.fired (inl (Some ($id))) tcomp;
-        do _ <- set_tcomp sitpn t tcomp';
-        do _ <- add_sig_decl sitpn (sdecl_ id tind_boolean);
+        do _ <- set_tcomp t tcomp';
+        do _ <- add_sig_decl (sdecl_ id tind_boolean);
         
         (* Increments nextid to return the next available identifier. *)
         Ret (lofexprs ++ [#id])
@@ -454,8 +454,8 @@ Section GenArch.
                (xopid yipid : ident) :
        CompileTimeState (HComponent * HComponent) :=
 
-      do id <- get_nextid sitpn;
-      do _ <- add_sig_decl sitpn (sdecl_ id tind_boolean);
+      do id <- get_nextid;
+      do _ <- add_sig_decl (sdecl_ id tind_boolean);
       do compx' <- add_cassoc_to_opmap xopid ($id) compx;
       do compy' <- add_cassoc_to_ipmap yipid (#id) compy;
       Ret (compx', compy').
@@ -468,14 +468,14 @@ Section GenArch.
                (pcomp : HComponent)
                (t : T sitpn) :
       CompileTimeState HComponent :=
-      do tcomp <- get_tcomp sitpn t;
+      do tcomp <- get_tcomp t;
       do ptcomp1 <- connect pcomp tcomp Place.output_arcs_valid Transition.input_arcs_valid;
       let (pcomp1, tcomp1) := ptcomp1 in
       do ptcomp2 <- connect pcomp1 tcomp1 Place.priority_authorizations Transition.priority_authorizations;
       let (pcomp2, tcomp2) := ptcomp2 in
       do ptcomp3 <- connect pcomp2 tcomp2 Place.reinit_transitions_time Transition.reinit_time;
       let (pcomp3, tcomp3) := ptcomp3 in
-      do _ <- set_tcomp sitpn t tcomp3;
+      do _ <- set_tcomp t tcomp3;
       Ret pcomp3.      
 
     (** Connects the output port map of component [pcomp] representing
@@ -497,130 +497,72 @@ Section GenArch.
        p.  *)
       ListsMonad.fold_left wconn_pop_to_tip (toutputs pinfo) pcomp.
 
-    (** Retrieves the component representing place [p] in the
-      Architecture [arch] and connects its input and ouput ports to
-      the components representing its input (resp. output)
-      transitions.  
-
-      Informations about which transitions are the input and output
-      of place [p] are retrieved thanks to the [sitpn_info] instance. 
-     *)
+    (** Retrieves the component [pcomp] associated to place [p] in the
+        architecture of the compile-time state, and connects its input
+        and ouput ports to the components representing its input
+        (resp. output) transitions.  *)
     
-    Definition interconnect_p
-               (arch : Architecture sitpn)
-               (nextid : ident)
-               (p : P sitpn) :
-      optionE (Architecture sitpn * ident) :=
-      
-      (* Destructs the architecture. *)
-      let '(sigs, plmap, trmap, fmap, amap) := arch in
-      
-      (* Retrieves information about p. *)
-      match getv Peqdec p (pinfos sitpn sitpn_info) with
-      | Some pinfo =>
-        (* Retrieves the component associated to p in plmap. *)
-        match getv Peqdec p plmap with
-        | Some pcomp =>
-          (* Connects the input port map of pcomp. *)
-          s' <- connect_place_inputs arch nextid pinfo pcomp;
-  let '(arch', nextid', pcomp') := s' in
+    Definition interconnect_p (p : P sitpn) :
+      CompileTimeState unit :=
 
-  (* Connects the output port map of pcomp. *)
-  s'' <- connect_place_outputs arch' nextid' pinfo pcomp';
-  let '(arch'', nextid'', pcomp'') := s'' in
-
-  (* Associates p to pcomp'' in the PlaceMap of arch''. *)
-  let '(sigs'', plmap'', trmap'', fmap, amap) := arch'' in
-  let plmap''' := setv Peqdec p pcomp'' plmap'' in
-  
-  (* Creates an new architecture, and returns the resulting couple. *)
-  let arch''' := (sigs'', plmap''', trmap'', fmap, amap) in
-
-  (* Returns a couple new architecture and fresh id. *)
-  [| (arch''', nextid'') |]
-  | None =>
-    Err ("interconnect_p:"
-           ++ "Place " ++ $$p
-           ++ " is not referenced in the architecture's PlaceMap structure.")%string
-    end
-  | None =>
-    Err ("interconnect_p:"
-           ++ "Place " ++ $$p
-           ++ " is not referenced in SitpnInfo structure.")%string
-    end.
+      do pinfo <- get_pinfo p;
+      do pcomp <- get_pcomp p;
+      (* Connects the input port map of [pcomp]. *)
+      do pcomp1 <- connect_place_inputs pinfo pcomp;
+      (* Connects the output port map of [pcomp]. *)
+      do pcomp2 <- connect_place_outputs pinfo pcomp1;
+      set_pcomp p pcomp2.
 
     (** Generates the interconnections between place and transition
-      components of the architecture [arch].
+        components in the architecture of the compile-time state.
       
-      For each place in [sitpn], its mirror place component is
-      retrieved from [arch]'s PlaceMap, and interconnected to its
-      input and output transitions. *)
+        For each place in [sitpn], its mirror place component is
+        retrieved from [arch]'s PlaceMap, and interconnected to its
+        input and output transitions. *)
 
-    Definition generate_interconnections (arch : Architecture sitpn) (nextid : ident) :
-      optionE (Architecture sitpn * ident) :=
-      
-      (* Wrapper around the interconnect_p function. *)
-      let winterconn_p :=
-          (fun params p =>
-             let '(arch, nextid) := params in
-             interconnect_p arch nextid p)
-      in
+    Definition generate_interconnections :
+      CompileTimeState unit :=
       
       (* Calls interconnect_p on each place of sitpn. *)
-      topte_fold_left winterconn_p (P2List sitpn) (arch, nextid) nat_to_P.
+      ListsMonad.titer interconnect_p (P2List sitpn) nat_to_P.
     
   End GenerateInterconnections.
-
-  Arguments generate_interconnections {sitpn}.
 
   (** ** Generation of an Architecture structure from an Sitpn. *)
 
   Section GenerateArchitecture.
 
-    Variable sitpn : Sitpn.
-    Variable sitpn_info : SitpnInfo sitpn.
-    
-    (** Generates an Architecture structure (i.e, a triplet
-      archictecture declaration list, Placemap instance, and TransMap
-      instance) based on the information and the structure of
-      [sitpn]. *)
+    (** Generates an Architecture structure based on the information
+        and the structure of [sitpn]. *)
 
-    Definition generate_architecture (nextid : ident) (max_marking : nat) :
-      optionE (Architecture sitpn * ident) :=
+    Definition generate_architecture (max_marking : nat) :
+      CompileTimeState unit :=
       (* Generates the PlaceMap that maps places to intermediary Place
-       components. *)
-      plmap <- generate_place_map sitpn_info max_marking;
-  (* Generates the TransMap that maps transitions to intermediary
-       Transition components. *)
-  trmap <- generate_trans_map sitpn_info;
+         components. *)
+      do _ <- generate_place_map max_marking;
+      (* Generates the TransMap that maps transitions to intermediary
+         Transition components. *)
+      do _ <- generate_trans_map;
 
-  let arch := ([], plmap, trmap, [], []) in
-  (* Generates the interconnections between Place and Transition
-       components referenced in the PlaceMap plmap and the TransMap
-       trmap, and returns the new architecture and the next
-       available identifier. *)
-  generate_interconnections sitpn_info arch nextid.
+      (* Generates the interconnections between Place and Transition
+         components in the compile-time state architecture. *)
+      generate_interconnections.
 
   End GenerateArchitecture.
 
 End GenArch.
+
+Arguments generate_place_map {sitpn}.
+Arguments generate_trans_map {sitpn}.
+Arguments generate_interconnections {sitpn}.
+Arguments generate_architecture {sitpn}.
 
 Require Import test.sitpn.dp.WellDefinedSitpns.
 Require Import GenerateInfos.
 
 Local Notation "[ e ]" := (exist _ e _).
 
-Arguments generate_place_map {sitpn}.
-Arguments generate_trans_map {sitpn}.
-
 Compute (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-                do _ <- generate_place_map 255;
-                do _ <- generate_trans_map;
-                @connect_fired_ports sitpn_simpl [t0; t1; t2])
-                 (InitS2HState sitpn_simpl 10))).
-
-Compute (RedS ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-                do _ <- generate_place_map 255;
-                do _ <- generate_trans_map;
-                @connect_fired_ports sitpn_simpl [t0; t1; t2])
+                do _ <- generate_architecture 255;
+                get_arch)
                  (InitS2HState sitpn_simpl 10))).
