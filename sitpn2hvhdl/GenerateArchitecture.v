@@ -154,6 +154,7 @@ Section GenArch.
       do plmap <- ListsMonad.tmap (fun p => generate_place_map_entry p max_marking) (P2List sitpn) nat_to_P;
       do arch <- get_arch sitpn;
       let '(sigs, _, trmap, fmap, amap) := arch in
+      (* Sets the architecture with a new [PlaceMap] *)
       set_arch sitpn (sigs, plmap, trmap, fmap, amap).
     
   End GeneratePlaceMap.
@@ -172,9 +173,8 @@ Section GenArch.
       | None => not_temporal
       end.
 
-    (** Returns maximal time counter value associated to t, depending 
-      the time counter associated to t.
-     *)
+    (** Returns maximal time counter value associated to t, depending
+        the time counter associated to t.  *)
 
     Definition get_max_time_counter (t : T sitpn) : nat :=
       match Is t with
@@ -273,6 +273,11 @@ Section GenArch.
       CompileTimeState (option (option name + list name)) :=
       let '(gmap, ipmap, opmap) := comp in
       Ret (getv Nat.eq_dec opid opmap).
+
+    Definition get_actual_of_in_port (ipid : ident) (comp : HComponent) :
+      CompileTimeState (option (expr + list expr)) :=
+      let '(gmap, ipmap, opmap) := comp in
+      Ret (getv Nat.eq_dec ipid ipmap).
 
     Definition connect_out_port
                (opid : ident)
@@ -381,160 +386,116 @@ Section GenArch.
       (* Connects composite port [input_transitions_fired] of [pcomp]
          to the [fired] ports of its input transitions.  *)
       do pcomp' <- connect_in_port Place.input_transitions_fired (inr in_trans_fired) pcomp;
-      (* Connects, and returns, composite port [output_transitions_fired] of [pcomp]
-         to the [fired] ports of its output transitions.  *)      
+      (* Connects the composite port [output_transitions_fired] of [pcomp]
+         to the [fired] ports of its output transitions, and returns [pcomp].  *)      
       connect_in_port Place.output_transitions_fired (inr out_trans_fired) pcomp'.
     
-    (** Adds an association between the composite port [cportid] and the
-      expression [e] in the input port map [ipmap]. *)
+    (** Adds the expression [e] at the end of the list of expressions
+        associated with the composite input port [ipid] in the input
+        map of component [comp]. Returns the new version of [comp]. *)
 
-    Definition add_cassoc_to_ipmap (ipmap : InputMap) (cportid : ident) (e : expr) :
-      optionE InputMap :=
+    Definition add_cassoc_to_ipmap (ipid : ident) (e : expr) (comp : HComponent) :
+      CompileTimeState HComponent :=
       
-      (* Checks if cportid is known in ipmap. *)
-      match getv Nat.eq_dec cportid ipmap with
-      (* If cportid is associated to an expression in ipmap, then
-         cportid is not a composite port, then error.  *)
-      | Some (inl _) => Err ("add_cassoc_to_pmap : cportid is not a composite port.")%string
+      let '(gmap, ipmap, opmap) := comp in
 
-      (* If cportid is a known composite port in ipmap, then adds
-         e at the end of the associated list of expressions. *)
+      (* Checks if ipid is known in ipmap. *)
+      match getv Nat.eq_dec ipid ipmap with
+      (* If [ipid] is associated to an expression in [ipmap], then
+         [ipid] is not a composite port, then error.  *)
+      | Some (inl _) => Err ("add_cassoc_to_pmap : port "
+                               ++ $$ipid ++ " is not a composite port.")%string
+
+      (* If [ipid] is a known composite port in [ipmap], then adds [e]
+         at the end of the associated list of expressions. *)
       | Some (inr lofexprs) =>
-        [| (setv Nat.eq_dec cportid (inr (lofexprs ++ [e])) ipmap) |]
+         Ret (gmap, (setv Nat.eq_dec ipid (inr (lofexprs ++ [e])) ipmap), opmap)
 
-      (* If cportid is not known in ipmap, then adds the association
-         between cportid and the singleton list [e] in ipmap. *)
+      (* If ipid is not known in ipmap, then adds the association
+         between ipid and the singleton list [e] in ipmap. *)
       | None =>
-        [| (setv Nat.eq_dec cportid (inr [e]) ipmap) |]
+        Ret (gmap, (setv Nat.eq_dec ipid (inr [e]) ipmap), opmap)
       end.
 
-    (** Adds an association between the composite port [cportid] and the
-      name [n] in the output port map [opmap]. *)
+    (** Adds the name [n] at the end of the list of names associated
+        with the composite output port [opid] in the output map of
+        component [comp]. *)
+    
+    Definition add_cassoc_to_opmap (opid : ident) (n : name) (comp : HComponent) :
+      CompileTimeState HComponent :=
 
-    Definition add_cassoc_to_opmap (opmap : OutputMap) (cportid : ident) (n : name) :
-      optionE OutputMap :=
+      let '(gmap, ipmap, opmap) := comp in
       
-      (* Checks if cportid is known in opmap. *)
-      match getv Nat.eq_dec cportid opmap with
-      (* If cportid is associated to a name in opmap, then
-         cportid is not a composite port, then error.  *)
-      | Some (inl _) => Err ("add_cassoc_to_pmap : cportid is not a composite port.")%string
+      (* Checks if opid is known in opmap. *)
+      match getv Nat.eq_dec opid opmap with
+      (* If opid is associated to a name in opmap, then
+         opid is not a composite port, then error.  *)
+      | Some (inl _) => Err ("add_cassoc_to_pmap : "
+                               ++ $$opid ++ " is not a composite port.")%string
 
-      (* If cportid is a known composite port in opmap, then adds
-         n at the end of the associated list of names. *)
-      | Some (inr lofexprs) =>
-        [| (setv Nat.eq_dec cportid (inr (lofexprs ++ [n])) opmap) |]
+      (* If [opid] is a known composite port in [opmap], then adds
+         [n] at the end of the associated list of names. *)
+      | Some (inr lofnames) =>
+        Ret (gmap, ipmap, (setv Nat.eq_dec opid (inr (lofnames ++ [n])) opmap))
 
-      (* If cportid is not known in opmap, then adds the association
-         between cportid and the singleton list [n] in opmap. *)
+      (* If [opid] is not known in [opmap], then adds the association
+         between [opid] and the singleton list [n] in [opmap]. *)
       | None =>
-        [| (setv Nat.eq_dec cportid (inr [n]) opmap) |]
+        Ret (gmap, ipmap, (setv Nat.eq_dec opid (inr [n]) opmap))
       end.
     
     (** Creates an interconnection signal (adds it to [sigs]) and
-      connects [xoport] (in the output port map of [hcompx]) to
-      [yiport] (in the input port map of [hcompy]) through this newly
-      created signal.  *)
+        connects [xoport] (in the output port map of [compx]) to
+        [yiport] (in the input port map of [compy]) through this
+        newly created signal.  *)
     
     Definition connect
-               (sigs : list sdecl)
-               (nextid : ident)
-               (hcompx hcompy : HComponent)
-               (xoport yiport : ident) :
-      optionE (list sdecl * ident * HComponent * HComponent) :=
+               (compx compy : HComponent)
+               (xopid yipid : ident) :
+       CompileTimeState (HComponent * HComponent) :=
+
+      do id <- get_nextid sitpn;
+      do _ <- add_sig_decl sitpn (sdecl_ id tind_boolean);
+      do compx' <- add_cassoc_to_opmap xopid ($id) compx;
+      do compy' <- add_cassoc_to_ipmap yipid (#id) compy;
+      Ret (compx', compy').
       
-      (* Adds a new interconnection signal at the end of sigs. *)
-      let sigs := sigs ++ [sdecl_ nextid tind_boolean] in
-
-      (* Destructs component x and y. *)
-      let '(xgmap, xipmap, xopmap) := hcompx in
-      let '(ygmap, yipmap, yopmap) := hcompy in
-
-      (* Connects xoport to the newly declared interconnection signal in
-       output port map xopmap. *)
-      match add_cassoc_to_opmap xopmap xoport ($nextid) with
-      | [| xopmap' |] =>
-        (* Connects yiport to the newly declared interconnection signal
-         in input port map yipmap. *)
-        match add_cassoc_to_ipmap yipmap yiport (#nextid) with
-        | [| yipmap' |] =>
-          (* Overrides component hcompx and hcompy with their new output
-           and input port map.  *)
-          let hcompx' := (xgmap, xipmap, xopmap') in
-          let hcompy' := (ygmap, yipmap', yopmap) in
-          
-          (* Returns the resulting 4-uplet. *)
-          [| (sigs, nextid + 1, hcompx', hcompy') |]
-        | Err msg => Err msg
-        end
-      | Err msg => Err msg
-      end.
-
-    (** Connects the output port map of component [phcomp] to the input
+    (** Connects the output port map of component [pcomp] to the input
       port map of the component associated to transition [t] in the
       architecture [arch] (more precisely, in the [arch]'s TransMap). *)
 
     Definition connect_popmap_to_tipmap
-               (arch : Architecture sitpn)
-               (nextid : ident)
-               (phcomp : HComponent)
+               (pcomp : HComponent)
                (t : T sitpn) :
-      optionE (Architecture sitpn * ident * HComponent) :=
+      CompileTimeState HComponent :=
+      do tcomp <- get_tcomp sitpn t;
+      do ptcomp1 <- connect pcomp tcomp Place.output_arcs_valid Transition.input_arcs_valid;
+      let (pcomp1, tcomp1) := ptcomp1 in
+      do ptcomp2 <- connect pcomp1 tcomp1 Place.priority_authorizations Transition.priority_authorizations;
+      let (pcomp2, tcomp2) := ptcomp2 in
+      do ptcomp3 <- connect pcomp2 tcomp2 Place.reinit_transitions_time Transition.reinit_time;
+      let (pcomp3, tcomp3) := ptcomp3 in
+      do _ <- set_tcomp sitpn t tcomp3;
+      Ret pcomp3.      
 
-      (* Destructs the architecture. *)
-      let '(sigs, plmap, trmap, fmap, amap) := arch in
-      
-      (* Retrieves the component associated to transition t in trmap. *)
-      match getv Teqdec t trmap with
-      | Some thcomp =>
-        (* Connects output_arcs_valid to input_arcs_valid. *)
-        s' <- connect sigs nextid phcomp thcomp Place.output_arcs_valid Transition.input_arcs_valid;
-  let '(sigs', nextid', phcomp', thcomp') := s' in
-
-  (* Connects priority_authorizations to priority_authorizations. *)
-  s'' <- connect sigs' nextid' phcomp' thcomp' Place.priority_authorizations Transition.priority_authorizations;
-  let '(sigs'', nextid'', phcomp'', thcomp'') := s'' in
-
-  (* Connects reinit_transitions_time to reinit_time. *)
-  s''' <- connect sigs'' nextid'' phcomp'' thcomp'' Place.reinit_transitions_time Transition.reinit_time;
-  let '(sigs''', nextid''', phcomp''', thcomp''') := s''' in
-
-  (* Overrides the association of t to thcomp in trmap. *)
-  let trmap' := setv Teqdec t thcomp''' trmap in
-  
-  (* Creates a new architecture, i.e, with new sigs and trmap. *)
-  let arch' := (sigs''', plmap, trmap', fmap, amap) in
-
-  (* Returns a triplet with a new archictecture, fresh id, and an HComponent. *)
-  [| (arch', nextid''', phcomp) |]
-    
-  (* Error case. *)
-  | None => Err ("connect_popmap_to_tipmap:"
-                   ++ "Transition " ++ $$t ++
-                   " is not referenced in the architecture's TransMap.")%string
-    end.
-
-    (** Connects the output port map of component [phcomp] representing
-      some place p, to the input port map of the components
-      representing the output transitions of p in the architecture
-      [arch]. *)
+    (** Connects the output port map of component [pcomp] representing
+        some place p, to the input port map of the components
+        representing the output transitions of p in the architecture
+        [arch]. *)
     
     Definition connect_place_outputs
-               (arch : Architecture sitpn)
-               (nextid : ident)
                (pinfo : PlaceInfo sitpn)
-               (phcomp : HComponent) :
-      optionE (Architecture sitpn * ident * HComponent) :=
+               (pcomp : HComponent) :
+      CompileTimeState HComponent :=
 
       (* Wrapper around the connect_popmap_to_tipmap function. *)
       let wconn_pop_to_tip :=
-          (fun params t =>
-             let '(arch, nextid, phcomp) := params in
-             connect_popmap_to_tipmap arch nextid phcomp t)
+          (fun pcomp t =>
+             connect_popmap_to_tipmap pcomp t)
       in
       (* Calls connect_popmap_to_tipmap on every output transitions of
        p.  *)
-      oefold_left wconn_pop_to_tip (toutputs pinfo) (arch, nextid, phcomp).
+      ListsMonad.fold_left wconn_pop_to_tip (toutputs pinfo) pcomp.
 
     (** Retrieves the component representing place [p] in the
       Architecture [arch] and connects its input and ouput ports to
@@ -559,18 +520,18 @@ Section GenArch.
       | Some pinfo =>
         (* Retrieves the component associated to p in plmap. *)
         match getv Peqdec p plmap with
-        | Some phcomp =>
-          (* Connects the input port map of phcomp. *)
-          s' <- connect_place_inputs arch nextid pinfo phcomp;
-  let '(arch', nextid', phcomp') := s' in
+        | Some pcomp =>
+          (* Connects the input port map of pcomp. *)
+          s' <- connect_place_inputs arch nextid pinfo pcomp;
+  let '(arch', nextid', pcomp') := s' in
 
-  (* Connects the output port map of phcomp. *)
-  s'' <- connect_place_outputs arch' nextid' pinfo phcomp';
-  let '(arch'', nextid'', phcomp'') := s'' in
+  (* Connects the output port map of pcomp. *)
+  s'' <- connect_place_outputs arch' nextid' pinfo pcomp';
+  let '(arch'', nextid'', pcomp'') := s'' in
 
-  (* Associates p to phcomp'' in the PlaceMap of arch''. *)
+  (* Associates p to pcomp'' in the PlaceMap of arch''. *)
   let '(sigs'', plmap'', trmap'', fmap, amap) := arch'' in
-  let plmap''' := setv Peqdec p phcomp'' plmap'' in
+  let plmap''' := setv Peqdec p pcomp'' plmap'' in
   
   (* Creates an new architecture, and returns the resulting couple. *)
   let arch''' := (sigs'', plmap''', trmap'', fmap, amap) in
