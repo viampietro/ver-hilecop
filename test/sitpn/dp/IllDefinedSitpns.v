@@ -31,7 +31,9 @@ Example sitpn_emp_transs :=
     (fun t c => zero)
     (fun p a => false)
     (fun t f => false)
-    (fun t t' => false).
+    (fun t t' => False).
+
+Definition prio_emp_transs_dec : forall x y : T sitpn_emp_transs, {x >~ y} + {~x >~ y}. auto. Defined.
 
 (** ** An [Sitpn] instance with isolated places. *)
 
@@ -64,4 +66,10 @@ Example sitpn_iso_pls :=
     (fun t c => zero)
     (fun p a => false)
     (fun t f => false)
-    (fun t t' => false).
+    (fun t t' => False).
+
+Definition prio_iso_pls_dec : forall x y : T sitpn_iso_pls, {x >~ y} + {~x >~ y}. auto. Defined.
+
+Require Import sitpn2hvhdl.GenerateHVhdl.
+
+Compute (sitpn_to_hvhdl sitpn_iso_pls prio_iso_pls_dec 0 0 1).

@@ -257,15 +257,12 @@ Inductive sdecl : Type :=
 
 *)
 
-Inductive design : Type :=
-  design_ (entid    : ident)      (** Entity id *)
-          (archid   : ident)      (** Architecture id *)
-          (gens     : list gdecl) (** Generic constant clause *)
-          (ports    : list pdecl) (** Port clause *)
-          (sigs   : list sdecl) (** Architecture declarative part *)
-          (behavior : cs).        (** Concurrent statement part *)
-
-(** Projection functions for [design] *)
-
-Definition get_behavior (d : design) : cs :=
-  let '(design_ _ _ _ _ _ behavior) := d in behavior.
+Record design : Type :=
+  design_ {
+      entid    : ident;      (** Entity id *)
+      archid   : ident;      (** Architecture id *)
+      gens     : list gdecl; (** Generic constant clause *)
+      ports    : list pdecl; (** Port clause *)
+      sigs   : list sdecl; (** Architecture declarative part *)
+      behavior : cs
+    }.

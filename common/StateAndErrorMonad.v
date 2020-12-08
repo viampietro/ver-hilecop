@@ -60,8 +60,8 @@ Notation "'do' '|(' X , Y ')|' <- A ; B" := (Bind2 A (fun X Y => B))
    (at level 200, X ident, Y ident, A at level 100, B at level 200).
 
 Notation "'RedS' r" := match r with
-                     | OK _ _ _ _ s => s
-                     | Error _ _ _ _ => _
+                     | OK _ _ _ _ s => inl s
+                     | Error _ _ _ msg => inr msg
                        end (at level 0).
 
 Notation "'RedV' r" := match r with

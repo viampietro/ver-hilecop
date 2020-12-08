@@ -225,7 +225,16 @@ Section CompileTimeStateOpers.
     do _  <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (behavior s) (γ s));
     Ret (nextid s).
 
-  (** *** Operations for list of output ports *)
+  (** *** Operations for the list of input ports *)
+
+  Definition add_in_port (iport_decl : pdecl) :=
+    do s <- Get;
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s)
+                    ((iports s) ++ [iport_decl])
+                    (oports s)
+                    (arch s) (behavior s) (γ s)).
+  
+  (** *** Operations for the list of output ports *)
 
   Definition add_out_port (oport_decl : pdecl) :=
     do s <- Get;
@@ -248,6 +257,27 @@ Section CompileTimeStateOpers.
     let f2out' := setv Feqdec f id (f2out γ) in
     (* Updates the new archictecture. *)
     set_binder (MkS2HMap sitpn (p2pcomp γ) (t2tcomp γ) (a2out γ) f2out' (c2in γ)).
+
+  Definition bind_condition (c : C sitpn) (id : ident) :=
+    do γ <- get_binder;
+    (* Sets the couple [(c, id)] in the [c2in] field of [γ]. *)
+    let c2in' := setv Ceqdec c id (c2in γ) in
+    (* Updates the new archictecture. *)
+    set_binder (MkS2HMap sitpn (p2pcomp γ) (t2tcomp γ) (a2out γ) (f2out γ) c2in').
+
+  Definition bind_place (p : P sitpn) (id : ident) :=
+    do γ <- get_binder;
+    (* Sets the couple [(p, id)] in the [p2pcomp] field of [γ]. *)
+    let p2pcomp' := setv Peqdec p id (p2pcomp γ) in
+    (* Updates the new archictecture. *)
+    set_binder (MkS2HMap sitpn p2pcomp' (t2tcomp γ) (a2out γ) (f2out γ) (c2in γ)).
+
+  Definition bind_transition (t : T sitpn) (id : ident) :=
+    do γ <- get_binder;
+    (* Sets the couple [(t, id)] in the [t2tcomp] field of [γ]. *)
+    let t2tcomp' := setv Teqdec t id (t2tcomp γ) in
+    (* Updates the new architecture. *)
+    set_binder (MkS2HMap sitpn (p2pcomp γ) t2tcomp' (a2out γ) (f2out γ) (c2in γ)).
 
   (** *** Operations for behavior *)
 
@@ -551,9 +581,13 @@ Arguments add_sig_decl {sitpn}.
 
 Arguments bind_action {sitpn}.
 Arguments bind_function {sitpn}.
+Arguments bind_condition {sitpn}.
+Arguments bind_place {sitpn}.
+Arguments bind_transition {sitpn}.
 
 (* Set implicit arguments for list of output port monadic functions. *)
 
+Arguments add_in_port {sitpn}.
 Arguments add_out_port {sitpn}.
 
 (* Set implicit arguments for behavior monadic functions. *)

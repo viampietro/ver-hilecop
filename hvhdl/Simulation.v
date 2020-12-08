@@ -138,8 +138,8 @@ Inductive fullsim
       (* * Premises * *)
 
       edesign dstore Mg d Δ σ__e ->                (* Elaboration *)
-      init Δ σ__e (get_behavior d) σ0 ->           (* Initialization *)
-      simloop E__p Δ σ0 (get_behavior d) τ θ σ' -> (* Simulation loop *)
+      init Δ σ__e (behavior d) σ0 ->           (* Initialization *)
+      simloop E__p Δ σ0 (behavior d) τ θ σ' -> (* Simulation loop *)
                     
       (* * Conclusion * *)
       fullsim dstore Mg E__p τ Δ d (σ0 :: θ).

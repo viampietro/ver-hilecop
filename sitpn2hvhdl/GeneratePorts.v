@@ -87,7 +87,8 @@ Section GeneratePortsAndPs.
       (* Error case, the [marked] port is connected to a list of names
        is the output port map of [pcomp], albeit it must be of scalar
        type (boolean).  *)
-      | Some (inr _) => Err ("The marked port of place " ++ $$p ++ " must be of scalar type.")%string
+      | Some (inr _) => Err ("connect_marked_port: the marked port of place "
+                               ++ $$p ++ " must be of scalar type.")%string
       (* Case where marked is not connected yet. Then, adds a new
        interconnection signal to the arch's declaration list and at
        the end of the lofexprs, modifies the output port map of
@@ -239,117 +240,62 @@ Section GeneratePortsAndPs.
 
   Section GenerateAndConnectCondPorts.
     
-    (** Builds the expression that will result in the connection of the
-      input port representing condition [c] to the input port map of
-      the component representing transition [t] (i.e, via the
-      ["input_conditions"] composite port).
+    (** Builds the expression that will result in the connection of
+        the input port identifier [id__c], representing condition [c],
+        to the input port map of the component representing transition
+        [t] (i.e, via the ["input_conditions"] composite port).
 
       Raises an error if condition [c] and transition [t] are not
       associated in [sitpn].  *)
     
     Definition build_cond_expr (id__c : ident) (c : C sitpn) (t : T sitpn) :
-      optionE expr :=
+      CompileTimeState expr :=
       match has_C t c with
-      | one => Success (#id__c)
-      | mone => Success (e_not (#id__c))
-      | zero => Err ("build_cond_expr: Condition c is not associated with transition t.")%string
+      | one => Ret (#id__c)
+      | mone => Ret (e_not (#id__c))
+      | zero => Err ("build_cond_expr: Condition "
+                       ++ $$c ++ " is not associated with transition " ++ $$t)%string
       end.
     
-    (** Connects the input port [id__c] that represents condition
-      [c] to the input port map of the component representing
-      transition [t] relatively to the association relation existing
-      between [c] and [t].
-   
-      Returns a new Architecture, where the component representing [t]
-      has been modified.
+    (** Connects the input port [id__c], representing condition [c], in
+        the input port map of the component representing transition
+        [t].  *)
 
-     *)
+    Definition connect_in_cond_port (id__c : ident) (c : C sitpn) (t : T sitpn) :
+      CompileTimeState unit :=
 
-    Definition connect_in_cond_port
-               (arch : Architecture sitpn)
-               (id__c : ident)
-               (c : C sitpn)
-               (t : T sitpn) :
-      optionE (Architecture sitpn) :=
-      (* Destructs architecture. *)
-      let '(adecls, plmap, trmap, fmap, amap) := arch in
+      do tcomp <- get_tcomp t;
+      do condexpr <- build_cond_expr id__c c t;
+      do tcomp' <- add_cassoc_to_ipmap Transition.input_conditions condexpr tcomp;
+      set_tcomp t tcomp'.
 
-      (* Retrieves the component representing t in TransMap. *)
-      match getv Teqdec t trmap with
-      | Some thcomp =>
-        (* Destructs component. *)
-        let '(tgmap, tipmap, topmap) := thcomp in
-        (* Builds the expression that will be tha actual part of the
-         port association. *)
-        match build_cond_expr id__c c t with
-        | Success conde =>
-          (* Builds the port association between "input_conditions" and
-           expression conde. *)
-          match add_cassoc_to_ipmap tipmap Transition.input_conditions conde with
-          | Success tipmap' =>
-            (* Updates the component representing transition t. *)
-            let thcomp' := (tgmap, tipmap', topmap) in
-            (* Updates the architecture's TransMap. *)
-            let trmap' := setv Teqdec t thcomp' trmap in
-            (* Returns the new architecture *)
-            Success (adecls, plmap, trmap', fmap, amap)
-          | Err msg => Err msg
-          end
-        | Err msg => Err msg
-        end
-      (* Error case. *)
-      | None => Err ("connect_condition_port:"
-                       ++ "Transition " ++ $$t ++
-                       " is not referenced in the TransMap.")%string
-      end.
-
-    (** Connects the input port [cportid] to every component's input
-      mapping representing the transitions that are elements of the
-      list [transs].  *)
+    (** Connects the input port [id__c] to every input port map of T
+        components representing the transitions of the [transs]
+        list.  *)
     
     Definition connect_in_cond_ports
-               (arch : Architecture sitpn)
                (id__c : ident)
                (c : C sitpn)
                (transs : list (T sitpn)) :
-      optionE (Architecture sitpn) :=
-      (* Wrapper around the connect_in_cond_port function. *)
-      let conn_inc_port_fun :=
-          (fun arch t => connect_in_cond_port arch id__c c t)
-      in
-      (* Calls connect_in_cond_port on each transition of the transs
-       list and returns the new architecture (or an error).  *)
-      oefold_left conn_inc_port_fun transs arch. 
+      CompileTimeState unit :=
+      (* Calls [connect_in_cond_port id__c c] on each transition of the
+         transs list, thus modifying the architecture in the
+         compile-time state.  *)
+      iter (connect_in_cond_port id__c c) transs. 
 
     (** Creates an input port representing condition [c] and adds it to
-      the [condports] list. Connects the created input port to the
-      "input_conditions" port of all components representing the
-      transitions associated to condition [c]. *)
+        the [condports] list. Connects the created input port to the
+        "input_conditions" port of all components representing the
+        transitions associated to condition [c]. *)
 
-    Definition generate_and_connect_cond_port
-               (arch : Architecture sitpn)
-               (nextid : ident)
-               (condports : list pdecl)
-               (c : C sitpn) :
-      optionE (Architecture sitpn * ident * list pdecl) :=
+    Definition generate_and_connect_cond_port (c : C sitpn) :
+      CompileTimeState unit :=
 
-      (* Port id for condition c is the next available id. *)
-      let cportid := nextid in
-      
-      (* Creates a new input port representing condition c. *)
-      let condports := condports ++ [pdecl_in cportid tind_boolean] in
-
-      (* Retrieves The List Of transitions associated to c. *)
-      match getv Ceqdec c (cinfos sitpn_info) with
-      | Some transs =>
-        (* Connects cportid to the input_conditions port of Transition
-         components representing transitions of the transs list. *)
-        match connect_in_cond_ports arch cportid c transs with
-        | Success arch' => Success (arch', nextid + 1, condports)
-        | Err msg => Err msg
-        end
-      | None => Err ("Condition $$c is not referenced in the SitpnInfo structure.")%string
-      end.
+      do id       <- get_nextid;
+      do _        <- add_in_port (pdecl_in id tind_boolean);
+      do _        <- bind_condition c id;
+      do trs_of_c <- get_cinfo c;
+      connect_in_cond_ports id c trs_of_c.
 
     (** Generates an input port for each condition of [sitpn], and
       connects this input port to the proper Transition components.
@@ -357,68 +303,29 @@ Section GeneratePortsAndPs.
       Returns the new architecture, the next available identifier,
       and the list of created input ports representing conditions. *)
 
-    Definition generate_and_connect_cond_ports
-               (arch : Architecture sitpn)
-               (nextid : ident) :
-      optionE (Architecture sitpn * ident * list pdecl) :=
+    Definition generate_and_connect_cond_ports : CompileTimeState unit :=
 
-      (* Wrapper around the generate_and_connect_cond_port function. *)
-      let gen_and_conn_cports_fun :=
-          (fun params c =>
-             let '(arch, nextid, condports) := params in
-             generate_and_connect_cond_port arch nextid condports c)
-      in
-
-      (* Calls generate_and_connect_cond_port for each condition of sitpn. *)
-      topte_fold_left gen_and_conn_cports_fun (C2List sitpn) (arch, nextid, []) nat_to_C.
+      (* Calls [generate_and_connect_cond_port] for each condition of [sitpn]. *)
+      titer generate_and_connect_cond_port (C2List sitpn) nat_to_C.
     
   End GenerateAndConnectCondPorts.
-
-  (** Set implicit arguments for generate_action_ports_and_ps. *)
-
-  Arguments generate_and_connect_cond_ports {sitpn}.
 
   (** ** Generate ports and related processes. *)
 
   Section GeneratePorts.
     
     (** Generates the ports of an H-VHDL design implementing [sitpn],
-      that is, the input ports implementing the conditions of [sitpn],
-      the output ports implementing the actions and functions of
-      [sitpn].
+        that is, the input ports implementing the conditions of [sitpn],
+        the output ports implementing the actions and functions of
+        [sitpn].
       
-      Alongside the action and function ports, the action activation
-      and function execution processes are generated.
+        Alongside the action and function ports, the action activation
+        and function execution processes are generated. *)
 
-      If there are no condition in [sitpn] an empty list will stand as
-      the 3rd element of the returned 5-uplet; if there are no action
-      or function in [sitpn] then None is returned in the place of 4th
-      or 5th element of the returned 5-uplet.  *)
-
-    Definition generate_ports (arch : Architecture sitpn) (nextid : ident) :
-      optionE (Architecture sitpn * ident * list pdecl * option (list pdecl * cs) * option (list pdecl * cs)) :=
-
-      (* Generates the output port list representing actions and the
-       action activation process. *)
-      match generate_action_ports_and_ps sitpn_info arch nextid with
-      (* Ports and process have been successfully generated. *)
-      | Success (arch0, nextid0, aports_and_ps) =>
-        (* Generates the output port list representing functions and the
-         function execution process. *)
-        match generate_fun_ports_and_ps sitpn_info arch0 nextid0 with
-        | Success (arch1, nextid1, fports_and_ps) =>
-          (* Generates the input port list representing conditions, and
-         connects the ports to the associated transition
-         components. *)
-          match generate_and_connect_cond_ports sitpn_info arch1 nextid1  with
-          | Success (arch2, nextid2, condports) =>
-            Success (arch2, nextid2, condports, aports_and_ps, fports_and_ps)
-          | Err msg => Err msg
-          end
-        | Err msg => Err msg
-        end
-      | Err msg => Err msg
-      end.
+    Definition generate_ports : CompileTimeState unit :=
+      do _ <- generate_action_ports_and_ps;
+      do _ <- generate_fun_ports_and_ps;
+      generate_and_connect_cond_ports.
     
   End GeneratePorts.
 
@@ -434,6 +341,5 @@ Arguments generate_ports {sitpn}.
 (* Require Import NatSet. *)
 
 (* Eval compute in (RedS ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
-(*                         do _ <- generate_architecture 255; *)
-(*                         generate_action_ports_and_ps) *)
-(*                          (InitS2HState sitpn_simpl 10))). *)
+(*                         do _ <- generate_architecture Petri.MAXIMAL_GLOBAL_MARKING; *)
+(*                         generate_ports) (InitS2HState sitpn_simpl Petri.ffid))). *)
