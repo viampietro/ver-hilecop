@@ -243,14 +243,15 @@ Section Sitpn2HVhdl.
   (** Defines the transformation function that generates an H-VHDL design
       from an SITPN. *)
   
-  Definition sitpn_to_hvhdl (entid archid : ident) (max_marking : nat) : design + string :=
+  Definition sitpn_to_hvhdl (entid archid : ident) (max_marking : nat) :
+    (design * Sitpn2HVhdlMap sitpn) + string :=
     RedV ((do _ <- generate_sitpn_infos sitpn decpr;
            do _ <- generate_architecture max_marking;
            do _ <- generate_ports;
            do _ <- generate_comp_insts;
            do s <- Get;
            let '(sigs, _, _, _, _) := (arch s) in
-           Ret (design_ entid archid [] ((iports s) ++ (oports s)) sigs (behavior s)))
+           Ret ((design_ entid archid [] ((iports s) ++ (oports s)) sigs (behavior s)), (γ s)))
             (InitS2HState sitpn Petri.ffid)).
   
 End Sitpn2HVhdl.

@@ -157,7 +157,7 @@ Record SitpnState (sitpn : Sitpn) :=
 
       (* Current state of time counters. *)
       
-      I : Ti sitpn -> option nat;
+      I : Ti sitpn -> nat;
 
       (* Orders to reset time counters. *)
       
@@ -167,12 +167,9 @@ Record SitpnState (sitpn : Sitpn) :=
       
       cond : C sitpn -> bool;
 
-      (* Current activation state for continuous actions. *)
+      (* Current activation state for actions and functions. *)
       
-      exa : A sitpn -> bool;
+      ex : A sitpn + F sitpn -> bool;
 
-      (* Current activation state for interpretation functions. *)
-      
-      exf : F sitpn -> bool;
     }.
 

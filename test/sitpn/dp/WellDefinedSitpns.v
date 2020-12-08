@@ -5,14 +5,12 @@ Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import GlobalTypes.
 Require Import String.
-Require Import StateAndErrorMonad.
-Require Import Sitpn2HVhdlTypes.
 
 Import ErrMonadNotations.
 
-Open Scope string_scope.
-
 Set Implicit Arguments.
+
+Open Scope string_scope.
 
 Local Notation "[ e ]" := (exist _ e _).
 
@@ -103,24 +101,17 @@ Example sitpn_simpl :=
     prio_simpl.
 
 (* Decidability of priority relation *)
+Require Import SitpnInstancesTactics.
 
-Definition prio_simpl_dec : forall x y : T sitpn_simpl, {x >~ y} + {~x >~ y}.
-  intros; simpl; unfold prio_simpl.
-  destruct x as (a, pf). destruct y as (b, pf').
-  case a.
-  - case b; [auto | intros n; case n; [auto | intros m; case m; auto]]. 
-  - intros n; case n; [auto
-                      | intros m; case m; case b;
-                        [auto | intros o; case o; auto | auto | auto ]
-                      ].
-    case b; [auto | intros m; case m; auto]. 
+Definition prio_simpl_dec : forall x y : Tsimpl, {prio_simpl x y} + {~prio_simpl x y}.
+  decide_prio_dec. 
 Defined.
 
-(*! ** Tests ** !*)
+(* Require Import GenerateHVhdl. *)
+(* Require Import AbstractSyntax. *)
+(* Require Import Sitpn2HVhdlTypes. *)
 
-Require Import sitpn2hvhdl.GenerateHVhdl.
-Require Import AbstractSyntax.
+(* Compute (sitpn_to_hvhdl sitpn_simpl prio_simpl_dec 0 0 2). *)
 
-Compute (sitpn_to_hvhdl sitpn_simpl prio_simpl_dec 0 0 1).
-Extraction sitpn_to_hvhdl.
+
 

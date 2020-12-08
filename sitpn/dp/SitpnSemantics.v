@@ -33,15 +33,17 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (** Captures the new value of conditions, and determines the
         activation status for actions.  *)
     (forall c, (cond s' c) = (E tau c)) ->
-    (forall a, (exists p, (M s p) > 0 /\ has_A p a = true) -> (exa s' a) = true) ->
-    (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (exa s' a) = false) ->    
+    (forall a, (exists p, (M s p) > 0 /\ has_A p a = true) -> (ex s' (inl a)) = true) ->
+    (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (ex s' (inl a)) = false) ->    
 
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
-    (forall (t : Ti sitpn), ~Sens (M s) t -> I s' t = Some 0) ->
-    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = true -> I s' t = Some 1) ->
-    (forall (t : Ti sitpn) n, Sens (M s) t -> reset s t = false -> I s t = Some n -> I s' t = Some (S n)) ->
-    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = false -> I s t = None -> I s' t = None) ->
+    (forall (t : Ti sitpn), ~Sens (M s) t -> I s' t = 0) ->
+    (forall (t : Ti sitpn), Sens (M s) t -> reset s t = true -> I s' t = 1) ->
+    (forall (t : Ti sitpn),
+        Sens (M s) t ->
+        reset s t = false ->
+        (HasReachedUpperBound s t \/ upper s t = i+) -> I s' t = S (I s t)) ->
 
     (** Marking stays the same between s and s'. *)
     (forall p, M s p = M s' p) -> 
@@ -50,7 +52,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (forall t, reset s t = reset s' t) ->
 
     (** Function states stay the same between s and s'. *)
-    (forall f, exf s f = exf s' f) ->
+    (forall f, ex s (inr f) = ex s' (inr f)) ->
     
     (** Conclusion *)
     SitpnStateTransition E tau s s' falling_edge
@@ -66,19 +68,15 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (forall (t : Ti sitpn) fired m, IsTransientMarking s fired m -> (~Sens m t \/ Fired s fired t) -> reset s' t = true) ->
     (forall (t : Ti sitpn) fired m, IsTransientMarking s fired m -> Sens m t -> ~Fired s fired t -> reset s' t = false) ->
 
-    (** Determines if some time counters are blocked. *)
-    (forall (t : Ti sitpn) fired, HasReachedUpperBound s t -> ~Fired s fired t -> (I s' t) = None) ->
-    (forall (t : Ti sitpn) fired, (~HasReachedUpperBound s t \/ Fired s fired t) -> (I s' t) = (I s t)) ->
-
     (** Determines if some functions are executed. *)
-    (forall f fired, (exists t, Fired s fired t /\ has_F t f = true) -> exf s' f = true) ->
-    (forall f fired, (forall t, ~Fired s fired t \/ has_F t f = false) -> exf s' f = true) -> 
+    (forall f fired, (exists t, Fired s fired t /\ has_F t f = true) -> ex s' (inr f) = true) ->
+    (forall f fired, (forall t, ~Fired s fired t \/ has_F t f = false) -> ex s' (inr f) = false) -> 
     
     (** Condition values stay the same between s and s'. *)
     (forall c, cond s' c = cond s c) -> 
     
     (** Action states stay the same between s and s'. *)
-    (forall a, exa s' a = exa s a) ->
+    (forall a, ex s' (inl a) = ex s (inl a)) ->
     
     (** Conclusion *)
     SitpnStateTransition E tau s s' rising_edge.    

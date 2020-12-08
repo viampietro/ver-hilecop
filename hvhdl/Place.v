@@ -298,9 +298,10 @@ Definition reinit_transitions_time_evaluation_ps :=
         Then (For i In 0 To (#output_arcs_number @- 1) Loop (reinit_transitions_time $[[ #i ]] @<== false))
         Else (Rising
                 (For i In 0 To (#output_arcs_number @- 1) Loop
-                     (If ((output_arcs_types[[ #i ]] @= basic @|| (output_arcs_types[[ #i ]] @= test))
-                            @&& ((#s_marking @- #s_output_token_sum) @< (output_arcs_weights[[ #i ]]))
-                            @&& (#s_output_token_sum @> 0))
+                     (If (((output_arcs_types[[ #i ]] @= basic @|| (output_arcs_types[[ #i ]] @= test))
+                             @&& ((#s_marking @- #s_output_token_sum) @< (output_arcs_weights[[ #i ]]))
+                             @&& (#s_output_token_sum @> 0))
+                            @|| (output_transitions_fired[[ #i ]] @= true))
                       Then (reinit_transitions_time $[[ #i ]] @<== true)
                       Else (reinit_transitions_time $[[ #i ]] @<== false))))).
 

@@ -88,10 +88,18 @@ Defined.
 
 (** Defines some TimeInterval. *)
 
-Definition it11 := MkTItval onens (ninat onens) (or_introl (le_nat_le_natinf 1 onens (le_n 1))).
-Definition it1inf := MkTItval onens niinf (or_intror (eq_refl niinf)).
-Definition it12 := MkTItval onens (ninat twons) (or_introl (le_nat_le_natinf 1 twons (le_n_Sn 1))).
-Definition it34 := MkTItval threens (ninat fourns) (or_introl (le_nat_le_natinf 3 fourns (le_n_Sn 3))).
+Definition itAB (a b : natstar) (le_AB : a <= b) :=
+  MkTItval a (ninat b) (or_introl (le_nat_le_natinf a b le_AB)).
+
+Definition itAA (a : natstar) := MkTItval a (ninat a) (or_introl (le_nat_le_natinf a a (le_n a))).
+Definition itAinf (a : natstar) := MkTItval a niinf (or_intror (eq_refl niinf)).
+
+Definition it1inf := itAinf onens.
+Definition it11 := itAA onens.
+Definition it12 := itAB onens twons (le_n_Sn 1).
+Definition it34 := itAB threens fourns (le_n_Sn 3).
+Definition it33 := itAA threens.
+Definition it10inf := itAinf tenns.
 
 (* Defines a predicate stating that two StaticTimeInterval do
    not overlap, i.e, the intersection of the two is empty.

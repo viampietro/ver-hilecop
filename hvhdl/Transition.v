@@ -215,7 +215,7 @@ Definition time_counter_ps :=
           Else (
             Falling (
                 If (#s_enabled @= true @&& (#transition_type @/= not_temporal))
-                   Then (If (#s_reinit_time_counter @= false @&& (#s_fired @= false))
+                   Then (If (#s_reinit_time_counter @= false)
                             Then (If (#s_time_counter @< #maximal_time_counter) Then
                                      (s_time_counter @<== (#s_time_counter @+ 1)))
                             Else (s_time_counter @<== 1))

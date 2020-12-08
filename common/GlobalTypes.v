@@ -27,6 +27,7 @@ Definition sixns := exist _ 6 (gt_Sn_O 5).
 Definition sevenns := exist _ 7 (gt_Sn_O 6).
 Definition eightns := exist _ 8 (gt_Sn_O 7).
 Definition ninens := exist _ 9 (gt_Sn_O 8).
+Definition tenns := exist _ 10 (gt_Sn_O 9).
 
 (** ** Definitions and Facts about strict orders and boolean functions *)
 

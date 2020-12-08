@@ -25,13 +25,10 @@ Definition Sens (sitpn : Sitpn) (M : (P sitpn) -> nat) (t : (T sitpn)) :=
     (pre p t = Some (test, n) \/ pre p t = Some (basic, n) -> (M p) >= n) /\
     (pre p t = Some (inhibitor, n) -> (M p) < n).
 
-(** ∀ optn ∈ N ⊔ {ψ}, n ∈ i iff n ≠ ψ ∧ i = [a; b] ∧ a ≤ n ≤ b *)
+(** ∀ n ∈ N, n ∈ i iff i = [a; b] ∧ a ≤ n ≤ b *)
 
-Definition InItval (optn : option nat) (i : TimeInterval) : Prop :=
-  match optn with
-  | None => False
-  | Some n => (a i) <= n /\ forall bnotinf, le_nat_natinf n (b i) bnotinf
-  end.
+Definition InItval (n : nat) (i : TimeInterval) : Prop :=
+  (a i) <= n /\ forall bnotinf, le_nat_natinf n (b i) bnotinf.
   
 (** t ∉ Ti ∨ 0 ∈ I(t) *)
 
@@ -48,10 +45,19 @@ Definition HasReachedUpperBound sitpn (s : SitpnState sitpn) : {t | @Is sitpn t 
   destruct Is;
     [ match goal with
       | [ i: TimeInterval |- _ ] =>
-        refine (match I s tex with
-                | None => True
-                | Some n => forall pf_bnotinf, eq_nat_natinf n (b i) pf_bnotinf
-                end)
+        refine (forall pf_bnotinf, eq_nat_natinf (I s tex) (b i) pf_bnotinf)
+      end
+    | contradiction].
+Defined.
+
+(* Returns the upper bound of the time interval associated with time
+   transition [t]. *)
+
+Definition upper sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> natinf.
+  refine (fun tex => (let '(exist _ t pf) := tex in _)).
+    destruct Is;
+    [ match goal with
+      | [ i: TimeInterval |- _ ] => refine (b i)
       end
     | contradiction].
 Defined.
