@@ -1,10 +1,11 @@
 (** * Definition of the fired set of transitions *)
 
-Require Import Coqlib.
+Require Import common.Coqlib.
 Require Import dp.Sitpn.
-Require Import SitpnTypes.
-Require Import GlobalTypes.
-Require Import SitpnSemanticsDefs.
+Require Import dp.SitpnTypes.
+Require Import common.GlobalTypes.
+Require Import dp.SitpnSemanticsDefs.
+Require Import common.ListsPlus.
 
 Set Implicit Arguments.
 

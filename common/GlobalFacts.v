@@ -6,6 +6,12 @@ Require Import SetoidList.
 
 Set Implicit Arguments.
 
+(** ** Extra facts about the [option] type *)
+
+Definition some_to_nnone {A} (f : option A) (a : A) (pf : f = Some a) : f <> None.
+  intros pf'; rewrite pf in pf'; inversion pf'.
+Defined.
+
 (** ** Equivalence relation for sig. *)
 
 Section SigEq.

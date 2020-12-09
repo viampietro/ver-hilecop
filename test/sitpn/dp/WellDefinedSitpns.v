@@ -17,7 +17,7 @@ Local Notation "[ e ]" := (exist _ e _).
 (** ** An simple instance of [Sitpn]. *)
 
 Definition places_simpl := [ 0; 1; 2].
-Definition transs_simpl := [ 0; 1; 2 ].
+Definition transs_simpl := [ 1; 0; 2 ].
 Definition conds_simpl := [ 30; 31; 32 ].
 
 Definition Psimpl := { p | List.In p places_simpl }.
@@ -78,7 +78,7 @@ Definition has_C_simpl (t : Tsimpl) (c : Csimpl) : MOneZeroOne :=
 Definition prio_simpl :=
   fun t t' : Tsimpl =>
     match t, t' with
-    | [2], ([1] | [0]) | [1], [0] => True
+    | [2], [1] | [1], [0] => True
     | _, _ => False
     end.
 
@@ -107,11 +107,11 @@ Definition prio_simpl_dec : forall x y : Tsimpl, {prio_simpl x y} + {~prio_simpl
   decide_prio_dec. 
 Defined.
 
-(* Require Import GenerateHVhdl. *)
-(* Require Import AbstractSyntax. *)
-(* Require Import Sitpn2HVhdlTypes. *)
+Require Import GenerateHVhdl.
+Require Import AbstractSyntax.
+Require Import Sitpn2HVhdlTypes.
 
-(* Compute (sitpn_to_hvhdl sitpn_simpl prio_simpl_dec 0 0 2). *)
+Compute (sitpn_to_hvhdl sitpn_simpl prio_simpl_dec 0 0 2).
 
 
 

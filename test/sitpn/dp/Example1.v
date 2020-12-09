@@ -166,6 +166,7 @@ Example sitpn1 :=
 (* Require Import GenerateHVhdl. *)
 (* Require Import AbstractSyntax. *)
 (* Require Import Sitpn2HVhdlTypes. *)
+(* Require Import String. *)
 
 (* Compute (sitpn_to_hvhdl sitpn1 prio1_dec 0 0 2). *)
 

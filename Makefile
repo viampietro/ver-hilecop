@@ -11,7 +11,7 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 COMMONFILES=NatMap.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
 	FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
-	StateAndErrorMonad.v
+	StateAndErrorMonad.v ListsMonad.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -51,7 +51,7 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v SemanticalDomains.v \
 
 # SITPN to H-VHDL transformation.
 
-SITPN2HVHDLFILES= InfosTypes.v Sitpn2HVhdlTypes.v \
+SITPN2HVHDLFILES= Sitpn2HVhdlTypes.v \
 		GenerateInfos.v GenerateArchitecture.v \
 		GeneratePorts.v	GenerateHVhdl.v
 

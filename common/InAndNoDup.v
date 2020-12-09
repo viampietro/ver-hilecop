@@ -540,7 +540,7 @@ Ltac apply_incl Hin :=
 
 Ltac incl_rm_hd_fs Hincl_fs :=
   lazymatch Hincl_fs with
-  | incl (fst (split ((_, _) :: _))) _ =>
+  | _ : incl (fst (split ((_, _) :: _))) _ =>
     rewrite fst_split_cons_app in Hincl_fs;
     simpl in Hincl_fs;
     apply incl_cons_inv in Hincl_fs
@@ -564,9 +564,9 @@ Ltac contradiction_with_nodup_same_pair l p p' Hin_p_l Hin_p'_l :=
 
   (* Checks that arguments are well-typed. *)
   lazymatch Hin_p_l with
-  | In p l =>
+  | _ : In p l =>
     lazymatch Hin_p'_l with
-    | In p' l =>
+    | _ :In p' l =>
       lazymatch goal with
       | [ Hnodup: NoDup (fst (split l)) |- _ ] =>
         
@@ -578,9 +578,9 @@ Ltac contradiction_with_nodup_same_pair l p p' Hin_p_l Hin_p'_l :=
                                                                   
       | _ => fail "No hypothesis of the form NoDup (fst (split l))"
       end
-    | _ => fail "Argument is not of the form In (?a, ?b) ?l" 
+    | _ => fail "5th argument is not of the form In (?a, ?b) ?l" 
     end
-  | _ => fail "Argument is not of the form In (?a, ?b) ?l"
+  | _ => fail "4th argument is not of the form In (?a, ?b) ?l"
   end.
 
 (** Looks for a hypothesis of the form [NoDup (?a :: ?l)]

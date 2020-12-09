@@ -2,6 +2,7 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
+Require Import common.GlobalFacts.
 Require Import common.ListsPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
@@ -25,6 +26,13 @@ Definition Sens (sitpn : Sitpn) (M : (P sitpn) -> nat) (t : (T sitpn)) :=
     (pre p t = Some (test, n) \/ pre p t = Some (basic, n) -> (M p) >= n) /\
     (pre p t = Some (inhibitor, n) -> (M p) < n).
 
+(** States that transition [t] is sensitized by marking [M] only
+    considering its basic and test input arcs.  *)
+
+Definition Sensbt (sitpn : Sitpn) (M : (P sitpn) -> nat) (t : T sitpn) :=
+  forall p n,
+    (pre p t = Some (test, n) \/ pre p t = Some (basic, n) -> (M p) >= n).
+
 (** ∀ n ∈ N, n ∈ i iff i = [a; b] ∧ a ≤ n ≤ b *)
 
 Definition InItval (n : nat) (i : TimeInterval) : Prop :=
@@ -32,20 +40,41 @@ Definition InItval (n : nat) (i : TimeInterval) : Prop :=
   
 (** t ∉ Ti ∨ 0 ∈ I(t) *)
 
-Definition HasReachedTimeWindow (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
-  match Is t with
-  | None => True
-  | Some itval => forall t_is_timet, InItval (I s (exist _ t t_is_timet)) itval
-  end.
+Definition HasReachedTimeWindow (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) : Prop.
+  case_eq (Is t);
+    [
+      lazymatch goal with
+      | [ _ : _ |- forall i : TimeInterval, _ -> _ ] =>
+        let i := fresh in
+        intros i t_is_timet; refine (InItval (I s (exist _ t (some_to_nnone t_is_timet))) i)
+      end
+    | intros; exact True].
+Defined.
 
-(** t ∈ Ti ∧ I(t) = upper(Is(t)) *)
+(** States that the time counter of transition [t] is less than or
+    equal to the upper bound of the time interval associated to [t],
+    i.e, I(t) ≤ upper(Is(t)) *)
 
-Definition HasReachedUpperBound sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+Definition TcLeUpper sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+  refine (fun tex => (let '(exist _ t pf) := tex in _));
+    destruct Is;
+    [ match goal with
+      | [ i: TimeInterval |- _ ] =>
+        refine (forall pf_bnotinf, le_nat_natinf (I s tex) (b i) pf_bnotinf)
+      end
+    | contradiction].
+Defined.
+
+(** States that the time counter of transition [t] is strictly greater
+    than the upper bound of the time interval associated to [t], i.e,
+    I(t) > upper(Is(t)) *)
+
+Definition TcGtUpper sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
   refine (fun tex => (let '(exist _ t pf) := tex in _));
   destruct Is;
     [ match goal with
       | [ i: TimeInterval |- _ ] =>
-        refine (forall pf_bnotinf, eq_nat_natinf (I s tex) (b i) pf_bnotinf)
+        refine (forall pf_bnotinf, gt_nat_natinf (I s tex) (b i) pf_bnotinf)
       end
     | contradiction].
 Defined.
@@ -69,11 +98,6 @@ Defined.
 Definition Firable (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
   Sens (M s) t /\ HasReachedTimeWindow s t /\ AllConditionsEnabled s t.
 
-(** States that a given Set S is implemented by a list l.  As a side
-    effect, states that a given set is finite and enumerable. *)
-
-Definition Set_in_List (A : Type) (P : A -> Prop) (l : list A) : Prop :=
-  (forall a : A, P a <-> In a l) /\ NoDup l.
 
 (** Sums the weight of the pre-edges between the place [p] 
     and the transitions of a list given in parameter.

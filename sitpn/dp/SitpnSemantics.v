@@ -1,11 +1,12 @@
 (** * Sitpn semantics definition. *)
 
-Require Import Coqlib.
+Require Import common.Coqlib.
+Require Import common.GlobalTypes.
+Require Import ListsPlus.
 Require Import dp.Sitpn.
-Require Import SitpnTypes.
-Require Import GlobalTypes.
-Require Import SitpnSemanticsDefs.
-Require Import Fired.
+Require Import dp.SitpnTypes.
+Require Import dp.SitpnSemanticsDefs.
+Require Import dp.Fired.
 
 Local Set Implicit Arguments.
 
@@ -27,14 +28,19 @@ Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (fired : list (T 
 
 (** Defines the Sitpn state transition relation. *)
 
-Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s s' : SitpnState sitpn) : Clk -> Prop :=
+Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s' : SitpnState sitpn) : Clk -> Prop :=
 | SitpnStateTransition_falling :
 
     (** Captures the new value of conditions, and determines the
         activation status for actions.  *)
-    (forall c, (cond s' c) = (E tau c)) ->
+    (forall c, (cond s' c) = (E τ c)) ->
     (forall a, (exists p, (M s p) > 0 /\ has_A p a = true) -> (ex s' (inl a)) = true) ->
-    (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (ex s' (inl a)) = false) ->    
+    (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (ex s' (inl a)) = false) ->
+
+    (* Equivalent to the two lines above. *)
+    (forall a marked sum, @Set_in_List (P sitpn) (fun p => M s p > 0) marked ->
+                          BSum (fun p => has_A p a) marked sum ->
+                          ex s' (inl a) = sum) ->
 
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
@@ -43,7 +49,11 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (forall (t : Ti sitpn),
         Sens (M s) t ->
         reset s t = false ->
-        (HasReachedUpperBound s t \/ upper s t = i+) -> I s' t = S (I s t)) ->
+        (TcLeUpper s t \/ upper s t = i+) -> I s' t = S (I s t)) ->
+    (forall (t : Ti sitpn),
+        Sens (M s) t ->
+        reset s t = false ->
+        (upper s t <> i+ /\ TcGtUpper s t) -> I s' t = S (I s t)) ->
 
     (** Marking stays the same between s and s'. *)
     (forall p, M s p = M s' p) -> 
@@ -55,22 +65,31 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (forall f, ex s (inr f) = ex s' (inr f)) ->
     
     (** Conclusion *)
-    SitpnStateTransition E tau s s' falling_edge
+    SitpnStateTransition E τ s s' falling_edge
 
 | SitpnStateTransition_rising:
 
     (** Marking at state s' is the new marking resulting of the firing
         of all transitions belonging to the Fired subset at state
-        s. *)
-    forall fired, IsNewMarking s fired (M s') ->
+        s. *)  
+    (forall fired, IsNewMarking s fired (M s')) ->
 
     (** Computes the reset orders for time counters and fired transitions. *)
-    (forall (t : Ti sitpn) fired m, IsTransientMarking s fired m -> (~Sens m t \/ Fired s fired t) -> reset s' t = true) ->
-    (forall (t : Ti sitpn) fired m, IsTransientMarking s fired m -> Sens m t -> ~Fired s fired t -> reset s' t = false) ->
+    (forall (t : Ti sitpn) fired m,
+        IsTransientMarking s fired m ->
+        (Sens (M s) t /\ ~Sensbt m t \/ Fired s fired t) -> reset s' t = true) ->
+    
+    (forall (t : Ti sitpn) fired m,
+        IsTransientMarking s fired m ->
+        (~Sens (M s) t \/ Sensbt m t) ->
+        ~Fired s fired t -> reset s' t = false) ->
 
     (** Determines if some functions are executed. *)
     (forall f fired, (exists t, Fired s fired t /\ has_F t f = true) -> ex s' (inr f) = true) ->
-    (forall f fired, (forall t, ~Fired s fired t \/ has_F t f = false) -> ex s' (inr f) = false) -> 
+    (forall f fired, (forall t, ~Fired s fired t \/ has_F t f = false) -> ex s' (inr f) = false) ->
+
+    (* Equivalent to the two lines above. *)
+    (forall f fired sum, IsFiredList s fired -> BSum (fun t => has_F t f) fired sum -> ex s' (inr f) = sum) ->
     
     (** Condition values stay the same between s and s'. *)
     (forall c, cond s' c = cond s c) -> 
@@ -79,7 +98,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (tau : nat) (s
     (forall a, ex s' (inl a) = ex s (inl a)) ->
     
     (** Conclusion *)
-    SitpnStateTransition E tau s s' rising_edge.    
+    SitpnStateTransition E τ s s' rising_edge.    
 
 (** ** SITPN Execution Relations *)
 
@@ -102,7 +121,7 @@ Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn)
 (** Defines the initial state of an SITPN. *)
 
 Definition s0 sitpn : SitpnState sitpn :=
-  BuildSitpnState (@M0 sitpn) (fun _ => Some 0) nullb nullb nullb nullb.
+  BuildSitpnState (@M0 sitpn) (fun _ => 0) nullb nullb nullb.
 
 (** Defines a full execution relation for an SITPN, i.e, starting from
     the initial state of an SITPN. *)

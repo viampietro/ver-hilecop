@@ -27,6 +27,12 @@ Section ListPlusMisc.
 
   Definition inter (eq : A -> A -> Prop) (Aeqdec : forall x y : A, {eq x y} + {~eq x y}) (l m : list A) :=
     filter (fun a => if InA_dec Aeqdec a m then true else false) l. 
+
+  (** States that a given Set S is implemented by a list l.  As a side
+    effect, states that a given set is finite and enumerable. *)
+
+  Definition Set_in_List (A : Type) (P : A -> Prop) (l : list A) : Prop :=
+    (forall a : A, P a <-> In a l) /\ NoDup l.
   
 End ListPlusMisc.
 
@@ -605,3 +611,25 @@ Section Fold_left_prop.
 End Fold_left_prop.
 
 Arguments FoldL {A B}.
+
+(** ** Boolean and lists. *)
+
+Section BoolAndLists.
+
+  Variable A : Type.
+  Variable f : A -> bool.
+
+  (* States that the boolean [sum] is the sum of the application of
+     function [f] to the elements of list [l]. *)
+  
+  Definition BSum (l : list A) (sum : bool) : Prop :=
+    FoldL (fun sum a => sum || f a) l false sum.
+
+  (* States that the boolean [prod] is the product of the application
+     of function [f] to the elements of list [l]. *)
+
+  Definition BProd (l : list A) (prod : bool) : Prop :=
+    FoldL (fun prod a => prod && f a) l true prod.
+  
+End BoolAndLists.
+
