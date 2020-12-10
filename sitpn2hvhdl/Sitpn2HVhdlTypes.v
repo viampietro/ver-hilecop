@@ -152,7 +152,7 @@ Section CompileTimeTypes.
   
   Definition InitS2HState (ffid : ident) :=
     MkS2HState ffid EmptySitpnInfos [] [] EmptyArch cs_null EmptyS2HMap.
-
+  
 End CompileTimeTypes.
 
 (* Set implicit arguments for SitpnInfos *)

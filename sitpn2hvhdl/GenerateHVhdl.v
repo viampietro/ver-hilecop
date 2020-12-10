@@ -25,7 +25,6 @@ Open Scope abss_scope.
 
 (** ** Transformation from an SITPN to an H-VHDL design *)
 
-
 Section Sitpn2HVhdl.
 
   Variable sitpn : Sitpn.

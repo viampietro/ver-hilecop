@@ -12,6 +12,7 @@ Require Import String.
 Require Import common.StateAndErrorMonad.
 Require Import common.ListsMonad.
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import FunInd.
 
 Local Open Scope string_scope.
 
@@ -397,27 +398,92 @@ Section GenSitpnInfos.
     
   End InterpretationInfos.
 
-  (** ** Informations about an Sitpn. *)
+  (** ** Well-definition of an [Sitpn] *)
 
-  (** Returns an SitpnInfo instance computed from [sitpn]. *)
-  
-  Definition generate_sitpn_infos : CompileTimeState unit := 
-  
-    (* Raises an error if sitpn has an empty set of places or transitions. *)
-    if (places sitpn) then Err ("Found an empty set of places.")
-    else
-      if (transitions sitpn) then Err ("Found an empty set of transitions.")
+  Section CheckWellDefinedSitpn.
+
+    Definition Innodup2In {A}
+               (decA : forall x y : A, {x = y} + {x <> y})
+               {l : list A}
+               (a : { a : A | In a (nodup decA l) }) : {a : A | In a l}.
+      specialize (proj2_sig a) as pf;
+        rewrite (nodup_In decA) in pf;
+        exact (exist _ (proj1_sig a) pf). 
+    Defined.
+
+    Definition pre2nodup (pre : P sitpn -> T sitpn -> option (ArcT * natstar)) := 
+      fun p t => pre (Innodup2In Nat.eq_dec p) (Innodup2In Nat.eq_dec t).
+
+    Definition post2nodup (post : T sitpn -> P sitpn -> option natstar) :=
+      fun t p => post (Innodup2In Nat.eq_dec t) (Innodup2In Nat.eq_dec p).
+
+    Definition M02nodup (M0 : P sitpn -> nat) :=
+      fun p => M0 (Innodup2In Nat.eq_dec p).
+
+    Definition Is2nodup (Is : T sitpn -> option TimeInterval) :=
+      fun t => Is (Innodup2In Nat.eq_dec t).
+
+    Definition hasCtonodup (has_C : T sitpn -> C sitpn -> MOneZeroOne) :=
+      fun t c => has_C (Innodup2In Nat.eq_dec t) (Innodup2In Nat.eq_dec c).
+
+    Definition hasAtonodup (has_A : P sitpn -> A sitpn -> bool) :=
+      fun p a => has_A (Innodup2In Nat.eq_dec p) (Innodup2In Nat.eq_dec a).
+
+    Definition hasFtonodup (has_F : T sitpn -> F sitpn -> bool) :=
+      fun t f => has_F (Innodup2In Nat.eq_dec t) (Innodup2In Nat.eq_dec f).
+
+    Definition pr2nodup (pr : T sitpn -> T sitpn -> Prop) :=
+      fun x y => pr (Innodup2In Nat.eq_dec x) (Innodup2In Nat.eq_dec y).
+    
+    Definition check_well_defined_sitpn : CompileTimeState Sitpn :=
+      (* Raises an error if sitpn has an empty set of places or transitions. *)
+      if (places sitpn) then Err ("Found an empty set of places.")
       else
-        (* Otherwise, generates information about sitpn. *)
-
-        (* Call to [generate_trans_infos] must precede the call to
-           [generate_place_infos] because the latter uses transition
-           informations.  *)
-        do _ <- generate_trans_infos;        
-        do _ <- generate_place_infos;
-        do _ <- generate_cond_infos; 
-        do _ <- generate_action_infos;
-        generate_fun_infos.
-  
+        if (transitions sitpn) then Err ("Found an empty set of transitions.")
+        else
+          (* Builds a new [sitpn] where the list of places, transitions,
+           actions, functions and conditions have no duplicate
+           element. *)
+          let sitpn_nodup :=
+              BuildSitpn (nodup Nat.eq_dec (places sitpn))
+                         (nodup Nat.eq_dec (transitions sitpn))
+                         (pre2nodup (@pre sitpn)) (post2nodup (@post sitpn))
+                         (M02nodup (@M0 sitpn)) (Is2nodup (@Is sitpn))
+                         (nodup Nat.eq_dec (conditions sitpn))
+                         (nodup Nat.eq_dec (actions sitpn))
+                         (nodup Nat.eq_dec (functions sitpn))
+                         (hasCtonodup (@has_C sitpn))
+                         (hasAtonodup (@has_A sitpn))
+                         (hasFtonodup (@has_F sitpn))
+                         (pr2nodup (@pr sitpn))
+          in
+          (* do _ <- pr_rel_is_strict_order sitpn_nodup; *)
+          Ret (sitpn_nodup).
+    
+  End CheckWellDefinedSitpn.
+    
 End GenSitpnInfos.
 
+(** ** Informations about an [Sitpn] *)
+
+Definition check_wd_dec_pr (sitpn : Sitpn) (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) :
+  forall s s' sitpn',
+    check_well_defined_sitpn sitpn s = @OK _ _ s sitpn' s' ->
+    forall x y : T sitpn', {x >~ y} + {~x >~ y}.
+Admitted.
+
+  (** Returns an SitpnInfo instance computed from [sitpn]. *)
+
+Definition generate_sitpn_infos
+           (sitpn : Sitpn)
+           (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) := 
+
+  (* Call to [generate_trans_infos] must precede the call to
+     [generate_place_infos] because the latter uses transition
+     informations.  *)
+  do sitpn' <- check_well_defined_sitpn sitpn;
+  do _ <- generate_trans_infos sitpn';        
+  do _ <- generate_place_infos sitpn' decpr;
+  do _ <- generate_cond_infos sitpn'; 
+  do _ <- generate_action_infos sitpn';
+  generate_fun_infos sitpn'.
