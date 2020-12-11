@@ -402,6 +402,75 @@ Section GenSitpnInfos.
 
   Section CheckWellDefinedSitpn.
 
+    (** Assuming that x ≻ y, checks that x ≻ z if y ≻ z.  Returns an
+        error if x ≻ y and y ≻ z but x ⊁ z.  *)
+    
+    Let check_trans (x y z : T sitpn) : CompileTimeState unit :=
+      match decpr y z, decpr x z with
+      | left _, right _ => Err ("check_trans: priority relation is not transitive. "
+                                  ++ $$x ++ " ≻ " ++ $$y
+                                  ++ " and " ++ $$y ++ " ≻ " ++ $$z
+                                  ++ " but " ++ $$x ++ " ⊁ " ++ $$z)
+      | _, _ => Ret tt
+      end.
+
+    (** Assuming that [x ≻ y], checks that if [y ≻ z] then [x ≻ z]
+        holds for each [z ∈ trs].  *)
+    
+    Definition iter_xy_check_trans (x y : T sitpn) (trs : list (T sitpn)) :
+      CompileTimeState unit :=
+      iter (check_trans x y) trs.
+
+    (** For each transition [y] in [trs], if [x ≻ y] then calls
+        [iter_xy_check_trans] on [x], [y] and [trs∖{y}].  *)
+    
+    Definition foreach_x_check_trans (x : T sitpn) (trs : list (T sitpn)) :
+      CompileTimeState unit :=
+      let f := fun y trs' =>
+                 if decpr x y
+                 then iter_xy_check_trans x y trs'
+                 else Ret tt
+      in foreach f trs.
+
+    (** Checks that the priority relation is transitive; returns an
+        error if not. *)
+    
+    Definition check_pr_is_trans :=
+      let Tlist :=  ListsDep.tmap id (transitions sitpn) nat_to_T in
+      let f := fun x trs => foreach_x_check_trans x trs in
+      foreach f Tlist.
+
+    (** Checks that the priority relation is irreflexive; returns
+        an error if not. *)
+    
+    Definition check_pr_is_irrefl : CompileTimeState unit :=
+      let check_irrefl :=
+          (fun t =>
+             if decpr t t
+             then Err ("pr_rel_is_strict_order: priority relation is reflexive for transition "
+                         ++ $$t ++ ".")
+             else Ret tt) in
+      titer check_irrefl (transitions sitpn) nat_to_T.
+
+    (** Checks that the priority relation is a strict order, i.e,
+        irreflexive and transitive. *)
+    
+    Definition pr_rel_is_strict_order : CompileTimeState unit :=
+      do _ <- check_pr_is_irrefl; check_pr_is_trans.
+    
+    (** Returns an error if the list of places or transitions of
+        [sitpn] are empty, or if the priority relation is not a strict
+        order. *)
+    
+    Definition check_wd_sitpn : CompileTimeState unit :=
+      (* Raises an error if sitpn has an empty set of places or transitions. *)
+      if (places sitpn) then Err ("Found an empty set of places.")
+      else
+        if (transitions sitpn) then Err ("Found an empty set of transitions.")
+        else pr_rel_is_strict_order.
+
+    (** *** Well-definition of an [Sitpn] with nodup lists *)
+    
     Definition Innodup2In {A}
                (decA : forall x y : A, {x = y} + {x <> y})
                {l : list A}
@@ -435,15 +504,15 @@ Section GenSitpnInfos.
     Definition pr2nodup (pr : T sitpn -> T sitpn -> Prop) :=
       fun x y => pr (Innodup2In Nat.eq_dec x) (Innodup2In Nat.eq_dec y).
     
-    Definition check_well_defined_sitpn : CompileTimeState Sitpn :=
+    Definition check_wd_sitpn_nodup : CompileTimeState Sitpn :=
       (* Raises an error if sitpn has an empty set of places or transitions. *)
       if (places sitpn) then Err ("Found an empty set of places.")
       else
         if (transitions sitpn) then Err ("Found an empty set of transitions.")
         else
           (* Builds a new [sitpn] where the list of places, transitions,
-           actions, functions and conditions have no duplicate
-           element. *)
+             actions, functions and conditions have no duplicate
+             element. *)
           let sitpn_nodup :=
               BuildSitpn (nodup Nat.eq_dec (places sitpn))
                          (nodup Nat.eq_dec (transitions sitpn))
@@ -458,7 +527,7 @@ Section GenSitpnInfos.
                          (pr2nodup (@pr sitpn))
           in
           (* do _ <- pr_rel_is_strict_order sitpn_nodup; *)
-          Ret (sitpn_nodup).
+          Ret sitpn_nodup.
     
   End CheckWellDefinedSitpn.
     
@@ -466,24 +535,20 @@ End GenSitpnInfos.
 
 (** ** Informations about an [Sitpn] *)
 
-Definition check_wd_dec_pr (sitpn : Sitpn) (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) :
-  forall s s' sitpn',
-    check_well_defined_sitpn sitpn s = @OK _ _ s sitpn' s' ->
-    forall x y : T sitpn', {x >~ y} + {~x >~ y}.
-Admitted.
-
-  (** Returns an SitpnInfo instance computed from [sitpn]. *)
+(** Returns an SitpnInfo instance computed from [sitpn]. *)
 
 Definition generate_sitpn_infos
            (sitpn : Sitpn)
-           (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) := 
+           (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) :=
 
   (* Call to [generate_trans_infos] must precede the call to
      [generate_place_infos] because the latter uses transition
      informations.  *)
-  do sitpn' <- check_well_defined_sitpn sitpn;
-  do _ <- generate_trans_infos sitpn';        
-  do _ <- generate_place_infos sitpn' decpr;
-  do _ <- generate_cond_infos sitpn'; 
-  do _ <- generate_action_infos sitpn';
-  generate_fun_infos sitpn'.
+  do _ <- check_wd_sitpn sitpn decpr;
+  do _ <- generate_trans_infos sitpn;
+  do _ <- generate_place_infos sitpn decpr;
+  do _ <- generate_cond_infos sitpn; 
+  do _ <- generate_action_infos sitpn;
+  generate_fun_infos sitpn.
+
+

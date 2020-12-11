@@ -7,21 +7,7 @@ Require Import StateAndErrorMonad.
 
 Import ListNotations.
 
-(*  *)
-
-Fixpoint fold_left {A B C} (f : C -> B -> @Mon A C) (l : list B) (c : C) {struct l} : @Mon A C :=
-  match l with
-  | nil => Ret c
-  | b :: tl =>
-    do c' <- f c b;
-    fold_left f tl c'
-  end.
-
-Fixpoint iter {A B} (f : B -> @Mon A unit) (l : list B) {struct l} : @Mon A unit :=
-  match l with
-  | nil => Ret tt
-  | b :: tl => do _ <- iter f tl; f b
-  end.
+(** ** State-and-error monad version of find *)
 
 Fixpoint find {A B} (f : B -> @Mon A bool) (l : list B) {struct l} : @Mon A (option B) :=
   match l with
@@ -31,7 +17,13 @@ Fixpoint find {A B} (f : B -> @Mon A bool) (l : list B) {struct l} : @Mon A (opt
     if res then Ret (Some b) else find f tl
   end.
 
-(*  *)
+(** ** State-and-error monad version of iter *)
+
+Fixpoint iter {A B} (f : B -> @Mon A unit) (l : list B) {struct l} : @Mon A unit :=
+  match l with
+  | nil => Ret tt
+  | b :: tl => do _ <- iter f tl; f b
+  end.
 
 Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
   (forall a, In a lofAs -> B) -> @Mon C unit :=
@@ -118,7 +110,15 @@ End TMap.
 
 Arguments tmap {state A B C}.
 
-(** ** State-and-error monad version of transform and fold left.  *)
+(** ** State-and-error monad version of fold left.  *)
+
+Fixpoint fold_left {A B C} (f : C -> B -> @Mon A C) (l : list B) (c : C) {struct l} : @Mon A C :=
+  match l with
+  | nil => Ret c
+  | b :: tl =>
+    do c' <- f c b;
+    fold_left f tl c'
+  end.
 
 Section TFold_Left_Recursor.
 
@@ -151,3 +151,48 @@ Section TFold_Left_Recursor.
 End TFold_Left_Recursor.
 
 Arguments tfold_left {State A B C}.
+
+(** ** State-and-error monad version of foreach. *)
+
+Section ForEach.
+
+  Variable state A : Type.
+  Variable f : A -> list A -> @Mon state unit.
+  
+  Fixpoint foreach_aux (lft rght : list A) {struct rght} : @Mon state unit :=
+    match rght with
+    | a :: tl => do _ <- f a (lft ++ tl); foreach_aux (lft ++ [a]) tl
+    | _ => Ret tt
+    end.
+
+  Definition foreach (l : list A) : @Mon state unit := foreach_aux [] l.
+  
+End ForEach.
+
+Arguments foreach {state A}.
+
+Section TForEach.
+
+  Variable state A B : Type.
+  Variable f : forall (b : B) (lofBs : list B) (lofAs : list A) (pf : forall a, In a lofAs -> B), @Mon state unit.
+  
+  Fixpoint tforeach_aux (lft : list B) (rght : list A) {struct rght} :
+    (forall a, In a rght -> B) -> @Mon state unit :=
+    match rght with
+    | a :: tl =>
+      fun pf =>
+        (* Creates a B from a proof that (In a (a :: tl)). *)
+        let b := pf a (in_eq a tl) in
+        (* Creates a proof that (forall a, In a tl -> B) *)
+        let pf_tl := in_T_in_sublist_T a tl pf in
+        
+        do _ <- f b lft tl pf_tl; tforeach_aux (lft ++ [b]) tl pf_tl
+    | _ => fun _ => Ret tt
+    end.
+
+  Definition tforeach (l : list A) : (forall a, In a l -> B) -> @Mon state unit :=
+    tforeach_aux [] l.
+  
+End TForEach.
+
+Arguments tforeach {state A B}.

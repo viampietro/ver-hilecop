@@ -78,7 +78,7 @@ Definition has_C_simpl (t : Tsimpl) (c : Csimpl) : MOneZeroOne :=
 Definition prio_simpl :=
   fun t t' : Tsimpl =>
     match t, t' with
-    | [2], [1] | [1], [0] => True
+    | [2], ([1] | [0]) | [1], [0] => True
     | _, _ => False
     end.
 
@@ -106,12 +106,6 @@ Require Import SitpnInstancesTactics.
 Definition prio_simpl_dec : forall x y : Tsimpl, {prio_simpl x y} + {~prio_simpl x y}.
   decide_prio_dec. 
 Defined.
-
-Require Import GenerateHVhdl.
-Require Import AbstractSyntax.
-Require Import Sitpn2HVhdlTypes.
-
-Compute (sitpn_to_hvhdl sitpn_simpl prio_simpl_dec 0 0 2).
 
 
 
