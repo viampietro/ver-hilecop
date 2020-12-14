@@ -46,7 +46,7 @@ Inductive listipm (ed cenv : ElDesign) (dstate : DState) (formals : list (ident 
 
 (** Lists an non-empty list of port associations. *)
 | ListIPMCons :
-    forall {asip lofasips formals' formals''},
+    forall asip lofasips formals' formals'',
       eassocip ed cenv dstate formals asip formals' ->
       listipm ed cenv dstate formals' lofasips formals'' ->
       listipm ed cenv dstate formals (asip :: lofasips) formals''
@@ -59,14 +59,14 @@ with eassocip (ed cenv : ElDesign) (dstate : DState) (formals : list (ident * op
 
 (** Checks an association with a simple port identifier (no index). *)
 | EAssocipPartial :
-    forall {id e v t},
+    forall id e v t,
 
       (* Premises *)
       vexpr ed dstate EmptyLEnv false e v ->
       is_of_type v t ->
 
       (* Side conditions *)
-      (forall {optv}, ~List.In (id, optv) formals) -> (* ∄ optv, (id, optv) ∈ formals *)
+      (forall optv, ~List.In (id, optv) formals) -> (* ∄ optv, (id, optv) ∈ formals *)
       MapsTo id (Input t) cenv ->                     (* id ∈ Ins(Δ_c) and Δ_c(id) = t *)
 
       (* Conclusion *)
@@ -74,7 +74,7 @@ with eassocip (ed cenv : ElDesign) (dstate : DState) (formals : list (ident * op
 
 (** Checks an association with a partial port identifier (with index). *)
 | EAssocipSimple :
-    forall {id ei e v vi t l u},
+    forall id ei e v vi t l u,
 
       (* Premises *)
       is_gstatic_expr ed ei ->
@@ -98,13 +98,13 @@ Definition checkipm (cenv : ElDesign) (formals : list (ident * option value)) : 
   forall (id : ident) (t : type),
     MapsTo id (Input t) cenv ->
     List.In (id, None) formals \/
-    (exists {t' l u}, t = (Tarray t' l u) /\ forall {i}, l <= i <= u -> List.In (id, Some (Vnat i)) formals).
+    (exists t' l u, t = (Tarray t' l u) /\ forall i, l <= i <= u -> List.In (id, Some (Vnat i)) formals).
 
 (** Defines the predicate stating that an "in" port map is valid. *)
 
 Inductive validipm (ed cenv : ElDesign) (dstate : DState) (ipmap : list associp) : Prop :=
 | ValidIpm :
-    forall {formals},
+    forall formals,
       listipm ed cenv dstate [] ipmap formals ->
       checkipm cenv formals ->
       validipm ed cenv dstate ipmap.
@@ -123,7 +123,7 @@ Inductive listopm (ed cenv : ElDesign) (formals actuals : list (ident * option v
 
 (** Lists an non-empty list of port associations. *)
 | ListOPMCons :
-    forall {aspo lofaspos formals' actuals' formals'' actuals''},
+    forall aspo lofaspos formals' actuals' formals'' actuals'',
       eassocop ed cenv formals actuals aspo formals' actuals' ->
       listopm ed cenv formals' actuals' lofaspos formals'' actuals'' ->
       listopm ed cenv formals actuals (aspo :: lofaspos) formals'' actuals''
@@ -218,7 +218,7 @@ with eassocop (ed cenv : ElDesign) (formals actuals : list (ident * option value
 (** Checks an "out" port map association of the form "idf(ei) => ida(ei')",
     where [ida] refers to a declared signal or an output port identifier. *)
 | EAssocopPartialToPartialDecl :
-    forall {idf ei ida ei' vi vi' t l u l' u'},
+    forall idf ei ida ei' vi vi' t l u l' u',
 
       (* Premises *)
       is_gstatic_expr ed ei ->

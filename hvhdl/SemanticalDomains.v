@@ -104,7 +104,7 @@ Defined.
 (** Given a proof that [n > 0], returns an arrofvalues of length [n]
     filled with value [v]. *)
 
-Fixpoint create_arr (n : nat) (v : value) {struct n} : n > 0 -> arrofvalues :=
+Definition create_arr (n : nat) (v : value) : n > 0 -> arrofvalues :=
   match n as n0 return (n0 > 0 -> arrofvalues) with
   (* Absurd case, 0 > 0. *)
   | 0 => fun H : 0 > 0 => False_rect arrofvalues (Nat.nlt_0_r 0 H)

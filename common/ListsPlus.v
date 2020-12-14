@@ -633,3 +633,23 @@ Section BoolAndLists.
   
 End BoolAndLists.
 
+(** ** Nat and lists. *)
+
+Section NatAndLists.
+
+  Variable A : Type.
+  Variable f : A -> nat.
+
+  (* States that the nat [sum] is the sum of the application of
+     function [f] to the elements of list [l]. *)
+  
+  Definition NatSum (l : list A) (sum : nat) : Prop :=
+    FoldL (fun sum a => sum + f a) l 0 sum.
+
+  (* States that the nat [prod] is the product of the application
+     of function [f] to the elements of list [l]. *)
+
+  Definition NatProd (l : list A) (prod : nat) : Prop :=
+    FoldL (fun prod a => prod * f a) l 1 prod.
+  
+End NatAndLists.

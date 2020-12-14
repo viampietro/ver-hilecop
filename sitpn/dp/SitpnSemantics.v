@@ -49,11 +49,11 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (forall (t : Ti sitpn),
         Sens (M s) t ->
         reset s t = false ->
-        (TcLeUpper s t \/ upper s t = i+) -> I s' t = S (I s t)) ->
+        (TcLeUpper s t \/ upper t = i+) -> I s' t = S (I s t)) ->
     (forall (t : Ti sitpn),
         Sens (M s) t ->
         reset s t = false ->
-        (upper s t <> i+ /\ TcGtUpper s t) -> I s' t = S (I s t)) ->
+        (upper t <> i+ /\ TcGtUpper s t) -> I s' t = S (I s t)) ->
 
     (** Marking stays the same between s and s'. *)
     (forall p, M s p = M s' p) -> 

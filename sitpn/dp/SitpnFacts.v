@@ -11,7 +11,16 @@ Set Implicit Arguments.
     of the [sig] type [P sitpn].  *)
 
 Definition Peq sitpn (p p' : P sitpn) : Prop := seq p p'.
+
+(** For a given [sitpn], defines the equivalence relation [Pkeq]
+    between two pairs where places are the first elements of the
+    pairs.  *)
+
+Definition Pkeq sitpn {A : Type} (p p' : P sitpn * A) : Prop :=
+  Peq (fst p) (fst p') /\ snd p = snd p'.
+
 Arguments Peq {sitpn}.
+Arguments Pkeq {sitpn A}.
 
 (** The equivalence relation [Peq] is decidable. *)
 
@@ -36,6 +45,15 @@ Definition Teq sitpn (t t' : T sitpn) : Prop := seq t t'.
 
 Definition Teq' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : Prop :=
   Teq (proj1_sig t) (proj1_sig t').
+
+(** For a given [sitpn], defines the equivalence relation [Tkeq]
+    between two pairs where transitions are the first elements of the
+    pairs.  *)
+
+Definition Tkeq sitpn {A : Type} (p p' : T sitpn * A) : Prop :=
+  Teq (fst p) (fst p') /\ snd p = snd p'.
+
+Arguments Tkeq {sitpn A}.
 
 (** The equivalence relation [Teq] is decidable. *)
 
@@ -65,6 +83,14 @@ Definition InA_Teq_dec sitpn (t : T sitpn) (lofT : list (T sitpn)) :
 Definition Aeq sitpn (a a' : A sitpn) : Prop := seq a a'.
 Arguments Aeq {sitpn}.
 
+(** For a given [sitpn], defines the equivalence relation [Akeq]
+    between two pairs where actions are the first elements of the
+    pairs.  *)
+
+Definition Akeq sitpn {B : Type} (p p' : A sitpn * B) : Prop := Aeq (fst p) (fst p') /\ snd p = snd p'.
+
+Arguments Akeq {sitpn B}.
+
 (** The equivalence relation [Aeq] is decidable. *)
 
 Definition Aeqdec sitpn (x y : A sitpn) : {Aeq x y} + {~Aeq x y} :=
@@ -78,6 +104,14 @@ Arguments Aeqdec {sitpn}.
 Definition Feq sitpn (f f' : F sitpn) : Prop := seq f f'.
 Arguments Feq {sitpn}.
 
+(** For a given [sitpn], defines the equivalence relation [Fkeq]
+    between two pairs where functions are the first elements of the
+    pairs.  *)
+
+Definition Fkeq sitpn {B : Type} (p p' : F sitpn * B) : Prop := Feq (fst p) (fst p') /\ snd p = snd p'.
+
+Arguments Fkeq {sitpn B}.
+
 (** The equivalence relation [Feq] is decidable. *)
 
 Definition Feqdec sitpn (x y : F sitpn) : {Feq x y} + {~Feq x y} :=
@@ -90,6 +124,14 @@ Arguments Feqdec {sitpn}.
 
 Definition Ceq sitpn (c c' : C sitpn) : Prop := seq c c'.
 Arguments Ceq {sitpn}.
+
+(** For a given [sitpn], defines the equivalence relation [Ckeq]
+    between two pairs where conditions are the first elements of the
+    pairs.  *)
+
+Definition Ckeq sitpn {B : Type} (p p' : C sitpn * B) : Prop := Ceq (fst p) (fst p') /\ snd p = snd p'.
+
+Arguments Ckeq {sitpn B}.
 
 (** The equivalence relation [Ceq] is decidable. *)
 

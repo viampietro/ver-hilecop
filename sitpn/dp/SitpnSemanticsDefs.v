@@ -82,11 +82,51 @@ Defined.
 (* Returns the upper bound of the time interval associated with time
    transition [t]. *)
 
-Definition upper sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> natinf.
+Definition upper sitpn : {t | @Is sitpn t <> None} -> natinf.
   refine (fun tex => (let '(exist _ t pf) := tex in _)).
     destruct Is;
     [ match goal with
       | [ i: TimeInterval |- _ ] => refine (b i)
+      end
+    | contradiction].
+Defined.
+
+(** States that the time counter of transition [t] is less than or
+    equal to the lower bound of the time interval associated to [t],
+    i.e, I(t) ≤ lower(Is(t)) *)
+
+Definition TcLeLower sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+  refine (fun tex => (let '(exist _ t pf) := tex in _));
+    destruct Is;
+    [ match goal with
+      | [ i: TimeInterval |- _ ] =>
+        refine (I s tex <= a i)
+      end
+    | contradiction].
+Defined.
+
+(** States that the time counter of transition [t] is strictly greater
+    than the lower bound of the time interval associated to [t], i.e,
+    I(t) > lower(Is(t)) *)
+
+Definition TcGtLower sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+  refine (fun tex => (let '(exist _ t pf) := tex in _));
+  destruct Is;
+    [ match goal with
+      | [ i: TimeInterval |- _ ] =>
+        refine (I s tex > a i)
+      end
+    | contradiction].
+Defined.
+
+(* Returns the lower bound of the time interval associated with time
+   transition [t]. *)
+
+Definition lower sitpn : {t | @Is sitpn t <> None} -> natstar.
+  refine (fun tex => (let '(exist _ t pf) := tex in _)).
+    destruct Is;
+    [ match goal with
+      | [ i: TimeInterval |- _ ] => refine (a i)
       end
     | contradiction].
 Defined.
@@ -97,7 +137,6 @@ Defined.
 
 Definition Firable (sitpn : Sitpn) (s : SitpnState sitpn) (t : T sitpn) :=
   Sens (M s) t /\ HasReachedTimeWindow s t /\ AllConditionsEnabled s t.
-
 
 (** Sums the weight of the pre-edges between the place [p] 
     and the transitions of a list given in parameter.

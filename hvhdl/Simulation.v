@@ -9,18 +9,20 @@
       needed to simulate a H-VHDL design (elaboration and simulation).
  *)
 
-Require Import Coqlib.
-Require Import GlobalTypes.
-Require Import SemanticalDomains.
-Require Import Environment.
-Require Import AbstractSyntax.
+Require Import common.Coqlib.
+Require Import common.GlobalTypes.
+
 Require Import dp.SitpnTypes.
-Require Import SynchronousEvaluation.
-Require Import Stabilize.
-Require Import DesignElaboration.
-Require Import Initialization.
-Require Import HVhdlTypes.
-Require Import HilecopDesignStore.
+
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.Environment.
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.SynchronousEvaluation.
+Require Import hvhdl.Stabilize.
+Require Import hvhdl.DesignElaboration.
+Require Import hvhdl.Initialization.
+Require Import hvhdl.HVhdlTypes.
+Require Import hvhdl.HilecopDesignStore.
 
 (** Defines the relation that computes a simulation cycle in the
     context of an elaborated design [ed], starting from a design
@@ -29,14 +31,14 @@ Require Import HilecopDesignStore.
     phases that happen during a cycle, and generates a new design
     state [σ'].
 
-    - [Pi] is the function yielding the values of input ports at a
+    - [E__p] is the function yielding the values of input ports at a
       given simulation time and for a given clock signal event.
       
     - [τ] corresponds to the number of simulation cycles that are
       yet to be executed.  *)
 
 Inductive simcycle
-          (Pi : nat -> Clk -> IdMap value)
+          (E__p : nat -> Clk -> IdMap value)
           (Δ : ElDesign)
           (τ : nat)
           (σ : DState)
@@ -59,14 +61,14 @@ Inductive simcycle
       (* ⊌ stands for the overriding union and ∩≠ stands for the
          differentiated intersection. *)
       
-      (* σ = <S, C, E> and σre = <S ⊌ Pi(Tc, ↑), C, E ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState σ (Pi τ rising_edge) σ__injr ->
+      (* σ = <S, C, E> and [σ__re = <S ⊌ E__p(Tc, ↑), C, E ∪ (S ∩≠ E__p(Tc, ↑))>] *)
+      IsInjectedDState σ (E__p τ rising_edge) σ__injr ->
 
-      (* σ' = <S', C', E'> and σfe = <S' ∪← Pi(Tc, ↓), C', E' ∪ (S ∩≠ Pi(Tc, ↑))> *)
-      IsInjectedDState σ' (Pi τ falling_edge) σ__injf ->
+      (* σ' = <S', C', E'> and [σ__fe = <S' ⊌ E__p(Tc, ↓), C', E' ∪ (S ∩≠ E__p(Tc, ↑))>] *)
+      IsInjectedDState σ' (E__p τ falling_edge) σ__injf ->
       
       (* * Conclusion * *)
-      simcycle Pi Δ τ σ behavior σ''.
+      simcycle E__p Δ τ σ behavior σ''.
 
 (** Defines the simulation loop relation, that relates the design
     state through simulation cycles, until the time counter reaches
@@ -77,29 +79,31 @@ Inductive simcycle
     of the simulation.  *)
 
 Inductive simloop
-          (Pi : nat -> Clk -> IdMap value)
+          (E__p : nat -> Clk -> IdMap value)
           (Δ : ElDesign)
           (σ : DState)
-          (behavior : cs) : nat -> list DState -> DState -> Prop :=
+          (behavior : cs) : nat -> list DState -> Prop :=
 
 (** Loops if time counter is greater than zero, and adds the state at
     the end cycle to the simulation trace. *)
   
 | SimLoop :
-    forall τ σ' σ'' θ,
+    forall τ σ' θ,
 
       (* * Premises * *)
-      simcycle Pi Δ (S τ) σ behavior σ' ->
+      simcycle E__p Δ (S τ) σ behavior σ' ->
       
-      simloop Pi Δ σ' behavior τ θ σ'' ->
+      simloop E__p Δ σ' behavior τ θ ->
             
       (* * Conclusion * *)
-      simloop Pi Δ σ behavior (S τ) (σ' :: θ) σ''
+      simloop E__p Δ σ behavior (S τ) (σ' :: θ)
 
 (** Stops if time counter is zero and produce an empty loop trace. *)
               
 | SimLoopEnd :
-    simloop Pi Δ σ behavior 0 [] σ.
+    simloop E__p Δ σ behavior 0 [].
+
+Hint Constructors simloop : hvhdl.
 
 (** Defines the full simulation (elaboration + simulation from initial
     state) relation that establish a link between a H-VHDL design and
@@ -133,16 +137,18 @@ Inductive fullsim
           (d : design) : list DState -> Prop :=
   
 | FullSim :
-    forall σ__e σ0 σ' θ,
+    forall σ__e σ0 θ,
       
       (* * Premises * *)
 
-      edesign dstore Mg d Δ σ__e ->                (* Elaboration *)
-      init Δ σ__e (behavior d) σ0 ->           (* Initialization *)
-      simloop E__p Δ σ0 (behavior d) τ θ σ' -> (* Simulation loop *)
+      edesign dstore Mg d Δ σ__e ->         (* Elaboration *)
+      init Δ σ__e (behavior d) σ0 ->        (* Initialization *)
+      simloop E__p Δ σ0 (behavior d) τ θ -> (* Simulation loop *)
                     
       (* * Conclusion * *)
       fullsim dstore Mg E__p τ Δ d (σ0 :: θ).
+
+Hint Constructors fullsim : hvhdl.
 
 (** Defines the full simulation relation for a H-VHDL design, in the
     HILECOP presets.
