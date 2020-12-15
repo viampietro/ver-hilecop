@@ -41,6 +41,28 @@ Require Import soundness.SoundnessDefs.
 
 Local Unset Implicit Arguments.
 
+(* ** Equal Initial States *)
+
+Lemma sim_init_states :
+  forall sitpn decpr mm d Δ σ__e σ0 γ,
+    
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn decpr mm = Success d ->
+
+    (* ed, dstate are the results of the elaboration of d. *)
+    edesign hdstore (empty value) d Δ σ__e ->
+
+    (* initialization d's state. *)
+    init Δ σ__e (get_behavior d) σ0 ->
+
+    (* init states are similar *)
+    γ ⊢ (s0 sitpn) ∼ σ0.
+Proof.
+  intros *; intros Htransl Helab Hinit.
+  inversion_clear Hinit as (σ, beh, σ', σ'', θ, Hruninit, Hstab).
+
+Admitted.
+
 (** ** Step lemma
     
     States that starting from similar state, state are similar after
@@ -96,27 +118,7 @@ Local Unset Implicit Arguments.
 (*   - admit. *)
 (* Admitted. *)
 
-(** ** Equal Initial States  *)
 
-(* Lemma init_states_sim : *)
-(*   forall sitpn decpr mm d Δ σ__e σ0 γ, *)
-    
-(*     (* sitpn translates into d. *) *)
-(*     sitpn_to_hvhdl sitpn decpr mm = Success d -> *)
-
-(*     (* ed, dstate are the results of the elaboration of d. *) *)
-(*     edesign hdstore (empty value) d Δ σ__e -> *)
-
-(*     (* initialization d's state. *) *)
-(*     init Δ σ__e (get_behavior d) σ0 -> *)
-
-(*     (* init states are similar *) *)
-(*     γ ⊢ (s0 sitpn) ∼ σ0. *)
-(* Proof. *)
-(*   intros *; intros Htransl Helab Hinit. *)
-(*   inversion_clear Hinit as (σ, beh, σ', σ'', θ, Hruninit, Hstab). *)
-
-(* Admitted. *)
 
 (** ** Similar States after First Cycle  *)
 
@@ -221,37 +223,45 @@ Theorem sitpn2vhdl_sound :
     (* ** Conclusion: traces are positionally similar. ** *)
     SimTrace γ θ__s θ__σ.
 Proof.
-  intros.
-  
-  lazymatch goal with
-  | [
-    Htransl: sitpn_to_hvhdl _ _ _ _ _ = _,
-    Hsenv: @SimEnv _ _ _ _,
-    Hsitpnfexec: @SitpnFullExec _ _ _ _,
-    Hhfsim: hfullsim _ _ _ _ _
-    |- _ ] =>
-    
-    (* CASE τ = 0, traces are empty. Trivial. *)
-    destruct τ; inversion_clear Hsitpnfexec; inversion_clear Hhfsim; [
-      eauto |
-      eauto
-    ]
-  end.
+  intros *; intros Htransl Hsenv Hsitpnfexec Hhfsim.
 
+  destruct τ; inversion_clear Hsitpnfexec; inversion_clear Hhfsim.
+
+  (* CASE τ = 0, must prove [γ ⊢ s0 ∼ σ0]. *)
+  - lazymatch goal with
+    | [ Hsimloop: simloop _ _ _ _ _ _ |- _ ] =>
+      inversion_clear Hsimloop; constructor; auto with soundness
+    end; admit.
+    
   (* CASE τ > 0. *)
   
-  (* Asserts s0 ∼ σ0 *)
-  lazymatch goal with
-  | [ Htransl: sitpn_to_hvhdl _ _ _ = _, Helab: edesign _ _ _ _ _, Hinit: init _ _ _ _ |- _ ] =>
-    specialize (init_states_sim sitpn decpr mm d Δ σ__e σ0 γ Htransl Helab Hinit) as Hinit_eq
-  end.
+  - lazymatch goal with
+    | [ Hsimloop: simloop _ _ _ _ _ _ |- _ ] =>
+      inversion_clear Hsimloop; constructor
+    end.
 
-  (* Asserts that [s0 ⇝↓ s] and [σ0 ⇝↑,↓ σ] then 
-     [s ∼ σ].
+    (* CASE [γ ⊢ s0 ∼ σ0] *)
+    + admit.
+
+    (* IND. CASE. *)
+    + constructor.
+
+      (* CASE [γ ⊢ s ∼ σ']. Apply [first_cycle] lemma to solve the goal. *)
+      -- admit.
+
+      (* Knowing [γ ⊢ s ∼ σ'], apply [simulation] lemma to solve the goal. *)
+      -- admit.
+
+
+        lazymatch goal with
+         | [ Htransl: sitpn_to_hvhdl _ _ _ = _, Helab: edesign _ _ _ _ _, Hinit: init _ _ _ _ |- _ ] =>
+           specialize (init_states_sim sitpn decpr mm d Δ σ__e σ0 γ Htransl Helab Hinit) as Hinit_eq
+         end.
+
+  (* Asserts that [s0 ⇝↓ s] and [σ0 ⇝↑,↓ σ] then [s ∼ σ].
      
-     Here, [s0 ⇝↓ s ≡ s0 ⇝↑,↓ s] where [Fired(s0)] is
-     forced to the empty set.
-   *)
+     Here, [s0 ⇝↓ s ≡ s0 ⇝↑,↓ s] where [Fired(s0)] is forced to the
+     empty set.  *)
   lazymatch goal with
   | [ Htransl: sitpn_to_hvhdl _ _ _ = _,
       Henveq: EnvEq _ _ _,

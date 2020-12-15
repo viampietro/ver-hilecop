@@ -277,6 +277,8 @@ Inductive SimTrace {sitpn} γ : list (SitpnState sitpn) -> list DState -> Prop :
     SimTrace γ θ__s θ__σ ->
     SimTrace γ (s :: θ__s) (σ :: θ__σ).
 
+Hint Constructors SimTrace : soundness.
+
 (** *** PastSim Relations
 
     Defines a simulation trace as the trace that led to the current
