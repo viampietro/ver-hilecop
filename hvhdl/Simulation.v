@@ -42,12 +42,13 @@ Inductive simcycle
           (Δ : ElDesign)
           (τ : nat)
           (σ : DState)
-          (behavior : cs) : DState -> Prop :=
+          (behavior : cs)
+          (σ'' : DState) : Prop :=
 
 (** Defines one simulation cycle *)
   
 | SimCycle :
-    forall σ__injr σ__r σ' σ__injf σ__f σ'' θ θ',
+    forall σ__injr σ__r σ' σ__injf σ__f θ θ',
       
       (* * Premises * *)
       

@@ -44,24 +44,23 @@ Local Unset Implicit Arguments.
 (* ** Equal Initial States *)
 
 Lemma sim_init_states :
-  forall sitpn decpr mm d Δ σ__e σ0 γ,
+  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
     
-    (* sitpn translates into d. *)
-    sitpn_to_hvhdl sitpn decpr mm = Success d ->
-
-    (* ed, dstate are the results of the elaboration of d. *)
+    (* [sitpn] translates into [(d, γ)]. *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    
+    (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init Δ σ__e (get_behavior d) σ0 ->
+    init Δ σ__e (behavior d) σ0 ->
 
     (* init states are similar *)
     γ ⊢ (s0 sitpn) ∼ σ0.
 Proof.
-  intros *; intros Htransl Helab Hinit.
-  inversion_clear Hinit as (σ, beh, σ', σ'', θ, Hruninit, Hstab).
-
 Admitted.
+
+Hint Resolve sim_init_states : core.
 
 (** ** Step lemma
     
@@ -70,144 +69,129 @@ Admitted.
 
  *)
 
-(* Lemma step_lemma : *)
-(*   forall sitpn decpr id__ent id__arch mm d s s' E__c σ σ' Δ Mg σ__e P__i τ γ, *)
+Lemma step :
+  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e τ s s'' σ σ'',
     
-(*     (* sitpn translates into d. *) *)
-(*     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) -> *)
+    (* sitpn translates into d. *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
 
-(*     (* Starting states are similar *) *)
-(*     γ ⊢ s ∼ σ -> *)
+    (* Environments are similar. *)
+    SimEnv sitpn γ E__c E__p ->
 
-(*     (* [Δ, σ__e] are the results of the elaboration of [d]. *) *)
-(*     edesign hdstore Mg d Δ σ__e -> *)
+    (* [Δ, σ__e] are the results of the elaboration of [d]. *)
+    edesign hdstore (empty value) d Δ σ__e ->
     
-(*     (* One execution cycle for SITPN *) *)
+    (* Starting states are similar (post fe similarity). *)
+    SimStateAfterFE sitpn γ s σ ->
     
-(*     @SitpnCycle sitpn E__c τ s s' -> *)
+    (* One execution cycle for [sitpn]. *)    
+    @SitpnCycle sitpn E__c τ s s'' ->
 
-(*     (* One execution cycle for VHDL *) *)
-(*     simcycle P__i Δ τ σ (behavior d) σ' -> *)
+    (* One execution cycle for [d] *)
+    simcycle E__p Δ τ σ (behavior d) σ'' ->
      
-(*     (* Final states are similar *) *)
-(*     γ ⊢ s' ∼ σ'. *)
-(* Proof. *)
-(*   intros *; intros Htransl Hsim Helab Hsitpn_cyc Hhdl_cyc. *)
-(*   unfold SitpnCycle in Hsitpn_cyc. *)
-(*   inversion_clear Hsitpn_cyc as (s__i & (Hrising, Hfalling)). *)
-(*   inversion_clear Hhdl_cyc as *)
-(*       (σ__injr, σ__r, σ__i, σ__injf, σ__f, σ'', θ, θ', *)
-(*        Hhdl_rising, Hstab_rising, Hhdl_falling, Hstab_falling, Hinj_rising, Hinj_falling). *)
-
-(*   (* Must prove s similar to σ after capture of input values on rising edge.  *)
-(*      Necessary premise to apply [rising_edge_states_equal].       *)
-(*    *) *)
-(*   cut (γ ⊢ s ∼ σ__injr); intros Hsim_injr. *)
-(*   specialize (rising_edge_states_equal *)
-(*            Δ σ__r d θ σ__i σ__injr sitpn decpr E__c τ s s__i mm γ *)
-(*            Htransl Hsim_injr Hrising Hhdl_rising Hstab_rising); intros Heq_int_states. *)
-
-(*   (* Must prove s similar to σ after capture of input values on falling edge.  *)
-(*      Necessary premise to apply [falling_edge_states_equal]. *)
-(*    *) *)
-(*   cut (γ ⊢ s__i ∼ σ__injf); intros Hsim_injf. *)
-(*   apply (falling_edge_states_equal Δ σ__f d θ' σ' σ__injf sitpn decpr E__c τ s__i s' mm γ *)
-(*                                    Htransl Hsim_injf Hfalling Hhdl_falling Hstab_falling). *)
+    (* Final states are similar *)
+    SimStateAfterFE sitpn γ s'' σ''.
+Proof.
+  intros *; intros Htransl Hsenv Helab Hsimstate Hsitpncyc Hhcyc.
   
-(*   - admit. *)
-(*   - admit. *)
-(* Admitted. *)
+  inversion_clear Hsitpncyc as (s' & (Hrising, Hfalling)).
+  inversion_clear Hhcyc as
+      (σ__injr, σ__r, σ', σ__injf, σ__f, θ, θ',
+       Hh_rising, Hstab_rising, Hh_falling, Hstab_falling, Hinj_rising, Hinj_falling).
+Admitted.
 
+(* Tries to apply the [step] lemma when the goal is of the form
+   [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
 
+Hint Resolve step : core.
+Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply step; eauto : core.
 
 (** ** Similar States after First Cycle  *)
 
-(* Lemma sim_after_first_cycle : *)
-(*   forall sitpn decpr mm d E__c E__p Δ σ__e σ0 τ σ s γ, *)
-(*     (* [sitpn] translates into [d]. *) *)
-(*     sitpn_to_hvhdl sitpn decpr mm = Success d -> *)
+Lemma first_cycle :
+  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e σ0 τ σ s,
 
-(*     (* Environments are similar. *) *)
-(*     EnvEq sitpn E__c E__p -> *)
+    (* sitpn translates into (d, γ). *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
 
-(*     (* [Δ, σ__e] are the results of the elaboration of [d]. *) *)
-(*     edesign hdstore (empty value) d Δ σ__e -> *)
+    (* Environments are similar. *)
+    SimEnv sitpn γ E__c E__p ->
+    
+    (* [Δ, σ__e] are the results of the elaboration of [d]. *)
+    edesign hdstore (empty value) d Δ σ__e ->
 
-(*     (* [σ0] is the initial state of [d]. *) *)
-(*     init Δ σ__e (get_behavior d) σ0 -> *)
+    (* [σ0] is the initial state of [d]. *)
+    init Δ σ__e (behavior d) σ0 ->
 
-(*     (* From [σ0] to [σ] in one simulation cycle. *) *)
-(*     simcycle E__p Δ (S τ) σ0 (get_behavior d) σ -> *)
+    (* From [σ0] to [σ] in one simulation cycle. *)
+    simcycle E__p Δ τ σ0 (behavior d) σ ->
 
-(*     (* From [s0] to [s] in one execution cycle, where [Fired(s0) = ∅]. *) *)
-(*     SitpnStateTransition E__c (S τ) (s0 sitpn) s falling_edge -> *)
+    (* From [s0] to [s] in one execution cycle, where [Fired(s0) = ∅]. *)
+    SitpnStateTransition E__c τ (s0 sitpn) s falling_edge ->
 
-(*     (* States [s] and [σ] are similar. *) *)
-(*     γ ⊢ s ∼ σ. *)
-(* Admitted. *)
+    (* States [s] and [σ] are similar. *)
+    SimStateAfterFE sitpn γ s σ.
+Admitted.
+
+(* Tries to apply the [first_cycle] lemma when the goal is of the form
+   [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
+Hint Resolve first_cycle : core.
+Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_cycle; eauto : core.
 
 (** ** Simulation Lemma *)
 
-(* Lemma simulation_lemma : *)
+Lemma simulation :
+  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e τ s σ θ__s θ__σ, 
+
+    (* sitpn translates into (d, γ). *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+
+    (* Environments are similar. *)
+    SimEnv sitpn γ E__c E__p ->
+    
+    (* [Δ, σ__e] are the results of the elaboration of d. *)
+    edesign hdstore (empty value) d Δ σ__e ->
+
+    (* States s and σ are similar (after a fe). *)
+    SimStateAfterFE sitpn γ s σ ->
+
+    (* From state s, produces trace [θ__s] after τ execution cycles. *)
+    SitpnExecute E__c s τ θ__s ->
+    
+    (* From [σ], produces trace [θ__σ] after τ execution cycles. *)
+    simloop E__p Δ σ (behavior d) τ θ__σ ->
+
+    (* Conclusion *)
+    SimTrace γ θ__s θ__σ.
+Proof.
+  (* Induction on τ *)
+  induction τ;
+    intros *;
+    intros Htransl Hsenv Helab Hsimstate Hsitpnexec Hhsim.
   
-(*   forall sitpn Ec τ s θ__s s', *)
+  (* CASE τ = 0, trivial. *)
+  - inversion_clear Hsitpnexec; inversion_clear Hhsim; auto.
 
-(*     (* From state s to state s' after τ execution cycles, and *)
-(*        producing trace θs. *) *)
-(*     SitpnExecute Ec s τ θ__s s' -> *)
+  (* CASE τ > 0 *)
+  - inversion_clear Hsitpnexec; inversion_clear Hhsim; constructor.
 
-(*     forall decpr d mm Ep Δ σ__e θ__σ σ σ' γ, *)
+    (* GOAL [γ ⊢ s' ∼ σ']. Solved with [step] lemma. *)
+    + eauto.
+
+    (* Apply induction hypothesis. *)
+    + eapply IHτ with (s := s') (σ := σ'); eauto.
       
-(*     (* sitpn translates into d. *) *)
-(*     sitpn_to_hvhdl sitpn decpr mm = Success d -> *)
+Qed.
 
-(*     (* Environments are similar. *) *)
-(*     EnvEq sitpn Ec Ep -> *)
+Hint Resolve simulation : core.
 
-(*     (* Δ, σe are the results of the elaboration of d. *) *)
-(*     edesign hdstore (empty value) d Δ σ__e -> *)
-
-(*     (* States s and σ are similar; *) *)
-(*     γ ⊢ s ∼ σ -> *)
-    
-(*     (* From [σ] to [σ'] after τ execution cycles, producing trace [θ__σ]. *) *)
-(*     simloop Ep Δ σ (get_behavior d) τ θ__σ σ' -> *)
-
-(*     (* Conclusion *) *)
-(*     SimTrace γ θ__s θ__σ. *)
-(* Proof. *)
-(*   intros *; intros Hexec; dependent induction Hexec; *)
-(*   intros *; intros Htransl Henveq Helab Hsimstate Hsim. *)
-  
-(*   (* CASE tau = 0, trivial. *) *)
-(*   - inversion Hsim; apply SimTraceInit. *)
-
-(*   (* CASE tau > 0 *) *)
-(*   - inversion_clear Hsim as [ τ0 σ0 σ'0 θ0 Hcyc Hsiml |  ]. *)
-    
-(*     (* Specializes the induction hypothesis, then apply the step lemma. *) *)
-    
-(*     specialize (IHHexec decpr d mm Ep Δ σ__e θ0 σ0 σ'). *)
-(*     specialize (IHHexec γ Htransl Henveq Helab). *)
-
-(*     (* Then, we need a lemma stating that s' ∼ σ0. That is, state are *)
-(*        similar after one execution cycle. *) *)
-
-(*     specialize (step_lemma sitpn decpr mm d s s' Ec σ σ0 Δ (empty value) σ__e Ep (S τ) γ *)
-(*                            Htransl Hsimstate Helab H Hcyc) *)
-(*       as Heq_state_cyc. *)
-
-(*     (* Solve the induction case. *) *)
-(*     apply (@SimTraceCons sitpn γ s' σ0 θ θ0); *)
-(*       [ assumption | apply (IHHexec Heq_state_cyc Hsiml)]. *)
-(* Qed. *)
-
-(** ** Semantic Preservation Theorem *)
+(** ** Behavior Preservation Theorem *)
 
 Theorem sitpn2vhdl_sound :
   forall sitpn decpr id__ent id__arch E__c τ θ__s d E__p mm θ__σ γ Δ,
       
-    (* sitpn translates into d. *)
+    (* sitpn translates into (d, γ). *)
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
 
     (* Environments are similar. *)
@@ -223,78 +207,18 @@ Theorem sitpn2vhdl_sound :
     (* ** Conclusion: traces are positionally similar. ** *)
     SimTrace γ θ__s θ__σ.
 Proof.
-  intros *; intros Htransl Hsenv Hsitpnfexec Hhfsim.
+  (* Case analysis on τ *)
+  destruct τ;
+    intros *; intros Htransl Hsenv Hsitpnfexec Hhfsim;
+    inversion_clear Hsitpnfexec;
+    inversion_clear Hhfsim;
 
-  destruct τ; inversion_clear Hsitpnfexec; inversion_clear Hhfsim.
-
-  (* CASE τ = 0, must prove [γ ⊢ s0 ∼ σ0]. *)
-  - lazymatch goal with
+    (* - CASE τ = 0, GOAL [γ ⊢ s0 ∼ σ0]. Solved with [sim_init_states] lemma. 
+       - CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].  
+         Solved with [first_cycle] and [simulation] lemmas. *)
+    lazymatch goal with
     | [ Hsimloop: simloop _ _ _ _ _ _ |- _ ] =>
-      inversion_clear Hsimloop; constructor; auto with soundness
-    end; admit.
-    
-  (* CASE τ > 0. *)
-  
-  - lazymatch goal with
-    | [ Hsimloop: simloop _ _ _ _ _ _ |- _ ] =>
-      inversion_clear Hsimloop; constructor
-    end.
-
-    (* CASE [γ ⊢ s0 ∼ σ0] *)
-    + admit.
-
-    (* IND. CASE. *)
-    + constructor.
-
-      (* CASE [γ ⊢ s ∼ σ']. Apply [first_cycle] lemma to solve the goal. *)
-      -- admit.
-
-      (* Knowing [γ ⊢ s ∼ σ'], apply [simulation] lemma to solve the goal. *)
-      -- admit.
-
-
-        lazymatch goal with
-         | [ Htransl: sitpn_to_hvhdl _ _ _ = _, Helab: edesign _ _ _ _ _, Hinit: init _ _ _ _ |- _ ] =>
-           specialize (init_states_sim sitpn decpr mm d Δ σ__e σ0 γ Htransl Helab Hinit) as Hinit_eq
-         end.
-
-  (* Asserts that [s0 ⇝↓ s] and [σ0 ⇝↑,↓ σ] then [s ∼ σ].
-     
-     Here, [s0 ⇝↓ s ≡ s0 ⇝↑,↓ s] where [Fired(s0)] is forced to the
-     empty set.  *)
-  lazymatch goal with
-  | [ Htransl: sitpn_to_hvhdl _ _ _ = _,
-      Henveq: EnvEq _ _ _,
-      Helab: edesign _ _ _ _ _,
-      Hinit: init _ _ _ _,
-      Hsimcycle: simcycle _ _ _ _ _ _,
-      Hexecfe: SitpnStateTransition _ _ _ _ _
-      |-
-      _
-    ] =>
-    specialize (sim_after_first_cycle
-                  sitpn decpr mm d E__c E__p Δ σ__e σ0 τ σ s γ
-                  Htransl Henveq Helab Hinit Hsimcycle Hexecfe)
-      as Hfirst_sim
-  end.
-
-  (* Apply [simulation_lemma] to complete the proof *)
-  
-  lazymatch goal with
-  | [ Htransl: sitpn_to_hvhdl _ _ _ = _,
-      Henveq: EnvEq _ _ _,
-      Helab: edesign _ _ _ _ _,
-      Hinit: init _ _ _ _,
-      Hsimcycle: simcycle _ _ _ _ _ _,
-      Hexecfe: SitpnStateTransition _ _ _ _ _,
-      Hsimloop: simloop _ _ _ _ _ _ _,
-      Hsitpnexec: SitpnExecute _ _ _ _ _
-      |-
-      _
-    ] =>
-    apply (simulation_lemma
-             sitpn E__c τ s θ__s s' Hsitpnexec decpr d mm E__p Δ σ__e θ__σ σ σ' γ
-             Htransl Henveq Helab Hfirst_sim Hsimloop)
+      inversion_clear Hsimloop; constructor; eauto
     end.
 Qed.
     

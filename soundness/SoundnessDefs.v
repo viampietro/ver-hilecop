@@ -43,12 +43,11 @@ Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 *)
 
 Definition SimEnv sitpn (γ : Sitpn2HVhdlMap sitpn) (E__c : nat -> C sitpn -> bool) (E__p : nat -> Clk -> IdMap value) : Prop :=
-  forall τ clk c id__c b,
+  forall τ clk c id__c,
     (* [γ(c) = id__c] *)
     SetoidList.InA Ckeq (c, id__c) (c2in γ)  ->
     (* [E__p(τ,clk)(id__c) = E__c(τ)(c)] *)
-    MapsTo id__c (Vbool b) (E__p τ clk) -> 
-    E__c τ c = b.
+    MapsTo id__c (Vbool (E__c τ c)) (E__p τ clk).
 
 (** Defines the general state similarity relation between an SITPN
     state and a H-VHDL design state.  *)
@@ -277,7 +276,7 @@ Inductive SimTrace {sitpn} γ : list (SitpnState sitpn) -> list DState -> Prop :
     SimTrace γ θ__s θ__σ ->
     SimTrace γ (s :: θ__s) (σ :: θ__σ).
 
-Hint Constructors SimTrace : soundness.
+Hint Constructors SimTrace : core.
 
 (** *** PastSim Relations
 
