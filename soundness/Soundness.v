@@ -7,7 +7,6 @@ Require Import common.InAndNoDup.
 Require Import common.GlobalTypes.
 Require Import common.ListsPlus.
 
-
 (* SITPN Libraries *)
 
 Require Import dp.SitpnSemanticsDefs.
@@ -38,36 +37,49 @@ Require Import sitpn2hvhdl.GenerateHVhdl.
 (* Soundness definitions and lemmas *)
 
 Require Import soundness.SoundnessDefs.
+Require Import soundness.InitialStates.
+Require Import soundness.RisingEdge.
+Require Import soundness.FallingEdge.
 
 Local Unset Implicit Arguments.
 
-(* ** Equal Initial States *)
+(** ** Similar States after First Cycle  *)
 
-Lemma sim_init_states :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
-    
-    (* [sitpn] translates into [(d, γ)]. *)
+Lemma first_cycle :
+  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e σ0 τ σ s,
+
+    (* sitpn translates into (d, γ). *)
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+
+    (* Environments are similar. *)
+    SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (empty value) d Δ σ__e ->
 
-    (* initialization d's state. *)
+    (* [σ0] is the initial state of [d]. *)
     init Δ σ__e (behavior d) σ0 ->
 
-    (* init states are similar *)
-    γ ⊢ (s0 sitpn) ∼ σ0.
-Proof.
+    (* From [σ0] to [σ] in one simulation cycle. *)
+    simcycle E__p Δ τ σ0 (behavior d) σ ->
+
+    (* From [s0] to [s] in one execution cycle, with an idle rising
+       edge (where [Fired(s0) = ∅]). *)
+    SitpnStateTransition E__c τ (s0 sitpn) s fe ->
+
+    (* States [s] and [σ] are similar. *)
+    SimStateAfterFE sitpn γ s σ.
 Admitted.
 
-Hint Resolve sim_init_states : core.
+(* Tries to apply the [first_cycle] lemma when the goal is of the form
+   [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
+Hint Resolve first_cycle : core.
+Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_cycle; eauto : core.
 
 (** ** Step lemma
     
     States that starting from similar state, state are similar after
-    one execution cycle.
-
- *)
+    one execution cycle. *)
 
 Lemma step :
   forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e τ s s'' σ σ'',
@@ -99,45 +111,15 @@ Proof.
   inversion_clear Hhcyc as
       (σ__injr, σ__r, σ', σ__injf, σ__f, θ, θ',
        Hh_rising, Hstab_rising, Hh_falling, Hstab_falling, Hinj_rising, Hinj_falling).
-Admitted.
+  (* Applies [rising_edge], then [falling_edge] lemmas. *)
+  eauto.
+Qed.
 
 (* Tries to apply the [step] lemma when the goal is of the form
    [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
 
 Hint Resolve step : core.
 Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply step; eauto : core.
-
-(** ** Similar States after First Cycle  *)
-
-Lemma first_cycle :
-  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e σ0 τ σ s,
-
-    (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
-
-    (* Environments are similar. *)
-    SimEnv sitpn γ E__c E__p ->
-    
-    (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
-
-    (* [σ0] is the initial state of [d]. *)
-    init Δ σ__e (behavior d) σ0 ->
-
-    (* From [σ0] to [σ] in one simulation cycle. *)
-    simcycle E__p Δ τ σ0 (behavior d) σ ->
-
-    (* From [s0] to [s] in one execution cycle, where [Fired(s0) = ∅]. *)
-    SitpnStateTransition E__c τ (s0 sitpn) s falling_edge ->
-
-    (* States [s] and [σ] are similar. *)
-    SimStateAfterFE sitpn γ s σ.
-Admitted.
-
-(* Tries to apply the [first_cycle] lemma when the goal is of the form
-   [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
-Hint Resolve first_cycle : core.
-Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_cycle; eauto : core.
 
 (** ** Simulation Lemma *)
 

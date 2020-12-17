@@ -63,10 +63,10 @@ Inductive simcycle
          differentiated intersection. *)
       
       (* σ = <S, C, E> and [σ__re = <S ⊌ E__p(Tc, ↑), C, E ∪ (S ∩≠ E__p(Tc, ↑))>] *)
-      IsInjectedDState σ (E__p τ rising_edge) σ__injr ->
+      IsInjectedDState σ (E__p τ re) σ__injr ->
 
       (* σ' = <S', C', E'> and [σ__fe = <S' ⊌ E__p(Tc, ↓), C', E' ∪ (S ∩≠ E__p(Tc, ↑))>] *)
-      IsInjectedDState σ' (E__p τ falling_edge) σ__injf ->
+      IsInjectedDState σ' (E__p τ fe) σ__injf ->
       
       (* * Conclusion * *)
       simcycle E__p Δ τ σ behavior σ''.

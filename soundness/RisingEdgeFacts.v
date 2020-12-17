@@ -33,7 +33,7 @@ Lemma rising_edge_marking_equal :
     γ ⊢ s ∼ σ ->
     
     (* Rising edge from s to s', s ⇝↑ s' *)
-    SitpnStateTransition Ec τ s s' rising_edge -> 
+    SitpnStateTransition Ec τ s s' re -> 
 
     (* Rising edge from σ to σr *)
     vrising Δ σ (get_behavior d) σ__r -> 
@@ -71,7 +71,7 @@ Lemma rising_edge_states_equal :
     γ ⊢ s ∼ σ ->
     
     (* Rising edge from s to s', s ⇝↑ s' *)
-    SitpnStateTransition E__c τ s s' rising_edge -> 
+    SitpnStateTransition E__c τ s s' re -> 
 
     (* Rising edge from σ to σr *)
     vrising Δ σ (get_behavior d) σ__r -> 

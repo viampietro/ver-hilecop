@@ -65,7 +65,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (forall f, ex s (inr f) = ex s' (inr f)) ->
     
     (** Conclusion *)
-    SitpnStateTransition E τ s s' falling_edge
+    SitpnStateTransition E τ s s' fe
 
 | SitpnStateTransition_rising:
 
@@ -98,7 +98,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (forall a, ex s' (inl a) = ex s (inl a)) ->
     
     (** Conclusion *)
-    SitpnStateTransition E τ s s' rising_edge.    
+    SitpnStateTransition E τ s s' re.    
 
 (** ** SITPN Execution Relations *)
 
@@ -107,7 +107,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
  *)
 
 Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s'' : SitpnState sitpn) :=
-  exists s', SitpnStateTransition E τ s s' rising_edge /\ SitpnStateTransition E τ s' s'' falling_edge.
+  exists s', SitpnStateTransition E τ s s' re /\ SitpnStateTransition E τ s' s'' fe.
 
 (** Defines the SITPN Execution Relation. *)
 
@@ -138,7 +138,7 @@ Inductive SitpnFullExec
       (* First cycle of execution. Only the falling edge is taken into
          account, since on the first rising edge there are no fired
          transitions. *)
-      SitpnStateTransition E (S τ) (s0 sitpn) s falling_edge ->
+      SitpnStateTransition E (S τ) (s0 sitpn) s fe ->
 
       (* Executes τ cycles *)
       SitpnExecute E s τ θ ->

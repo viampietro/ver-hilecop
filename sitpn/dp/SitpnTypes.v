@@ -152,6 +152,6 @@ Defined.
 
 Inductive MOneZeroOne : Set := mone | zero | one.
 
-(** Clock events set. *)
+(** Clock events set = {↑, ↓}. *)
 
-Inductive Clk := rising_edge | falling_edge.
+Inductive Clk := re | fe.

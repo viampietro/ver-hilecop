@@ -41,7 +41,7 @@ Lemma falling_edge_compute_s_firable_true :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -69,7 +69,7 @@ Lemma falling_edge_compute_s_firable_false :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -97,7 +97,7 @@ Lemma falling_edge_compute_firable :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -125,7 +125,7 @@ Lemma falling_edge_compute_nfirable :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -288,7 +288,7 @@ Lemma elect_fired_compute_fired :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -391,7 +391,7 @@ Lemma falling_edge_compute_fired_aux :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -499,7 +499,7 @@ Lemma falling_edge_compute_fired_list :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -563,7 +563,7 @@ Lemma elect_fired_compute_fired_port_false :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -654,7 +654,7 @@ Lemma falling_edge_compute_fired_port_false_aux :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -748,7 +748,7 @@ Lemma falling_edge_compute_fired_port_false_list :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -1258,7 +1258,7 @@ Lemma elect_fired_compute_fired_port_true :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -1382,7 +1382,7 @@ Lemma falling_edge_compute_fired_port_true_aux :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -1474,7 +1474,7 @@ Lemma falling_edge_compute_fired_port_true_list :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -1523,7 +1523,7 @@ Lemma falling_edge_compute_fired_port_true :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
@@ -1570,7 +1570,7 @@ Lemma falling_edge_states_equal :
     γ ⊢ s ∼ σ ->
     
     (* Falling edge from s to s', s ⇝↓ s' *)
-    SitpnStateTransition Ec τ s s' falling_edge -> 
+    SitpnStateTransition Ec τ s s' fe -> 
 
     (* Falling edge from σ to σf *)
     vfalling Δ σ (get_behavior d) σ__f -> 
