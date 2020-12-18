@@ -10,6 +10,9 @@ Definition EqualDom {A} (m m' : t A) : Prop := forall (k : nat), In k m <-> In k
 Module NatMapFacts := Facts NatMap.
 Include NatMapFacts.
 
+(** ** Hints to solve goals with MapsTo *)
+
+Hint Resolve MapsTo_fun : mapsto.
 
 Export NatMap NatMapFacts.
 

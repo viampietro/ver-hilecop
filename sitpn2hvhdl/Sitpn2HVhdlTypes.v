@@ -138,7 +138,7 @@ Section CompileTimeTypes.
         arch : Architecture;
 
         (* Architecture body in VHDL abstract syntax *)
-        behavior : cs;
+        beh : cs;
 
         (* Source-to-target binder *)
         γ : Sitpn2HVhdlMap;
@@ -179,7 +179,7 @@ Arguments iports {sitpn}.
 Arguments oports {sitpn}.
 Arguments γ {sitpn}.
 Arguments arch {sitpn}.
-Arguments behavior {sitpn}.
+Arguments beh {sitpn}.
 
 (** ** Operations on Compile-time State *)
 
@@ -194,17 +194,17 @@ Section CompileTimeStateOpers.
 
   Definition set_infos (infos : SitpnInfos sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) infos (iports s) (oports s) (arch s) (behavior s) (γ s)).
+    Put (MkS2HState sitpn (nextid s) infos (iports s) (oports s) (arch s) (beh s) (γ s)).
 
   Definition get_arch : @Mon (Sitpn2HVhdlState sitpn) (Architecture sitpn) :=
     do s <- Get; Ret (arch s).
 
   Definition set_arch (arch : Architecture sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) arch (behavior s) (γ s)).
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) arch (beh s) (γ s)).
 
   Definition get_beh : @Mon (Sitpn2HVhdlState sitpn) cs :=
-    do s <- Get; Ret (behavior s).
+    do s <- Get; Ret (beh s).
 
   Definition set_beh (beh : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
@@ -215,14 +215,14 @@ Section CompileTimeStateOpers.
 
   Definition set_binder (γ : Sitpn2HVhdlMap sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) (behavior s) γ).
+    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) γ).
   
   (* Returns the next available identifier, and increments the
      [nextid] value in the compile-time state. *)
 
   Definition get_nextid : @Mon (Sitpn2HVhdlState sitpn) ident :=
     do s <- Get;
-    do _  <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (behavior s) (γ s));
+    do _  <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s));
     Ret (nextid s).
 
   (** *** Operations for the list of input ports *)
@@ -232,7 +232,7 @@ Section CompileTimeStateOpers.
     Put (MkS2HState sitpn (nextid s) (sitpninfos s)
                     ((iports s) ++ [iport_decl])
                     (oports s)
-                    (arch s) (behavior s) (γ s)).
+                    (arch s) (beh s) (γ s)).
   
   (** *** Operations for the list of output ports *)
 
@@ -240,7 +240,7 @@ Section CompileTimeStateOpers.
     do s <- Get;
     Put (MkS2HState sitpn (nextid s) (sitpninfos s)
                     (iports s) ((oports s) ++ [oport_decl])
-                    (arch s) (behavior s) (γ s)).
+                    (arch s) (beh s) (γ s)).
 
   (** *** Operations for SITPN-to-H-VHDL map *)
 
@@ -279,13 +279,13 @@ Section CompileTimeStateOpers.
     (* Updates the new architecture. *)
     set_binder (MkS2HMap sitpn (p2pcomp γ) t2tcomp' (a2out γ) (f2out γ) (c2in γ)).
 
-  (** *** Operations for behavior *)
+  (** *** Operations for beh *)
 
   Definition add_cs (cstmt : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (nextid s) (sitpninfos s)
                     (iports s) (oports s)
-                    (arch s) (cs_par cstmt (behavior s)) (γ s)).
+                    (arch s) (cs_par cstmt (beh s)) (γ s)).
   
   (** *** Operations for Architecture structure *)
 

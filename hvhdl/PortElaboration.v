@@ -1,9 +1,11 @@
+(** * Port Elaboration *)
+
 (** Defines the relation that elaborates the port clause of a design,
     declared in abstract syntax.
 
     The result is the addition of entries refering to port
-    declarations in the design environment [ed] (Δ) and the mapping
-    from port id to their default value in the design state [dstate]
+    declarations in the design environment [Δ] (Δ) and the mapping
+    from port id to their default value in the design state [σ]
     (σ).  *)
 
 Require Import Coqlib.
@@ -19,47 +21,47 @@ Import NatMap.
 
 (** The port elaboration relation. *)
 
-Inductive eports (ed : ElDesign) (dstate : DState) : list pdecl -> ElDesign -> DState -> Prop :=
+Inductive eports (Δ : ElDesign) (σ : DState) : list pdecl -> ElDesign -> DState -> Prop :=
 
 (** Empty list of port declarations. *)
-| EPortsNil : eports ed dstate [] ed dstate
+| EPortsNil : eports Δ σ [] Δ σ
   
 (** Sequence of port declarations. *)
 | EPortsCons :
-    forall {pd lofpdecls ed' dstate' dstate'' ed''},
-      eport ed dstate pd ed' dstate' ->
-      eports ed' dstate' lofpdecls ed'' dstate'' ->
-      eports ed dstate (pd :: lofpdecls) ed'' dstate''
+    forall {pd lofpdecls Δ' σ' σ'' Δ''},
+      eport Δ σ pd Δ' σ' ->
+      eports Δ' σ' lofpdecls Δ'' σ'' ->
+      eports Δ σ (pd :: lofpdecls) Δ'' σ''
 
 (** Defines the elaboration relation for single port declaration. *)
-with eport (ed : ElDesign) (dstate : DState) : pdecl -> ElDesign -> DState -> Prop :=
+with eport (Δ : ElDesign) (σ : DState) : pdecl -> ElDesign -> DState -> Prop :=
   
 (** Declaration of port in "in" mode. *)
 | EPortIn :
-    forall {tau t v id},
+    forall τ t v id,
     
       (* Premises. *)
-      etype ed tau t ->
+      etype Δ τ t ->
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NatMap.In id ed ->           (* id ∉ Δ *)
-      ~InSStore id dstate -> (* id ∉ σ *)
+      ~NatMap.In id Δ ->           (* id ∉ Δ *)
+      ~InSStore id σ -> (* id ∉ σ *)
 
       (* Conclusion *)
-      eport ed dstate (pdecl_in id tau) (add id (Input t) ed) (sstore_add id v dstate)
+      eport Δ σ (pdecl_in id τ) (add id (Input t) Δ) (sstore_add id v σ)
 
 (** Declaration of port in "out" mode. *)
 | EPortOut :
-    forall {tau t v id},
+    forall τ t v id,
       
       (* Premises. *)
-      etype ed tau t ->
+      etype Δ τ t ->
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NatMap.In id ed ->           (* id ∉ Δ *)
-      ~InSStore id dstate -> (* id ∉ σ *)
+      ~NatMap.In id Δ ->           (* id ∉ Δ *)
+      ~InSStore id σ -> (* id ∉ σ *)
 
       (* Conclusion *)
-      eport ed dstate (pdecl_in id tau) (add id (Output t) ed) (sstore_add id v dstate).
+      eport Δ σ (pdecl_in id τ) (add id (Output t) Δ) (sstore_add id v σ).

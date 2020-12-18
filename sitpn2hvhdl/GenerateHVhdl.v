@@ -250,7 +250,7 @@ Section Sitpn2HVhdl.
            do _ <- generate_comp_insts;
            do s <- Get;
            let '(sigs, _, _, _, _) := (arch s) in
-           Ret ((design_ entid archid [] ((iports s) ++ (oports s)) sigs (behavior s)), (γ s)))
+           Ret ((design_ entid archid [] ((iports s) ++ (oports s)) sigs (beh s)), (γ s)))
             (InitS2HState sitpn Petri.ffid)).
   
 End Sitpn2HVhdl.

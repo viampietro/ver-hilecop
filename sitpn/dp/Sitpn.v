@@ -34,12 +34,12 @@ Record Sitpn  :=
       transitions : list nat;
       
       (* Alias for the set of elements that belong to the finite set [places]. *)
-      InP := (fun p => In p places);
-      P := { p | InP p };
+      In_P := (fun p => In p places);
+      P := { p | In_P p };
       
       (* Alias for the set of elements that belong to the finite set [transitions]. *)
-      InT := (fun t => In t transitions);
-      T := { t | InT t };
+      In_T := (fun t => In t transitions);
+      T := { t | In_T t };
 
       (* Given a place p ∈ P and t ∈ T:
 
@@ -73,14 +73,14 @@ Record Sitpn  :=
 
       (* Aliases for the set of elements that belong to the finite set
          [conditions] (resp. [actions] and [functions]). *)
-      InC := (fun c => In c conditions);
-      C := { c | InC c };
+      In_C := (fun c => In c conditions);
+      C := { c | In_C c };
       
-      InA := (fun a => In a actions);
-      A := { a | InA a };
+      In_A := (fun a => In a actions);
+      A := { a | In_A a };
 
-      InF := (fun f => In f functions);
-      F := { f | InF f };
+      In_F := (fun f => In f functions);
+      F := { f | In_F f };
       
       (* The function associating conditions to transitions. *)
       has_C : T -> C -> MOneZeroOne; 
@@ -118,11 +118,11 @@ Definition C_in_nat sitpn (c : C sitpn) : nat := proj1_sig c.
 Definition A_in_nat sitpn (a : A sitpn) : nat := proj1_sig a.
 Definition F_in_nat sitpn (f : F sitpn) : nat := proj1_sig f.
 
-Definition nat_to_P {sitpn} p := (fun (pf : InP sitpn p) => exist _ p pf).
-Definition nat_to_T {sitpn} t := (fun (pf : InT sitpn t) => exist _ t pf).
-Definition nat_to_C {sitpn} c := (fun (pf : InC sitpn c) => exist _ c pf).
-Definition nat_to_A {sitpn} a := (fun (pf : InA sitpn a) => exist _ a pf).
-Definition nat_to_F {sitpn} f := (fun (pf : InF sitpn f) => exist _ f pf).
+Definition nat_to_P {sitpn} p := (fun (pf : In_P sitpn p) => exist _ p pf).
+Definition nat_to_T {sitpn} t := (fun (pf : In_T sitpn t) => exist _ t pf).
+Definition nat_to_C {sitpn} c := (fun (pf : In_C sitpn c) => exist _ c pf).
+Definition nat_to_A {sitpn} a := (fun (pf : In_A sitpn a) => exist _ a pf).
+Definition nat_to_F {sitpn} f := (fun (pf : In_F sitpn f) => exist _ f pf).
 
 (** Coercions for Sitpn. *)
 

@@ -11,3 +11,4 @@ Require Export Omega.
 Require Export FunInd.
 Require Export Permutation.
 Require Export NArith.
+Require Export SetoidList.

@@ -45,7 +45,7 @@ Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 Definition SimEnv sitpn (γ : Sitpn2HVhdlMap sitpn) (E__c : nat -> C sitpn -> bool) (E__p : nat -> Clk -> IdMap value) : Prop :=
   forall τ clk c id__c,
     (* [γ(c) = id__c] *)
-    SetoidList.InA Ckeq (c, id__c) (c2in γ)  ->
+    InA Ckeq (c, id__c) (c2in γ)  ->
     (* [E__p(τ,clk)(id__c) = E__c(τ)(c)] *)
     MapsTo id__c (Vbool (E__c τ c)) (E__p τ clk).
 
@@ -58,7 +58,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   (forall p id__p σ__p,
       (* [id__p] is the identifier of the place component associated with
          place [p] by the [γ] binder. *)
-      SetoidList.InA Pkeq (p, id__p) (p2pcomp γ) ->
+      InA Pkeq (p, id__p) (p2pcomp γ) ->
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
@@ -72,7 +72,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   /\ (forall (t : Ti sitpn) id__t σ__t n,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         SetoidList.InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -91,7 +91,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   /\ (forall (t : Ti sitpn) id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         SetoidList.InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -104,7 +104,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   /\ (forall a id__a,
          (* [id__a] is the output port identifier associated to action
             [a] in the [γ] binder. *)
-         SetoidList.InA Akeq (a, id__a) (a2out γ) ->
+         InA Akeq (a, id__a) (a2out γ) ->
          
          (* Output port [id__a] equals [ex s (inl a)] at state [σ] *)
          MapsTo id__a (Vbool (ex s (inl a))) (sigstore σ))
@@ -113,7 +113,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   /\ (forall f id__f,
          (* [id__f] is the output port identifier associated to function
             [f] in the [γ] binder. *)
-         SetoidList.InA Fkeq (f, id__f) (f2out γ) ->
+         InA Fkeq (f, id__f) (f2out γ) ->
          
          (* Output port [id__f] equals [ex s (inr f)] at state [σ] *)
          MapsTo id__f (Vbool (ex s (inr f))) (sigstore σ))
@@ -122,7 +122,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   /\ (forall c id__c,
          (* [id__c] is the input port identifier associated to condition
             [c] in the [γ] binder. *)
-         SetoidList.InA Ckeq (c, id__c) (c2in γ) ->
+         InA Ckeq (c, id__c) (c2in γ) ->
          
          (* Input port [id__c] equals [cond s c] at state [σ] *)
          MapsTo id__c (Vbool (cond s c)) (sigstore σ)).
@@ -138,7 +138,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   (forall p id__p σ__p,
       (* [id__p] is the identifier of the place component associated with
          place [p] by the [γ] binder. *)
-      SetoidList.InA Pkeq (p, id__p) (p2pcomp γ) ->
+      InA Pkeq (p, id__p) (p2pcomp γ) ->
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
@@ -152,7 +152,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall (t : Ti sitpn) id__t σ__t n,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         SetoidList.InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -171,7 +171,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall (t : Ti sitpn) id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         SetoidList.InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -184,7 +184,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall a id__a,
          (* [id__a] is the output port identifier associated to action
             [a] in the [γ] binder. *)
-         SetoidList.InA Akeq (a, id__a) (a2out γ) ->
+         InA Akeq (a, id__a) (a2out γ) ->
          
          (* Output port [id__a] equals [ex s (inl a)] at state [σ] *)
          MapsTo id__a (Vbool (ex s (inl a))) (sigstore σ))
@@ -193,7 +193,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall f id__f,
          (* [id__f] is the output port identifier associated to function
             [f] in the [γ] binder. *)
-         SetoidList.InA Fkeq (f, id__f) (f2out γ) ->
+         InA Fkeq (f, id__f) (f2out γ) ->
          
          (* Output port [id__f] equals [ex s (inr f)] at state [σ] *)
          MapsTo id__f (Vbool (ex s (inr f))) (sigstore σ))
@@ -202,7 +202,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall t id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         SetoidList.InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tcomp γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -221,7 +221,7 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall t id__t σ__t fired,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         SetoidList.InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tcomp γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -234,7 +234,7 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall p id__p σ__p fired pre__sum,
          (* [id__p] is the identifier of the place component associated with
             place [p] by the [γ] binder. *)
-         SetoidList.InA Pkeq (p, id__p) (p2pcomp γ) ->
+         InA Pkeq (p, id__p) (p2pcomp γ) ->
 
          (* [σ__p] is the current state of component [id__p] is the global
             design state [σ]. *)
@@ -250,7 +250,7 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall p id__p σ__p fired post__sum,
          (* [id__p] is the identifier of the place component associated with
             place [p] by the [γ] binder. *)
-         SetoidList.InA Pkeq (p, id__p) (p2pcomp γ) ->
+         InA Pkeq (p, id__p) (p2pcomp γ) ->
 
          (* [σ__p] is the current state of component [id__p] is the global
             design state [σ]. *)
