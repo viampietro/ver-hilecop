@@ -64,4 +64,4 @@ with eport (Δ : ElDesign) (σ : DState) : pdecl -> ElDesign -> DState -> Prop :
       ~InSStore id σ -> (* id ∉ σ *)
 
       (* Conclusion *)
-      eport Δ σ (pdecl_in id τ) (add id (Output t) Δ) (sstore_add id v σ).
+      eport Δ σ (pdecl_out id τ) (add id (Output t) Δ) (sstore_add id v σ).

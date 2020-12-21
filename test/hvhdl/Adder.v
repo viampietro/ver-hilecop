@@ -59,8 +59,8 @@ Definition adder : design := design_ adder_id__e adder_id__a [] (ins ++ outs) si
                                      (add_ps // publish_ps).
 Set Printing Coercions.
 
-Lemma vexpr_deterministic :
-  forall e Δ σ Λ mode v v',
+Lemma vexpr_determ :
+  forall {e Δ σ Λ mode v v'},
     vexpr Δ σ Λ mode e v ->
     vexpr Δ σ Λ mode e v' -> v = v'.
 Proof.
@@ -91,24 +91,51 @@ Proof.
     + inversion 1.
 Admitted.
 
-Lemma econstr_eq_bounds :
-  forall Δ e e' n m n' m',
+Lemma econstr_determ :
+  forall {Δ e e' n m n' m'},
     econstr Δ e e' n m -> econstr Δ e e' n' m' -> n = n' /\ m = m'.
 Proof.
   intros Δ e e' n m n' m' Heconstr Heconstr'.
   inversion Heconstr; inversion Heconstr'.
+  lazymatch goal with
+  | [ Hvexprn : vexpr _ _ _ _ ?e _,
+      Hvexprn' : vexpr _ _ _ _?e _,
+      Hvexprm : vexpr _ _ _ _ ?e' _,
+      Hvexprm' : vexpr _ _ _ _?e' _
+      |- _ ] =>
+    specialize (vexpr_determ Hvexprn Hvexprn');
+      specialize (vexpr_determ Hvexprm Hvexprm');
+      intros Heqvm Heqvn;
+      injection Heqvm as Heqm;
+      injection Heqvn as Heqvn;
+      split; assumption
+  end.
+Qed.
 
-    
-Lemma etype_eq_type : forall Δ τ t t', etype Δ τ t -> etype Δ τ t' -> t = t'.
-  intros Δ τ t t' Ht Ht'.
-  inversion Ht; inversion Ht';
-  (reflexivity || match goal with
-                 | [ Heq: _ = ?a, Heq': _ = ?a |- _ ] =>
-                   rewrite <- Heq in Heq';
-                   (discriminate
-                    || injection Heq'; intros Heqe Heqe'; rewrite Heqe, Heqe' in *)
-                 | _ => auto
-                  end).
+Lemma etype_determ : forall {τ Δ t t'}, etype Δ τ t -> etype Δ τ t' -> t = t'.
+Proof.
+  induction τ;
+    intros Δ t t' Ht Ht'; inversion Ht; inversion Ht'; auto.
+  (* Constraints are equal *)
+  - lazymatch goal with
+    | [ Heconstr: econstr _ _ _ _ _, Heconstr': econstr _ _ _ _ _ |- _ ] =>
+      specialize (econstr_determ Heconstr Heconstr'); intros [Heq Heq'];
+        rewrite Heq, Heq'; reflexivity
+    end.
+  (* Constraints and type of elements are equal. *)
+  - lazymatch goal with
+    | [ Heconstr: econstr _ _ _ _ _, Heconstr': econstr _ _ _ _ _, Het: etype _ τ ?t0, Het': etype _ τ ?t1 |- _ ] =>
+      specialize (econstr_determ Heconstr Heconstr');
+        specialize (IHτ Δ t0 t1 Het Het');
+        intros [Heq Heq'];
+        rewrite Heq, Heq', IHτ;
+        reflexivity
+    end.
+Qed.
+
+Lemma defaultv_determ : forall {t v v'}, defaultv t v -> defaultv t v' -> v = v'.
+Proof.
+Admitted.
 
 Lemma eport_defaultv :
   forall Δ σ id τ Δ' σ' t v,
@@ -117,11 +144,15 @@ Lemma eport_defaultv :
     defaultv t v ->
     MapsTo id v (sigstore σ').
 Proof.
-  intros Δ σ id τ Δ' σ' t v Hv_eport Hetype Hdv.
-  inversion_clear Hv_eport; inversion_clear H.
-Admitted.
-
-
+  inversion 1 as [Hep|Hep];
+    inversion Hep; intros;
+    lazymatch goal with
+    | [ Het: etype ?Δ ?τ _, Het': etype ?Δ ?τ _, Hdv: defaultv _ _, Hdv': defaultv _ _ |- _ ] =>
+      specialize (etype_determ Het Het') as Heqt; rewrite Heqt in Hdv;
+        specialize (defaultv_determ Hdv Hdv') as Heqdv;
+        rewrite Heqdv; simpl; auto with mapsto
+    end.
+Qed.
   
 Lemma adder_o_defaultv :
   forall Δ__adder σ__e,
@@ -134,5 +165,10 @@ Proof.
   do 3 (match goal with
         | [ H: eports _ _ _ _ _ |- _ ] => inversion_clear H
         end).
-Admitted.
-
+  lazymatch goal with
+  | [ Heport_o: eport _ _ (pdecl_out o _) _ _ |- _ ] =>
+    inversion Heport_o
+  end.
+  inversion_clear H8 in H9.
+  inversion H9 in H12.
+Qed.

@@ -13,6 +13,7 @@ Include NatMapFacts.
 (** ** Hints to solve goals with MapsTo *)
 
 Hint Resolve MapsTo_fun : mapsto.
+Hint Extern 1 (MapsTo ?k ?v (add ?k ?v ?m)) => apply (add_1 m v eq_refl) : mapsto.
 
 Export NatMap NatMapFacts.
 
