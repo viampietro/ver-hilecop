@@ -653,3 +653,14 @@ Section NatAndLists.
     FoldL (fun prod a => prod * f a) l 1 prod.
   
 End NatAndLists.
+
+(** ** Propositional version of Map *)
+
+Section Map_prop.
+
+  Inductive Map {A B : Type} (f : A -> B) : list A -> list B -> Prop :=
+  | Map_nil : Map f [] []
+  | Map_cons : forall l m a, Map f l m -> Map f (a :: l) (f a :: m).
+  
+End Map_prop.
+

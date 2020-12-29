@@ -521,21 +521,6 @@ End InAndNoDupLemmas.
 
 (** ** Misc. tactics for [In] and [NoDup] predicates *)
 
-(** Search for a hypothesis H of the form (incl l l') 
-      and a hypothesis H' of the form (In a l).
-      If H and H' in the context then apply H a H'
-      and name the resulting hypothesis as Hin. *)
-
-Ltac apply_incl Hin :=
-  lazymatch goal with
-  | [ H: incl ?l ?l' |- _ ] =>
-    lazymatch goal with
-    | [H': In ?a l |- _ ] => specialize (H a H') as Hin
-    | _ => fail "No hypotheses of the form (In ?a ?l) in the context"
-    end
-  | _ => fail "No hypotheses of the form (incl ?l ?l') in the context"
-  end.
-
 (** If Hincl_fs is a the form (incl (fst (split (?a, ?b) :: _)) _)
     then rewrites Hincl_fs in (incl (fst (split _))), i.e removes
     the head. *)
@@ -550,7 +535,6 @@ Ltac incl_rm_hd_fs Hincl_fs :=
   end.
 
 Ltac apply_nodup_same_pair :=
-
   lazymatch goal with
   | [ Hin_p_l: In (?x, ?y) ?l, Hin_p'_l: In (?x, ?z) ?l, Hnodup_l: NoDup (fst (split ?l)) |- _ ] =>
     assert (Heq_fs_pair : fst (x, y) = fst (x, z)) by (simpl; auto);
@@ -599,25 +583,6 @@ Ltac deduce_nodup_hd_not_in :=
     rewrite NoDup_cons_iff in Hnot_in;
     apply proj1 in Hnot_in
   | _ => fail "No hypothesis of the form 'NoDup (?a :: ?l)'"
-  end.
-
-(* Applies the [in_app_or] lemma on an hypothesis of the 
-   form "In _ (_ ++ _)", then inversion. *)
-
-Ltac destruct_in_app_or :=
-  lazymatch goal with
-  | [ H : List.In _ (_ ++ _) |- _ ] =>
-    apply in_app_or in H; inversion_clear H
-  end.
-
-(* Deduces "?a = ?b" from "In ?a [?b]".  Introduces an hypothesis Heqn
-   in the proof context.  *)
-
-Ltac singleton_eq :=
-  lazymatch goal with
-  | [ H: List.In ?a [?b] |- _ ] =>
-    let Heq := fresh "Heq" in
-    inversion_clear H as [Heq | ]; [auto | contradiction]
   end.
 
 (** *** Lemmas using the above tactics . *)

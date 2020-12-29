@@ -26,3 +26,5 @@ Inductive defaultv : type -> value -> Prop :=
       let plus1_gt_O := (gt_Sn_O (u - l)) in
       defaultv t v ->
       defaultv (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).
+
+Hint Constructors defaultv : hvhdl.

@@ -14,6 +14,8 @@ Require Import HVhdlTypes.
 Open Scope natset_scope.
 Open Scope abss_scope.
 
+Include HVhdlCsNotations.
+
 Local Definition i := local_var.
 
 (** ** Entity part of the Transition design. *)

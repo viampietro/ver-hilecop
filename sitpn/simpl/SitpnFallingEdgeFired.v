@@ -1,3 +1,4 @@
+Require Import common.ListPlusTactics.
 
 (* Import Sitpn material. *)
 

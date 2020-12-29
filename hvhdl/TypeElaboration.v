@@ -29,3 +29,8 @@ Inductive etypeg : tind -> type -> Prop :=
     forall {e e' n n'},
       econstrg e e' n n' ->
       etypeg (tind_natural e e') (Tnat n n').
+
+(** Hints for etype and etypeg *)
+
+Hint Constructors etype : hvhdl.
+Hint Constructors etypeg : hvhdl.

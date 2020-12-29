@@ -4,15 +4,19 @@ Require Import common.Coqlib.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.NatMapFacts.
+Require Import common.ListsPlus.
+Require Import common.ListPlusTactics.
 
 Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.AbstractSyntaxDefs.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.Elaboration.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Petri.
+Require Import hvhdl.WellDefinedDesign.
 
-Local Open Scope abss_scope.
+(* Local Open Scope abss_scope. *)
 Local Open Scope natset_scope.
 
 (** ** Input ports *)
@@ -58,6 +62,43 @@ Definition adder_id__a : ident := S adder_id__e.
 Definition adder : design := design_ adder_id__e adder_id__a [] (ins ++ outs) sigs
                                      (add_ps // publish_ps).
 Set Printing Coercions.
+
+Lemma flatten_cs_ex : forall beh, exists lofcs, FlattenCs beh lofcs. Admitted.
+
+Lemma is_unique_port_id_ps : 
+  forall d lofcs id τ,
+    HasUniqueIds d ->
+    FlattenCs (behavior d) lofcs ->
+    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
+    ~ (exists sl vars body, List.In (cs_ps id sl vars body) lofcs).
+Admitted.
+
+Lemma is_unique_port_id_comps : 
+  forall d lofcs id τ,
+    HasUniqueIds d ->
+    FlattenCs (behavior d) lofcs ->
+    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
+    ~ (exists id__e gmap ipmap opmap, List.In (cs_comp id id__e gmap ipmap opmap) lofcs).
+Admitted.
+
+Lemma is_unique_port_id_sigs : 
+  forall d lofcs id τ,
+    HasUniqueIds d ->
+    FlattenCs (behavior d) lofcs ->
+    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
+    ~ (exists τ, List.In (sdecl_ id τ) (AbstractSyntax.sigs d)).
+Admitted.
+
+Ltac build_lofcs beh :=
+  lazymatch beh with
+  | ?beh : cs => 
+    specialize (flatten_cs_ex beh);
+    intros Hflatcs_ex;
+    let lofcs := fresh "lofcs" in
+    let Hflatcs := fresh "Hflatcs" in
+    inversion_clear Hflatcs_ex as (lofcs, Hflatcs)
+  | _ => fail "Term" beh "is not of type cs"
+  end.
 
 Lemma vexpr_determ :
   forall {e Δ σ Λ mode v v'},
@@ -137,7 +178,7 @@ Lemma defaultv_determ : forall {t v v'}, defaultv t v -> defaultv t v' -> v = v'
 Proof.
 Admitted.
 
-Lemma eport_defaultv :
+Lemma eport_elab_sigma :
   forall Δ σ id τ Δ' σ' t v,
     (eport Δ σ (pdecl_out id τ) Δ' σ' \/ eport Δ σ (pdecl_in id τ) Δ' σ') ->
     etype Δ τ t ->
@@ -153,22 +194,105 @@ Proof.
         rewrite Heqdv; simpl; auto with mapsto
     end.
 Qed.
-  
+
+Definition IsUniquePortId (id : ident) (ports : list pdecl) (portids : list ident) :=
+  let pdecl2id := fun pd => match pd with pdecl_in id' _ | pdecl_out id' _ => id' end in
+  Map pdecl2id ports portids /\ List.In id portids /\ List.NoDup portids.
+
+Lemma eports_elab_sigma :
+  forall id τ Δ σ Δ' σ' Δ'' t v ports portids,
+    eports Δ σ ports Δ' σ' ->
+    (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
+    etype Δ'' τ t ->
+    defaultv t v ->
+    IsUniquePortId id ports portids ->
+    MapsTo id v (sigstore σ').
+Admitted.
+
+Lemma edecls_elab_idle_sigma :
+  forall id Δ σ sigs Δ' σ' v,
+    edecls Δ σ sigs Δ' σ' ->
+    (~exists τ, List.In (sdecl_ id τ) sigs) ->
+    MapsTo id v (sigstore σ) ->
+    MapsTo id v (sigstore σ').
+Admitted.
+
+Lemma ebeh_elab_idle_sigma :
+  forall id D__s Δ σ beh Δ' σ' v lofcs,
+    ebeh D__s Δ σ beh Δ' σ' ->
+    FlattenCs beh lofcs ->
+    (~exists sl vars body, List.In (cs_ps id sl vars body) lofcs) ->
+    (~exists id__e gmap ipmap opmap, List.In (cs_comp id id__e gmap ipmap opmap) lofcs) ->
+    MapsTo id v (sigstore σ) ->
+    MapsTo id v (sigstore σ').
+Admitted.
+
+Lemma in_ports_in_portids :
+  forall id τ ports portids,
+    (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
+    ArePortIds ports portids ->
+    List.In id portids.
+Admitted.
+
+Lemma elab_out_port_sigma :
+  forall id τ D__s M__g d Δ Δ' σ__e t v,
+    edesign D__s M__g d Δ σ__e ->
+    HasUniqueIds d ->
+    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
+    etype Δ' τ t ->
+    defaultv t v ->
+    MapsTo id v (sigstore σ__e).
+Proof.
+  inversion 1; simpl; intros.
+
+  (* Builds a list of [cs] out of [behavior]. *)
+  build_lofcs behavior.
+
+  (* Apply [ebeh_elab_idle_sigma] lemma. *)
+  eapply ebeh_elab_idle_sigma; eauto;
+    [(* ∄ process(id, sl, vars, body) ∈ lofcs *)
+      eapply is_unique_port_id_ps; eauto
+    |
+    (* [∄ comp(id, id__e, gm, ipm, opm) ∈ lofcs] *)
+    eapply is_unique_port_id_comps; eauto
+    | ].
+
+  (* Apply [edecls_elab_idle_sigma] lemma. *)
+  lazymatch goal with
+  | [ d: design, Heq: _ = d |- _ ] =>
+      eapply edecls_elab_idle_sigma; rewrite <- Heq; eauto;
+        replace sigs0 with (AbstractSyntax.sigs d) by (rewrite <- Heq; reflexivity);
+        only 1 : (eapply is_unique_port_id_sigs with (lofcs := lofcs) (τ := τ); rewrite <- Heq; simpl; eauto)
+  end.  
+
+  (* Apply [eports_elab_sigma] lemma. *)
+  lazymatch goal with
+  | [ H: HasUniqueIds _ |- _ ] =>
+    unfold HasUniqueIds in H;
+      inversion_clear H as (declids, (behids, (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))));
+      clear Hbehids Hnodupvars; inversion_clear Hdeclids in Hnodupids; simpl in *
+  end.
+  eapply eports_elab_sigma with (portids := portids); eauto.
+  unfold IsUniquePortId.
+  split; [assumption
+         | split; [ eapply in_ports_in_portids; eauto
+                  | red_nodup Hnodupids;
+                    lazymatch goal with
+                    | [ H: List.NoDup (_ ++ _) |- _ ] =>
+                      do 2 (rewrite <- app_assoc in H);
+                      get_nodup_at H 1;
+                      assumption
+                    end
+                  ]
+         ].
+Qed.
+
 Lemma adder_o_defaultv :
   forall Δ__adder σ__e,
     edesign (empty design) (empty value) adder Δ__adder σ__e ->
     MapsTo o (Vbool false) (sigstore σ__e).
 Proof.
   intros *; intros Helab.
-  inversion_clear Helab.
-  unfold outs in H0.
-  do 3 (match goal with
-        | [ H: eports _ _ _ _ _ |- _ ] => inversion_clear H
-        end).
-  lazymatch goal with
-  | [ Heport_o: eport _ _ (pdecl_out o _) _ _ |- _ ] =>
-    inversion Heport_o
-  end.
-  inversion_clear H8 in H9.
-  inversion H9 in H12.
+  eapply elab_out_port_sigma with (τ := tind_boolean) (t := Tbool); eauto.
+    [right; simpl; tauto | auto with hvhdl | auto with hvhdl ].
 Qed.

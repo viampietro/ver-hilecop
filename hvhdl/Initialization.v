@@ -23,6 +23,8 @@ Require Import GlobalTypes.
 Require Import Petri.
 Require Import NatSet.
 
+Include HVhdlCsNotations.
+
 (** Defines the [runinit] relation that computes all concurrent
     statements once, regardless of sensitivity lists or events on
     signals and component instances.  *)

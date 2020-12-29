@@ -50,6 +50,11 @@ with name : Type :=
 | n_id : ident -> name  
 | n_xid : ident -> expr -> name.
 
+Module HVhdlExprNotations.
+
+  
+End HVhdlExprNotations.
+
 (** Notations and coercions for names. *)
 
 Notation " '$' x " := (n_id x) (at level 100) : abss_scope.
@@ -212,16 +217,22 @@ Inductive cs : Type :=
 (** Null statement *)
 | cs_null.
 
-Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z) (at level 100) : abss_scope.
-Notation "pid ':' 'Process' sl vars 'Begin' stmt" :=
-  (cs_ps pid sl vars stmt)
-    (at level 200,
-     format "'[v' pid  ':'  'Process'  sl '/' '['   vars ']' '/' 'Begin' '/' '['   stmt ']' ']'").
+Module HVhdlCsNotations.
 
-Notation "pid ':' 'Process' sl 'Begin' stmt" :=
-  (cs_ps pid sl [] stmt)
-    (at level 200,
-     format "'[v' pid  ':'  'Process'  sl '/' 'Begin' '/' '['   stmt ']' ']'").
+  Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z) (at level 100) : abss_scope.
+  Notation "pid ':' 'Process' sl vars 'Begin' stmt" :=
+    (cs_ps pid sl vars stmt)
+      (at level 200(* , *)
+       (* format "'[v' pid  ':'  'Process'  sl '/' '['   vars ']' '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
+
+  Notation "pid ':' 'Process' sl 'Begin' stmt" :=
+    (cs_ps pid sl [] stmt)
+      (at level 200(* , *)
+       (* format "'[v' pid  ':'  'Process'  sl '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
+  
+End HVhdlCsNotations.
+
+Import HVhdlCsNotations.
 
 (** ** Design declaration. *)
 
@@ -266,3 +277,4 @@ Record design : Type :=
       sigs   : list sdecl; (** Architecture declarative part *)
       behavior : cs
     }.
+
