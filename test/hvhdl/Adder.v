@@ -8,7 +8,7 @@ Require Import common.ListsPlus.
 Require Import common.ListPlusTactics.
 
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxDefs.
+Require Import hvhdl.AbstractSyntaxFacts.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.Elaboration.
@@ -16,8 +16,10 @@ Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Petri.
 Require Import hvhdl.WellDefinedDesign.
 
-(* Local Open Scope abss_scope. *)
+Local Open Scope abss_scope.
 Local Open Scope natset_scope.
+
+Import HVhdlCsNotations.
 
 (** ** Input ports *)
 
@@ -63,7 +65,38 @@ Definition adder : design := design_ adder_id__e adder_id__a [] (ins ++ outs) si
                                      (add_ps // publish_ps).
 Set Printing Coercions.
 
-Lemma flatten_cs_ex : forall beh, exists lofcs, FlattenCs beh lofcs. Admitted.
+Lemma Map_in :
+  forall {A B : Type} (f : A -> B) lofAs lofBs a,
+    Map f lofAs lofBs ->
+    List.In a lofAs ->
+    List.In (f a) lofBs.
+Admitted.
+
+Lemma in_ports_in_portids :
+  forall id τ ports portids,
+    (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
+    ArePortIds ports portids ->
+    List.In id portids.
+Proof.
+  intros *; intros Hor Hmap.
+  inversion_clear Hor;
+    lazymatch goal with
+    | [ H: List.In ?p _ |- _ ] =>
+      change id with ((fun pd : pdecl =>
+                         match pd with
+                         | pdecl_in id _ | pdecl_out id _ => id
+                         end) p);
+        eapply Map_in with (lofAs := ports); eauto
+    end.
+Qed.
+
+Lemma in_ps_in_pids :
+  forall behavior lofcs pids id__p sl vars body ,
+    FlattenCs behavior lofcs ->
+    List.In (cs_ps id__p sl vars body) lofcs ->
+    ArePIds lofcs pids ->
+    List.In id__p pids.
+Admitted.
 
 Lemma is_unique_port_id_ps : 
   forall d lofcs id τ,
@@ -71,6 +104,8 @@ Lemma is_unique_port_id_ps :
     FlattenCs (behavior d) lofcs ->
     (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
     ~ (exists sl vars body, List.In (cs_ps id sl vars body) lofcs).
+Proof.
+  unfold HasUniqueIds.
 Admitted.
 
 Lemma is_unique_port_id_comps : 
@@ -90,8 +125,8 @@ Lemma is_unique_port_id_sigs :
 Admitted.
 
 Ltac build_lofcs beh :=
-  lazymatch beh with
-  | ?beh : cs => 
+  lazymatch type of beh with
+  | cs => 
     specialize (flatten_cs_ex beh);
     intros Hflatcs_ex;
     let lofcs := fresh "lofcs" in
@@ -227,13 +262,6 @@ Lemma ebeh_elab_idle_sigma :
     MapsTo id v (sigstore σ').
 Admitted.
 
-Lemma in_ports_in_portids :
-  forall id τ ports portids,
-    (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
-    ArePortIds ports portids ->
-    List.In id portids.
-Admitted.
-
 Lemma elab_out_port_sigma :
   forall id τ D__s M__g d Δ Δ' σ__e t v,
     edesign D__s M__g d Δ σ__e ->
@@ -269,19 +297,17 @@ Proof.
   lazymatch goal with
   | [ H: HasUniqueIds _ |- _ ] =>
     unfold HasUniqueIds in H;
-      inversion_clear H as (declids, (behids, (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))));
-      clear Hbehids Hnodupvars; inversion_clear Hdeclids in Hnodupids; simpl in *
+      inversion_clear H as (genids, (portids, (sigids, (lofcs', (compids, (pids, (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))))))));
+      clear Hbehids Hnodupvars; unfold AreDeclPartIds in Hdeclids; simpl in *
   end.
   eapply eports_elab_sigma with (portids := portids); eauto.
   unfold IsUniquePortId.
-  split; [assumption
-         | split; [ eapply in_ports_in_portids; eauto
+  split; [ firstorder |
+           split; [ eapply in_ports_in_portids; (eauto || firstorder)
                   | red_nodup Hnodupids;
                     lazymatch goal with
                     | [ H: List.NoDup (_ ++ _) |- _ ] =>
-                      do 2 (rewrite <- app_assoc in H);
-                      get_nodup_at H 1;
-                      assumption
+                      get_nodup_at H 1; assumption
                     end
                   ]
          ].
