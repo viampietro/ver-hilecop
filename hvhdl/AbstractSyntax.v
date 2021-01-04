@@ -310,4 +310,4 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
    forall cstmt cstmt' l l',
      FlattenCs cstmt l -> FlattenCs cstmt' l' -> FlattenCs (cstmt // cstmt') (l ++ l').
 
-Hint Constructors FlattenCs.
+Hint Constructors FlattenCs : core.

@@ -6,6 +6,7 @@ Require Import common.NatMap.
 Require Import common.NatMapFacts.
 Require Import common.ListsPlus.
 Require Import common.ListPlusTactics.
+Require Import common.ListPlusFacts.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
@@ -15,6 +16,7 @@ Require Import hvhdl.Elaboration.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Petri.
 Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.WellDefinedDesignFacts.
 
 Local Open Scope abss_scope.
 Local Open Scope natset_scope.
@@ -64,57 +66,6 @@ Definition adder_id__a : ident := S adder_id__e.
 Definition adder : design := design_ adder_id__e adder_id__a [] (ins ++ outs) sigs
                                      (add_ps // publish_ps).
 Set Printing Coercions.
-
-Lemma Map_in :
-  forall {A B : Type} (f : A -> B) lofAs lofBs a,
-    Map f lofAs lofBs ->
-    List.In a lofAs ->
-    List.In (f a) lofBs.
-Admitted.
-
-Lemma in_ports_in_portids :
-  forall id τ ports portids,
-    (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
-    ArePortIds ports portids ->
-    List.In id portids.
-Proof.
-  intros *; intros Hor Hmap.
-  inversion_clear Hor;
-    lazymatch goal with
-    | [ H: List.In ?p _ |- _ ] =>
-      change id with ((fun pd : pdecl =>
-                         match pd with
-                         | pdecl_in id _ | pdecl_out id _ => id
-                         end) p);
-        eapply Map_in with (lofAs := ports); eauto
-    end.
-Qed.
-
-Lemma in_ps_in_pids :
-  forall behavior lofcs pids id__p sl vars body ,
-    FlattenCs behavior lofcs ->
-    List.In (cs_ps id__p sl vars body) lofcs ->
-    ArePIds lofcs pids ->
-    List.In id__p pids.
-Admitted.
-
-Lemma is_unique_port_id_ps : 
-  forall d lofcs id τ,
-    HasUniqueIds d ->
-    FlattenCs (behavior d) lofcs ->
-    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
-    ~ (exists sl vars body, List.In (cs_ps id sl vars body) lofcs).
-Proof.
-  unfold HasUniqueIds.
-Admitted.
-
-Lemma is_unique_port_id_comps : 
-  forall d lofcs id τ,
-    HasUniqueIds d ->
-    FlattenCs (behavior d) lofcs ->
-    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
-    ~ (exists id__e gmap ipmap opmap, List.In (cs_comp id id__e gmap ipmap opmap) lofcs).
-Admitted.
 
 Lemma is_unique_port_id_sigs : 
   forall d lofcs id τ,

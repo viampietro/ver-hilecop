@@ -9,6 +9,16 @@ Require Import FstSplit.
 
 Section InAndNoDupLemmas.
 
+  (* In and append *)
+
+  Lemma in_appl : forall {A : Type} {l m} {a : A}, In a l -> In a (l ++ m).
+    intros *; intros Hin; apply in_or_app; left; assumption.
+  Defined.
+
+  Lemma in_appr : forall {A : Type} {l m} {a : A}, In a m -> In a (l ++ m).
+    intros *; intros Hin; apply in_or_app; right; assumption.
+  Defined.
+  
   (* In tail of list *)
   Lemma in_last {A : Type} : forall (a : A) l, In a (l ++ [a]).
     intros; apply in_elt.
@@ -143,7 +153,7 @@ Section InAndNoDupLemmas.
   (** ∀ a, a ∉ (l ++ l') ⇒ a ∉ l ∧ a ∉ l' *)
 
   Lemma not_app_in {A : Type} :
-    forall (a : A) (l l' : list A),
+    forall {a : A} {l l' : list A},
       ~In a (l ++ l') -> ~In a l /\ ~In a l'.
   Proof.
     intros a l l' Hnot_in_app.

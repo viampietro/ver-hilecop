@@ -45,13 +45,13 @@ Ltac singleton_eq :=
 Ltac red_nodup H :=
   lazymatch type of H with
   | List.NoDup (?a :: ?l) =>
-    inversion_clear H; idtac a;
+    inversion_clear H;
     lazymatch goal with
     | [ H': ~List.In a _, H'': List.NoDup l |- _ ] =>
       clear H'; red_nodup H''
     | _ => fail "Proper hypotheses not found after NoDup reduction"
     end
-  | _ => idtac "End of NoDup reduction"
+  | _ => idtac
   end.
 
 (** Given a [H] of the form [NoDup ?l] where [?l] is of the form [?m0 ++ ... ++ ?m__i], 

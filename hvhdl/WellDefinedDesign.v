@@ -4,7 +4,6 @@ Require Import common.Coqlib.
 Require Import common.ListsPlus.
 
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxDefs.
 Require Import hvhdl.HVhdlTypes.
 
 (** ** Identifiers Unicity *)

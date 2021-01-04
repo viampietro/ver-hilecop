@@ -10,7 +10,9 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 # General-purpose utilities (in common/)
 
 COMMONFILES=NatMap.v NatMapFacts.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
-	ListPlusTactics.v FstSplit.v InAndNoDup.v ListsPlus.v ListsDep.v \
+	FstSplit.v InAndNoDup.v \
+	ListsPlus.v ListPlusTactics.v ListPlusFacts.v \
+	ListsDep.v \
 	StateAndErrorMonad.v ListsMonad.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
@@ -33,7 +35,6 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v \
 	SitpnSemanticsDefs.v Fired.v SitpnSemantics.v \
- 
 
 # H-VHDL syntax and semantics.
 
@@ -47,7 +48,7 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v AbstractSyntaxFacts.v SemanticalDomains
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \
 	Place.v Transition.v \
 	Initialization.v HilecopDesignStore.v Simulation.v \
-	Elaboration.v WellDefinedDesign.v 
+	Elaboration.v WellDefinedDesign.v WellDefinedDesignFacts.v
 
 
 # SITPN to H-VHDL transformation.
