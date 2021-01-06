@@ -20,33 +20,33 @@ Import NatMap.
 
 (** The architecture declarative part elaboration relation. *)
 
-Inductive edecls (ed : ElDesign) (dstate : DState)  : list sdecl -> ElDesign -> DState -> Prop :=
+Inductive edecls (Δ : ElDesign) (σ : DState)  : list sdecl -> ElDesign -> DState -> Prop :=
 
 (** Empty list of architecture declarations. *)
-| EDeclsNil : edecls ed dstate [] ed dstate
+| EDeclsNil : edecls Δ σ [] Δ σ
   
 (** Sequence of architecture declaration. *)
 | EDeclsCons :
-    forall {ad lofsigs ed' dstate' ed'' dstate''},
-      edecl ed dstate ad ed' dstate' ->
-      edecls ed' dstate' lofsigs ed'' dstate'' ->
-      edecls ed dstate (ad :: lofsigs) ed'' dstate''
+    forall {ad lofsigs Δ' σ' Δ'' σ''},
+      edecl Δ σ ad Δ' σ' ->
+      edecls Δ' σ' lofsigs Δ'' σ'' ->
+      edecls Δ σ (ad :: lofsigs) Δ'' σ''
 
 (** Defines the elaboration relation for single architecture declaration. *)
-with edecl (ed : ElDesign) (dstate : DState)  : sdecl -> ElDesign -> DState -> Prop :=
+with edecl (Δ : ElDesign) (σ : DState)  : sdecl -> ElDesign -> DState -> Prop :=
   
 (** Signal declaration elaboration. *)
   
 | EDeclSig :
-    forall {tau t v id},
+    forall {τ t v id},
       
       (* Premises. *)
-      etype ed tau t ->
+      etype Δ τ t ->
       defaultv t v ->
       
       (* Side conditions. *)
-      ~NatMap.In id ed -> (* id ∉ Δ *)
-      ~InSStore id dstate ->  (* id ∉ σ *)
+      ~NatMap.In id Δ -> (* id ∉ Δ *)
+      ~InSStore id σ ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecl ed dstate (sdecl_ id tau) (add id (Declared t) ed) (sstore_add id v dstate).
+      edecl Δ σ (sdecl_ id τ) (add id (Declared t) Δ) (sstore_add id v σ).

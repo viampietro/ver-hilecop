@@ -9,7 +9,7 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
 
-Lemma in_ports_in_portids :
+Lemma ports_in_portids :
   forall {id τ ports portids},
     (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
     ArePortIds ports portids ->
@@ -22,7 +22,24 @@ Proof.
                          match pd with
                          | pdecl_in id _ | pdecl_out id _ => id
                          end) p);
-        eapply Map_in with (lofAs := ports); eauto
+        eapply Map_in; eauto
+    end.
+Qed.
+
+Lemma sigs_in_sigids :
+  forall {id τ sigs sigids},
+    List.In (sdecl_ id τ) sigs ->
+    AreSigIds sigs sigids ->
+    List.In id sigids.
+Proof.
+  intros;
+    lazymatch goal with
+    | [ H: List.In ?s _ |- _ ] =>
+      change id with ((fun sd : sdecl =>
+                         match sd with
+                         | sdecl_ id _ => id
+                         end) s);
+        eapply Map_in; eauto
     end.
 Qed.
 
@@ -83,13 +100,13 @@ Ltac inv_hasuniqids H :=
     let Hbehids := fresh "Hbehids" in
     let Hnodupids := fresh "Hnodupids" in
     let Hnodupvars := fresh "Hnodupvars" in
-    inversion_clear Huniqids as (genids,
-                                 (portids,
-                                  (sigids,
-                                   (lofcs,
-                                    (compids,
-                                     (pids,
-                                      (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))))))))
+    inversion_clear H as (genids,
+                          (portids,
+                           (sigids,
+                            (lofcs,
+                             (compids,
+                              (pids,
+                               (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))))))))
   | _ => fail "Type of" H "is not HasUniqueIds ?d"
   end.
 
@@ -105,7 +122,7 @@ Proof.
   inv_hasuniqids Huniqids.
 
   (* [id ∈ portids] *)
-  specialize (in_ports_in_portids Hin_ports (proj1 (proj2 Hdeclids))) as Hin_portids.
+  specialize (ports_in_portids Hin_ports (proj1 (proj2 Hdeclids))) as Hin_portids.
 
   (* [id ∈ pids] *)
   rewrite <- (flatten_cs_determ Hflat (proj1 Hbehids)) in Hbehids.
@@ -131,7 +148,7 @@ Proof.
   inv_hasuniqids Huniqids.
 
   (* [id ∈ portids] *)
-  specialize (in_ports_in_portids Hin_ports (proj1 (proj2 Hdeclids))) as Hin_portids.
+  specialize (ports_in_portids Hin_ports (proj1 (proj2 Hdeclids))) as Hin_portids.
 
   (* [id ∈ compids] *)
   rewrite <- (flatten_cs_determ Hflat (proj1 Hbehids)) in Hbehids.
@@ -143,4 +160,31 @@ Proof.
   specialize (nodup_app_not_in (genids ++ portids) (sigids ++ compids ++ pids) H1 id (in_appr Hin_portids)) as Hnot_in_compids.
   apply not_app_in, proj2, not_app_in, proj1 in Hnot_in_compids.
   contradiction.  
+Qed.
+
+Lemma is_unique_port_id_sigs : 
+  forall d id τ,
+    HasUniqueIds d ->
+    (List.In (pdecl_in id τ) (ports d) \/ List.In (pdecl_out id τ) (ports d)) ->
+    ~ (exists τ, List.In (sdecl_ id τ) (AbstractSyntax.sigs d)).
+Proof.
+  intros *; intros Huniqids Hin_ports Hex.
+  inversion_clear Hex as (τ', Hin_sigs).
+  inv_hasuniqids Huniqids.
+
+  (* [id ∈ portids] *)
+  specialize (ports_in_portids Hin_ports (proj1 (proj2 Hdeclids))) as Hin_portids.
+
+  (* [id ∈ sigids] *)
+  specialize (sigs_in_sigids Hin_sigs (proj2 (proj2 Hdeclids))) as Hin_sigids.
+
+  (* Gets [id ∉ pids], then contradiction. *)
+  red_nodup Hnodupids.
+  lazymatch goal with
+  | [ Hnodup: NoDup _ |- _ ] =>
+    rewrite (app_assoc genids portids (sigids ++ compids ++ pids)) in Hnodup;
+      specialize (nodup_app_not_in (genids ++ portids) (sigids ++ compids ++ pids) Hnodup id (in_appr Hin_portids)) as Hnot_in_sigids
+  end.
+  apply not_app_in, proj1 in Hnot_in_sigids.
+  contradiction.    
 Qed.

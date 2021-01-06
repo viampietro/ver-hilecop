@@ -2,10 +2,12 @@
 
 (** Module defining the components of the simulation environment.  *)
 
-Require Import Coqlib.
-Require Import ListsPlus.
-Require Import GlobalTypes.
-Require Import AbstractSyntax.
+Require Import Setoid.
+Require Import common.Coqlib.
+Require Import common.ListsPlus.
+Require Import common.GlobalTypes.
+
+Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.HVhdlTypes.
 
@@ -197,4 +199,29 @@ Definition IsInjectedDState (σ__o : DState) (m : IdMap value) (σ__inj : DState
   forall idset, IsDiffInter (sigstore σ__o) m idset ->
                 NatSet.Equal (events σ__inj) ((events σ__o) U idset).
 
+(** ** Equivalence Relations between Elaborated Designs *)
+
+(** *** Generic Constant Set Equivalence *)
+
+Definition EqGens (Δ Δ' : ElDesign) :=
+  forall id t v,
+    MapsTo id (Generic t v) Δ <-> MapsTo id (Generic t v) Δ'.
+
+Definition EqGens_refl : forall (Δ : ElDesign), EqGens Δ Δ. firstorder. Defined.
+Definition EqGens_trans : forall (Δ Δ' Δ'' : ElDesign), EqGens Δ Δ' -> EqGens Δ' Δ'' -> EqGens Δ Δ''.
+  unfold EqGens; intros; transitivity (MapsTo id (Generic t0 v) Δ'); auto.
+Defined.
+Definition EqGens_sym : forall (Δ Δ' : ElDesign), EqGens Δ Δ' -> EqGens Δ' Δ.
+  unfold EqGens; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (ElDesign) (EqGens)
+    reflexivity proved by EqGens_refl
+    symmetry proved by EqGens_sym
+    transitivity proved by EqGens_trans
+      as EqGens_rel.           
+
+Hint Resolve EqGens_refl : hvhdl.
+Hint Resolve EqGens_trans : hvhdl.
+Hint Resolve EqGens_sym : hvhdl.
 

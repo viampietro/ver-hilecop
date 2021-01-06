@@ -62,21 +62,21 @@ with evar (Δ : ElDesign) (Λ : LEnv) : vdecl -> LEnv -> Prop :=
     It creates a map (i.e, a dimensioning function) binding generic
     constant ids to values.  *)
 
-Inductive emapg (dimen : IdMap value) : list assocg -> IdMap value -> Prop :=
+Inductive emapg (M__g : IdMap value) : list assocg -> IdMap value -> Prop :=
   
 (* Elaborates an empty generic map. No effect on the dimensioning function. *)
-| EMapGNil : emapg dimen [] dimen
+| EMapGNil : emapg M__g [] M__g
 
 (* Elaborates a sequence of generic map associations. *)
 | EMapGCons :
-    forall ag lofassocgs dimen' dimen'',
-      eassocg dimen ag dimen' ->
-      emapg dimen' lofassocgs dimen'' ->
-      emapg dimen (ag :: lofassocgs) dimen''
+    forall ag lofassocgs M__g' M__g'',
+      eassocg M__g ag M__g' ->
+      emapg M__g' lofassocgs M__g'' ->
+      emapg M__g (ag :: lofassocgs) M__g''
 
 (** Defines the elaboration relation for a single generic map association. *)
             
-with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
+with eassocg (M__g : IdMap value) : assocg -> IdMap value -> Prop :=
 | EAssocG :
     forall id e v,
 
@@ -85,70 +85,82 @@ with eassocg (dimen : IdMap value) : assocg -> IdMap value -> Prop :=
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
 
       (* Side conditions *)
-      ~NatMap.In id dimen ->
+      ~NatMap.In id M__g ->
 
       (* Conclusion *)
-      eassocg dimen (assocg_ id e) (add id v dimen).
+      eassocg M__g (assocg_ id e) (add id v M__g).
       
 
 (** * Design elaboration relation. *)
 
 (** Defines the design elaboration relation. *)
 
-Inductive edesign (dstore : IdMap design) : IdMap value -> design -> ElDesign -> DState -> Prop :=
+Inductive edesign (D__s : IdMap design) : IdMap value -> design -> ElDesign -> DState -> Prop :=
 | EDesign :
-    forall dimen entid archid gens ports sigs behavior
+    forall M__g id__e id__a gens ports sigs behavior
            Δ Δ' Δ'' Δ''' σ σ' σ'',
 
       (* Premises *)
-      egens EmptyElDesign dimen gens Δ ->
+      egens EmptyElDesign M__g gens Δ ->
       eports Δ EmptyDState ports Δ' σ ->
       edecls Δ' σ sigs Δ'' σ' ->
-      ebeh dstore Δ'' σ' behavior Δ''' σ'' ->
+      ebeh D__s Δ'' σ' behavior Δ''' σ'' ->
       
       (* Conclusion *)
-      edesign dstore dimen (design_ entid archid gens ports sigs behavior) Δ''' σ''    
+      edesign D__s M__g (design_ id__e id__a gens ports sigs behavior) Δ''' σ''    
 
 (** Defines the relation that elaborates the concurrent statements
     defining the behavior of a design.  *)
 
-with ebeh (dstore : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState -> Prop :=
+with ebeh (D__s : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState -> Prop :=
 
 (** Elaborates and type-checks a process statement. *)
 | EBehPs :
-    forall id sl vars stmt Λ Δ σ,
+    forall id__p sl vars stmt Λ Δ σ,
 
       (* Premises *)
       evars Δ EmptyLEnv vars Λ ->
       validss Δ σ Λ stmt ->
 
       (* Side conditions *)
-      ~NatMap.In id Δ ->
+      ~NatMap.In id__p Δ ->
       (* sl ⊆ Ins(Δ) ∪ Sigs(Δ) *)
-      (forall s,
-          NatSet.In s sl ->
-          exists t, MapsTo s (Declared t) Δ \/ MapsTo s (Input t) Δ) ->
+      (forall id__s,
+          NatSet.In id__s sl ->
+          exists t, MapsTo id__s (Declared t) Δ \/ MapsTo id__s (Input t) Δ) ->
 
       (* Conclusion *)
-      ebeh dstore Δ σ (cs_ps id sl vars stmt) (NatMap.add id (Process Λ) Δ) σ
+      ebeh D__s Δ σ (cs_ps id__p sl vars stmt) (NatMap.add id__p (Process Λ) Δ) σ
 
 (** Elaborates and type-checks a component instantiation statement. *)
 | EBehComp :
     forall Δ σ id__c id__e gmap ipmap opmap
-           dimen Δ__c σ__c cdesign,
+           M__g Δ__c σ__c cdesign,
 
       (* Premises *)
-      emapg (NatMap.empty value) gmap dimen ->
-      edesign dstore dimen cdesign Δ__c σ__c ->
+      emapg (NatMap.empty value) gmap M__g ->
+      edesign D__s M__g cdesign Δ__c σ__c ->
       validipm Δ Δ__c σ ipmap ->
       validopm Δ Δ__c opmap ->
       
       (* Side conditions *)
-      MapsTo id__e cdesign dstore ->
-      (forall g, NatMap.In g dimen -> exists t v, MapsTo g (Generic t v) Δ__c) ->
+      ~NatMap.In id__c Δ ->
+      MapsTo id__e cdesign D__s ->
+      (forall g, NatMap.In g M__g -> exists t v, MapsTo g (Generic t v) Δ__c) ->
       
       (* Conclusion *)
-      ebeh dstore Δ σ
+      ebeh D__s Δ σ
            (cs_comp id__c id__e gmap ipmap opmap)
            (NatMap.add id__c (Component Δ__c (behavior cdesign)) Δ)
-           (cstore_add id__c σ__c σ).
+           (cstore_add id__c σ__c σ)
+           
+(** Elaborates a null cs statement *)
+| EBehNull:
+    forall Δ σ, ebeh D__s Δ σ cs_null Δ σ
+
+(** Elaborates a || cs statement *)
+| EBehPar:
+    forall Δ Δ' Δ'' σ σ' σ'' cstmt cstmt',
+      ebeh D__s Δ σ cstmt Δ' σ' ->
+      ebeh D__s Δ' σ' cstmt' Δ'' σ'' ->
+      ebeh D__s Δ σ (cs_par cstmt cstmt') Δ'' σ''.

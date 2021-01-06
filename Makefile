@@ -38,17 +38,17 @@ SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v \
 
 # H-VHDL syntax and semantics.
 
-HVHDLFILES=HVhdlTypes.v AbstractSyntax.v AbstractSyntaxFacts.v SemanticalDomains.v \
-	Environment.v StaticExpressions.v DefaultValue.v \
+HVHDLFILES=HVhdlTypes.v AbstractSyntax.v AbstractSyntaxFacts.v AbstractSyntaxTactics.v \
+	SemanticalDomains.v Environment.v StaticExpressions.v DefaultValue.v \
 	ExpressionEvaluation.v ConstraintElaboration.v TypeElaboration.v \
 	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
-	ValidSS.v ValidPortMap.v DesignElaboration.v \
+	ValidSS.v ValidPortMap.v DesignElaboration.v Elaboration.v ElaborationFacts.v \
 	SSEvaluation.v PortMapEvaluation.v \
 	Petri.v \
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \
 	Place.v Transition.v \
 	Initialization.v HilecopDesignStore.v Simulation.v \
-	Elaboration.v WellDefinedDesign.v WellDefinedDesignFacts.v
+	WellDefinedDesign.v WellDefinedDesignFacts.v
 
 
 # SITPN to H-VHDL transformation.

@@ -327,7 +327,7 @@ Section SitpnFallingEdgeNotFirableNotFired.
       assert (Hnot_in_nil : ~In t []) by apply in_nil.
       (* Builds (~In t pgroup) to apply sitpn_fire_aux_not_in_not_fired. *)
       simpl in Hnot_in_concat.
-      generalize (not_app_in t pgroup (concat pgroups_tail) Hnot_in_concat)
+      generalize (not_app_in Hnot_in_concat)
         as Hnot_in_wedge; intro.
       elim Hnot_in_wedge; intros Hnot_in_pg Hnot_in_concat'.
       (* Applies sitpn_fire_aux_not_in_not_fired *)

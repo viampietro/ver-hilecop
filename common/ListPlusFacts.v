@@ -8,9 +8,9 @@ Require Import common.ListsPlus.
 Section Map.
 
   Lemma Map_in :
-    forall {A B : Type} (f : A -> B) lofAs lofBs,
+    forall {A B : Type} {f : A -> B} {lofAs lofBs},
       Map f lofAs lofBs ->
-      forall a,
+      forall {a},
         List.In a lofAs ->
         List.In (f a) lofBs.
   Proof.

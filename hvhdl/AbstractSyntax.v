@@ -154,7 +154,7 @@ Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) :
  *)
 
 Inductive vdecl : Type :=
-  vdecl_ (vid : ident) (t : tind).
+  vdecl_ (vid : ident) (τ : tind).
 
 (** Generic map entry; e.g:
 
@@ -240,18 +240,18 @@ Import HVhdlCsNotations.
 (** Generic constant declaration. *)
 
 Inductive gdecl : Type :=
-  gdecl_ (genid : ident) (t : tind) (e : expr).
+  gdecl_ (genid : ident) (τ : tind) (e : expr).
                                    
 (** Port declarations. *)
 
 Inductive pdecl : Type :=
-| pdecl_in (portid : ident) (t : tind)  (** Declaration of port in "in" mode. *)
-| pdecl_out (portid : ident) (t : tind). (** Declaration of port in "out" mode. *)
+| pdecl_in (portid : ident) (τ : tind)  (** Declaration of port in "in" mode. *)
+| pdecl_out (portid : ident) (τ : tind). (** Declaration of port in "out" mode. *)
             
 (** Signal declaration. *)
 
 Inductive sdecl : Type :=
-  sdecl_ (sigid : ident) (t : tind).
+  sdecl_ (sigid : ident) (τ : tind).
 
 (** Design declaration, i.e the entity-architecture couple; e.g:
     
