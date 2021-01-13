@@ -2,7 +2,7 @@
     expressions. *)
 
 Require Import Coqlib.
-Require Import ListsPlus.
+Require Import ListPlus.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.

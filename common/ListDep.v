@@ -1,7 +1,7 @@
 (** * Utilities for lists of dependent elements. *)
 
 Require Import List.
-Require Import ListsPlus.
+Require Import ListPlus.
 Require Import Coqlib.
 Require Import GlobalTypes.
 Require Import Nat.

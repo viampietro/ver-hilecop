@@ -11,9 +11,9 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 
 COMMONFILES=NatMap.v NatMapFacts.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
 	FstSplit.v InAndNoDup.v \
-	ListsPlus.v ListPlusTactics.v ListPlusFacts.v \
-	ListsDep.v \
-	StateAndErrorMonad.v ListsMonad.v
+	ListPlus.v ListPlusTactics.v ListPlusFacts.v \
+	ListDep.v \
+	StateAndErrorMonad.v ListMonad.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 

@@ -5,7 +5,7 @@ Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import common.GlobalTypes.
 Require Import dp.SitpnSemanticsDefs.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 
 Set Implicit Arguments.
 

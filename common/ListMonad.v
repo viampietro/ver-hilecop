@@ -2,7 +2,7 @@
 
 Require Import String.
 Require Import List.
-Require Import ListsDep.
+Require Import ListDep.
 Require Import StateAndErrorMonad.
 
 Import ListNotations.
@@ -19,14 +19,14 @@ Fixpoint find {A B} (f : B -> @Mon A bool) (l : list B) {struct l} : @Mon A (opt
 
 (** ** State-and-error monad version of iter *)
 
-Fixpoint iter {A B} (f : B -> @Mon A unit) (l : list B) {struct l} : @Mon A unit :=
+Fixpoint iter {state A} (f : A -> @Mon state unit) (l : list A) {struct l} : @Mon state unit :=
   match l with
   | nil => Ret tt
   | b :: tl => do _ <- iter f tl; f b
   end.
 
-Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
-  (forall a, In a lofAs -> B) -> @Mon C unit :=
+Fixpoint titer {state A B} (f : B -> @Mon state unit) (lofAs : list A) {struct lofAs} :
+  (forall a, In a lofAs -> B) -> @Mon state unit :=
   match lofAs with
   | nil => fun _ => Ret tt
   | a :: tl =>
@@ -39,6 +39,8 @@ Fixpoint titer {A B C} (f : B -> @Mon C unit) (lofAs : list A) {struct lofAs} :
       
       do _ <- titer f tl pf_tl; f b
   end.
+
+Functional Scheme titer_ind := Induction for titer Sort Prop.
 
 (** ** State-and-error monad version of map *)
 

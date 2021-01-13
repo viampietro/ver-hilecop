@@ -89,7 +89,7 @@ Proof.
   2, 4:
     split; intros Hmap;
     [ let apply_add_2 sobj := ltac: (apply (add_2 sobj Hneq_id Hmap)) in
-      (apply_add_2 (Process Λ) || apply_add_2 (Component Δ__c (behavior cdesign)))
+      (apply_add_2 (Process Λ) || apply_add_2 (Component Δ__c))
     | apply (add_3 Hneq_id Hmap)
     ].
   1, 2:
@@ -111,7 +111,7 @@ Proof.
            inversion Heq_semobj
          end
         )
-    in (tac (Process Λ) || tac (Component Δ__c (behavior cdesign)))
+    in (tac (Process Λ) || tac (Component Δ__c))
     ].
 Qed.
 

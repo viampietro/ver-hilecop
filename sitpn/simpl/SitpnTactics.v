@@ -1,4 +1,4 @@
-Require Import ListsPlus.
+Require Import ListPlus.
 Require Import simpl.Sitpn.
 Require Import simpl.SitpnSemantics.
 
@@ -314,13 +314,13 @@ Ltac clear_well_defined_sitpn_state :=
   end.
 
 Ltac explode_well_defined_sitpn_state Hwell_def_state :=
-  lazymatch Hwell_def_state with
-  | ?H : IsWellDefinedSitpnState _ _  =>
-    assert (H' := H); 
-    unfold IsWellDefinedSitpnState in H;
-    decompose [and] H;
+  lazymatch type of Hwell_def_state with
+  | IsWellDefinedSitpnState _ _  =>
+    assert (H' := Hwell_def_state); 
+    unfold IsWellDefinedSitpnState in Hwell_def_state;
+    decompose [and] Hwell_def_state;
     rename_well_defined_sitpn_state;
-    clear H;
+    clear Hwell_def_state;
     rename H' into Hwell_def_state
   | _ => fail "Hwell_def_state is not of the form IsWellDefinedSitpnState"
   end.

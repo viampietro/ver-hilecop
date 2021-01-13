@@ -3,25 +3,25 @@
 (** Defines two relations that evaluate synchronous concurrent
     statements: the evaluation relation on the falling edge event of
     the clock signal, and the evaluation relation on the rising edge
-    of the clock signal.
+    of the clock signal. *)
 
- *)
+Require Import common.GlobalTypes.
+Require Import common.NatSet.
 
-Require Import AbstractSyntax.
-Require Import Environment.
-Require Import SSEvaluation.
-Require Import PortMapEvaluation.
-Require Import GlobalTypes.
-Require Import SSEvaluation.
-Require Import Petri.
-Require Import NatSet.
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.Environment.
+Require Import hvhdl.SSEvaluation.
+Require Import hvhdl.PortMapEvaluation.
+Require Import hvhdl.SSEvaluation.
+Require Import hvhdl.Petri.
+Require Import hvhdl.HVhdlTypes.
 
 Include HVhdlCsNotations.
 
 (** Defines the relation that evaluates concurrent statement in
     reaction to the rising edge event of the clock signal. *)
 
-Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
+Inductive vrising (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement that does not hold the reserved
     identifier [clk] (referring to the clock signal identifier) in its
@@ -34,7 +34,7 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       ~NatSet.In clk sl ->
       
       (* * Conclusion * *)
-      vrising Δ σ (cs_ps pid sl vars stmt) σ
+      vrising D__s Δ σ (cs_ps pid sl vars stmt) σ
 
 (** Evaluates a process statement that is sensitive to the clock
     signal.
@@ -54,7 +54,7 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       NatMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
-      vrising Δ σ (cs_ps pid sl vars stmt) σ'
+      vrising D__s Δ σ (cs_ps pid sl vars stmt) σ'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -63,60 +63,70 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     embedding design. *)
 
 | VRisingCompEvents :
-    forall {compid entid gmap ipmap opmap cstmt
+    forall {compid entid gmap ipmap opmap d
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
-      vrising Δ__c σ__c' cstmt σ__c'' ->
+      vrising D__s Δ__c σ__c' (behavior d) σ__c'' ->
       mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
-      (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      (* [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
       
-      (* compid ∈ σ and σ(compid) = σ__c *)
+      (* [compid ∈ Comps(Δ)] and [Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ] and [σ(compid) = σ__c] *)
       NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* Events registered in σ__c''. *)
+      (* Events registered in [σ__c'']. *)
       events σ__c'' <> NatSet.empty ->
       
       (* * Conclusion * *)
-      (* Add compid to the events field of σ' because compid
-         registered some events in its internal state. *)
-      vrising Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
+      
+      (* Add [compid] to the events field of [σ'] because [compid]
+         registered some events in its internal state.
+
+         Associates [compid] to its new state [σ__c''] in the component
+         store of [σ'].  *)
+      vrising D__s Δ σ (cs_comp compid entid gmap ipmap opmap) (cstore_add compid σ__c'' (events_add compid σ'))
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
     registered no events. *)
 
 | VRisingCompNoEvent :
-    forall {compid entid gmap ipmap opmap cstmt
+    forall {compid entid gmap ipmap opmap d
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
-      vrising Δ__c σ__c' cstmt σ__c'' ->
+      vrising D__s Δ__c σ__c' (behavior d) σ__c'' ->
       mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
-      (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      (* [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
       
-      (* compid ∈ σ and σ(compid) = σ__c *)
+      (* [compid ∈ Comps(Δ)] and [Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ] and [σ(compid) = σ__c] *)
       NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* No event registered in σ__c''. *)
+      (* No event registered in [σ__c'']. *)
       events σ__c'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vrising Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
+      vrising D__s Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
 (** Evaluates the null statement. *)
 
-| VRisingNull : vrising Δ σ cs_null σ
+| VRisingNull : vrising D__s Δ σ cs_null σ
               
 (** Evaluates the parallel execution of two synchronous concurrent
     statements.  *)
@@ -125,8 +135,8 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' σ' σ'' merged},
 
       (* * Premises * *)
-      vrising Δ σ cstmt σ' ->
-      vrising Δ σ cstmt' σ'' ->
+      vrising D__s Δ σ cstmt σ' ->
+      vrising D__s Δ σ cstmt' σ'' ->
 
       (* * Side conditions * *)
       
@@ -138,12 +148,12 @@ Inductive vrising (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       IsMergedDState σ σ' σ'' merged ->
       
       (* * Conclusion * *)
-      vrising Δ σ (cstmt // cstmt') merged.
+      vrising D__s Δ σ (cstmt // cstmt') merged.
 
 (** Defines the relation that evaluates concurrent statement in
     reaction to the falling edge event of the clock signal. *)
 
-Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
+Inductive vfalling (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement that does not hold the reserved
     identifier [clk] (referring to the clock signal identifier) in its
@@ -156,7 +166,7 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       ~NatSet.In clk sl ->
       
       (* * Conclusion * *)
-      vfalling Δ σ (cs_ps pid sl vars stmt) σ
+      vfalling D__s Δ σ (cs_ps pid sl vars stmt) σ
 
 (** Evaluates a process statement that is sensitive to the clock
     signal.
@@ -176,69 +186,77 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       NatMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
-      vfalling Δ σ (cs_ps pid sl vars stmt) σ'
+      vfalling D__s Δ σ (cs_ps pid sl vars stmt) σ'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
-    registered some events. Therefore, we need to add the component
-    identifier to the events field in the state of the
-    embedding design. *)
+    registered some events. *)
 
 | VFallingCompEvents :
-    forall {compid entid gmap ipmap opmap cstmt
+    forall {compid entid gmap ipmap opmap d
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
-      vfalling Δ__c σ__c' cstmt σ__c'' ->
+      vfalling D__s Δ__c σ__c' (behavior d) σ__c'' ->
       mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
-
-      (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
-      (* compid ∈ σ and σ(compid) = σ__c *)
+      (* [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
+      
+      (* [compid ∈ Comps(Δ) and Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ and σ(compid) = σ__c] *)
       NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* Events registered in σ__c''. *)
+      (* Events registered in [σ__c'']. *)
       events σ__c'' <> NatSet.empty ->
       
       (* * Conclusion * *)
       (* Add compid to the events field of σ' because compid
-         registered some events in its internal state. *)
-      vfalling Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
+         registered some events in its internal state.
+
+         Associates [compid] to its new state [σ__c''] in the component
+         store of [σ'].  *)
+      
+      vfalling D__s Δ σ (cs_comp compid entid gmap ipmap opmap) (cstore_add compid σ__c'' (events_add compid σ'))
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
     registered no events. *)
 
 | VFallingCompNoEvent :
-    forall {compid entid gmap ipmap opmap cstmt
+    forall {compid entid gmap ipmap opmap d
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
-      vfalling Δ__c σ__c' cstmt σ__c'' ->
+      vfalling D__s Δ__c σ__c' (behavior d) σ__c'' ->
       mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
-
-      (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
       
-      (* compid ∈ σ and σ(compid) = σ__c *)
+      (* [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
+      
+      (* [compid ∈ Comps(Δ)] and [Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ] and [σ(compid) = σ__c] *)
       NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* No event registered in σ__c''. *)
+      (* No event registered in [σ__c'']. *)
       events σ__c'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vfalling Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
+      vfalling D__s Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
 (** Evaluates the null statement. *)
 
-| VFallingNull : vfalling Δ σ cs_null σ
+| VFallingNull : vfalling D__s Δ σ cs_null σ
                
 (** Evaluates the parallel execution of two synchronous concurrent
     statements.  *)
@@ -247,8 +265,8 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' σ' σ'' merged},
 
       (* * Premises * *)
-      vfalling Δ σ cstmt σ' ->
-      vfalling Δ σ cstmt' σ'' ->
+      vfalling D__s Δ σ cstmt σ' ->
+      vfalling D__s Δ σ cstmt' σ'' ->
 
       (* * Side conditions * *)
       
@@ -260,4 +278,4 @@ Inductive vfalling (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       IsMergedDState σ σ' σ'' merged ->
       
       (* * Conclusion * *)
-      vfalling Δ σ (cstmt // cstmt') merged.
+      vfalling D__s Δ σ (cstmt // cstmt') merged.

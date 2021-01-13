@@ -2,15 +2,15 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalFacts.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import dp.SitpnFacts.
-Require Import common.ListsDep.
+Require Import common.ListDep.
 Require Import common.GlobalTypes.
 Require Import String.
 Require Import common.StateAndErrorMonad.
-Require Import common.ListsMonad.
+Require Import common.ListMonad.
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 Require Import FunInd.
 
@@ -48,7 +48,7 @@ Section GenSitpnInfos.
     Definition get_inputs_of_t (t : T sitpn) : CompileTimeState (list (P sitpn)) :=    
       (* Tests if a place is an input of t. *)
       let is_input_of_t := (fun p => if (pre p t) then true else false) in
-      Ret (tfilter is_input_of_t (P2List sitpn) nat_to_P).
+      Ret (tfilter is_input_of_t (places sitpn) nat_to_P).
 
     (** Returns the list of conditions associated to transition [t].
     
@@ -58,7 +58,7 @@ Section GenSitpnInfos.
     Definition get_conds_of_t (t : T sitpn) : CompileTimeState (list (C sitpn)) :=
       (* Tests if a condition is associated to t. *)
       let is_cond_of_t := (fun c => (match has_C t c with one | mone => true | zero => false end)) in
-      Ret (tfilter is_cond_of_t (C2List sitpn) nat_to_C).
+      Ret (tfilter is_cond_of_t (conditions sitpn) nat_to_C).
     
     (** Computes the information about transition t, and adds it to
         the current state. *)
@@ -72,7 +72,7 @@ Section GenSitpnInfos.
         modifying the current state. *)
 
     Definition generate_trans_infos : CompileTimeState unit :=
-      titer add_tinfo (T2List sitpn) nat_to_T.
+      titer add_tinfo (transitions sitpn) nat_to_T.
 
   End TransitionInfos.
 
@@ -120,7 +120,7 @@ Section GenSitpnInfos.
       (* Iterates over the list of transitions, and builds the couple of
          lists (tinputs, touputs) of p along the way by applying
          function is_neighbor_of_p.  *)
-      match ListsDep.tfold_left get_neighbor_of_p (T2List sitpn) (nil, nil, nil) nat_to_T with
+      match ListDep.tfold_left get_neighbor_of_p (transitions sitpn) (nil, nil, nil) nat_to_T with
       | (nil, nil, nil) => Err ("Place " ++ $$p ++ " is an isolated place.")
       | tin_tc_tout => Ret tin_tc_tout 
       end.
@@ -333,7 +333,7 @@ Section GenSitpnInfos.
         current state. *)
     
     Definition generate_place_infos : CompileTimeState unit :=
-      titer add_pinfo (P2List sitpn) nat_to_P.
+      titer add_pinfo (places sitpn) nat_to_P.
     
   End PlaceInfos.
   
@@ -345,7 +345,7 @@ Section GenSitpnInfos.
 
     Definition get_transs_of_c (c : C sitpn) : CompileTimeState (list (T sitpn)) :=
       let is_trans_of_c := (fun t => (match has_C t c with one | mone => true | zero => false end)) in
-      Ret (tfilter is_trans_of_c (T2List sitpn) nat_to_T).
+      Ret (tfilter is_trans_of_c (transitions sitpn) nat_to_T).
 
     (** Computes the information about transition c, and adds it to
         the current state. *)
@@ -358,12 +358,12 @@ Section GenSitpnInfos.
         modifying the current state. *)
 
     Definition generate_cond_infos : CompileTimeState unit :=
-      titer add_cinfo (C2List sitpn) nat_to_C.
+      titer add_cinfo (conditions sitpn) nat_to_C.
     
     (** Returns the list of transitions associated to function [f]. *)
 
     Definition get_transs_of_f (f : F sitpn) : CompileTimeState (list (T sitpn)) :=
-      Ret (tfilter (fun t => has_F t f) (T2List sitpn) nat_to_T).
+      Ret (tfilter (fun t => has_F t f) (transitions sitpn) nat_to_T).
 
     (** Computes the information about function f, and adds it to
         the current state. *)
@@ -376,12 +376,12 @@ Section GenSitpnInfos.
         thus modifying the current state. *)
     
     Definition generate_fun_infos : CompileTimeState unit :=
-      titer add_finfo (F2List sitpn) nat_to_F.
+      titer add_finfo (functions sitpn) nat_to_F.
     
     (** Returns the list of places associated to action [a]. *)
 
     Definition get_places_of_a (a : A sitpn) : CompileTimeState (list (P sitpn)) :=
-      Ret (tfilter (fun p => has_A p a) (P2List sitpn) nat_to_P).    
+      Ret (tfilter (fun p => has_A p a) (places sitpn) nat_to_P).    
 
     (** Computes the information about action a, and adds it to the
         current state. *)
@@ -394,7 +394,7 @@ Section GenSitpnInfos.
       [sitpn], thus modifying the current state. *)
     
     Definition generate_action_infos : CompileTimeState unit :=
-      titer add_ainfo (A2List sitpn) nat_to_A.
+      titer add_ainfo (actions sitpn) nat_to_A.
     
   End InterpretationInfos.
 
@@ -436,7 +436,7 @@ Section GenSitpnInfos.
         error if not. *)
     
     Definition check_pr_is_trans :=
-      let Tlist :=  ListsDep.tmap id (transitions sitpn) nat_to_T in
+      let Tlist :=  ListDep.tmap id (transitions sitpn) nat_to_T in
       let f := fun x trs => foreach_x_check_trans x trs in
       foreach f Tlist.
 
@@ -550,5 +550,3 @@ Definition generate_sitpn_infos
   do _ <- generate_cond_infos sitpn; 
   do _ <- generate_action_infos sitpn;
   generate_fun_infos sitpn.
-
-

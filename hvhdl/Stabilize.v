@@ -6,17 +6,19 @@
     then the design is said to be stabilized.
  *)
 
-Require Import Coqlib.
-Require Import NatMap.
-Require Import NatSet.
-Require Import Environment.
-Require Import AbstractSyntax.
-Require Import CombinationalEvaluation.
-Require Import ListsPlus.
+Require Import common.Coqlib.
+Require Import common.NatMap.
+Require Import common.NatSet.
+Require Import common.ListPlus.
+
+Require Import hvhdl.Environment.
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.CombinationalEvaluation.
+Require Import hvhdl.HVhdlTypes.
 
 (** Defines the stabilization relation. *)
 
-Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState -> DState -> Prop :=
+Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState -> DState -> Prop :=
 
 (** Case when the design state [σ] registered no event; it has
     stabilized.  The stabilization trace is empty (4th argument). *)
@@ -26,7 +28,7 @@ Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState 
     events σ = NatSet.empty ->
     
     (* * Conclusion * *)
-    stabilize Δ σ behavior [] σ 
+    stabilize D__s Δ σ behavior [] σ 
   
 (** Case when the design state [σ] registered some events;
     therefore it has not stabilized.
@@ -38,8 +40,8 @@ Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState 
     forall σ' σ'' θ,
       
       (* * Premises * *)
-      vcomb Δ σ behavior σ' ->
-      stabilize Δ σ' behavior θ σ'' ->
+      vcomb D__s Δ σ behavior σ' ->
+      stabilize D__s Δ σ' behavior θ σ'' ->
 
       (* * Side conditions * *)
       
@@ -50,13 +52,13 @@ Inductive stabilize (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState 
       events σ'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      stabilize Δ σ behavior (σ' :: θ) σ''.
+      stabilize D__s Δ σ behavior (σ' :: θ) σ''.
 
 (** ** Facts about [stabilize] *)
 
 Lemma is_last_of_trace :
-  forall Δ σ behavior θ σ',
-    stabilize Δ σ behavior θ σ' ->
+  forall D__s Δ σ behavior θ σ',
+    stabilize D__s Δ σ behavior θ σ' ->
     (Last θ σ' \/ σ = σ').
 Proof.
   induction 1.
@@ -67,7 +69,7 @@ Proof.
   (* IND. CASE. *)
   - destruct θ.
     + lazymatch goal with
-      | [ H: stabilize _ _ _ [] _ |- _ ] =>
+      | [ H: stabilize _ _ _ _ [] _ |- _ ] =>
         inversion H; left; apply Last_singleton
       end.
     + inversion_clear IHstabilize as [Hlast | Heq].
@@ -76,8 +78,8 @@ Proof.
 Qed.
 
 Lemma last_no_event :
-  forall Δ σ behavior θ σ',
-    stabilize Δ σ behavior θ σ' ->
+  forall D__s Δ σ behavior θ σ',
+    stabilize D__s Δ σ behavior θ σ' ->
     Last θ σ' ->
     events σ' = {[]}.
 Proof.
@@ -94,8 +96,8 @@ Qed.
    stabilization trace. *)
 
 Lemma stable_value_signal :
-  forall θ Δ σ behavior σ',
-    stabilize Δ σ behavior θ σ' ->
+  forall D__s θ Δ σ behavior σ',
+    stabilize D__s Δ σ behavior θ σ' ->
     (forall s,
       (exists v, MapsTo s v (sigstore σ)) ->
       (exists θ', θ' <> []
@@ -115,11 +117,11 @@ Proof.
   - left; intros.
     
     lazymatch goal with
-    | [ Hvcomb: vcomb _ _ _ _, H: (exists v, MapsTo s v (sigstore σ)) |- _ ] =>
+    | [ Hvcomb: vcomb _ _ _ _ _, H: (exists v, MapsTo s v (sigstore σ)) |- _ ] =>
 
       (* s has a value at σ' *)
       inversion_clear H as (v, Hmaps);
-        specialize (comb_maps_sigid Δ σ behavior σ' s v Hvcomb Hmaps) as Hex_v'
+        specialize (comb_maps_sigid D__s Δ σ behavior σ' s v Hvcomb Hmaps) as Hex_v'
     end.
 
     (* 2 CASES: θ' <> [] or σ' = σ'' *)
@@ -142,7 +144,7 @@ Proof.
        an empty event set. *)
       
     + lazymatch goal with
-      | [ H: stabilize _ _ _ _ _ |- _ ] =>
+      | [ H: stabilize _ _ _ _ _ _ |- _ ] =>
         inversion H
       end.
 

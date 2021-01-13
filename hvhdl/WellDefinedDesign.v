@@ -1,7 +1,7 @@
 (** * Well-definition of H-VHDL Design *)
 
 Require Import common.Coqlib.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HVhdlTypes.

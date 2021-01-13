@@ -31,6 +31,8 @@ Require Import hvhdl.HilecopDesignStore.
     phases that happen during a cycle, and generates a new design
     state [σ'].
 
+    - [D__s] is the global design store.
+
     - [E__p] is the function yielding the values of input ports at a
       given simulation time and for a given clock signal event.
       
@@ -38,6 +40,7 @@ Require Import hvhdl.HilecopDesignStore.
       yet to be executed.  *)
 
 Inductive simcycle
+          (D__s : IdMap design)
           (E__p : nat -> Clk -> IdMap value)
           (Δ : ElDesign)
           (τ : nat)
@@ -52,10 +55,10 @@ Inductive simcycle
       
       (* * Premises * *)
       
-      vrising Δ σ__injr behavior σ__r ->
-      stabilize Δ σ__r behavior θ σ' ->
-      vfalling Δ σ__injf behavior σ__f ->
-      stabilize Δ σ__f behavior θ' σ'' ->
+      vrising D__s Δ σ__injr behavior σ__r ->
+      stabilize D__s Δ σ__r behavior θ σ' ->
+      vfalling D__s Δ σ__injf behavior σ__f ->
+      stabilize D__s Δ σ__f behavior θ' σ'' ->
 
       (* * Side conditions * *)
 
@@ -69,7 +72,7 @@ Inductive simcycle
       IsInjectedDState σ' (E__p τ fe) σ__injf ->
       
       (* * Conclusion * *)
-      simcycle E__p Δ τ σ behavior σ''.
+      simcycle D__s E__p Δ τ σ behavior σ''.
 
 (** Defines the simulation loop relation, that relates the design
     state through simulation cycles, until the time counter reaches
@@ -80,6 +83,7 @@ Inductive simcycle
     of the simulation.  *)
 
 Inductive simloop
+          (D__s : IdMap design)
           (E__p : nat -> Clk -> IdMap value)
           (Δ : ElDesign)
           (σ : DState)
@@ -92,17 +96,17 @@ Inductive simloop
     forall τ σ' θ,
 
       (* * Premises * *)
-      simcycle E__p Δ (S τ) σ behavior σ' ->
+      simcycle D__s E__p Δ (S τ) σ behavior σ' ->
       
-      simloop E__p Δ σ' behavior τ θ ->
+      simloop D__s E__p Δ σ' behavior τ θ ->
             
       (* * Conclusion * *)
-      simloop E__p Δ σ behavior (S τ) (σ' :: θ)
+      simloop D__s E__p Δ σ behavior (S τ) (σ' :: θ)
 
 (** Stops if time counter is zero and produce an empty loop trace. *)
               
 | SimLoopEnd :
-    simloop E__p Δ σ behavior 0 [].
+    simloop D__s E__p Δ σ behavior 0 [].
 
 Hint Constructors simloop : hvhdl.
 
@@ -110,7 +114,7 @@ Hint Constructors simloop : hvhdl.
     state) relation that establish a link between a H-VHDL design and
     its simulation trace .
 
-    - [dstore], the design store that maps design identifiers (i.e,
+    - [D__s], the design store that maps design identifiers (i.e,
       the identifier of the entity part of the design) to their
       description in abstract syntax.
 
@@ -130,7 +134,7 @@ Hint Constructors simloop : hvhdl.
  *)
 
 Inductive fullsim
-          (dstore : IdMap design)
+          (D__s : IdMap design)
           (Mg : IdMap value)
           (E__p : nat -> Clk -> IdMap value)
           (τ : nat)
@@ -142,12 +146,12 @@ Inductive fullsim
       
       (* * Premises * *)
 
-      edesign dstore Mg d Δ σ__e ->         (* Elaboration *)
-      init Δ σ__e (behavior d) σ0 ->        (* Initialization *)
-      simloop E__p Δ σ0 (behavior d) τ θ -> (* Simulation loop *)
+      edesign D__s Mg d Δ σ__e ->         (* Elaboration *)
+      init D__s Δ σ__e (behavior d) σ0 ->        (* Initialization *)
+      simloop D__s E__p Δ σ0 (behavior d) τ θ -> (* Simulation loop *)
                     
       (* * Conclusion * *)
-      fullsim dstore Mg E__p τ Δ d (σ0 :: θ).
+      fullsim D__s Mg E__p τ Δ d (σ0 :: θ).
 
 Hint Constructors fullsim : hvhdl.
 

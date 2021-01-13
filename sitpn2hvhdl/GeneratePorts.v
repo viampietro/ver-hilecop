@@ -2,9 +2,9 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
-Require Import common.ListsPlus.
-Require Import common.ListsDep.
-Require Import common.ListsMonad.
+Require Import common.ListPlus.
+Require Import common.ListDep.
+Require Import common.ListMonad.
 Require Import common.StateAndErrorMonad.
 Require Import String.
 Require Import dp.Sitpn.
@@ -127,7 +127,7 @@ Section GeneratePortsAndPs.
 
     Definition generate_action_map : CompileTimeState unit :=
       (* Calls add_action_map_entry on each action of sitpn. *)
-      titer add_action_map_entry (A2List sitpn) nat_to_A.
+      titer add_action_map_entry (actions sitpn) nat_to_A.
 
     (** (1) Adds a new output port representing the activation state of
       action [a] in the list of port declarations [aports].
@@ -165,7 +165,7 @@ Section GeneratePortsAndPs.
         
         do rst_and_falling_ss <- tfold_left
                                    generate_action_port_and_ss
-                                   (A2List sitpn) (ss_null, ss_null) nat_to_A;
+                                   (actions sitpn) (ss_null, ss_null) nat_to_A;
         let (rstss, fallingss) := rst_and_falling_ss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
@@ -190,7 +190,7 @@ Section GeneratePortsAndPs.
 
     Definition generate_fun_map : CompileTimeState unit :=
       (* Calls add_fun_map_entry on each function of sitpn. *)
-      titer add_fun_map_entry (F2List sitpn) nat_to_F.
+      titer add_fun_map_entry (functions sitpn) nat_to_F.
     
     (** (1) Adds a new output port representing the execution state of
       function [f] in the output port declaration list.
@@ -226,7 +226,7 @@ Section GeneratePortsAndPs.
         
         do rst_and_rising_ss <- tfold_left
                                    generate_fun_port_and_ss
-                                   (F2List sitpn) (ss_null, ss_null) nat_to_F;
+                                   (functions sitpn) (ss_null, ss_null) nat_to_F;
         let (rstss, risingss) := rst_and_rising_ss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
@@ -306,7 +306,7 @@ Section GeneratePortsAndPs.
     Definition generate_and_connect_cond_ports : CompileTimeState unit :=
 
       (* Calls [generate_and_connect_cond_port] for each condition of [sitpn]. *)
-      titer generate_and_connect_cond_port (C2List sitpn) nat_to_C.
+      titer generate_and_connect_cond_port (conditions sitpn) nat_to_C.
     
   End GenerateAndConnectCondPorts.
 

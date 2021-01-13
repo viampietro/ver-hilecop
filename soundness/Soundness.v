@@ -5,7 +5,7 @@ Require Import NatMap.
 Require Import common.Coqlib.
 Require Import common.InAndNoDup.
 Require Import common.GlobalTypes.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 
 (* SITPN Libraries *)
 

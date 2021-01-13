@@ -2,8 +2,8 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
-Require Import common.ListsPlus.
-Require Import common.ListsDep.
+Require Import common.ListPlus.
+Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
 Require Import String.
 Require Import dp.Sitpn.
@@ -48,9 +48,9 @@ Section GenArch.
       CompileTimeState genmap :=
       
       (* Error case: p has no input or output transitions. *)
-      if ListsPlus.is_empty (tinputs pinfo)
-         && ListsPlus.is_empty (tconflict pinfo)
-         && ListsPlus.is_empty (toutputs pinfo) then
+      if ListPlus.is_empty (tinputs pinfo)
+         && ListPlus.is_empty (tconflict pinfo)
+         && ListPlus.is_empty (toutputs pinfo) then
         Err ("generate_place_gen_map: "
                ++ "Place " ++ $$p
                ++ " is an isolated place.")%string
@@ -87,7 +87,7 @@ Section GenArch.
 
       (* Iterates and calls get_in_arc_weight over all input transitions
        of p. *)
-      ListsMonad.fold_left get_in_arc_weight (tinputs pinfo) p_in_arcs_weights.
+      ListMonad.fold_left get_in_arc_weight (tinputs pinfo) p_in_arcs_weights.
 
     (** Returns the list of output arc weights and types of place [p]. *)
     
@@ -115,7 +115,7 @@ Section GenArch.
 
       (* Iterates and calls get_in_arc_weight over all input transitions
        of p. *)
-      ListsMonad.fold_left get_out_arc_wandt (toutputs pinfo) p_out_arcs_wandt.
+      ListMonad.fold_left get_out_arc_wandt (toutputs pinfo) p_out_arcs_wandt.
     
     (** Generates a part of the input map (static part) for the place
       component representing place [p]. *)
@@ -151,7 +151,7 @@ Section GenArch.
         sets it in the architecture of the compile-time state. *)
 
     Definition generate_place_map (max_marking : nat) : CompileTimeState unit :=
-      do plmap <- ListsMonad.tmap (fun p => generate_place_map_entry p max_marking) (P2List sitpn) nat_to_P;
+      do plmap <- ListMonad.tmap (fun p => generate_place_map_entry p max_marking) (places sitpn) nat_to_P;
       do arch <- get_arch;
       let '(sigs, _, trmap, fmap, amap) := arch in
       (* Sets the architecture with a new [PlaceMap] *)
@@ -256,7 +256,7 @@ Section GenArch.
     (** Returns the TransMap built out the list of transitions of [sitpn]. *)
 
     Definition generate_trans_map : CompileTimeState unit :=
-      do trmap <- ListsMonad.tmap generate_trans_map_entry (T2List sitpn) nat_to_T;
+      do trmap <- ListMonad.tmap generate_trans_map_entry (transitions sitpn) nat_to_T;
       do arch <- get_arch;
       let '(sigs, plmap, _, fmap, amap) := arch in
       set_arch (sigs, plmap, trmap, fmap, amap).
@@ -357,7 +357,7 @@ Section GenArch.
       
       (* Calls the connect_fired function over all transitions
          of the transs list. *)
-      ListsMonad.fold_left connect_fired_port transs lofexprs.
+      ListMonad.fold_left connect_fired_port transs lofexprs.
 
     Definition connect_in_port
                (ipid : ident)
@@ -495,7 +495,7 @@ Section GenArch.
       in
       (* Calls connect_popmap_to_tipmap on every output transitions of
        p.  *)
-      ListsMonad.fold_left wconn_pop_to_tip (toutputs pinfo) pcomp.
+      ListMonad.fold_left wconn_pop_to_tip (toutputs pinfo) pcomp.
 
     (** Retrieves the component [pcomp] associated to place [p] in the
         architecture of the compile-time state, and connects its input
@@ -524,7 +524,7 @@ Section GenArch.
       CompileTimeState unit :=
       
       (* Calls interconnect_p on each place of sitpn. *)
-      ListsMonad.titer interconnect_p (P2List sitpn) nat_to_P.
+      ListMonad.titer interconnect_p (places sitpn) nat_to_P.
     
   End GenerateInterconnections.
 

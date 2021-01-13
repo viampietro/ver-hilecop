@@ -1,5 +1,5 @@
 Require Import Coqlib.
-Require Import ListsPlus.
+Require Import ListPlus.
 
 (* Import Sitpn material. *)
 

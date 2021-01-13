@@ -2,7 +2,7 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
-Require Import ListsPlus.
+Require Import ListPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import dp.SitpnSemanticsDefs.

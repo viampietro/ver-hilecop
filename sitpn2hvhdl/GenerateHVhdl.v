@@ -2,21 +2,20 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
-Require Import common.ListsPlus.
-Require Import common.ListsDep.
+Require Import common.ListPlus.
+Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
-Require Import common.ListsMonad.
+Require Import common.ListMonad.
 Require Import String.
+
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Petri.
 Require Import hvhdl.HVhdlTypes.
+
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
-
-(* Import transformation functions. *)
-
 Require Import sitpn2hvhdl.GenerateInfos.
 Require Import sitpn2hvhdl.GenerateArchitecture.
 Require Import sitpn2hvhdl.GeneratePorts.
@@ -195,7 +194,7 @@ Section Sitpn2HVhdl.
         [sitpn], thus modifying the compile-time state. *)
     
     Definition generate_place_comp_insts : CompileTimeState unit :=
-      titer generate_place_comp_inst (P2List sitpn) nat_to_P.
+      titer generate_place_comp_inst (places sitpn) nat_to_P.
     
   End GeneratePlaceCompInst.
 
@@ -227,7 +226,7 @@ Section Sitpn2HVhdl.
         [sitpn], thus modifying the compile-time state. *)
     
     Definition generate_trans_comp_insts : CompileTimeState unit :=
-      titer generate_trans_comp_inst (T2List sitpn) nat_to_T.
+      titer generate_trans_comp_inst (transitions sitpn) nat_to_T.
     
   End GenerateTransCompInst.
 
@@ -241,16 +240,26 @@ Section Sitpn2HVhdl.
         
   (** Defines the transformation function that generates an H-VHDL design
       from an SITPN. *)
-  
+
+  Definition generate_design_and_binder (entid archid : ident) : CompileTimeState (design * Sitpn2HVhdlMap sitpn):=
+    do s <- Get;
+    let '(sigs, _, _, _, _) := (arch s) in
+    Ret ((design_ entid archid [] ((iports s) ++ (oports s)) sigs (beh s)), (γ s)).
+    
   Definition sitpn_to_hvhdl (entid archid : ident) (max_marking : nat) :
     (design * Sitpn2HVhdlMap sitpn) + string :=
-    RedV ((do _ <- generate_sitpn_infos sitpn decpr;
-           do _ <- generate_architecture max_marking;
-           do _ <- generate_ports;
-           do _ <- generate_comp_insts;
-           do s <- Get;
-           let '(sigs, _, _, _, _) := (arch s) in
-           Ret ((design_ entid archid [] ((iports s) ++ (oports s)) sigs (beh s)), (γ s)))
-            (InitS2HState sitpn Petri.ffid)).
+    RedV 
+      ((do _ <- generate_sitpn_infos sitpn decpr;
+        do _ <- generate_architecture max_marking;
+        do _ <- generate_ports;
+        do _ <- generate_comp_insts;
+        generate_design_and_binder entid archid)
+         (InitS2HState sitpn Petri.ffid)).
   
 End Sitpn2HVhdl.
+
+Require Import FunInd.
+
+Functional Scheme sitpn_to_hvhdl_ind := Induction for sitpn_to_hvhdl Sort Prop.
+Functional Scheme generate_comp_insts_ind := Induction for generate_comp_insts Sort Prop.
+

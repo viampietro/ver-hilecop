@@ -2,7 +2,7 @@
 (*! ======= SITPN SEMANTICS ======= !*)
 (*! =============================== !*)
 
-Require Export ListsPlus.
+Require Export ListPlus.
 Require Import simpl.Sitpn.
 
 (** * General preliminary definitions.  *)

@@ -53,7 +53,7 @@ Proof.
   - contradiction.
   - inversion_clear 1.
     + lazymatch goal with
-      | [ Heq: _ = _, Hfoldl: ListsPlus.FoldL _ _ _ _ |- _ ] =>
+      | [ Heq: _ = _, Hfoldl: ListPlus.FoldL _ _ _ _ |- _ ] =>
         rewrite Heq in Hfoldl; simpl in Hfoldl; eapply FoldL_in_acc; eauto
       end.
       -- apply in_last.
@@ -75,7 +75,7 @@ Proof.
   - contradiction.
   - inversion_clear 1.
     + lazymatch goal with
-      | [ Heq: _ = _, Hfoldl: ListsPlus.FoldL _ _ _ _ |- _ ] =>
+      | [ Heq: _ = _, Hfoldl: ListPlus.FoldL _ _ _ _ |- _ ] =>
         rewrite Heq in Hfoldl; simpl in Hfoldl; eapply FoldL_in_acc; eauto
       end.
       -- apply in_last.

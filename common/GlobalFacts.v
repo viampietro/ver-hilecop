@@ -60,6 +60,13 @@ Section SigEq.
           [ left; apply SetoidList.InA_cons; left; assumption |
             right; intro; inversion_clear H1; contradiction].
   Defined.
+
+  (** Declares seq as an instance of the Equivalence class. *)
+  
+  Instance Equivalence_seq : Equivalence seq :=
+    { Equivalence_Reflexive := seq_refl;
+      Equivalence_Symmetric := seq_sym;
+      Equivalence_Transitive := seq_trans }.
   
 End SigEq.
 

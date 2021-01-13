@@ -4,7 +4,7 @@
 
 Require Import Setoid.
 Require Import common.Coqlib.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 Require Import common.GlobalTypes.
 
 Require Import hvhdl.AbstractSyntax.
@@ -71,23 +71,19 @@ Local Unset Positivity Checking.
 
 (** Type of semantical objects that populate the design
     environment. *)
-                                                     
+
 Inductive SemanticalObject : Type :=
 | Generic (t : type) (v : value)
 | Input (t : type)
 | Output (t : type)
 | Declared (t : type)
 | Process (lenv : LEnv)
-| Component (ecomp : IdMap SemanticalObject) (behavior : cs).
+| Component (ecomp : IdMap SemanticalObject).
 
 (** Macro definition for the design environment type. 
     Mapping from identifiers to [SemanticalObject]. *)
 
 Definition ElDesign := IdMap SemanticalObject.
-
-(* genids : list ident; *)
-(*   G := { id | In id genids} *)
-(*   Gens : G -> type * value        *)
 
 (** Defines an empty design environment. *)
 
@@ -122,7 +118,7 @@ Definition NoEvDState (σ : DState) :=
 Definition sstore_add (id : ident) (v : value) (σ : DState) : DState :=
   MkDState (NatMap.add id v (sigstore σ)) (compstore σ) (events σ).
 
-(** Macro to add a new mapping id ⇒ DState in the [compstore] of the
+(** Macro to add a new mapping [id__c ⇒ σ__c] in the [compstore] of the
     design state [σ].  *)
 
 Definition cstore_add (id__c : ident) (σ__c : DState) (σ : DState) : DState :=

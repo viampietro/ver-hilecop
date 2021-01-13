@@ -3,10 +3,10 @@
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
-Require Import common.ListsDep.
+Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
-Require Import common.ListsPlus.
-Require Import common.ListsMonad.
+Require Import common.ListPlus.
+Require Import common.ListMonad.
 Require Import String.
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.
@@ -299,7 +299,7 @@ Section CompileTimeStateOpers.
     let check_t_in_trmap :=
         (fun params => let '(t', _) := params in
                        if seqdec Nat.eq_dec t t' then Ret true else Ret false) in
-    do opt_ttcomp <- ListsMonad.find check_t_in_trmap trmap;
+    do opt_ttcomp <- ListMonad.find check_t_in_trmap trmap;
     match opt_ttcomp with
     | None => Err ("get_tcomp: transition "
                      ++ $$t ++ " is not referenced in the Architecture structure.")
@@ -326,7 +326,7 @@ Section CompileTimeStateOpers.
     let check_p_in_plmap :=
         (fun params => let '(p', _) := params in
                        if seqdec Nat.eq_dec p p' then Ret true else Ret false) in
-    do opt_ppcomp <- ListsMonad.find check_p_in_plmap plmap;
+    do opt_ppcomp <- ListMonad.find check_p_in_plmap plmap;
     match opt_ppcomp with
     | None => Err ("get_pcomp: place "
                      ++ $$p ++ " is not referenced in the Architecture structure.")
@@ -353,7 +353,7 @@ Section CompileTimeStateOpers.
     let check_a_in_amap :=
         (fun params => let '(a', _) := params in
                        if seqdec Nat.eq_dec a a' then Ret true else Ret false) in
-    do opt_alofexprs <- ListsMonad.find check_a_in_amap amap;
+    do opt_alofexprs <- ListMonad.find check_a_in_amap amap;
     match opt_alofexprs with
     | None => Err ("get_aport: action "
                      ++ $$a ++ " is not referenced in the Architecture structure.")
@@ -380,7 +380,7 @@ Section CompileTimeStateOpers.
     let check_f_in_fmap :=
         (fun params => let '(f', _) := params in
                        if seqdec Nat.eq_dec f f' then Ret true else Ret false) in
-    do opt_flofexprs <- ListsMonad.find check_f_in_fmap fmap;
+    do opt_flofexprs <- ListMonad.find check_f_in_fmap fmap;
     match opt_flofexprs with
     | None => Err ("get_fport: function "
                      ++ $$f ++ " is not referenced in the Architecture structure.")
@@ -410,7 +410,7 @@ Section CompileTimeStateOpers.
         (fun params => let '(t', _) := params in
                        if seqdec Nat.eq_dec t t' then Ret true else Ret false) in
     do sitpninfos <- get_infos;
-    do opt_ttinfo <- ListsMonad.find check_t_in_tinfos (tinfos sitpninfos);
+    do opt_ttinfo <- ListMonad.find check_t_in_tinfos (tinfos sitpninfos);
     match opt_ttinfo with
     | None => Err ("get_tinfo: transition "
                      ++ $$t ++ " is not referenced in the SITPN information structure.")
@@ -422,7 +422,7 @@ Section CompileTimeStateOpers.
         (fun params => let '(p', _) := params in
                        if seqdec Nat.eq_dec p p' then Ret true else Ret false) in
     do sitpninfos <- get_infos;
-    do opt_ppinfo <- ListsMonad.find check_p_in_pinfos (pinfos sitpninfos);
+    do opt_ppinfo <- ListMonad.find check_p_in_pinfos (pinfos sitpninfos);
     match opt_ppinfo with
     | None => Err ("get_pinfo: place "
                      ++ $$p ++ " is not referenced in the SITPN information structure.")
@@ -434,7 +434,7 @@ Section CompileTimeStateOpers.
         (fun params => let '(a', _) := params in
                        if seqdec Nat.eq_dec a a' then Ret true else Ret false) in
     do sitpninfos <- get_infos;
-    do opt_aainfo <- ListsMonad.find check_a_in_ainfos (ainfos sitpninfos);
+    do opt_aainfo <- ListMonad.find check_a_in_ainfos (ainfos sitpninfos);
     match opt_aainfo with
     | None => Err ("get_ainfo: action "
                      ++ $$a ++ " is not referenced in the SITPN information structure.")
@@ -446,7 +446,7 @@ Section CompileTimeStateOpers.
         (fun params => let '(f', _) := params in
                        if seqdec Nat.eq_dec f f' then Ret true else Ret false) in
     do sitpninfos <- get_infos;
-    do opt_ffinfo <- ListsMonad.find check_f_in_finfos (finfos sitpninfos);
+    do opt_ffinfo <- ListMonad.find check_f_in_finfos (finfos sitpninfos);
     match opt_ffinfo with
     | None => Err ("get_finfo: function "
                      ++ $$f ++ " is not referenced in the SITPN information structure.")
@@ -458,7 +458,7 @@ Section CompileTimeStateOpers.
         (fun params => let '(c', _) := params in
                        if seqdec Nat.eq_dec c c' then Ret true else Ret false) in
     do sitpninfos <- get_infos;
-    do opt_ccinfo <- ListsMonad.find check_c_in_cinfos (cinfos sitpninfos);
+    do opt_ccinfo <- ListMonad.find check_c_in_cinfos (cinfos sitpninfos);
     match opt_ccinfo with
     | None => Err ("get_finfo: function "
                      ++ $$c ++ " is not referenced in the SITPN information structure.")

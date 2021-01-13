@@ -4,7 +4,7 @@ Require Import common.Coqlib.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.NatMapFacts.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 Require Import common.ListPlusTactics.
 Require Import common.ListPlusFacts.
 

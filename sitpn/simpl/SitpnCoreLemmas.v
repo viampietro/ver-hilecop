@@ -2708,18 +2708,7 @@ Section HasEnteredTimeWindow.
       (* Case (t, active 0) ∈ ditvals, impossible as NoDup (fs ditvals) *)
       + specialize (get_value_correct Nat.eq_dec t d_intervals e0) as Hin_t_actS_ditvals.
         inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).
-
-        Ltac check_in Hnodup :=
-          match Hnodup with
-          | _ : NoDup _ => idtac "OK"
-          | _ => fail "Fail"
-          end.
-
-        contradiction_with_nodup_same_pair d_intervals
-                                           (t, active {| min_t := S _x1; max_t := _x0 |})
-                                           (t, active {| min_t := 0; max_t := up_bound |})
-                                           Hin_t_actS_ditvals
-                                           Hin_t_act0_ditvals.
+        contradiction_with_nodup_same_pair Hin_t_actS_ditvals Hin_t_act0_ditvals.
                 
     (* CASE s_intervals = Some itval ∧ get_value t d_intervals = blocked *)
     - intro Hhas_entered_vee.
@@ -2730,13 +2719,8 @@ Section HasEnteredTimeWindow.
 
       (* Case (t, active 0) ∈ ditvals, impossible as NoDup (fs ditvals) *)
       + specialize (get_value_correct Nat.eq_dec t d_intervals e0) as Hin_t_actS_ditvals.
-        inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).
-        
-        contradiction_with_nodup_same_pair d_intervals
-                                           (t, blocked)
-                                           (t, active {| min_t := 0; max_t := up_bound |})
-                                           Hin_t_actS_ditvals
-                                           Hin_t_act0_ditvals.
+        inversion_clear Hex_active_0 as (up_bound & Hin_t_act0_ditvals).        
+        contradiction_with_nodup_same_pair Hin_t_actS_ditvals Hin_t_act0_ditvals.
                 
     (* ERROR CASE, get_value = None. *)
     - inversion Hfun.

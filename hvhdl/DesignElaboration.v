@@ -151,7 +151,7 @@ with ebeh (D__s : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState
       (* Conclusion *)
       ebeh D__s Δ σ
            (cs_comp id__c id__e gmap ipmap opmap)
-           (NatMap.add id__c (Component Δ__c (behavior cdesign)) Δ)
+           (NatMap.add id__c (Component Δ__c) Δ)
            (cstore_add id__c σ__c σ)
            
 (** Elaborates a null cs statement *)

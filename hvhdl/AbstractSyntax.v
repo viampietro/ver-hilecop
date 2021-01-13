@@ -311,3 +311,13 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
      FlattenCs cstmt l -> FlattenCs cstmt' l' -> FlattenCs (cstmt // cstmt') (l ++ l').
 
 Hint Constructors FlattenCs : core.
+
+(** States that a given simple [cs] (i.e, not [cs_par]) is a part of a another [cs]. *)
+
+Fixpoint InCs (cstmt cstmt' : cs) {struct cstmt'} : Prop :=
+  match cstmt' with
+  | cs_null | cs_ps _ _ _ _ | cs_comp _ _ _ _ _ => cstmt = cstmt'
+  | cstmt1 // cstmt2 =>
+    InCs cstmt cstmt1 \/ InCs cstmt cstmt2
+  end.
+

@@ -6,10 +6,6 @@
 Require Import Coqlib.
 Require Import Coq.Setoids.Setoid.
 
-(** Macro for [fst] and [split] composition. *)
-
-Definition fs {A B} (l : list (A * B)) := fst (split l).
-
 (** Proves a property over the combination of fst and split functions. *)
 
 Lemma fst_split_cons_app {A B : Type} :
@@ -18,6 +14,7 @@ Lemma fst_split_cons_app {A B : Type} :
 Proof.
   intros. elim a; simpl. elim split; simpl. auto.
 Qed.
+
 
 (** Equality between [map fst] and [fst (split)]
     applied to some list l.
@@ -37,20 +34,6 @@ Proof.
     rewrite fst_split_cons_app.
     simpl.
     rewrite IHl; reflexivity.
-Qed.
-
-(** Declares [fst (split)] as a morphism of the Permutation
-    relation. *)
-
-Add Parametric Morphism A B : (@fs A B)
-    with signature (@Permutation (A * B)) ==> (@Permutation A)
-      as fst_split_morphism.
-Proof.
-  intros x y Hperm.
-  apply (Permutation_map fst) in Hperm.
-  rewrite (map_fst_split_eq x) in Hperm.
-  rewrite (map_fst_split_eq y) in Hperm.
-  assumption.
 Qed.
 
 (** Proves a property over the combination of snd and split functions. *)
@@ -125,6 +108,8 @@ Proof.
       apply H2.
 Qed.
 
+
+
 (** For all pairs in l, in there are no duplicates in the first 
     elements of the pairs in l, then there are no duplicates in l. *)
 
@@ -182,4 +167,74 @@ Proof.
     + exists b; rewrite H0; apply in_eq.
     + apply IHl in H0; elim H0; intros.
       exists x; apply in_cons; assumption.
+Qed.
+
+(** ** Macro for [fst] and [split] composition. *)
+
+Definition fs {A B} (l : list (A * B)) := fst (split l).
+
+Lemma fs_eq_cons_app {A B : Type} :
+  forall (a : (A * B)) (l : list (A * B)),
+    fs (a :: l) = (fs [a]) ++ (fs l).
+Proof.
+  unfold fs; apply fst_split_cons_app.
+Qed.
+
+(** Equality between [fs l] and [l] when both are [nil]. *)
+
+Lemma fs_eq_nil :
+  forall {A B : Type} {l : list (A * B)}, fs l = nil <-> l = nil.
+Proof.
+  induction l; [ firstorder |
+                 destruct a; split; intros;
+                 [rewrite fs_eq_cons_app in H; inversion H
+                 | inversion H]
+               ].
+Qed.
+
+(** Declares [fst (split)] as a morphism of the Permutation
+    relation. *)
+
+Add Parametric Morphism A B : (@fs A B)
+    with signature (@Permutation (A * B)) ==> (@Permutation A)
+      as fst_split_morphism.
+Proof.
+  intros x y Hperm.
+  apply (Permutation_map fst) in Hperm.
+  rewrite (map_fst_split_eq x) in Hperm.
+  rewrite (map_fst_split_eq y) in Hperm.
+  assumption.
+Qed.
+
+(** ** Fst and Split Facts for Setoid Lists *)
+
+(** If a couple (a, b) is in the list of couples l 
+    then a is in (fst (split l)). *)
+
+Lemma setoidl_in_fst_split {A B : Type} :
+  forall {eqk : A -> A -> Prop} {eqv : B -> B -> Prop} {a l} (b : B),
+    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
+    InA eqkv (a, b) l -> InA eqk a (fst (split l)).
+Proof.
+  induction l.
+  - intros; inversion H.
+  - elim a0; intros; rewrite fst_split_cons_app; simpl.
+    inversion_clear H; apply InA_cons.
+    + firstorder.
+    + right; apply IHl with (b := b0); auto.
+Qed.
+
+(* Version of [not_in_fst_split] for setoid lists. *)
+
+Lemma setoidl_not_in_fst_split {A B : Type} :
+  forall {l : list (A * B)} {eqk : A -> A -> Prop} {eqv : B -> B -> Prop} {a : A},
+    ~InA eqk a (fst (split l)) ->
+    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
+    (forall b : B, ~InA eqkv (a, b) l).
+Proof.
+  induction l.
+  - intros; intros Hin; inversion Hin.
+  - elim a; intros; intros Hin.
+    specialize (setoidl_in_fst_split b0 Hin) as Hnotin_a1.
+    contradiction.
 Qed.

@@ -3,7 +3,7 @@
 Require Import common.Coqlib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
-Require Import common.ListsPlus.
+Require Import common.ListPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 

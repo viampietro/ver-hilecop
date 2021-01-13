@@ -136,14 +136,6 @@ Coercion Psubset_in_P : Psubset >-> P.
 Coercion Tsubset_in_T : Tsubset >-> T.
 Coercion Ti_in_T : Ti >-> T. 
 
-(** Macro functions for Sitpn. *)
-
-Definition P2List (sitpn : Sitpn) : list nat := places sitpn.
-Definition T2List (sitpn : Sitpn) : list nat := transitions sitpn.
-Definition C2List (sitpn : Sitpn) : list nat := conditions sitpn.
-Definition A2List (sitpn : Sitpn) : list nat := actions sitpn.
-Definition F2List (sitpn : Sitpn) : list nat := functions sitpn.
-
 (** ** Sitpn state definition. *)
 
 (** Defines the Sitpn state structure as a record. *)

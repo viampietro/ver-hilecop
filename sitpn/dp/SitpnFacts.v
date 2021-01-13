@@ -35,6 +35,10 @@ Definition InA_Peq_dec sitpn (p : P sitpn) (lofP : list (P sitpn)) :
   {SetoidList.InA Peq p lofP} + {~SetoidList.InA Peq p lofP} :=
   InA_seq_dec (fun n => In n sitpn.(places)) Nat.eq_dec p lofP.
 
+(*  *)
+
+Definition Equivalence_Peq sitpn := Equivalence_seq (In_P sitpn).
+
 (** For a given [sitpn], defines the equivalence relation [Teq]
     between two transitions as the equality between the first element
     of the [sig] type [T sitpn].  *)

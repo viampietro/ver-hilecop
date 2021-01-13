@@ -13,15 +13,17 @@
     
  *)
 
-Require Import Environment.
-Require Import AbstractSyntax.
-Require Import SSEvaluation.
-Require Import PortMapEvaluation.
-Require Import Stabilize.
-Require Import SemanticalDomains.
-Require Import GlobalTypes.
-Require Import Petri.
-Require Import NatSet.
+Require Import common.GlobalTypes.
+Require Import common.NatSet.
+
+Require Import hvhdl.Environment.
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.SSEvaluation.
+Require Import hvhdl.PortMapEvaluation.
+Require Import hvhdl.Stabilize.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.Petri.
+Require Import hvhdl.HVhdlTypes.
 
 Include HVhdlCsNotations.
 
@@ -29,7 +31,7 @@ Include HVhdlCsNotations.
     statements once, regardless of sensitivity lists or events on
     signals and component instances.  *)
 
-Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
+Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a process statement exactly once, regardless of its
     sensitivity list. *)
@@ -46,7 +48,7 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       NatMap.MapsTo pid (Process Λ) Δ ->
       
       (* * Conclusion * *)
-      vruninit Δ σ (cs_ps pid sl vars stmt) σ'
+      vruninit D__s Δ σ (cs_ps pid sl vars stmt) σ'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -55,7 +57,7 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     embedding design. *)
 
 | VRunInitCompEvents :
-    forall {compid entid gmap ipmap opmap cstmt
+    forall {compid entid gmap ipmap opmap d
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
@@ -64,17 +66,20 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
 
       (* Executes component behavior *)
-      vruninit Δ__c σ__c' cstmt σ__c'' ->
+      vruninit D__s Δ__c σ__c' (behavior d) σ__c'' ->
 
       (* Propagates output port values to embedded design *)
       mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
-      (* compid ∈ Comps(Δ) and Δ(compid) = (Δc, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      (* Identifier [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
       
-      (* compid ∈ σ and σ(compid) = σc *)
+      (* [compid ∈ Comps(Δ) and Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ and σ(compid) = σ__c] *)
       NatMap.MapsTo compid σ__c (compstore σ) ->
 
       (* Events registered in σc''. *)
@@ -85,25 +90,28 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       (* Add compid to the events field of σ' because compid
          registered some events in its internal state. *)
       
-      vruninit Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
+      vruninit D__s Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
     registered no events. *)
 
 | VRunInitCompNoEvent :
-    forall {compid entid gmap ipmap opmap cstmt
+    forall {compid entid gmap ipmap opmap d
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
-      vruninit Δ__c σ__c' cstmt σ__c'' ->
+      vruninit D__s Δ__c σ__c' (behavior d) σ__c'' ->
       mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
+      (* Identifier [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
+
       (* compid ∈ Comps(Δ) and Δ(compid) = (Δ__c, cstmt) *)
-      NatMap.MapsTo compid (Component Δ__c cstmt) Δ ->
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
       
       (* compid ∈ σ and σ(compid) = \sigma__c *)
       NatMap.MapsTo compid σ__c (compstore σ) ->
@@ -112,11 +120,11 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       events σ__c'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      vruninit Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
+      vruninit D__s Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
 (** Evaluates the null concurrent statement.  *)
 
-| VRunInitNull : vruninit Δ σ cs_null σ
+| VRunInitNull : vruninit D__s Δ σ cs_null σ
                           
 (** Evaluates the parallel execution of two concurrent
     statements computed with the [runinit] relation.  *)
@@ -125,8 +133,8 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' σ' σ'' merged},
 
       (* * Premises * *)
-      vruninit Δ σ cstmt σ' ->
-      vruninit Δ σ cstmt' σ'' ->
+      vruninit D__s Δ σ cstmt σ' ->
+      vruninit D__s Δ σ cstmt' σ'' ->
 
       (* * Side conditions * *)
       
@@ -138,12 +146,12 @@ Inductive vruninit (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       IsMergedDState σ σ' σ'' merged ->
       
       (* * Conclusion * *)
-      vruninit Δ σ (cstmt // cstmt') merged.
+      vruninit D__s Δ σ (cstmt // cstmt') merged.
 
 (** Defines the [init] relation, sequential composition of the
     [vruninit] and the [stabilize] relation. *)
 
-Inductive init (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
+Inductive init (D__s : IdMap design) (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
     forall σ behavior σ' σ'' θ,
@@ -152,12 +160,12 @@ Inductive init (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
 
       (* Sets the rst (i.e, reset) signal to ⊥ to trigger the
          evaluation of code related to "factory reset".  *)
-      vruninit Δ (sstore_add rst (Vbool false) σ) behavior σ' ->
+      vruninit D__s Δ (sstore_add rst (Vbool false) σ) behavior σ' ->
 
       (* Sets the rst signal to ⊤, and no longer will it gain the
          value ⊥ during the whole simulation loop.  *)
-      stabilize Δ (sstore_add rst (Vbool true) σ') behavior θ σ'' ->
+      stabilize D__s Δ (sstore_add rst (Vbool true) σ') behavior θ σ'' ->
       
       (* * Conclusion * *)
-      init Δ σ behavior σ''.
+      init D__s Δ σ behavior σ''.
 

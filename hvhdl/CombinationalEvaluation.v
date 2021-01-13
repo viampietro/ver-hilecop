@@ -3,19 +3,21 @@
 (** Defines the relation that evaluates combinational concurrent
     statements; used in the stabilization phases. *)
 
-Require Import Coqlib.
-Require Import NatMap.
-Require Import NatSet.
-Require Import AbstractSyntax.
-Require Import Environment.
-Require Import SSEvaluation.
-Require Import PortMapEvaluation.
+Require Import common.Coqlib.
+Require Import common.NatMap.
+Require Import common.NatSet.
+
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.Environment.
+Require Import hvhdl.SSEvaluation.
+Require Import hvhdl.PortMapEvaluation.
+Require Import hvhdl.HVhdlTypes.
 
 (** Defines the relation that evaluates combinational
     concurrent statements.
  *)
 
-Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
+Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
 (** Evaluates a stable process (no event are related to signals of the
     process sensitivity list). *)
@@ -27,7 +29,7 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E = ∅ *)
       
       (* * Conclusion * *)
-      vcomb Δ σ (cs_ps pid sl vars stmt) (NoEvDState σ)
+      vcomb D__s Δ σ (cs_ps pid sl vars stmt) (NoEvDState σ)
             
 (** Evaluates an unstable process (signals of the process sensitivity
     list generated events). Then, the process body is evaluated. *)
@@ -43,69 +45,77 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       NatMap.MapsTo pid (Process Λ) Δ ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
-      vcomb Δ σ (cs_ps pid sl vars stmt) σ'
+      vcomb D__s Δ σ (cs_ps pid sl vars stmt) σ'
 
 (** Evaluates a component instance. The new state of the component
     instance, resulting of the interpretation of its behavior,
-    registered some events. Therefore, we need to add the component
-    identifier to the events field in the state of the
-    embedding design. *)
+    registered some events. *)
 
 | VCombCompEvents :
-    forall {compid entid gmap ipmap opmap cstmt
-                   cenv cstate cstate' cstate'' σ'},
+    forall {compid entid gmap ipmap opmap d
+                   Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
-      mapip Δ cenv σ cstate ipmap cstate' ->
-      vcomb cenv cstate' cstmt cstate'' ->
-      mapop Δ cenv σ cstate'' opmap σ' ->
+      mapip Δ Δ__c σ σ__c ipmap σ__c' ->
+      vcomb D__s Δ__c σ__c' (behavior d) σ__c'' ->
+      mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
-      (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) Δ ->
+      (* [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
       
-      (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore σ) ->
+      (* [compid ∈ Comps(Δ) and Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ and σ(compid) = σ__c] *)
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* Events registered in cstate''. *)
-      NatSet.Equal (events cstate'') NatSet.empty ->
+      (* [Events registered in σ__c''.] *)
+      (events σ__c'') <> NatSet.empty ->
       
       (* * Conclusion * *)
-      (* Add compid to the events field of σ' because compid
-         registered some events in its internal state. *)
-      vcomb Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
+      
+      (* Add [compid] to the events set of [σ'] because compid
+         registered some events in its internal state.
+         
+         Associates [compid] to its new state [σ__c''] in the component
+         store of σ'. *)
+      vcomb D__s Δ σ (cs_comp compid entid gmap ipmap opmap) (cstore_add compid σ__c'' (events_add compid σ'))
 
 (** Evaluates a component instance. The new state of the component
     instance, resulting of the interpretation of its behavior,
     registered no events. *)
 
 | VCombCompNoEvent :
-    forall {compid entid gmap ipmap opmap cstmt
-                   cenv cstate cstate' cstate'' σ'},
+    forall {compid entid gmap ipmap opmap d
+                   Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
-      mapip Δ cenv σ cstate ipmap cstate' ->
-      vcomb cenv cstate' cstmt cstate'' ->
-      mapop Δ cenv σ cstate'' opmap σ' ->
+      mapip Δ Δ__c σ σ__c ipmap σ__c' ->
+      vcomb D__s Δ__c σ__c' (behavior d) σ__c'' ->
+      mapop Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
-
-      (* compid ∈ Comps(Δ) and Δ(compid) = (cenv, cstmt) *)
-      NatMap.MapsTo compid (Component cenv cstmt) Δ ->
       
-      (* compid ∈ σ and σ(compid) = cstate *)
-      NatMap.MapsTo compid cstate (compstore σ) ->
+      (* [entid] is associated to design [d] in design store [D__s] *)
+      NatMap.MapsTo entid d D__s ->
+      
+      (* [compid ∈ Comps(Δ)] and [Δ(compid) = Δ__c] *)
+      NatMap.MapsTo compid (Component Δ__c) Δ ->
+      
+      (* [compid ∈ σ] and [σ(compid) = σ__c] *)
+      NatMap.MapsTo compid σ__c (compstore σ) ->
 
-      (* No event registered in cstate''. *)
-      NatSet.Equal (events cstate'') NatSet.empty ->
+      (* No event registered in [σ__c'']. *)
+      (events σ__c'') = NatSet.empty ->
       
       (* * Conclusion * *)
-      vcomb Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
+      vcomb D__s Δ σ (cs_comp compid entid gmap ipmap opmap) σ'
 
 (** Evaluates the null concurrent statement. *)
 
-| VCombNull : vcomb Δ σ cs_null σ 
+| VCombNull : vcomb D__s Δ σ cs_null σ 
             
 (** Evaluates the parallel execution of two combinational concurrent
     statements.  *)
@@ -114,8 +124,8 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
     forall {cstmt cstmt' σ' σ'' merged},
 
       (* * Premises * *)
-      vcomb Δ σ cstmt σ' ->
-      vcomb Δ σ cstmt' σ'' ->
+      vcomb D__s Δ σ cstmt σ' ->
+      vcomb D__s Δ σ cstmt' σ'' ->
 
       (* * Side conditions * *)
       
@@ -127,13 +137,13 @@ Inductive vcomb (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
       IsMergedDState σ σ' σ'' merged ->
       
       (* * Conclusion * *)
-      vcomb Δ σ (cs_par cstmt cstmt') merged.
+      vcomb D__s Δ σ (cs_par cstmt cstmt') merged.
 
 (** ** Facts about [vcomb] *)
 
 Lemma comb_maps_id :
-  forall Δ σ behavior σ' id σ__id,
-    vcomb Δ σ behavior σ' ->
+  forall D__s Δ σ behavior σ' id σ__id,
+    vcomb D__s Δ σ behavior σ' ->
     MapsTo id σ__id (compstore σ) ->
     exists σ'__id, MapsTo id σ'__id (compstore σ').
 Proof.
@@ -169,8 +179,8 @@ Admitted.
 (*  *)
 
 Lemma comb_maps_id_rev :
-  forall Δ σ behavior σ' id σ'__id,
-    vcomb Δ σ behavior σ' ->
+  forall D__s Δ σ behavior σ' id σ'__id,
+    vcomb D__s Δ σ behavior σ' ->
     MapsTo id σ'__id (compstore σ') ->
     exists σ__id, MapsTo id σ__id (compstore σ).
 Proof.
@@ -179,8 +189,8 @@ Admitted.
 (*  *)
 
 Lemma comb_maps_sigid :
-  forall Δ σ behavior σ' s v,
-    vcomb Δ σ behavior σ' ->
+  forall D__s Δ σ behavior σ' s v,
+    vcomb D__s Δ σ behavior σ' ->
     MapsTo s v (sigstore σ) ->
     exists v', MapsTo s v' (sigstore σ').
 Proof.
