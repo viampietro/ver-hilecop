@@ -206,35 +206,3 @@ Proof.
   assumption.
 Qed.
 
-(** ** Fst and Split Facts for Setoid Lists *)
-
-(** If a couple (a, b) is in the list of couples l 
-    then a is in (fst (split l)). *)
-
-Lemma setoidl_in_fst_split {A B : Type} :
-  forall {eqk : A -> A -> Prop} {eqv : B -> B -> Prop} {a l} (b : B),
-    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
-    InA eqkv (a, b) l -> InA eqk a (fst (split l)).
-Proof.
-  induction l.
-  - intros; inversion H.
-  - elim a0; intros; rewrite fst_split_cons_app; simpl.
-    inversion_clear H; apply InA_cons.
-    + firstorder.
-    + right; apply IHl with (b := b0); auto.
-Qed.
-
-(* Version of [not_in_fst_split] for setoid lists. *)
-
-Lemma setoidl_not_in_fst_split {A B : Type} :
-  forall {l : list (A * B)} {eqk : A -> A -> Prop} {eqv : B -> B -> Prop} {a : A},
-    ~InA eqk a (fst (split l)) ->
-    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
-    (forall b : B, ~InA eqkv (a, b) l).
-Proof.
-  induction l.
-  - intros; intros Hin; inversion Hin.
-  - elim a; intros; intros Hin.
-    specialize (setoidl_in_fst_split b0 Hin) as Hnotin_a1.
-    contradiction.
-Qed.

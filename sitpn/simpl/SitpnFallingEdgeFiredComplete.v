@@ -8,11 +8,6 @@ Require Import simpl.SitpnSemantics.
 Require Import simpl.SitpnTactics.
 Require Import simpl.SitpnCoreLemmas.
 
-(* Import misc. lemmas, tactics and definitions. *)
-
-
-
-
 (* Import lemmas on marking functions. *)
 
 Require Import simpl.SitpnRisingEdgeMarking.
@@ -59,7 +54,7 @@ Section SitpnMapFireComplete.
         -- intro Heq_diff; elim Heq_diff; reflexivity.
       + simpl; case (Nat.eq_dec a t).
         -- rewrite NoDup_cons_iff in Hnodup_l; apply proj1 in Hnodup_l.
-           specialize (not_in_in_diff t a tail (conj Hnodup_l Hin_a_tl)) as Hdiff_ta.
+           specialize (not_in_in_diff (conj Hnodup_l Hin_a_tl)) as Hdiff_ta.
            intro Heq_at; symmetry in Heq_at; contradiction.
         -- intro Hdiff_at.
            simpl; symmetry; rewrite Nat.add_comm.
@@ -101,7 +96,7 @@ Section SitpnMapFireComplete.
         - intro Hin_tl; specialize (in_cons t t0 tail Hin_tl) as Hin_t0_ctl.
           rewrite NoDup_cons_iff in Hnodup_l.
           apply proj1 in Hnodup_l.
-          specialize (not_in_in_diff t t0 tail (conj Hnodup_l Hin_tl)) as Hdiff_tt0.
+          specialize (not_in_in_diff (conj Hnodup_l Hin_tl)) as Hdiff_tt0.
           apply not_eq_sym in Hdiff_tt0.
           rewrite Hequiv in Hin_t0_ctl.
           rewrite in_remove_iff; apply (conj Hin_t0_ctl Hdiff_tt0).
@@ -484,7 +479,7 @@ Section SitpnMapFireComplete.
                      (* Proves a <> t. *)
                      apply NoDup_remove_2 in Hnodup_app.
                      apply not_app_in in Hnodup_app; apply proj2 in Hnodup_app.
-                     apply (not_in_in_diff a t pg (conj Hnodup_app Hin_t_pg)).
+                     apply (not_in_in_diff (conj Hnodup_app Hin_t_pg)).
                      split.
 
                      (* Proves NoDup pgroup. *)

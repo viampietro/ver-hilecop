@@ -302,7 +302,7 @@ Section SitpnUpdateMarking.
         specialize (IHo fm Hwell_def_sitpn Hnodup_m
                         Hnodup_tl Hincl_pre_pl Hfun
                         p' n Hin_p'_tail) as Himpl.
-        specialize (not_in_in_diff p p' tail (conj Hnot_in_tl Hin_p'_tail))
+        specialize (not_in_in_diff (conj Hnot_in_tl Hin_p'_tail))
           as Hdiff_pp.
         specialize (modify_m_in_if_diff
                       marking p Nat.sub (pre sitpn t p) m'
@@ -622,7 +622,7 @@ Section SitpnUpdateMarking.
         specialize (IHo fm Hwell_def_sitpn Hnodup_m
                         Hnodup_tl Hincl_post_pl Hfun
                         p' n Hin_p'_tail) as Himpl.
-        specialize (not_in_in_diff p p' tail (conj Hnot_in_tl Hin_p'_tail))
+        specialize (not_in_in_diff (conj Hnot_in_tl Hin_p'_tail))
           as Hdiff_pp.
         specialize (@modify_m_in_if_diff
                       marking p Nat.add (post sitpn t p) m'

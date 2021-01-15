@@ -243,8 +243,7 @@ Section Sitpn2HVhdl.
 
   Definition generate_design_and_binder (entid archid : ident) : CompileTimeState (design * Sitpn2HVhdlMap sitpn):=
     do s <- Get;
-    let '(sigs, _, _, _, _) := (arch s) in
-    Ret ((design_ entid archid [] ((iports s) ++ (oports s)) sigs (beh s)), (γ s)).
+    Ret ((design_ entid archid [] ((iports s) ++ (oports s)) (sigs (arch s)) (beh s)), (γ s)).
     
   Definition sitpn_to_hvhdl (entid archid : ident) (max_marking : nat) :
     (design * Sitpn2HVhdlMap sitpn) + string :=

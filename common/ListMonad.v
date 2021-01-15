@@ -7,14 +7,31 @@ Require Import StateAndErrorMonad.
 
 Import ListNotations.
 
+(** ** State-and-error monad version of getv *)
+
+Fixpoint getv {state A B}
+         {eqk}
+         (eqk_dec : forall x y, {eqk x y} + {~eqk x y})
+         (k : A) (l : list (A * B)) {struct l} : @Mon state B :=
+  match l with
+  | nil => Err ("getv: found unassociated key.")
+  | (a, b) :: tl =>
+    if eqk_dec k a then Ret b else getv eqk_dec k tl
+  end.
+
 (** ** State-and-error monad version of find *)
 
-Fixpoint find {A B} (f : B -> @Mon A bool) (l : list B) {struct l} : @Mon A (option B) :=
+(** The difference between [find] and [getv] is that [find] returning
+    [None] is not necessarily an error, whereas if a key [k] is not
+    associated to a value in list [l], then [getv k l] returns an
+    error.*)
+
+Fixpoint find {state A} (f : A -> @Mon state bool) (l : list A) {struct l} : @Mon state (option A) :=
   match l with
   | nil => Ret None
-  | b :: tl =>
-    do res <- f b;
-    if res then Ret (Some b) else find f tl
+  | a :: tl =>
+    do res <- f a;
+    if res then Ret (Some a) else find f tl
   end.
 
 (** ** State-and-error monad version of iter *)
@@ -114,12 +131,12 @@ Arguments tmap {state A B C}.
 
 (** ** State-and-error monad version of fold left.  *)
 
-Fixpoint fold_left {A B C} (f : C -> B -> @Mon A C) (l : list B) (c : C) {struct l} : @Mon A C :=
+Fixpoint fold_left {state A B} (f : B -> A -> @Mon state B) (l : list A) (b : B) {struct l} : @Mon state B :=
   match l with
-  | nil => Ret c
-  | b :: tl =>
-    do c' <- f c b;
-    fold_left f tl c'
+  | nil => Ret b
+  | a :: tl =>
+    do b' <- f b a;
+    fold_left f tl b'
   end.
 
 Section TFold_Left_Recursor.

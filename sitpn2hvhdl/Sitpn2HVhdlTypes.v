@@ -93,11 +93,16 @@ Section CompileTimeTypes.
     of list of declarations (list adecl), a mapping from P to
     HComponent and a mapping from T to HComponent.  *)
 
-  Definition Architecture := (list sdecl * PlaceMap * TransMap * FunMap * ActionMap)%type.
+  Inductive Architecture :=
+    MkArch { sigs : list sdecl;
+             plmap : PlaceMap;
+             trmap : TransMap;
+             fmap : FunMap;
+             amap : ActionMap }.
 
   (** Empty architecture structure *)
 
-  Definition EmptyArch : Architecture := ([], [], [], [], []).
+  Definition EmptyArch : Architecture := MkArch [] [] [] [] [].
   
   (** *** Source to target binder *)
 
@@ -162,6 +167,14 @@ Arguments pinfos {sitpn}.
 Arguments cinfos {sitpn}.
 Arguments ainfos {sitpn}.
 Arguments finfos {sitpn}.
+
+(* Set implicit arguments for Architecture *)
+
+Arguments sigs {sitpn}.
+Arguments plmap {sitpn}.
+Arguments trmap {sitpn}.
+Arguments fmap {sitpn}.
+Arguments amap {sitpn}.
 
 (* Set implicit arguments for Sitpn2HVhdlMap *)
 
@@ -290,180 +303,76 @@ Section CompileTimeStateOpers.
   (** *** Operations for Architecture structure *)
 
   Definition get_tcomp (t : T sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
-
     (* Retrieves the architecture from the compile-time state. *)
-    do arch <- get_arch;
-    
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
-    let check_t_in_trmap :=
-        (fun params => let '(t', _) := params in
-                       if seqdec Nat.eq_dec t t' then Ret true else Ret false) in
-    do opt_ttcomp <- ListMonad.find check_t_in_trmap trmap;
-    match opt_ttcomp with
-    | None => Err ("get_tcomp: transition "
-                     ++ $$t ++ " is not referenced in the Architecture structure.")
-    | Some ttcomp => Ret (snd ttcomp)
-    end.
+    do a <- get_arch; getv Teqdec t (trmap a).
   
   Definition set_tcomp (t : T sitpn) (tcomp : HComponent) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do arch <- get_arch;
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    do a <- get_arch;
     (* Sets the couple [(t, tcomp)] in [trmap]. *)
-    let trmap' := setv Teqdec t tcomp trmap in
+    let trmap' := setv Teqdec t tcomp (trmap a) in
     (* Updates the new archictecture. *)
-    set_arch (sigs, plmap, trmap', fmap, amap).
+    set_arch (MkArch sitpn (sigs a) (plmap a) trmap' (fmap a) (amap a)).
 
   Definition get_pcomp (p : P sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
 
     (* Retrieves the architecture from the compile-time state. *)
-    do arch <- get_arch;
-    
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
-    let check_p_in_plmap :=
-        (fun params => let '(p', _) := params in
-                       if seqdec Nat.eq_dec p p' then Ret true else Ret false) in
-    do opt_ppcomp <- ListMonad.find check_p_in_plmap plmap;
-    match opt_ppcomp with
-    | None => Err ("get_pcomp: place "
-                     ++ $$p ++ " is not referenced in the Architecture structure.")
-    | Some ppcomp => Ret (snd ppcomp)
-    end.
+    do a <- get_arch; getv Peqdec p (plmap a).
 
   Definition set_pcomp (p : P sitpn) (pcomp : HComponent) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do arch <- get_arch;
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    do a <- get_arch;
     (* Sets the couple [(p, pcomp)] in [plmap]. *)
-    let plmap' := setv Peqdec p pcomp plmap in
+    let plmap' := setv Peqdec p pcomp (plmap a) in
     (* Updates the new archictecture. *)
-    set_arch (sigs, plmap', trmap, fmap, amap).
+    set_arch (MkArch sitpn (sigs a) plmap' (trmap a) (fmap a) (amap a)).
 
   Definition get_aport (a : A sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list expr) := 
-
     (* Retrieves the architecture from the compile-time state. *)
-    do arch <- get_arch;
+    do arch <- get_arch; getv Aeqdec a (amap arch).
     
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
-    let check_a_in_amap :=
-        (fun params => let '(a', _) := params in
-                       if seqdec Nat.eq_dec a a' then Ret true else Ret false) in
-    do opt_alofexprs <- ListMonad.find check_a_in_amap amap;
-    match opt_alofexprs with
-    | None => Err ("get_aport: action "
-                     ++ $$a ++ " is not referenced in the Architecture structure.")
-    | Some alofexprs => Ret (snd alofexprs)
-    end.
-
   Definition set_aport (a : A sitpn) (lofexprs : list expr) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
     do arch <- get_arch;
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
     (* Sets the couple [(a, lofexprs)] in [amap]. *)
-    let amap' := setv Aeqdec a lofexprs amap in
+    let amap' := setv Aeqdec a lofexprs (amap arch) in
     (* Updates the new archictecture. *)
-    set_arch (sigs, plmap, trmap, fmap, amap').
+    set_arch (MkArch sitpn (sigs arch) (plmap arch) (trmap arch) (fmap arch) amap').
 
   Definition get_fport (f : F sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list expr) := 
 
     (* Retrieves the architecture from the compile-time state. *)
-    do arch <- get_arch;
-    
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
-    let check_f_in_fmap :=
-        (fun params => let '(f', _) := params in
-                       if seqdec Nat.eq_dec f f' then Ret true else Ret false) in
-    do opt_flofexprs <- ListMonad.find check_f_in_fmap fmap;
-    match opt_flofexprs with
-    | None => Err ("get_fport: function "
-                     ++ $$f ++ " is not referenced in the Architecture structure.")
-    | Some flofexprs => Ret (snd flofexprs)
-    end.
+    do a <- get_arch; getv Feqdec f (fmap a).
 
   Definition set_fport (f : F sitpn) (lofexprs : list expr) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do arch <- get_arch;
-    (* Destructs the architecture. *)
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
+    do a <- get_arch;
     (* Sets the couple [(a, lofexprs)] in [amap]. *)
-    let fmap' := setv Feqdec f lofexprs fmap in
+    let fmap' := setv Feqdec f lofexprs (fmap a) in
     (* Updates the new archictecture. *)
-    set_arch (sigs, plmap, trmap, fmap', amap).
+    set_arch (MkArch sitpn (sigs a) (plmap a) (trmap a) fmap' (amap a)).
   
   Definition add_sig_decl (sd : sdecl) :
     @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do arch <- get_arch;
-    let '(sigs, plmap, trmap, fmap, amap) := arch in
-    set_arch (sigs ++ [sd], plmap, trmap, fmap, amap).
+    do a <- get_arch;
+    set_arch (MkArch sitpn (sigs a ++ [sd]) (plmap a) (trmap a) (fmap a) (amap a)).
   
   (** *** Getters for SitpnInfos structure *)
 
   Definition get_tinfo (t : T sitpn) : @Mon (Sitpn2HVhdlState sitpn) (TransInfo sitpn) :=
-    let check_t_in_tinfos :=
-        (fun params => let '(t', _) := params in
-                       if seqdec Nat.eq_dec t t' then Ret true else Ret false) in
-    do sitpninfos <- get_infos;
-    do opt_ttinfo <- ListMonad.find check_t_in_tinfos (tinfos sitpninfos);
-    match opt_ttinfo with
-    | None => Err ("get_tinfo: transition "
-                     ++ $$t ++ " is not referenced in the SITPN information structure.")
-    | Some ttinfo => Ret (snd ttinfo)
-    end.
-
+    do sitpninfos <- get_infos; getv Teqdec t (tinfos sitpninfos).
+  
   Definition get_pinfo (p : P sitpn) : @Mon (Sitpn2HVhdlState sitpn) (PlaceInfo sitpn) :=
-    let check_p_in_pinfos :=
-        (fun params => let '(p', _) := params in
-                       if seqdec Nat.eq_dec p p' then Ret true else Ret false) in
-    do sitpninfos <- get_infos;
-    do opt_ppinfo <- ListMonad.find check_p_in_pinfos (pinfos sitpninfos);
-    match opt_ppinfo with
-    | None => Err ("get_pinfo: place "
-                     ++ $$p ++ " is not referenced in the SITPN information structure.")
-    | Some ppinfo => Ret (snd ppinfo)
-    end.
+    do sitpninfos <- get_infos; getv Peqdec p (pinfos sitpninfos).
 
   Definition get_ainfo (a : A sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list (P sitpn)) :=
-    let check_a_in_ainfos :=
-        (fun params => let '(a', _) := params in
-                       if seqdec Nat.eq_dec a a' then Ret true else Ret false) in
-    do sitpninfos <- get_infos;
-    do opt_aainfo <- ListMonad.find check_a_in_ainfos (ainfos sitpninfos);
-    match opt_aainfo with
-    | None => Err ("get_ainfo: action "
-                     ++ $$a ++ " is not referenced in the SITPN information structure.")
-    | Some aainfo => Ret (snd aainfo)
-    end.
+    do sitpninfos <- get_infos; getv Aeqdec a (ainfos sitpninfos).
 
   Definition get_finfo (f : F sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list (T sitpn)) :=
-    let check_f_in_finfos :=
-        (fun params => let '(f', _) := params in
-                       if seqdec Nat.eq_dec f f' then Ret true else Ret false) in
-    do sitpninfos <- get_infos;
-    do opt_ffinfo <- ListMonad.find check_f_in_finfos (finfos sitpninfos);
-    match opt_ffinfo with
-    | None => Err ("get_finfo: function "
-                     ++ $$f ++ " is not referenced in the SITPN information structure.")
-    | Some ffinfo => Ret (snd ffinfo)
-    end.
-
+    do sitpninfos <- get_infos; getv Feqdec f (finfos sitpninfos).
+  
   Definition get_cinfo (c : C sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list (T sitpn)) :=
-    let check_c_in_cinfos :=
-        (fun params => let '(c', _) := params in
-                       if seqdec Nat.eq_dec c c' then Ret true else Ret false) in
-    do sitpninfos <- get_infos;
-    do opt_ccinfo <- ListMonad.find check_c_in_cinfos (cinfos sitpninfos);
-    match opt_ccinfo with
-    | None => Err ("get_finfo: function "
-                     ++ $$c ++ " is not referenced in the SITPN information structure.")
-    | Some ccinfo => Ret (snd ccinfo)
-    end.
+    do sitpninfos <- get_infos; getv Ceqdec c (cinfos sitpninfos).
   
   (** *** Setters *)
 

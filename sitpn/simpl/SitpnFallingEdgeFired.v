@@ -179,7 +179,7 @@ Section SitpnFallingEdgeNotFirableNotFired.
         {
           deduce_nodup_in_dec_pgroup.
           deduce_nodup_hd_not_in.
-          specialize (not_in_in_diff t t' tail (conj Hnot_in_tl Hin_tail)) as Hneq_tt'.
+          specialize (not_in_in_diff (conj Hnot_in_tl Hin_tail)) as Hneq_tt'.
           assert (Hnot_in_tlist : ~In t' [t]) by (apply not_in_cons; auto).
           apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tlist)).            
         }
@@ -218,7 +218,7 @@ Section SitpnFallingEdgeNotFirableNotFired.
         {
           deduce_nodup_in_dec_pgroup.
           deduce_nodup_hd_not_in.
-          specialize (not_in_in_diff t t' tail (conj Hnot_in_tl Hin_t'_tail)) as Hneq_tt'.
+          specialize (not_in_in_diff (conj Hnot_in_tl Hin_t'_tail)) as Hneq_tt'.
           assert (Hnot_in_tlist : ~In t' [t]) by (apply not_in_cons; auto).
           apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tlist)).            
         }
@@ -257,7 +257,7 @@ Section SitpnFallingEdgeNotFirableNotFired.
         {
           deduce_nodup_in_dec_pgroup.
           deduce_nodup_hd_not_in.
-          specialize (not_in_in_diff t t' tail (conj Hnot_in_tl Hin_t'_tail)) as Hneq_tt'.
+          specialize (not_in_in_diff (conj Hnot_in_tl Hin_t'_tail)) as Hneq_tt'.
           assert (Hnot_in_tlist : ~In t' [t]) by (apply not_in_cons; auto).
           apply (not_in_app t' fired [t] (conj Hnot_in_fired Hnot_in_tlist)).            
         }
@@ -841,7 +841,7 @@ Section SitpnFallingEdgeSensByResidual.
                 (* Proves t <> t'. *)
                 apply NoDup_remove_2 in Hnodup_pg.
                 apply not_app_in in Hnodup_pg; apply proj2 in Hnodup_pg.
-                apply (not_in_in_diff t t' tail (conj Hnodup_pg Hin_t'_tail)).
+                apply (not_in_in_diff (conj Hnodup_pg Hin_t'_tail)).
                 split.
                 
                 (* Proves NoDup pgroup. *)
@@ -1772,7 +1772,7 @@ Section SitpnNotSensitizedByResidual.
                 (* Proves t <> t'. *)
                 apply NoDup_remove_2 in Hnodup_pg.
                 apply not_app_in in Hnodup_pg; apply proj2 in Hnodup_pg.
-                apply (not_in_in_diff t t' tail (conj Hnodup_pg Hin_t'_tail)).
+                apply (not_in_in_diff (conj Hnodup_pg Hin_t'_tail)).
                 split.
 
                 (* Proves NoDup pgroup. *)

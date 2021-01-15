@@ -152,10 +152,9 @@ Section GenArch.
 
     Definition generate_place_map (max_marking : nat) : CompileTimeState unit :=
       do plmap <- ListMonad.tmap (fun p => generate_place_map_entry p max_marking) (places sitpn) nat_to_P;
-      do arch <- get_arch;
-      let '(sigs, _, trmap, fmap, amap) := arch in
+      do a <- get_arch;
       (* Sets the architecture with a new [PlaceMap] *)
-      set_arch (sigs, plmap, trmap, fmap, amap).
+      set_arch (MkArch sitpn (sigs a) plmap (trmap a) (fmap a) (amap a)).
     
   End GeneratePlaceMap.
 
@@ -257,9 +256,8 @@ Section GenArch.
 
     Definition generate_trans_map : CompileTimeState unit :=
       do trmap <- ListMonad.tmap generate_trans_map_entry (transitions sitpn) nat_to_T;
-      do arch <- get_arch;
-      let '(sigs, plmap, _, fmap, amap) := arch in
-      set_arch (sigs, plmap, trmap, fmap, amap).
+      do a <- get_arch;
+      set_arch (MkArch sitpn (sigs a) (plmap a) trmap (fmap a) (amap a)).
     
   End GenerateTransMap.
 

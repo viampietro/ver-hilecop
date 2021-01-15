@@ -13,7 +13,7 @@ COMMONFILES=NatMap.v NatMapFacts.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v
 	FstSplit.v InAndNoDup.v \
 	ListPlus.v ListPlusTactics.v ListPlusFacts.v \
 	ListDep.v \
-	StateAndErrorMonad.v ListMonad.v
+	StateAndErrorMonad.v StateAndErrorMonadTactics.v ListMonad.v
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -33,7 +33,8 @@ SITPNSIMPLFILES=Sitpn.v SitpnSemantics.v SitpnTokenPlayer.v \
 
 # Sitpn structures, semantics and token player (in sitpn/dp/)
 
-SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v SitpnWellDefined.v \
+SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v \
+	SitpnWellDefined.v SitpnWellDefinedTactics.v \
 	SitpnSemanticsDefs.v Fired.v SitpnSemantics.v \
 
 # H-VHDL syntax and semantics.
