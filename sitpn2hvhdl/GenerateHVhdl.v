@@ -47,7 +47,7 @@ Section Sitpn2HVhdl.
       and increments the index [idx].
      *)
     
-    Let expr_to_cassocip (id : ident) :=
+    Definition expr_to_cassocip (id : ident) :=
       (fun (params : inputmap * nat) (e : expr) =>
          let '(ipmap, idx) := params in
          (ipmap ++ [associp_ (id $[[idx]]) e], idx + 1)).
@@ -101,7 +101,7 @@ Section Sitpn2HVhdl.
       Appends the association "id([idx]) => n" at the end of [opmap],
       and increments the index [idx].  *)
     
-    Let expr_to_cassocop (id : ident) :=
+    Definition expr_to_cassocop (id : ident) :=
       (fun (params : outputmap * nat) (n : name) =>
          let '(opmap, idx) := params in
          (opmap ++ [assocop_idx id (#idx) n], idx + 1)).

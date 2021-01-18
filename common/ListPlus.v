@@ -64,6 +64,8 @@ Section MapAsListOfCouples.
     | nil => [(k, v)]
     | cons (a, b) tl => if eq_dec k a then cons (k, v) tl else cons (a, b) (setv k v tl)
     end.
+
+  Functional Scheme setv_ind := Induction for setv Sort Prop.
   
 End MapAsListOfCouples.
 

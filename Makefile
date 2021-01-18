@@ -13,7 +13,8 @@ COMMONFILES=NatMap.v NatMapFacts.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v
 	FstSplit.v InAndNoDup.v \
 	ListPlus.v ListPlusTactics.v ListPlusFacts.v \
 	ListDep.v \
-	StateAndErrorMonad.v StateAndErrorMonadTactics.v ListMonad.v
+	StateAndErrorMonad.v StateAndErrorMonadTactics.v \
+	ListMonad.v ListMonadFacts.v \
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -56,7 +57,8 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v AbstractSyntaxFacts.v AbstractSyntaxTac
 
 SITPN2HVHDLFILES= Sitpn2HVhdlTypes.v \
 		GenerateInfos.v GenerateArchitecture.v \
-		GeneratePorts.v	GenerateHVhdl.v
+		GeneratePorts.v	GenerateHVhdl.v \
+		GenerateHVhdlFacts.v
 
 # Soundness proof, theorems and lemmas.
 

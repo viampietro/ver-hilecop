@@ -672,5 +672,7 @@ Hint Resolve in_app_or : core.
 Hint Resolve in_cons : core.
 Hint Resolve nodup_app : core.
 
+(* Hints to solve NoDup predicate goals *)
 
+Hint Constructors NoDup : core.
 

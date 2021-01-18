@@ -110,7 +110,7 @@ Qed.
 
 Hint Rewrite NoDupA_fs_eqk_eq : setoidl.
 
-Lemma InA_setv :
+Lemma InA_setv_idle :
   forall {A B : Type} {x y : A} {z v : B} {eqk eqv l} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}},
     let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
     InA eqkv (x, z) l ->
@@ -126,4 +126,62 @@ Proof.
   apply (Equivalence_Transitive x a y) in e; [contradiction | auto].
 Qed.
 
+Hint Resolve InA_setv_idle : setoidl.
+
+Lemma InA_setv :
+  forall {A B : Type} {x : A} {z : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l},
+    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
+    Equivalence eqk ->
+    Equivalence eqv ->
+    InA eqkv (x, z) (setv eqk_dec x z l).
+Proof.
+  intros until l.
+  functional induction (setv eqk_dec x z l) using setv_ind; intros.
+  1, 2: apply InA_cons_hd; firstorder.
+  apply InA_cons_tl; apply IHl0; auto.
+Qed.
+
 Hint Resolve InA_setv : setoidl.
+
+Lemma InA_notin_fs_setv_inv {A B : Type} :
+  forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}}
+         {y} (b : B) {l : list (A * B)} {x},
+    Equivalence eqk ->
+    ~InA eqk x (fs l) ->
+    ~eqk y x ->
+    ~InA eqk x (fs (setv eqk_dec y b l)).
+Proof.
+  intros until l; functional induction (setv eqk_dec y b l) using setv_ind;
+    rewrite fs_eq_cons_app; simpl; intros; (rewrite fs_eq_cons_app; simpl; inversion_clear 1) || inversion_clear 1;
+      [ apply Equivalence_Symmetric in H3; contradiction
+      | apply H0; assumption
+      | apply Equivalence_Symmetric in H3; contradiction
+      | apply H0; auto
+      | apply H0; auto
+      | generalize H3; apply IHl0; auto
+      ].
+Qed.
+
+Hint Resolve InA_notin_fs_setv_inv : setoidl.
+
+Lemma NoDupA_setv_cons (A : Type) {B : Type} :
+  forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {a b} {l : list (A * B)},
+    Equivalence eqk ->
+    ~InA eqk a (fs l) ->
+    NoDupA eqk (fs l) ->
+    NoDupA eqk (fs (setv eqk_dec a b l)).
+Proof.  
+  intros until l; functional induction (setv eqk_dec a b l) using setv_ind.
+  - intros; apply NoDupA_singleton.
+  - intros Heq Hnin; elimtype False; apply Hnin.
+    rewrite fs_eq_cons_app; simpl; apply InA_cons_hd; assumption.
+  - do 2 (rewrite fs_eq_cons_app; simpl).
+    intros; apply NoDupA_cons;
+      lazymatch goal with
+      | [ H: NoDupA _ (_ :: _) |- _ ] =>
+        inversion_clear H as [  | x l Hnin Hnd ];
+          (apply InA_notin_fs_setv_inv; auto) || (apply IHl0; auto)
+      end.
+Qed.
+
+Hint Resolve NoDupA_setv_cons : setoidl.
