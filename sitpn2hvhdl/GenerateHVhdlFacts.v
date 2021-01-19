@@ -2,6 +2,7 @@
 
 Require Import common.Coqlib.
 Require Import common.GlobalFacts.
+Require Import common.FstSplit.
 Require Import common.InAndNoDup.
 Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
@@ -24,7 +25,7 @@ Require Import sitpn2hvhdl.Sitpn2HVhdl.
 
 Section InputMap2AST.
 
-  Lemma imap_entry_to_associp_idle :
+  Lemma imap_entry_to_associp_inv_state :
     forall {sitpn im ime s v s'},
       imap_entry_to_associp sitpn im ime s = OK v s' ->
       s = s'.
@@ -40,7 +41,7 @@ End InputMap2AST.
 
 Section OutputMap2AST.
 
-  Lemma omap_entry_to_assocop_idle :
+  Lemma omap_entry_to_assocop_inv_state :
     forall {sitpn om ome s v s'},
       omap_entry_to_assocop sitpn om ome s = OK v s' ->
       s = s'.
@@ -65,8 +66,8 @@ Section HComp2CompInst.
     monadFullInv e.
     unfold InputMap_to_AST in EQ; unfold OutputMap_to_AST in EQ1.
     transitivity s0.
-    eapply foldl_idle; eauto; intros; eapply imap_entry_to_associp_idle; eauto.
-    eapply foldl_idle; eauto; intros; eapply omap_entry_to_assocop_idle; eauto.
+    eapply foldl_inv_state; eauto with typeclass_instances; intros; eapply imap_entry_to_associp_inv_state; eauto.
+    eapply foldl_inv_state; eauto with typeclass_instances; intros; eapply omap_entry_to_assocop_inv_state; eauto.
   Qed.
 
   Lemma HComp_to_comp_inst_p_comp :
@@ -87,7 +88,9 @@ End HComp2CompInst.
 
 Section GeneratePlaceCompInst.
 
-  Lemma gen_p_comp_inst_idle_p_comp :
+  (** *** P Component Generation *)
+  
+  Lemma gen_p_comp_inst_inv_p_comp :
     forall {sitpn x y s v s' id__p gm ipm opm},
       generate_place_comp_inst sitpn y s = OK v s' ->
       proj1_sig y <> proj1_sig x ->
@@ -101,7 +104,7 @@ Section GeneratePlaceCompInst.
         specialize (getv_inv_state EQ4) as e1;
         specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
         rewrite <- e2, <- e1; clear e1 e2; simpl;
-          [ apply InA_setv_idle; auto | right; assumption ].
+          [ apply InA_setv_inv; auto | right; assumption ].
   Qed.
 
   Lemma gen_p_comp_inst_p_comp :
@@ -159,12 +162,12 @@ Section GeneratePlaceCompInst.
         specialize (IHm s x s0 EQ Hnodup_tl e_pf n HIn_ntl) as (id__p, (gm, (ipm, (opm, (Hγ, Hincs_comp))))).
         unfold in_T_in_sublist_T in Hγ.
 
-        (* Apply gen_p_comp_inst_idle_p_comp *)
+        (* Apply gen_p_comp_inst_inv_p_comp *)
         assert (ne_an : a <> n) by (apply (not_in_in_diff (conj Hnotin_a_tl HIn_ntl))).
         assert (ne_proj1 : proj1_sig (pf a (in_eq a tl)) <> proj1_sig (pf n (in_cons a n tl HIn_ntl)))
           by (intros e_proj1; rewrite <- ((proj2 (H1 a n (in_eq a tl) (in_cons a n tl HIn_ntl))) e_proj1) in ne_an;
               contradiction).
-        specialize (gen_p_comp_inst_idle_p_comp EQ0 ne_proj1 Hγ Hincs_comp) as (Hγ', Hincs_comp').
+        specialize (gen_p_comp_inst_inv_p_comp EQ0 ne_proj1 Hγ Hincs_comp) as (Hγ', Hincs_comp').
         exists id__p, gm, ipm, opm; split; [ | auto].
         specialize ((proj1 (H1 n n (in_cons a n tl HIn_ntl) Innpls)) eq_refl) as e_proj1.
         eapply InA_eqk; eauto.
@@ -186,6 +189,82 @@ Section GeneratePlaceCompInst.
     rewrite <- (eq_sig (nat_to_P (proj1_sig p) (proj2_sig p)) p eq_refl eq_refl).
     apply (titer_gen_p_comp_inst_p_comp e Hnodup nat_to_P_determ (proj1_sig p) (proj2_sig p)).  
   Qed.
+
+  (** *** NoDup in p2pcomp *)
+  
+  Lemma gen_p_comp_inst_nodup_p2pcomp :
+    forall {sitpn p s v s'},
+      generate_place_comp_inst sitpn p s = OK v s' ->
+      ~InA Peq p (fs (p2pcomp (γ s))) ->
+      NoDupA Peq (fs (p2pcomp (γ s))) ->
+      NoDupA Peq (fs (p2pcomp (γ s'))).
+  Proof.
+    intros until s'; intros e; monadFullInv e;
+      simpl; simpl in EQ4;
+        specialize (getv_inv_state EQ4) as e1;
+        specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
+        rewrite <- e2, <- e1; clear e1 e2; simpl.
+    apply NoDupA_setv_cons; auto.
+  Qed.
+
+  Lemma gen_p_comp_inst_inv_p2pcomp :
+    forall {sitpn x y s v s'},
+      generate_place_comp_inst sitpn y s = OK v s' ->
+      ~Peq y x ->
+      ~InA Peq x (fs (p2pcomp (γ s))) ->
+      ~InA Peq x (fs (p2pcomp (γ s'))).
+  Proof.
+    intros until s'; intros e; intros;
+      monadFullInv e; simpl; simpl in EQ4;
+        specialize (getv_inv_state EQ4) as e1;
+        specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
+        rewrite <- e2, <- e1; clear e1 e2; simpl; auto with setoidl.
+  Qed.
+
+  Lemma titer_gen_p_comp_inst_inv_nodup_p2pcomp :
+    forall {sitpn pls} {Inpls2P : forall n : nat, List.In n pls -> P sitpn} {s v s'},
+      titer (generate_place_comp_inst sitpn) pls Inpls2P s = OK v s' ->
+      (forall x pfx, x = proj1_sig (Inpls2P x pfx)) ->
+      forall p,
+        ~InA Peq p (fs (p2pcomp (γ s))) ->
+        ~List.In (proj1_sig p) pls ->
+        ~InA Peq p (fs (p2pcomp (γ s'))).
+  Proof.
+    intros until Inpls2P;
+      functional induction (titer (generate_place_comp_inst sitpn) pls Inpls2P) using titer_ind;
+      intros s v s' e; monadInv e; auto; intros.
+    eapply gen_p_comp_inst_inv_p2pcomp; eauto.
+    unfold Peq; unfold seq.
+    lazymatch goal with
+    | [ e1: forall _ _, _ = proj1_sig _, H: ~List.In _ (_ :: _) |- _ ] =>
+      rewrite <- (e1 a (in_eq a tl));
+        rewrite not_in_cons in H1; apply proj1 in H1; auto
+    end.
+  Qed.
+
+  Lemma titer_gen_p_comp_inst_nodup_p2pcomp :
+    forall {sitpn pls} {Inpls2P : forall n : nat, List.In n pls -> P sitpn} {s v s'},
+      titer (generate_place_comp_inst sitpn) pls Inpls2P s = OK v s' ->
+      List.NoDup pls ->
+      (forall n (Innpls : List.In n pls), ~InA Peq (Inpls2P n Innpls) (fs (p2pcomp (γ s)))) ->
+      (forall x pfx, x = proj1_sig (Inpls2P x pfx)) ->
+      NoDupA Peq (fs (p2pcomp (γ s))) ->
+      NoDupA Peq (fs (p2pcomp (γ s'))).
+  Proof.
+    intros until Inpls2P;
+      functional induction (titer (generate_place_comp_inst sitpn) pls Inpls2P) using titer_ind;
+      intros s v s' e; monadInv e; auto; intros.
+    
+    eapply gen_p_comp_inst_nodup_p2pcomp; eauto;
+      lazymatch goal with
+      | [ H: forall _ _, _ = proj1_sig _, Hnd: List.NoDup (_ :: _) |- _ ] =>
+        (eapply titer_gen_p_comp_inst_inv_nodup_p2pcomp; eauto;
+         rewrite <- (H a (in_eq a tl));
+         apply (proj1 (proj1 (NoDup_cons_iff a tl) Hnd)))
+        || (eapply IHm; eauto; apply (proj2 (proj1 (NoDup_cons_iff a tl) Hnd)))
+      end.
+  Qed.
+
   
 End GeneratePlaceCompInst.
 
@@ -263,7 +342,7 @@ End GenerateTransCompInst.
 (** ** Facts about SITPN-to-H-VHDL Transformation Function *)
 
 Section Sitpn2HVhdl.
-
+  
   Lemma gen_comp_insts_p_comp :
     forall {sitpn s v s'},
       generate_comp_insts sitpn s = OK v s' ->
@@ -307,5 +386,19 @@ Section Sitpn2HVhdl.
         monadFullInv EQ4; inversion H; subst; simpl; auto
     end.
   Qed.
+
+  Lemma gen_comp_insts_nodup_p2pcomp :
+    forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
+      generate_comp_insts sitpn s = OK v s' ->
+      List.NoDup (places sitpn) ->
+      (forall n (n2P : In_P sitpn n), ~InA Peq (exist _ n n2P) (fs (p2pcomp (γ s)))) ->
+      NoDupA Peq (fs (p2pcomp (γ s))) ->
+      NoDupA Peq (fs (p2pcomp (γ s'))).
+  Proof.
+    intros until s'; intros e; monadInv e; intros.
+    rewrite <- (titer_gen_t_comp_inst_inv_p2pcomp EQ0).
+    eapply titer_gen_p_comp_inst_nodup_p2pcomp; eauto.
+  Qed.
+
   
 End Sitpn2HVhdl.

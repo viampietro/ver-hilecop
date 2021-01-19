@@ -14,7 +14,7 @@ COMMONFILES=NatMap.v NatMapFacts.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v
 	ListPlus.v ListPlusTactics.v ListPlusFacts.v \
 	ListDep.v \
 	StateAndErrorMonad.v StateAndErrorMonadTactics.v \
-	ListMonad.v ListMonadFacts.v \
+	ListMonad.v ListMonadFacts.v ListMonadTactics \
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 

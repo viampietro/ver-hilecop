@@ -110,7 +110,7 @@ Qed.
 
 Hint Rewrite NoDupA_fs_eqk_eq : setoidl.
 
-Lemma InA_setv_idle :
+Lemma InA_setv_inv :
   forall {A B : Type} {x y : A} {z v : B} {eqk eqv l} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}},
     let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
     InA eqkv (x, z) l ->
@@ -126,7 +126,7 @@ Proof.
   apply (Equivalence_Transitive x a y) in e; [contradiction | auto].
 Qed.
 
-Hint Resolve InA_setv_idle : setoidl.
+Hint Resolve InA_setv_inv : setoidl.
 
 Lemma InA_setv :
   forall {A B : Type} {x : A} {z : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l},
@@ -152,7 +152,7 @@ Lemma InA_notin_fs_setv_inv {A B : Type} :
     ~InA eqk x (fs (setv eqk_dec y b l)).
 Proof.
   intros until l; functional induction (setv eqk_dec y b l) using setv_ind;
-    rewrite fs_eq_cons_app; simpl; intros; (rewrite fs_eq_cons_app; simpl; inversion_clear 1) || inversion_clear 1;
+    rewrite fs_eq_cons_app ; simpl; intros; (rewrite fs_eq_cons_app; simpl; inversion_clear 1) || inversion_clear 1;
       [ apply Equivalence_Symmetric in H3; contradiction
       | apply H0; assumption
       | apply Equivalence_Symmetric in H3; contradiction

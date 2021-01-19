@@ -40,53 +40,6 @@ Require Import soundness.SoundnessDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
 
-Lemma gen_p_comp_inst_nodup_p2pcomp :
-  forall {sitpn p s v s'},
-    generate_place_comp_inst sitpn p s = OK v s' ->
-    ~InA Peq p (fs (p2pcomp (γ s))) ->
-    NoDupA Peq (fs (p2pcomp (γ s))) ->
-    NoDupA Peq (fs (p2pcomp (γ s'))).
-Proof.
-  intros until s'; intros e; monadFullInv e;
-    simpl; simpl in EQ4;
-      specialize (getv_inv_state EQ4) as e1;
-      specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
-      rewrite <- e2, <- e1; clear e1 e2; simpl.
-  apply NoDupA_setv_cons; auto.
-Qed.
-
-Lemma titer_gen_p_comp_inst_inv_nodup_p2pcomp :
-  forall {sitpn pls} {Inpls2P : forall n : nat, List.In n pls -> P sitpn} {s v s'},
-    titer (generate_place_comp_inst sitpn) pls Inpls2P s = OK v s' ->
-    (forall x pfx, x = proj1_sig (Inpls2P x pfx)) ->
-    forall p,
-      ~InA Peq p (fs (p2pcomp (γ s))) ->
-      ~List.In (proj1_sig p) pls ->
-      ~InA Peq p (fs (p2pcomp (γ s'))).
-Admitted.
-
-Lemma titer_gen_p_comp_inst_nodup_p2pcomp :
-  forall {sitpn pls} {Inpls2P : forall n : nat, List.In n pls -> P sitpn} {s v s'},
-    titer (generate_place_comp_inst sitpn) pls Inpls2P s = OK v s' ->
-    List.NoDup pls ->
-    (forall n (Innpls : List.In n pls), ~InA Peq (Inpls2P n Innpls) (fs (p2pcomp (γ s)))) ->
-    (forall x pfx, x = proj1_sig (Inpls2P x pfx)) ->
-    NoDupA Peq (fs (p2pcomp (γ s))) ->
-    NoDupA Peq (fs (p2pcomp (γ s'))).
-Proof.
-  intros until Inpls2P;
-    functional induction (titer (generate_place_comp_inst sitpn) pls Inpls2P) using titer_ind;
-    intros s v s' e; monadInv e; auto; intros.
-  eapply gen_p_comp_inst_nodup_p2pcomp; eauto;
-  lazymatch goal with
-  | [ H: forall _ _, _ = proj1_sig _, Hnd: List.NoDup (_ :: _) |- _ ] =>
-    (eapply titer_gen_p_comp_inst_inv_nodup_p2pcomp; eauto;
-     rewrite <- (H a (in_eq a tl));
-     apply (proj1 (proj1 (NoDup_cons_iff a tl) Hnd)))
-    || (eapply IHm; eauto; apply (proj2 (proj1 (NoDup_cons_iff a tl) Hnd)))
-  end.
-Qed.
-
 Lemma gen_comp_insts_nodup_p2pcomp :
   forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
     generate_comp_insts sitpn s = OK v s' ->
@@ -100,10 +53,38 @@ Proof.
   eapply titer_gen_p_comp_inst_nodup_p2pcomp; eauto.
 Qed.
 
+Require Import common.ListMonadTactics.
+
+Lemma check_wd_sitpn_inv_eq_state :
+  forall {sitpn decpr s v s'},
+    check_wd_sitpn sitpn decpr s = OK v s' ->
+    s = s'.
+Proof.  
+  intros until s'; intros e. solveSInv e.
+  
+  (* check_pr_is_irrefl *)
+  intros until s2; intros e1; solveSInv e1; auto.
+
+  (* check_pr_is_trans *)
+  intros until s2; intros e1; solveSInv e1; auto.
+  intros until s4; intros e2; solveSInv e2; auto.
+  intros until s6; intros e3; solveSInv e3; auto.
+Qed.
+
 Lemma gen_sitpn_infos_inv_p2pcomp :
   forall {sitpn decpr s v s'},
     generate_sitpn_infos sitpn decpr s = OK v s' ->
     p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; solveSInv e.
+  solveSInv EQ.
+  unfold check_wd_sitpn in EQ(* ; destruct (places sitpn); destruct (transitions sitpn) *).
+
+  unfold generate_trans_infos in EQ1.
+  unfold generate_place_infos in EQ0.
+  unfold generate_cond_infos in EQ2.
+  unfold generate_action_infos in EQ3.
+  unfold generate_fun_infos in EQ5.
 Admitted.
 
 Lemma gen_arch_inv_p2pcomp :
@@ -137,7 +118,7 @@ Proof.
   | [ H: inl _ = inl _, Hwd: IsWellDefined _ |- _ ] =>
     let NoDupPlaces := (get_nodup_places Hwd) in
     monadFullInv EQ4; inversion H; subst; simpl;
-      eapply (gen_comp_insts_nodup_p_binder EQ2 NoDupPlaces);
+      eapply (gen_comp_insts_nodup_p2pcomp EQ2 NoDupPlaces);
       rewrite <- (gen_ports_inv_p2pcomp EQ0);
       rewrite <- (gen_arch_inv_p2pcomp EQ1);
       rewrite <- (gen_sitpn_infos_inv_p2pcomp EQ);

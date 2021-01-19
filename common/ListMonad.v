@@ -42,6 +42,8 @@ Fixpoint iter {state A} (f : A -> @Mon state unit) (l : list A) {struct l} : @Mo
   | b :: tl => do _ <- iter f tl; f b
   end.
 
+Functional Scheme iter_ind := Induction for iter Sort Prop.
+
 Fixpoint titer {state A B} (f : B -> @Mon state unit) (lofAs : list A) {struct lofAs} :
   (forall a, In a lofAs -> B) -> @Mon state unit :=
   match lofAs with

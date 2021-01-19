@@ -21,14 +21,80 @@ Qed.
 
 Hint Resolve getv_inv_state : listmonad.
 
-Lemma foldl_idle :
-  forall {state A B : Type} {f : B -> A -> Mon B} {l b0} {s : state} {v s'},
+Remark foldl_inv_state :
+  forall {state A B : Type} {f : B -> A -> Mon B} {l b0} {s : state} {v s'}
+         {Q : state -> state -> Prop},
     fold_left f l b0 s = OK v s' ->
-    (forall b a s0 v0 s0', f b a s0 = OK v0 s0' -> s0 = s0') ->
-    s = s'.
+    Reflexive Q ->
+    Transitive Q ->
+    (forall b a s0 v0 s0', f b a s0 = OK v0 s0' -> Q s0 s0') ->
+    Q s s'.
 Proof.
-  induction l; simpl; intros b0 s v s' e; monadInv e; intros f_idle.
-  auto.
-  apply IHl with (b0 := x) (v := v); auto.
-  rewrite <- (f_idle b0 a s x s0 EQ) in EQ0; assumption.
+  induction l; simpl; intros b0 s v s' Q e; monadInv e; intros Qrefl Qtrans f_inv;
+    [ apply Qrefl
+    | apply Qtrans with (y := s0);
+      [apply (f_inv b0 a s x s0 EQ)
+      | apply IHl with (b0 := x) (v := v); auto]].
+Qed.
+
+Remark iter_inv_state :
+  forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}
+         {Q : state -> state -> Prop},
+    iter f l s = OK v s' ->
+    Reflexive Q ->
+    Transitive Q ->
+    (forall a s1 x s2, f a s1 = OK x s2 -> Q s1 s2) ->
+    Q s s'.
+Proof.
+  intros until l; functional induction (iter f l) using iter_ind;
+    intros s v s' Q e; monadFullInv e; intros Qrefl Qtrans f_inv;
+      [ apply Qrefl |
+        apply Qtrans with (y := s0);
+        [ eapply IHm; eauto | apply (f_inv b s0 v s' EQ0) ] ].
+Qed.
+
+Remark titer_inv_state :
+  forall {state A B : Type} {f : B -> Mon unit} {l : list A} {Inl2B} {s : state} {v s'}
+         {Q : state -> state -> Prop},
+    titer f l Inl2B s = OK v s' ->
+    Reflexive Q ->
+    Transitive Q ->
+    (forall b s1 x s2, f b s1 = OK x s2 -> Q s1 s2) ->
+    Q s s'.
+Proof.
+  intros until Inl2B; functional induction (titer f l Inl2B) using titer_ind;
+    intros s v s' Q e; monadFullInv e; intros Qrefl Qtrans f_inv;
+      [ apply Qrefl
+      | apply Qtrans with (y := s0);
+        [ eapply IHm; eauto | apply (f_inv (pf a (in_eq a tl)) s0 v s' EQ0) ] ].
+Qed.
+
+Functional Scheme foreach_ind := Induction for foreach Sort Prop.
+
+Remark foreach_aux_inv_state :
+  forall {state A : Type} {f : A -> list A -> Mon unit} {rght lft : list A} {s : state} {v s'}
+         {Q : state -> state -> Prop},
+    foreach_aux state A f lft rght s = OK v s' ->
+    Reflexive Q ->
+    Transitive Q ->
+    (forall a lofAs s1 x s2, f a lofAs s1 = OK x s2 -> Q s1 s2) ->
+    Q s s'.
+Proof.
+  induction rght; simpl; intros lft s v s' Q e Qrefl Qtrans f_inv; monadInv e.
+  apply Qrefl.
+  apply Qtrans with (y := s0).
+  eapply f_inv; eauto.
+  eapply IHrght; eauto.
+Qed.
+
+Remark foreach_inv_state :
+  forall {state A : Type} {f : A -> list A -> Mon unit} {l : list A} {s : state} {v s'}
+         {Q : state -> state -> Prop},
+    foreach f l s = OK v s' ->
+    Reflexive Q ->
+    Transitive Q ->
+    (forall a lofAs s1 x s2, f a lofAs s1 = OK x s2 -> Q s1 s2) ->
+    Q s s'.
+Proof.
+  intros; eapply foreach_aux_inv_state; eauto.
 Qed.
