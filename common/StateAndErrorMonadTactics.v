@@ -99,4 +99,57 @@ Ltac monadFullInv H :=
     ((progress simpl in H) || unfold F in H); monadFullInv H
   end.
 
+Ltac minv1 H :=
+  match type of H with
+  | (OK _ _ = OK _ _) =>
+    inversion H; clear H; try subst
+  | (Get _ = OK _ _) =>
+    inversion H; clear H; try subst
+  | (Put _ _ = OK _ _) =>
+    inversion H; clear H; try subst
+  | (Ret _ _ = OK _ _) =>
+    inversion H; clear H; try subst
+  | (Err _ _ = OK _ _) =>
+    discriminate
+  | (Error _ = OK _ _) =>
+    discriminate
+  end.
+
+Ltac minv H :=
+  match type of H with
+  | (OK _ _ = OK _ _) => try (minv1 H)
+  | (Get _ = OK _ _) => try (minv1 H)
+  | (Put _ _ = OK _ _) => try (minv1 H)
+  | (Ret _ _ = OK _ _) => try (minv1 H)
+  | (Err _ _ = OK _ _) => try (minv1 H)
+  | (Error _ = OK _ _) => try (minv1 H)
+  | (Bind ?F ?G ?S = OK ?X ?S') =>
+    let x := fresh "x" in
+    let s := fresh "s" in
+    let EQ1 := fresh "EQ" in
+    let EQ2 := fresh "EQ" in
+    destruct (Bind_inversion _ _ _ F G X S S' H) as [x [s [EQ1 EQ2]]];
+    clear H;
+    try (minv EQ2);
+    try (minv EQ1)
+  | ((if ?c then _ else _) _ = OK _ _) => destruct c; try (minv H)
+  | ((let '_ := ?y in _) _ = OK _ _) => destruct y; try (minv H)
+  | ((let _ := ?y in _) _ = OK _ _) => destruct y; try (minv H)
+  | (?F _ _ _ _ _ _ _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ _ _ _ _ _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ _ _ _ _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ _ _ _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ _ _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  | (?F _ = OK _ _) =>
+    ((progress simpl in H) || unfold F in H); minv H
+  end.
 

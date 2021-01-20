@@ -266,30 +266,18 @@ Section GenSitpnInfos.
           end
         end.
 
-      (** Injects all transitions of the [transs] list in the list [stranss]
-      that contains transitions sorted by level of firing priority.  *)
-
-      Fixpoint sort_by_priority_aux
-               (cgroup : list (T sitpn))
-               (scgroup : list (T sitpn)) {struct cgroup} :
-        CompileTimeState (list (T sitpn)) :=
-        match cgroup with
-        | [] => Ret scgroup
-        | t :: tl =>
-          do scgroup' <- inject_t t scgroup;
-          sort_by_priority_aux tl scgroup'
-        end.
-
+      Functional Scheme inject_t_ind := Induction for inject_t Sort Prop.
+      
       (** Takes a list of transitions [cgroup] (conflict group), and
           returns a new list of transitions where the elements of the
           confict group are ordered by level of firing priority.
 
-          Raises an error if no strict total ordering can be established
-          in relation to the priority order.  *)
+          Raises an error if the priority relation is not a strict
+          total order over the elements of [cgroup].  *)
 
       Definition sort_by_priority (cgroup : list (T sitpn)) :
         CompileTimeState (list (T sitpn)) :=
-        sort_by_priority_aux cgroup [].
+        fold_left (fun scgroup t => inject_t t scgroup) cgroup [].
 
     End ConflictResolution.
 

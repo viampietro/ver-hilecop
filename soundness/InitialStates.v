@@ -9,9 +9,10 @@ Require Import common.GlobalFacts.
 Require Import common.SetoidListFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
-Require Import ListPlus.
+Require Import common.ListPlus.
 Require Import common.ListMonad.
 Require Import common.ListMonadFacts.
+Require Import common.ListMonadTactics.
 Require Import common.ListDep.
 
 Require Import sitpn.dp.Sitpn.
@@ -53,14 +54,12 @@ Proof.
   eapply titer_gen_p_comp_inst_nodup_p2pcomp; eauto.
 Qed.
 
-Require Import common.ListMonadTactics.
-
 Lemma check_wd_sitpn_inv_eq_state :
   forall {sitpn decpr s v s'},
     check_wd_sitpn sitpn decpr s = OK v s' ->
     s = s'.
 Proof.  
-  intros until s'; intros e. solveSInv e.
+  intros until s'; intros e; solveSInv e.
   
   (* check_pr_is_irrefl *)
   intros until s2; intros e1; solveSInv e1; auto.
@@ -71,21 +70,107 @@ Proof.
   intros until s6; intros e3; solveSInv e3; auto.
 Qed.
 
+Lemma gen_tinfos_inv_p2pcomp :
+  forall {sitpn s v s'},
+    generate_trans_infos sitpn s = OK v s' ->
+    p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; pattern s, s'; solveSInv e.
+  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
+Qed.
+
+Lemma all_conflicts_solved_by_mutex_inv_state :
+  forall {sitpn lofTs s v s'},
+    all_conflicts_solved_by_mutex sitpn lofTs s = OK v s' ->
+    s = s'.
+Proof.
+  induction lofTs; simpl; intros until s'; intros e; minv e; auto.
+  transitivity s0.
+  - eapply find_inv_state; eauto with typeclass_instances.
+    intros until s2; intros e1; pattern s1, s2; minv e1;
+      (transitivity s6; [ eauto with listmonad | ];
+       transitivity s4; [ eauto with listmonad | ];
+       transitivity s5; [ eauto with listmonad | ];
+       eauto with listmonad).
+  - eapply IHlofTs; eauto.
+  - eapply find_inv_state; eauto with typeclass_instances.
+    intros until s2; intros e1; pattern s1, s2; minv e1;
+      (transitivity s5; [ eauto with listmonad | ];
+       transitivity s3; [ eauto with listmonad | ];
+       transitivity s4; [ eauto with listmonad | ];
+       eauto with listmonad).
+Qed.
+
+Lemma sort_by_priority_inv_state :
+  forall {sitpn decpr lofTs s v s'},
+    sort_by_priority sitpn decpr lofTs s = OK v s' ->
+    s = s'.
+Proof.
+  intros until s'; intros e; unfold sort_by_priority in e.
+  eapply foldl_inv_state; eauto with typeclass_instances.
+  intros until s0; cbv beta.
+  functional induction (inject_t sitpn decpr a b) using inject_t_ind;
+    intros until s0'; intros f; minv f; auto.
+  eapply IHc; eauto. 
+Qed.
+
+Lemma gen_pinfos_inv_p2pcomp :
+  forall {sitpn decpr s v s'},
+    generate_place_infos sitpn decpr s = OK v s' ->
+    p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; pattern s, s'; solveSInv e.
+  intros until s2; intros e1; pattern s1, s2; minv e1; simpl.
+  - minv EQ1; auto.
+  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1); auto.
+  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1); auto.
+  - minv EQ0; minv EQ1.
+  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1);
+      rewrite (sort_by_priority_inv_state EQ0); auto.
+  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1);
+      rewrite (sort_by_priority_inv_state EQ0); auto.
+Qed.
+
+Lemma gen_cinfos_inv_p2pcomp :
+  forall {sitpn s v s'},
+    generate_cond_infos sitpn s = OK v s' ->
+    p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; pattern s, s'; solveSInv e.
+  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
+Qed.
+
+Lemma gen_ainfos_inv_p2pcomp :
+  forall {sitpn s v s'},
+    generate_action_infos sitpn s = OK v s' ->
+    p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; pattern s, s'; solveSInv e.
+  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
+Qed.
+
+Lemma gen_finfos_inv_p2pcomp :
+  forall {sitpn s v s'},
+    generate_fun_infos sitpn s = OK v s' ->
+    p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; pattern s, s'; solveSInv e.
+  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
+Qed.
+
 Lemma gen_sitpn_infos_inv_p2pcomp :
   forall {sitpn decpr s v s'},
     generate_sitpn_infos sitpn decpr s = OK v s' ->
     p2pcomp (γ s) = p2pcomp (γ s').
 Proof.
-  intros until s'; intros e; solveSInv e.
-  solveSInv EQ.
-  unfold check_wd_sitpn in EQ(* ; destruct (places sitpn); destruct (transitions sitpn) *).
-
-  unfold generate_trans_infos in EQ1.
-  unfold generate_place_infos in EQ0.
-  unfold generate_cond_infos in EQ2.
-  unfold generate_action_infos in EQ3.
-  unfold generate_fun_infos in EQ5.
-Admitted.
+  intros until s'; intros e; monadFullInv e.
+  rewrite (check_wd_sitpn_inv_eq_state EQ).
+  rewrite (gen_tinfos_inv_p2pcomp EQ1).
+  rewrite (gen_pinfos_inv_p2pcomp EQ0).
+  rewrite (gen_cinfos_inv_p2pcomp EQ2).
+  rewrite (gen_ainfos_inv_p2pcomp EQ3).
+  apply (gen_finfos_inv_p2pcomp EQ5).
+Qed.
 
 Lemma gen_arch_inv_p2pcomp :
   forall {sitpn mm s v s'},

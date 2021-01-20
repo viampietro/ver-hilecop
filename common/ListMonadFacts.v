@@ -69,8 +69,6 @@ Proof.
         [ eapply IHm; eauto | apply (f_inv (pf a (in_eq a tl)) s0 v s' EQ0) ] ].
 Qed.
 
-Functional Scheme foreach_ind := Induction for foreach Sort Prop.
-
 Remark foreach_aux_inv_state :
   forall {state A : Type} {f : A -> list A -> Mon unit} {rght lft : list A} {s : state} {v s'}
          {Q : state -> state -> Prop},
@@ -97,4 +95,20 @@ Remark foreach_inv_state :
     Q s s'.
 Proof.
   intros; eapply foreach_aux_inv_state; eauto.
+Qed.
+
+Remark find_inv_state :
+  forall {state A : Type} {f : A -> Mon bool} {l : list A} {s : state} {v s'}
+         {Q : state -> state -> Prop},
+    find f l s = OK v s' ->
+    Reflexive Q ->
+    Transitive Q ->
+    (forall a s1 x s2, f a s1 = OK x s2 -> Q s1 s2) ->
+    Q s s'.
+Proof.
+  induction l; simpl; intros s v s' Q e Qrefl Qtrans f_inv; minv e.
+  apply Qrefl.
+  eapply f_inv; eauto.
+  apply Qtrans with (y := s0);
+  [ eapply f_inv; eauto | eapply IHl; eauto ].
 Qed.

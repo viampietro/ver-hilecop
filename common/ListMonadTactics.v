@@ -7,12 +7,12 @@ Require Import StateAndErrorMonadTactics.
 
 Ltac solveSInv H :=
   match type of H with
-  | (OK _ _ = OK _ _) => try (monadInv1 H)
-  | (Get _ = OK _ _) => try (monadInv1 H)
-  | (Put _ _ = OK _ _) => try (monadInv1 H)
-  | (Ret _ _ = OK _ _) => try (monadInv1 H)
-  | (Err _ _ = OK _ _) => try (monadInv1 H)
-  | (Error _ = OK _ _) => try (monadInv1 H)
+  | (OK _ _ = OK _ _) => try (minv1 H)
+  | (Get _ = OK _ _) => try (minv1 H)
+  | (Put _ _ = OK _ _) => try (minv1 H)
+  | (Ret _ _ = OK _ _) => try (minv1 H)
+  | (Err _ _ = OK _ _) => try (minv1 H)
+  | (Error _ = OK _ _) => try (minv1 H)
   | (Bind ?F ?G ?S = OK ?X ?S') =>
     let x := fresh "x" in
     let s := fresh "s" in
@@ -24,8 +24,7 @@ Ltac solveSInv H :=
     | _ = OK _ ?s2 =>
       (transitivity s2; [ try (solveSInv EQ1) | try (solveSInv EQ2) ])
       || auto
-    end
-    
+    end    
   | (if ?c then _ else _) _ = OK _ _ => destruct c; try (solveSInv H)
   | iter ?f _ _ = OK _ _ =>
     eapply iter_inv_state; eauto with typeclass_instances
@@ -53,22 +52,23 @@ Ltac solveSInv H :=
 
 Definition NatCounter := @Mon nat.
 
-Definition suml (l : list nat) : NatCounter unit :=
-  do _ <- iter (fun n s => OK tt (n + s)) l;
-  iter (fun n s => OK tt (n + s)) l.
-
 Require Import List.
 Import ListNotations.
 
-Compute (suml [1; 2; 3; 4] 0).
+Definition suml (l : list nat) (x : { n : nat | n > 0 }) : NatCounter unit :=
+  let (m, gt0m) := x in
+  do _ <- iter (fun n s => OK tt (n + s)) l;
+  iter (fun n s => OK tt (n + s)) (l ++ [m]).
+
+Compute (suml [1; 2; 3; 4] (exist _ 1 (Gt.gt_Sn_O 0)) 0).
 
 Lemma suml_inv_S :
-  forall {l s v s'},
-    suml l s = OK v s' ->
+  forall {l x s v s'},
+    suml l x s = OK v s' ->
     ((fun s1 s2 => s1 > 0 -> s2 > 0) s s').
 Proof.
   intros until s'; intros e.
-  solveSInv e.
-  solveSInv EQ.
+  cbv beta.
+  pattern s, s'.
 Admitted.
   
