@@ -36,152 +36,22 @@ Require Import hvhdl.ExpressionEvaluation.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateHVhdlFacts.
+Require Import sitpn2hvhdl.GenerateInfosFacts.
 
 Require Import soundness.SoundnessDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
 
-Lemma gen_comp_insts_nodup_p2pcomp :
-  forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
-    generate_comp_insts sitpn s = OK v s' ->
-    List.NoDup (places sitpn) ->
-    (forall n (n2P : In_P sitpn n), ~InA Peq (exist _ n n2P) (fs (p2pcomp (γ s)))) ->
-    NoDupA Peq (fs (p2pcomp (γ s))) ->
-    NoDupA Peq (fs (p2pcomp (γ s'))).
-Proof.
-  intros until s'; intros e; monadInv e; intros.
-  rewrite <- (titer_gen_t_comp_inst_inv_p2pcomp EQ0).
-  eapply titer_gen_p_comp_inst_nodup_p2pcomp; eauto.
-Qed.
-
-Lemma check_wd_sitpn_inv_eq_state :
-  forall {sitpn decpr s v s'},
-    check_wd_sitpn sitpn decpr s = OK v s' ->
-    s = s'.
-Proof.  
-  intros until s'; intros e; solveSInv e.
-  
-  (* check_pr_is_irrefl *)
-  intros until s2; intros e1; solveSInv e1; auto.
-
-  (* check_pr_is_trans *)
-  intros until s2; intros e1; solveSInv e1; auto.
-  intros until s4; intros e2; solveSInv e2; auto.
-  intros until s6; intros e3; solveSInv e3; auto.
-Qed.
-
-Lemma gen_tinfos_inv_p2pcomp :
-  forall {sitpn s v s'},
-    generate_trans_infos sitpn s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; pattern s, s'; solveSInv e.
-  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
-Qed.
-
-Lemma all_conflicts_solved_by_mutex_inv_state :
-  forall {sitpn lofTs s v s'},
-    all_conflicts_solved_by_mutex sitpn lofTs s = OK v s' ->
-    s = s'.
-Proof.
-  induction lofTs; simpl; intros until s'; intros e; minv e; auto.
-  transitivity s0.
-  - eapply find_inv_state; eauto with typeclass_instances.
-    intros until s2; intros e1; pattern s1, s2; minv e1;
-      (transitivity s6; [ eauto with listmonad | ];
-       transitivity s4; [ eauto with listmonad | ];
-       transitivity s5; [ eauto with listmonad | ];
-       eauto with listmonad).
-  - eapply IHlofTs; eauto.
-  - eapply find_inv_state; eauto with typeclass_instances.
-    intros until s2; intros e1; pattern s1, s2; minv e1;
-      (transitivity s5; [ eauto with listmonad | ];
-       transitivity s3; [ eauto with listmonad | ];
-       transitivity s4; [ eauto with listmonad | ];
-       eauto with listmonad).
-Qed.
-
-Lemma sort_by_priority_inv_state :
-  forall {sitpn decpr lofTs s v s'},
-    sort_by_priority sitpn decpr lofTs s = OK v s' ->
-    s = s'.
-Proof.
-  intros until s'; intros e; unfold sort_by_priority in e.
-  eapply foldl_inv_state; eauto with typeclass_instances.
-  intros until s0; cbv beta.
-  functional induction (inject_t sitpn decpr a b) using inject_t_ind;
-    intros until s0'; intros f; minv f; auto.
-  eapply IHc; eauto. 
-Qed.
-
-Lemma gen_pinfos_inv_p2pcomp :
-  forall {sitpn decpr s v s'},
-    generate_place_infos sitpn decpr s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; pattern s, s'; solveSInv e.
-  intros until s2; intros e1; pattern s1, s2; minv e1; simpl.
-  - minv EQ1; auto.
-  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1); auto.
-  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1); auto.
-  - minv EQ0; minv EQ1.
-  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1);
-      rewrite (sort_by_priority_inv_state EQ0); auto.
-  - rewrite (all_conflicts_solved_by_mutex_inv_state EQ1);
-      rewrite (sort_by_priority_inv_state EQ0); auto.
-Qed.
-
-Lemma gen_cinfos_inv_p2pcomp :
-  forall {sitpn s v s'},
-    generate_cond_infos sitpn s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; pattern s, s'; solveSInv e.
-  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
-Qed.
-
-Lemma gen_ainfos_inv_p2pcomp :
-  forall {sitpn s v s'},
-    generate_action_infos sitpn s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; pattern s, s'; solveSInv e.
-  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
-Qed.
-
-Lemma gen_finfos_inv_p2pcomp :
-  forall {sitpn s v s'},
-    generate_fun_infos sitpn s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; pattern s, s'; solveSInv e.
-  intros until s2; intros e1; pattern s1, s2; minv e1; simpl; reflexivity.
-Qed.
-
-Lemma gen_sitpn_infos_inv_p2pcomp :
-  forall {sitpn decpr s v s'},
-    generate_sitpn_infos sitpn decpr s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; monadFullInv e.
-  rewrite (check_wd_sitpn_inv_eq_state EQ).
-  rewrite (gen_tinfos_inv_p2pcomp EQ1).
-  rewrite (gen_pinfos_inv_p2pcomp EQ0).
-  rewrite (gen_cinfos_inv_p2pcomp EQ2).
-  rewrite (gen_ainfos_inv_p2pcomp EQ3).
-  apply (gen_finfos_inv_p2pcomp EQ5).
-Qed.
-
-Lemma gen_arch_inv_p2pcomp :
-  forall {sitpn mm s v s'},
-    @generate_architecture sitpn mm s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Admitted.
-
 Lemma gen_ports_inv_p2pcomp :
   forall {sitpn s v s'},
     @generate_ports sitpn s = OK v s' ->
     p2pcomp (γ s) = p2pcomp (γ s').
+Proof.
+  intros until s'; intros e; minv e.
+  unfold generate_action_ports_and_ps in EQ.
+  unfold nat_to_A in EQ. unfold In_A in EQ.
+  set (l := actions sitpn) in EQ.
+  case l in EQ.
 Admitted.
 
 Lemma sitpn2hvhdl_nodup_p2pcomp :
@@ -205,9 +75,9 @@ Proof.
     monadFullInv EQ4; inversion H; subst; simpl;
       eapply (gen_comp_insts_nodup_p2pcomp EQ2 NoDupPlaces);
       rewrite <- (gen_ports_inv_p2pcomp EQ0);
-      rewrite <- (gen_arch_inv_p2pcomp EQ1);
-      rewrite <- (gen_sitpn_infos_inv_p2pcomp EQ);
-      simpl; apply NoDupA_nil
+      rewrite <- (gen_arch_inv_γ EQ1);
+      rewrite <- (gen_sitpn_infos_inv_γ EQ);
+      simpl; [ inversion 1 | apply NoDupA_nil]
   end.
 Qed.
 

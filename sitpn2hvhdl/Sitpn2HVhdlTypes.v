@@ -127,6 +127,14 @@ Section CompileTimeTypes.
   Inductive Sitpn2HVhdlState : Type :=
     MkS2HState {
 
+        (* Dependently-typed lists of places, transitions, conditions,
+           actions and functions *)
+        lofPs : list (P sitpn);
+        lofTs : list (T sitpn);
+        lofCs : list (C sitpn);
+        lofAs : list (A sitpn);
+        lofFs : list (F sitpn);
+        
         (* Next id *)
         nextid : ident;
 
@@ -156,7 +164,7 @@ Section CompileTimeTypes.
       state. *)
   
   Definition InitS2HState (ffid : ident) :=
-    MkS2HState ffid EmptySitpnInfos [] [] EmptyArch cs_null EmptyS2HMap.
+    MkS2HState [] [] [] [] [] ffid EmptySitpnInfos [] [] EmptyArch cs_null EmptyS2HMap.
   
 End CompileTimeTypes.
 
@@ -186,6 +194,11 @@ Arguments c2in {sitpn}.
 
 (* Set implicit arguments for compile-time state *)
 
+Arguments lofPs {sitpn}.
+Arguments lofTs {sitpn}.
+Arguments lofCs {sitpn}.
+Arguments lofAs {sitpn}.
+Arguments lofFs {sitpn}.
 Arguments nextid {sitpn}.
 Arguments sitpninfos {sitpn}.
 Arguments iports {sitpn}.
@@ -202,58 +215,102 @@ Section CompileTimeStateOpers.
 
   (** *** Operations for compile-time state *)
 
+  Definition get_lofPs : @Mon (Sitpn2HVhdlState sitpn) (list (P sitpn)) :=
+    do s <- Get; Ret (lofPs s).
+
+  Definition set_lofPs (Plist : list (P sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn Plist (lofTs s) (lofCs s) (lofAs s) (lofFs s) (nextid s)
+                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+
+  Definition get_lofTs : @Mon (Sitpn2HVhdlState sitpn) (list (T sitpn)) :=
+    do s <- Get; Ret (lofTs s).
+
+  Definition set_lofTs (Tlist : list (T sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (lofPs s) Tlist (lofCs s) (lofAs s) (lofFs s) (nextid s)
+                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+
+  Definition get_lofCs : @Mon (Sitpn2HVhdlState sitpn) (list (C sitpn)) :=
+    do s <- Get; Ret (lofCs s).
+
+  Definition set_lofCs (Clist : list (C sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) Clist (lofAs s) (lofFs s) (nextid s)
+                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+
+  Definition get_lofAs : @Mon (Sitpn2HVhdlState sitpn) (list (A sitpn)) :=
+    do s <- Get; Ret (lofAs s).
+
+  Definition set_lofAs (Alist : list (A sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) Alist (lofFs s) (nextid s)
+                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+
+  Definition get_lofFs : @Mon (Sitpn2HVhdlState sitpn) (list (F sitpn)) :=
+    do s <- Get; Ret (lofFs s).
+
+  Definition set_lofFs (Flist : list (F sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) Flist (nextid s)
+                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+  
   Definition get_infos : @Mon (Sitpn2HVhdlState sitpn) (SitpnInfos sitpn) :=
     do s <- Get; Ret (sitpninfos s).
 
   Definition set_infos (infos : SitpnInfos sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) infos (iports s) (oports s) (arch s) (beh s) (γ s)).
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) infos (iports s) (oports s) (arch s) (beh s) (γ s)).
 
   Definition get_arch : @Mon (Sitpn2HVhdlState sitpn) (Architecture sitpn) :=
     do s <- Get; Ret (arch s).
 
   Definition set_arch (arch : Architecture sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) arch (beh s) (γ s)).
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) (iports s) (oports s) arch (beh s) (γ s)).
 
   Definition get_beh : @Mon (Sitpn2HVhdlState sitpn) cs :=
     do s <- Get; Ret (beh s).
 
   Definition set_beh (beh : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) beh (γ s)).
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) beh (γ s)).
   
   Definition get_binder : @Mon (Sitpn2HVhdlState sitpn) (Sitpn2HVhdlMap sitpn) :=
     do s <- Get; Ret (γ s).
 
   Definition set_binder (γ : Sitpn2HVhdlMap sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) γ).
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) γ).
   
   (* Returns the next available identifier, and increments the
      [nextid] value in the compile-time state. *)
 
   Definition get_nextid : @Mon (Sitpn2HVhdlState sitpn) ident :=
     do s <- Get;
-    do _  <- Put (MkS2HState sitpn (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s));
+    do _  <- Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                             (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s));
     Ret (nextid s).
 
   (** *** Operations for the list of input ports *)
 
   Definition add_in_port (iport_decl : pdecl) :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s)
-                    ((iports s) ++ [iport_decl])
-                    (oports s)
-                    (arch s) (beh s) (γ s)).
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) ((iports s) ++ [iport_decl])
+                    (oports s) (arch s) (beh s) (γ s)).
   
   (** *** Operations for the list of output ports *)
 
   Definition add_out_port (oport_decl : pdecl) :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s)
-                    (iports s) ((oports s) ++ [oport_decl])
-                    (arch s) (beh s) (γ s)).
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) 
+                    (iports s) ((oports s) ++ [oport_decl]) (arch s) (beh s) (γ s)).
 
   (** *** Operations for SITPN-to-H-VHDL map *)
 
@@ -296,8 +353,8 @@ Section CompileTimeStateOpers.
 
   Definition add_cs (cstmt : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
-    Put (MkS2HState sitpn (nextid s) (sitpninfos s)
-                    (iports s) (oports s)
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) (iports s) (oports s)
                     (arch s) (cs_par cstmt (beh s)) (γ s)).
   
   (** *** Operations for Architecture structure *)
@@ -453,6 +510,16 @@ Arguments cinfos {sitpn}.
 
 (* Set implicit arguments for Sitpn2HVhdlState monadic functions. *)
 
+Arguments get_lofPs {sitpn}.
+Arguments set_lofPs {sitpn}.
+Arguments get_lofTs {sitpn}.
+Arguments set_lofTs {sitpn}.
+Arguments get_lofAs {sitpn}.
+Arguments set_lofAs {sitpn}.
+Arguments get_lofCs {sitpn}.
+Arguments set_lofCs {sitpn}.
+Arguments get_lofFs {sitpn}.
+Arguments set_lofFs {sitpn}.
 Arguments get_arch {sitpn}.
 Arguments set_arch {sitpn}.
 Arguments get_infos {sitpn}.

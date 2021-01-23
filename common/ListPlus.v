@@ -4,10 +4,11 @@
  *)
 
 Require Import Coqlib.
+Require Import common.GlobalFacts.
+Require Import SetoidList.
 Require Import Omega.
 Require Import Classical_Prop.
 Require Import GlobalTypes.
-Require Import SetoidList.
 Require Export FstSplit.
 Require Export InAndNoDup.
 
@@ -33,6 +34,9 @@ Section ListPlusMisc.
 
   Definition Set_in_List (A : Type) (P : A -> Prop) (l : list A) : Prop :=
     (forall a : A, P a <-> In a l) /\ NoDup l.
+
+  Definition Sig_in_List {A : Type} {P : A -> Prop} (l : list {x : A | P x}) : Prop :=
+    (forall a : {x : A | P x}, InA GlobalFacts.seq a l) /\ NoDupA GlobalFacts.seq l.
   
 End ListPlusMisc.
 

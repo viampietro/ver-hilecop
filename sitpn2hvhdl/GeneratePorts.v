@@ -127,7 +127,7 @@ Section GeneratePortsAndPs.
 
     Definition generate_action_map : CompileTimeState unit :=
       (* Calls add_action_map_entry on each action of sitpn. *)
-      titer add_action_map_entry (actions sitpn) nat_to_A.
+      do Alist <- get_lofAs; iter add_action_map_entry Alist.
 
     (** (1) Adds a new output port representing the activation state of
       action [a] in the list of port declarations [aports].
@@ -162,10 +162,10 @@ Section GeneratePortsAndPs.
       if (actions sitpn) then Ret tt
       else
         do _ <- generate_action_map;
-        
-        do rst_and_falling_ss <- tfold_left
+        do Alist <- get_lofAs;
+        do rst_and_falling_ss <- fold_left
                                    generate_action_port_and_ss
-                                   (actions sitpn) (ss_null, ss_null) nat_to_A;
+                                   Alist (ss_null, ss_null);
         let (rstss, fallingss) := rst_and_falling_ss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
@@ -190,7 +190,7 @@ Section GeneratePortsAndPs.
 
     Definition generate_fun_map : CompileTimeState unit :=
       (* Calls add_fun_map_entry on each function of sitpn. *)
-      titer add_fun_map_entry (functions sitpn) nat_to_F.
+      do Flist <- get_lofFs; iter add_fun_map_entry Flist.
     
     (** (1) Adds a new output port representing the execution state of
       function [f] in the output port declaration list.
@@ -223,10 +223,8 @@ Section GeneratePortsAndPs.
       if (functions sitpn) then Ret tt
       else
         do _ <- generate_fun_map;
-        
-        do rst_and_rising_ss <- tfold_left
-                                   generate_fun_port_and_ss
-                                   (functions sitpn) (ss_null, ss_null) nat_to_F;
+        do Flist <- get_lofFs;
+        do rst_and_rising_ss <- fold_left generate_fun_port_and_ss Flist (ss_null, ss_null);
         let (rstss, risingss) := rst_and_rising_ss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
@@ -306,7 +304,7 @@ Section GeneratePortsAndPs.
     Definition generate_and_connect_cond_ports : CompileTimeState unit :=
 
       (* Calls [generate_and_connect_cond_port] for each condition of [sitpn]. *)
-      titer generate_and_connect_cond_port (conditions sitpn) nat_to_C.
+      do Clist <- get_lofCs; iter generate_and_connect_cond_port Clist.
     
   End GenerateAndConnectCondPorts.
 

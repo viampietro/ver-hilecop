@@ -48,7 +48,7 @@ Section GenSitpnInfos.
     Definition get_inputs_of_t (t : T sitpn) : CompileTimeState (list (P sitpn)) :=    
       (* Tests if a place is an input of t. *)
       let is_input_of_t := (fun p => if (pre p t) then true else false) in
-      Ret (tfilter is_input_of_t (places sitpn) nat_to_P).
+      do Plist <- get_lofPs; Ret (filter is_input_of_t Plist).
 
     (** Returns the list of conditions associated to transition [t].
     
@@ -58,7 +58,7 @@ Section GenSitpnInfos.
     Definition get_conds_of_t (t : T sitpn) : CompileTimeState (list (C sitpn)) :=
       (* Tests if a condition is associated to t. *)
       let is_cond_of_t := (fun c => (match has_C t c with one | mone => true | zero => false end)) in
-      Ret (tfilter is_cond_of_t (conditions sitpn) nat_to_C).
+      do Clist <- get_lofCs; Ret (filter is_cond_of_t Clist).
     
     (** Computes the information about transition t, and adds it to
         the current state. *)
@@ -72,7 +72,7 @@ Section GenSitpnInfos.
         modifying the current state. *)
 
     Definition generate_trans_infos : CompileTimeState unit :=
-      titer add_tinfo (transitions sitpn) nat_to_T.
+      do Tlist <- get_lofTs; iter add_tinfo Tlist.
 
   End TransitionInfos.
 
@@ -119,8 +119,9 @@ Section GenSitpnInfos.
 
       (* Iterates over the list of transitions, and builds the couple of
          lists (tinputs, touputs) of p along the way by applying
-         function is_neighbor_of_p.  *)
-      match ListDep.tfold_left get_neighbor_of_p (transitions sitpn) (nil, nil, nil) nat_to_T with
+         function [is_neighbor_of_p].  *)
+      do Tlist <- get_lofTs;
+      match List.fold_left get_neighbor_of_p Tlist (nil, nil, nil) with
       | (nil, nil, nil) => Err ("Place " ++ $$p ++ " is an isolated place.")
       | tin_tc_tout => Ret tin_tc_tout 
       end.
@@ -321,7 +322,7 @@ Section GenSitpnInfos.
         current state. *)
     
     Definition generate_place_infos : CompileTimeState unit :=
-      titer add_pinfo (places sitpn) nat_to_P.
+      do Plist <- get_lofPs; iter add_pinfo Plist.
     
   End PlaceInfos.
   
@@ -333,7 +334,7 @@ Section GenSitpnInfos.
 
     Definition get_transs_of_c (c : C sitpn) : CompileTimeState (list (T sitpn)) :=
       let is_trans_of_c := (fun t => (match has_C t c with one | mone => true | zero => false end)) in
-      Ret (tfilter is_trans_of_c (transitions sitpn) nat_to_T).
+      do Tlist <- get_lofTs; Ret (filter is_trans_of_c Tlist).
 
     (** Computes the information about transition c, and adds it to
         the current state. *)
@@ -346,12 +347,12 @@ Section GenSitpnInfos.
         modifying the current state. *)
 
     Definition generate_cond_infos : CompileTimeState unit :=
-      titer add_cinfo (conditions sitpn) nat_to_C.
+      do Clist <- get_lofCs; iter add_cinfo Clist.
     
     (** Returns the list of transitions associated to function [f]. *)
 
     Definition get_transs_of_f (f : F sitpn) : CompileTimeState (list (T sitpn)) :=
-      Ret (tfilter (fun t => has_F t f) (transitions sitpn) nat_to_T).
+      do Tlist <- get_lofTs; Ret (filter (fun t => has_F t f) Tlist).
 
     (** Computes the information about function f, and adds it to
         the current state. *)
@@ -364,12 +365,12 @@ Section GenSitpnInfos.
         thus modifying the current state. *)
     
     Definition generate_fun_infos : CompileTimeState unit :=
-      titer add_finfo (functions sitpn) nat_to_F.
+      do Flist <- get_lofFs; iter add_finfo Flist.
     
     (** Returns the list of places associated to action [a]. *)
 
     Definition get_places_of_a (a : A sitpn) : CompileTimeState (list (P sitpn)) :=
-      Ret (tfilter (fun p => has_A p a) (places sitpn) nat_to_P).    
+      do Plist <- get_lofPs; Ret (filter (fun p => has_A p a) Plist).    
 
     (** Computes the information about action a, and adds it to the
         current state. *)
@@ -382,7 +383,7 @@ Section GenSitpnInfos.
       [sitpn], thus modifying the current state. *)
     
     Definition generate_action_infos : CompileTimeState unit :=
-      titer add_ainfo (actions sitpn) nat_to_A.
+      do Alist <- get_lofAs; iter add_ainfo Alist.
     
   End InterpretationInfos.
 
@@ -424,9 +425,8 @@ Section GenSitpnInfos.
         error if not. *)
     
     Definition check_pr_is_trans :=
-      let Tlist :=  ListDep.tmap id (transitions sitpn) nat_to_T in
       let f := fun x trs => foreach_x_check_trans x trs in
-      foreach f Tlist.
+      do Tlist <- get_lofTs; foreach f Tlist.
 
     (** Checks that the priority relation is irreflexive; returns
         an error if not. *)
@@ -438,7 +438,7 @@ Section GenSitpnInfos.
              then Err ("pr_rel_is_strict_order: priority relation is reflexive for transition "
                          ++ $$t ++ ".")
              else Ret tt) in
-      titer check_irrefl (transitions sitpn) nat_to_T.
+      do Tlist <- get_lofTs; iter check_irrefl Tlist.
 
     (** Checks that the priority relation is a strict order, i.e,
         irreflexive and transitive. *)
@@ -529,6 +529,20 @@ Definition generate_sitpn_infos
            (sitpn : Sitpn)
            (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) :=
 
+  (* Turns the list of places, transitions, conditions, actions and
+     functions of [sitpn], into dependently-typed lists, and sets them
+     in the compile-time state. *)
+  do Plist <- tmap (fun p s => Ret p s) (places sitpn) nat_to_P;
+  do Tlist <- tmap (fun t s => Ret t s) (transitions sitpn) nat_to_T;
+  do Clist <- tmap (fun c s => Ret c s) (conditions sitpn) nat_to_C;
+  do Alist <- tmap (fun a s => Ret a s) (actions sitpn) nat_to_A;
+  do Flist <- tmap (fun f s => Ret f s) (functions sitpn) nat_to_F;
+  do _ <- set_lofPs Plist;
+  do _ <- set_lofTs Tlist;
+  do _ <- set_lofCs Clist;
+  do _ <- set_lofAs Alist;
+  do _ <- set_lofFs Flist;
+  
   (* Call to [generate_trans_infos] must precede the call to
      [generate_place_infos] because the latter uses transition
      informations.  *)

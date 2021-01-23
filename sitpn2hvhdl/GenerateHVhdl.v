@@ -194,7 +194,7 @@ Section Sitpn2HVhdl.
         [sitpn], thus modifying the compile-time state. *)
     
     Definition generate_place_comp_insts : CompileTimeState unit :=
-      titer generate_place_comp_inst (places sitpn) nat_to_P.
+      do Plist <- get_lofPs; iter generate_place_comp_inst Plist.
     
   End GeneratePlaceCompInst.
 
@@ -226,7 +226,7 @@ Section Sitpn2HVhdl.
         [sitpn], thus modifying the compile-time state. *)
     
     Definition generate_trans_comp_insts : CompileTimeState unit :=
-      titer generate_trans_comp_inst (transitions sitpn) nat_to_T.
+      do Tlist <- get_lofTs; iter generate_trans_comp_inst Tlist.
     
   End GenerateTransCompInst.
 

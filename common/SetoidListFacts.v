@@ -4,7 +4,7 @@ Require Import common.Coqlib.
 Require Import common.ListPlus.
 Require Import common.FstSplit.
 
-(** ** Fst and Split Facts for Setoid Lists *)
+(** ** Facts about [InA] *)
 
 (** If a couple (a, b) is in the list of couples l 
     then a is in (fst (split l)). *)
@@ -55,60 +55,6 @@ Proof.
 Qed.
 
 Hint Resolve InA_eqk : setoidl.
-
-Lemma NoDupA_fs_eqk_eq (A : Type) {B : Type} :
-  forall {eqk : A -> A -> Prop} {l : list (A * B)} {a b b'},
-    Equivalence eqk ->
-    NoDupA eqk (fs l) ->
-    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eq (snd x) (snd y)) in
-    InA eqkv (a, b) l ->
-    InA eqkv (a, b') l ->
-    eq b b'.
-Proof.
-  induction l.
-  
-  (* BASE CASE *)
-  - inversion 3.
-
-  (* IND. CASE *)
-  - intros.
-    lazymatch goal with
-    | [ H: NoDupA _ _ |- _ ] =>
-      rewrite fs_eq_cons_app in H; destruct a as (a1, b1);
-        simpl in H; inversion_clear H
-    end.
-
-    lazymatch goal with
-    | [ H: InA _ (a0, b) _, H': InA _ (a0, b') _ |- _ ] =>
-      inversion_clear H; inversion_clear H'
-    end.
-
-    (* 4 subgoals *)
-
-    (* [(a0, b) = (a1, b1)] and [(a0, b') = (a1, b1)] *)
-    + firstorder; transitivity b1; auto.
-
-    (* [(a0, b) = (a1, b1)] and [(a0, b') ∈ l]. 
-       Then, [eqk a0 a1], then [(a1, b') ∈ l], then [a1 ∈ (fs l)].
-       Contradicts [a1 ∉ (fs l)].  *)
-    + elimtype False; lazymatch goal with
-                      | [ H: ~InA _ _ _ |- _ ] =>
-                        apply H
-                      end.
-      apply (@InA_fst_split A B eqk eq a1 l b').
-      eapply InA_eqk; eauto; firstorder.
-
-    + elimtype False; lazymatch goal with
-                      | [ H: ~InA _ _ _ |- _ ] =>
-                        apply H
-                      end.
-      apply (@InA_fst_split A B eqk eq a1 l b).
-      eapply InA_eqk; eauto; firstorder.
-
-    + eapply IHl; eauto.
-Qed.
-
-Hint Rewrite NoDupA_fs_eqk_eq : setoidl.
 
 Lemma InA_setv_inv :
   forall {A B : Type} {x y : A} {z v : B} {eqk eqv l} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}},
@@ -163,6 +109,72 @@ Proof.
 Qed.
 
 Hint Resolve InA_notin_fs_setv_inv : setoidl.
+
+Lemma InA_neqA {A : Type} :
+  forall {eqA : A -> A -> Prop} {x y} {l : list A},
+    Equivalence eqA ->
+    InA eqA x l ->
+    ~InA eqA y l ->
+    ~eqA x y.
+Proof. intros; intro; specialize (InA_eqA H H2 H0); contradiction. Qed.
+
+Hint Resolve InA_neqA : setoidl.
+     
+(** ** Facts about [NoDupA] *)
+
+Lemma NoDupA_fs_eqk_eq (A : Type) {B : Type} :
+  forall {eqk : A -> A -> Prop} {l : list (A * B)} {a b b'},
+    Equivalence eqk ->
+    NoDupA eqk (fs l) ->
+    let eqkv := (fun x y => eqk (fst x) (fst y) /\ eq (snd x) (snd y)) in
+    InA eqkv (a, b) l ->
+    InA eqkv (a, b') l ->
+    eq b b'.
+Proof.
+  induction l.
+  
+  (* BASE CASE *)
+  - inversion 3.
+
+  (* IND. CASE *)
+  - intros.
+    lazymatch goal with
+    | [ H: NoDupA _ _ |- _ ] =>
+      rewrite fs_eq_cons_app in H; destruct a as (a1, b1);
+        simpl in H; inversion_clear H
+    end.
+
+    lazymatch goal with
+    | [ H: InA _ (a0, b) _, H': InA _ (a0, b') _ |- _ ] =>
+      inversion_clear H; inversion_clear H'
+    end.
+
+    (* 4 subgoals *)
+
+    (* [(a0, b) = (a1, b1)] and [(a0, b') = (a1, b1)] *)
+    + firstorder; transitivity b1; auto.
+
+    (* [(a0, b) = (a1, b1)] and [(a0, b') ∈ l]. 
+       Then, [eqk a0 a1], then [(a1, b') ∈ l], then [a1 ∈ (fs l)].
+       Contradicts [a1 ∉ (fs l)].  *)
+    + elimtype False; lazymatch goal with
+                      | [ H: ~InA _ _ _ |- _ ] =>
+                        apply H
+                      end.
+      apply (@InA_fst_split A B eqk eq a1 l b').
+      eapply InA_eqk; eauto; firstorder.
+
+    + elimtype False; lazymatch goal with
+                      | [ H: ~InA _ _ _ |- _ ] =>
+                        apply H
+                      end.
+      apply (@InA_fst_split A B eqk eq a1 l b).
+      eapply InA_eqk; eauto; firstorder.
+
+    + eapply IHl; eauto.
+Qed.
+
+Hint Rewrite NoDupA_fs_eqk_eq : setoidl.
 
 Lemma NoDupA_setv_cons (A : Type) {B : Type} :
   forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {a b} {l : list (A * B)},

@@ -151,7 +151,8 @@ Section GenArch.
         sets it in the architecture of the compile-time state. *)
 
     Definition generate_place_map (max_marking : nat) : CompileTimeState unit :=
-      do plmap <- ListMonad.tmap (fun p => generate_place_map_entry p max_marking) (places sitpn) nat_to_P;
+      do Plist <- get_lofPs;
+      do plmap <- ListMonad.map (fun p => generate_place_map_entry p max_marking) Plist;
       do a <- get_arch;
       (* Sets the architecture with a new [PlaceMap] *)
       set_arch (MkArch sitpn (sigs a) plmap (trmap a) (fmap a) (amap a)).
@@ -255,7 +256,8 @@ Section GenArch.
     (** Returns the TransMap built out the list of transitions of [sitpn]. *)
 
     Definition generate_trans_map : CompileTimeState unit :=
-      do trmap <- ListMonad.tmap generate_trans_map_entry (transitions sitpn) nat_to_T;
+      do Tlist <- get_lofTs;
+      do trmap <- ListMonad.map generate_trans_map_entry Tlist;
       do a <- get_arch;
       set_arch (MkArch sitpn (sigs a) (plmap a) trmap (fmap a) (amap a)).
     
@@ -520,9 +522,8 @@ Section GenArch.
 
     Definition generate_interconnections :
       CompileTimeState unit :=
-      
       (* Calls interconnect_p on each place of sitpn. *)
-      ListMonad.titer interconnect_p (places sitpn) nat_to_P.
+      do Plist <- get_lofPs; ListMonad.iter interconnect_p Plist.
     
   End GenerateInterconnections.
 

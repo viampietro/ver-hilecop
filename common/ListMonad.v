@@ -129,6 +129,7 @@ Section TMap.
   
 End TMap.
 
+Arguments tmap_aux {state A B C}.
 Arguments tmap {state A B C}.
 
 (** ** State-and-error monad version of fold left.  *)

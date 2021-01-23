@@ -153,3 +153,11 @@ Ltac minv H :=
     ((progress simpl in H) || unfold F in H); minv H
   end.
 
+Ltac destrm H :=
+  lazymatch type of H with
+  | ((if ?c then _ else _) _ = OK _ _) => destruct c; destrm H
+  | ((let '_ := ?y in _) _ = OK _ _) => destruct y; destrm H
+  | ((let _ := ?y in _) _ = OK _ _) => destruct y; destrm H
+  | _ => idtac "End of destrm"
+  end.
+
