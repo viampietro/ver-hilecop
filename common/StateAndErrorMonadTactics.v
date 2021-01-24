@@ -115,14 +115,22 @@ Ltac minv1 H :=
     discriminate
   end.
 
+Ltac destrm H :=
+  lazymatch type of H with
+  | ((if ?c then _ else _) _ = OK _ _) => destruct c; destrm H
+  | ((let '_ := ?y in _) _ = OK _ _) => destruct y; destrm H
+  | ((let _ := ?y in _) _ = OK _ _) => destruct y; destrm H
+  | _ => idtac
+  end.
+
 Ltac minv H :=
-  match type of H with
-  | (OK _ _ = OK _ _) => try (minv1 H)
-  | (Get _ = OK _ _) => try (minv1 H)
-  | (Put _ _ = OK _ _) => try (minv1 H)
-  | (Ret _ _ = OK _ _) => try (minv1 H)
-  | (Err _ _ = OK _ _) => try (minv1 H)
-  | (Error _ = OK _ _) => try (minv1 H)
+  lazymatch type of H with
+  | (OK _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
+  | (Get _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
+  | (Put _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
+  | (Ret _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
+  | (Err _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
+  | (Error _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
   | (Bind ?F ?G ?S = OK ?X ?S') =>
     let x := fresh "x" in
     let s := fresh "s" in
@@ -132,9 +140,9 @@ Ltac minv H :=
     clear H;
     try (minv EQ2);
     try (minv EQ1)
-  | ((if ?c then _ else _) _ = OK _ _) => destruct c; try (minv H)
-  | ((let '_ := ?y in _) _ = OK _ _) => destruct y; try (minv H)
-  | ((let _ := ?y in _) _ = OK _ _) => destruct y; try (minv H)
+  | ((if ?c then _ else _) _ = OK _ _) => destrm H; minv H (* destruct c; try (minv H) *)
+  | ((let '_ := ?y in _) _ = OK _ _) => destrm H; minv H (* destruct y; try (minv H) *)
+  | ((let _ := ?y in _) _ = OK _ _) => destrm H; minv H (* destruct y; try (minv H) *)
   | (?F _ _ _ _ _ _ _ _ = OK _ _) =>
     ((progress simpl in H) || unfold F in H); minv H
   | (?F _ _ _ _ _ _ _ = OK _ _) =>
@@ -153,11 +161,4 @@ Ltac minv H :=
     ((progress simpl in H) || unfold F in H); minv H
   end.
 
-Ltac destrm H :=
-  lazymatch type of H with
-  | ((if ?c then _ else _) _ = OK _ _) => destruct c; destrm H
-  | ((let '_ := ?y in _) _ = OK _ _) => destruct y; destrm H
-  | ((let _ := ?y in _) _ = OK _ _) => destruct y; destrm H
-  | _ => idtac "End of destrm"
-  end.
 

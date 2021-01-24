@@ -106,11 +106,11 @@ Remark find_inv_state :
     (forall a s1 x s2, f a s1 = OK x s2 -> Q s1 s2) ->
     Q s s'.
 Proof.
-  induction l; simpl; intros s v s' Q e Qrefl Qtrans f_inv; minv e.
+  induction l; simpl; intros s v s' Q e Qrefl Qtrans f_inv; monadInv e.
   apply Qrefl.
-  eapply f_inv; eauto.
-  apply Qtrans with (y := s0);
-  [ eapply f_inv; eauto | eapply IHl; eauto ].
+  destrm EQ0; [ monadInv EQ0; eapply f_inv; eauto
+              | apply Qtrans with (y := s0);
+                [ eapply f_inv; eauto | eapply IHl; eauto ] ].
 Qed.
 
 Remark map_aux_inv_state :

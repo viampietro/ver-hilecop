@@ -65,6 +65,8 @@ Ltac solve_listm H :=
     pattern s, s'; eapply (iter_inv_state H); eauto with typeclass_instances; clear H
   | (fold_left ?f _ _ ?s = OK _ ?s') =>
     pattern s, s'; eapply (foldl_inv_state H); eauto with typeclass_instances; clear H
+  | (find ?f _ ?s = OK _ ?s') =>
+    pattern s, s'; eapply (find_inv_state H); eauto with typeclass_instances; clear H
   | (foreach ?f _ ?s = OK _ ?s') =>
     pattern s, s'; eapply (foreach_inv_state H); eauto with typeclass_instances; clear H
   | (getv _ _ _ ?s = OK _ ?s') => rewrite (getv_inv_state H); clear H; try reflexivity                                                              

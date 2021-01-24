@@ -379,13 +379,13 @@ Section Sitpn2HVhdl.
     forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
       generate_comp_insts sitpn s = OK v s' ->
       List.NoDup (places sitpn) ->
-      (forall n (n2P : In_P sitpn n), ~InA Peq (exist _ n n2P) (fs (p2pcomp (γ s)))) ->
+      (forall p, ~InA Peq p (fs (p2pcomp (γ s)))) ->
       NoDupA Peq (fs (p2pcomp (γ s))) ->
       NoDupA Peq (fs (p2pcomp (γ s'))).
   Proof.
     intros until s'; intros e; monadInv e; intros.
-    rewrite <- (iter_gen_t_comp_inst_inv_p2pcomp EQ0).
-    eapply titer_gen_p_comp_inst_nodup_p2pcomp; eauto.
+    minv EQ0; rewrite <- (iter_gen_tcomp_inst_inv_p2pcomp EQ2).
+    eapply @iter_gen_pcomp_inst_nodup_p2pcomp with (v := x); eauto.
   Qed.
 
   

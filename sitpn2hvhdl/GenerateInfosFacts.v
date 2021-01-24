@@ -49,21 +49,19 @@ Section PInfos.
       all_conflicts_solved_by_mutex sitpn lofTs s = OK v s' ->
       s = s'.
   Proof.
-    induction lofTs; simpl; intros until s'; intros e; minv e; auto.
-    transitivity s0.
-    - eapply find_inv_state; eauto with typeclass_instances.
-      intros until s2; intros e1; pattern s1, s2; minv e1;
-        (transitivity s6; [ eauto with listmonad | ];
-         transitivity s4; [ eauto with listmonad | ];
-         transitivity s5; [ eauto with listmonad | ];
-         eauto with listmonad).
+    induction lofTs; simpl; intros until s'; intros e; minv e; auto; transitivity s0.
+    - solve_listm EQ1;
+        intros *; intros e; unfold not_exists_mutex in e; minv e;
+          repeat (match goal with
+                  | [e: _ ?st = OK _ _ |- ?st = _ ] => solve_listm e
+                  end).
+    - minv EQ0; auto.
+    - solve_listm EQ1;
+        intros *; intros e; unfold not_exists_mutex in e; minv e;
+          repeat (match goal with
+                  | [e: _ ?st = OK _ _ |- ?st = _ ] => solve_listm e
+                  end).
     - eapply IHlofTs; eauto.
-    - eapply find_inv_state; eauto with typeclass_instances.
-      intros until s2; intros e1; pattern s1, s2; minv e1;
-        (transitivity s5; [ eauto with listmonad | ];
-         transitivity s3; [ eauto with listmonad | ];
-         transitivity s4; [ eauto with listmonad | ];
-         eauto with listmonad).
   Qed.
 
   Lemma sort_by_priority_inv_state :
