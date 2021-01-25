@@ -172,12 +172,6 @@ End GenInterconn.
 
 (** ** Facts about Architecture Generation Function *)
 
-Ltac shelf_state H :=
-  match type of H with
-  | _ ?st = OK _ _ =>
-    simpl in H; let s := fresh "s" in set (s := st) in *
-  end.
-
 Lemma gen_arch_inv_γ :
   forall {sitpn mm s v s'},
     @generate_architecture sitpn mm s = OK v s' ->

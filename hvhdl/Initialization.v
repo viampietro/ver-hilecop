@@ -90,7 +90,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
       (* Add compid to the events field of σ' because compid
          registered some events in its internal state. *)
       
-      vruninit D__s Δ σ (cs_comp compid entid gmap ipmap opmap) (events_add compid σ')
+      vruninit D__s Δ σ (cs_comp compid entid gmap ipmap opmap) (cstore_add compid σ__c'' (events_add compid σ'))
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,

@@ -125,12 +125,12 @@ Ltac destrm H :=
 
 Ltac minv H :=
   lazymatch type of H with
-  | (OK _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
-  | (Get _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
-  | (Put _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
-  | (Ret _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
-  | (Err _ _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
-  | (Error _ = OK _ _) => inversion H; clear H; try subst (* try (minv1 H) *)
+  | (OK _ _ = OK _ _) => inversion H; clear H; try (subst; simpl in *) (* try (minv1 H) *)
+  | (Get _ = OK _ _) => inversion H; clear H; try (subst; simpl in *) (* try (minv1 H) *)
+  | (Put _ _ = OK _ _) => inversion H; clear H; try (subst; simpl in *) (* try (minv1 H) *)
+  | (Ret _ _ = OK _ _) => inversion H; clear H; try (subst; simpl in *) (* try (minv1 H) *)
+  | (Err _ _ = OK _ _) => inversion H; clear H; try (subst; simpl in *) (* try (minv1 H) *)
+  | (Error _ = OK _ _) => inversion H; clear H; try (subst; simpl in *) (* try (minv1 H) *)
   | (Bind ?F ?G ?S = OK ?X ?S') =>
     let x := fresh "x" in
     let s := fresh "s" in
@@ -161,4 +161,8 @@ Ltac minv H :=
     ((progress simpl in H) || unfold F in H); minv H
   end.
 
-
+Ltac shelf_state H :=
+  match type of H with
+  | _ ?st = OK _ _ =>
+    simpl in H; let s := fresh "s" in set (s := st) in *
+  end.

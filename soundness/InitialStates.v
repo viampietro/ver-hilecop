@@ -33,6 +33,8 @@ Require Import hvhdl.Initialization.
 Require Import hvhdl.Environment.
 Require Import hvhdl.Place.
 Require Import hvhdl.ExpressionEvaluation.
+Require Import hvhdl.Stabilize.
+Require Import hvhdl.InitializationFacts.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateHVhdlFacts.
@@ -42,88 +44,21 @@ Require Import soundness.SoundnessDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
 
-Lemma gen_ports_inv_p2pcomp :
-  forall {sitpn s v s'},
-    @generate_ports sitpn s = OK v s' ->
-    p2pcomp (γ s) = p2pcomp (γ s').
-Proof.
-  intros until s'; intros e; minv e.
-  unfold generate_action_ports_and_ps in EQ.
-  unfold nat_to_A in EQ. unfold In_A in EQ.
-  set (l := actions sitpn) in EQ.
-  case l in EQ.
-Admitted.
-
-Lemma sitpn2hvhdl_nodup_p2pcomp :
-  forall {sitpn decpr id__ent id__arch mm d γ},    
+Lemma sitpn2hvhdl_bind_init_marking :
+  forall {sitpn decpr id__ent id__arch mm d γ},
     (* [sitpn] translates into [(d, γ)]. *)
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
-    IsWellDefined sitpn ->
-    NoDupA Peq (fs (p2pcomp γ)).
-Proof.
-  intros until mm;  
-    functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) using sitpn_to_hvhdl_ind.
-  
-  (* Error *)
-  inversion 1.
-
-  (* OK *)
-  intros; monadInv e.
-  lazymatch goal with
-  | [ H: inl _ = inl _, Hwd: IsWellDefined _ |- _ ] =>
-    let NoDupPlaces := (get_nodup_places Hwd) in
-    monadFullInv EQ4; inversion H; subst; simpl;
-      eapply (gen_comp_insts_nodup_p2pcomp EQ2 NoDupPlaces);
-      rewrite <- (gen_ports_inv_p2pcomp EQ0);
-      rewrite <- (gen_arch_inv_γ EQ1);
-      rewrite <- (gen_sitpn_infos_inv_γ EQ);
-      simpl; [ inversion 1 | apply NoDupA_nil]
-  end.
-Qed.
-
-(* Lemma sitpn2hvhdl_bind_init_marking : *)
-(*   forall {sitpn decpr id__ent id__arch mm d γ}, *)
-(*     (* [sitpn] translates into [(d, γ)]. *) *)
-(*     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) -> *)
-(*     forall p id__p gm ipm opm, *)
-(*       InA Pkeq (p, id__p) (p2pcomp γ) -> *)
-(*       InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) -> *)
-(*       List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm. *)
-(* Admitted. *)
-
-(* Lemma sitpn2hvhdl_γp : *)
-(*   forall {sitpn decpr id__ent id__arch mm d γ}, *)
-(*     (* [sitpn] translates into [(d, γ)]. *) *)
-(*     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) -> *)
-(*     IsWellDefined sitpn -> *)
-(*     forall p, exists id__p, InA Pkeq (p, id__p) (p2pcomp γ). *)
-(* Proof. *)
-(*   intros *; intros Hs2h Hwd p; *)
-(*     specialize (sitpn2hvhdl_p_comp Hs2h Hwd p) as Hex. *)
-(*   inversion_clear Hex as (id__p, (gm, (ipm, (opm, (HinA, H))))). *)
-(*   exists id__p; assumption. *)
-(* Qed. *)
-
-Lemma init_s_marking_eq_init_marking :
-  forall Δ σ behavior σ0,
-    init hdstore Δ σ behavior σ0 ->
-    forall id__p gm ipm opm σ__p0 v,
-      InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
-      NatMap.MapsTo id__p σ__p0 (compstore σ0) ->
-      NatMap.MapsTo Place.initial_marking v (sigstore σ__p0) ->
-      NatMap.MapsTo Place.s_marking v (sigstore σ__p0).
-Admitted.
-
-Lemma init_init_marking_eq_M0 :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ σ0,
-    init hdstore Δ σ (behavior d) σ0 ->
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
-  
-    forall p id__p gm ipm opm σ__p0,
+    forall p id__p gm ipm opm,
       InA Pkeq (p, id__p) (p2pcomp γ) ->
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
-      NatMap.MapsTo id__p σ__p0 (compstore σ0) ->
-      NatMap.MapsTo Place.initial_marking (Vnat (M0 p)) (sigstore σ__p0).
+      List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
+Admitted.
+
+Lemma elab_compid_in_compstore :
+  forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm},
+    edesign D__s M__g d Δ σ__e ->
+    InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+    exists σ__c, MapsTo id__c σ__c (compstore σ__e).
 Admitted.
 
 Ltac rw_γp p id__p id__p' :=
@@ -184,13 +119,16 @@ Proof.
       rename H into Hsitpn2hvhdl
   end.
 
-  (* To prove [σ__p0("s_marking") = M0(p)], then prove
-     [σ__p0("initial_marking") = M0(p)] *)
-  eapply init_s_marking_eq_init_marking; eauto.  
-  rw_γp p id__p id__p'; assumption.
+  (* To prove [σ__p0("s_marking") = M0(p)] *)
+  eapply init_s_marking_eq_nat; eauto.
+  
+  (* Prove [<initial_marking => M0(p)> ∈ ipm] *)
+  eapply sitpn2hvhdl_bind_init_marking; eauto.
 
-  (* To prove [σ__p0("initial_marking") = M0(p)], then prove *)
-  eapply init_init_marking_eq_M0; eauto.
+  (* [∃ σ, σ__e(id__p') = σ] *)
+  eapply elab_compid_in_compstore; eauto.
+  
+  (* Prove [id__p = id__p'] *)
   rw_γp p id__p id__p'; assumption.    
 Qed.
 

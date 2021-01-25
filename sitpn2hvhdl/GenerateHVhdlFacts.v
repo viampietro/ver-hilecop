@@ -23,6 +23,8 @@ Require Import hvhdl.AbstractSyntax.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateInfosFacts.
+Require Import sitpn2hvhdl.GenerateArchitectureFacts.
+Require Import sitpn2hvhdl.GeneratePortsFacts.
 
 (** ** Facts about [InputMap_to_AST] Function *)
 
@@ -326,22 +328,6 @@ Section Sitpn2HVhdl.
     exists id__p, gm, ipm, opm.
     eapply gen_t_comp_insts_inv_p_comp; eauto.
   Qed.
-
-  Lemma gen_arch_inv_lofPs :
-    forall {sitpn mm} {s : Sitpn2HVhdlState sitpn} {v s'},
-      generate_architecture mm s = OK v s' ->
-      Sig_in_List (lofPs s) ->
-      Sig_in_List (lofPs s').
-  Proof.
-    
-  Admitted.
-
-  Lemma gen_ports_inv_lofPs :
-    forall {sitpn} {s : Sitpn2HVhdlState sitpn} {v s'},
-      generate_ports s = OK v s' ->
-      Sig_in_List (lofPs s) ->
-      Sig_in_List (lofPs s').
-  Admitted.
   
   Lemma sitpn2hvhdl_p_comp :
     forall {sitpn decpr id__ent id__arch mm d γ},
@@ -362,31 +348,66 @@ Section Sitpn2HVhdl.
 
     (* OK *)
     monadInv e.
-    lazymatch goal with
-    | [ H: inl _ = inl _, Hwd: IsWellDefined _ |- _ ] =>
-      let NoDupPlaces := (get_nodup_places Hwd) in
-      let sil_lofPs_s := constr:(gen_sitpn_infos_sil_lofPs EQ NoDupPlaces) in
-      let sil_lofPs_s0 := constr:(gen_arch_inv_lofPs EQ1 sil_lofPs_s) in
-      let sil_lofPs_s1 := constr:(gen_ports_inv_lofPs EQ0 sil_lofPs_s0) in
-      specialize (gen_comp_insts_p_comp EQ2 sil_lofPs_s1 p)
-        as (id__p, (gm, (ipm, (opm, (Hin_γs2, Hin_behs2)))));
-        exists id__p, gm, ipm, opm;
-        monadFullInv EQ4; inversion H; subst; simpl; auto
-    end.
-  Qed.
+    minv EQ4; inversion H; clear H; subst; simpl.
+    eapply gen_comp_insts_p_comp; eauto.
+    
+    (* lazymatch goal with *)
+    (* | [ H: inl _ = inl _, Hwd: IsWellDefined _ |- _ ] => *)
+    (*   let NoDupPlaces := (get_nodup_places Hwd) in *)
+    (*   let sil_lofPs_s := constr:(gen_sitpn_infos_sil_lofPs EQ NoDupPlaces) in *)
+    (*   let sil_lofPs_s' := ltac:(rewrite (gen_arch_inv_lofPs EQ1) in sil_lofPs_s) in *)
+    (*   idtac sil_lofPs_s *)
+    (*   (* let sil_lofPs_s0 := constr:(gen_arch_inv_lofPs EQ1 sil_lofPs_s) in *) *)
+    (*   (* let sil_lofPs_s1 := constr:(gen_ports_inv_lofPs EQ0 sil_lofPs_s0) in *) *)
+    (*   (* specialize (gen_comp_insts_p_comp EQ2 sil_lofPs_s1 p) *) *)
+    (*   (*   as (id__p, (gm, (ipm, (opm, (Hin_γs2, Hin_behs2))))); *) *)
+    (*   (*   exists id__p, gm, ipm, opm; *) *)
+    (*   (*   monadFullInv EQ4; inversion H; subst; simpl; auto *) *)
+    (* end. *)
+  Admitted.
 
   Lemma gen_comp_insts_nodup_p2pcomp :
     forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
       generate_comp_insts sitpn s = OK v s' ->
-      List.NoDup (places sitpn) ->
+      Sig_in_List (lofPs s) ->
       (forall p, ~InA Peq p (fs (p2pcomp (γ s)))) ->
       NoDupA Peq (fs (p2pcomp (γ s))) ->
       NoDupA Peq (fs (p2pcomp (γ s'))).
   Proof.
     intros until s'; intros e; monadInv e; intros.
     minv EQ0; rewrite <- (iter_gen_tcomp_inst_inv_p2pcomp EQ2).
-    eapply @iter_gen_pcomp_inst_nodup_p2pcomp with (v := x); eauto.
+    minv EQ; eapply iter_gen_pcomp_inst_nodup_p2pcomp; eauto.
+    apply (proj2 H).
   Qed.
 
+  Lemma sitpn2hvhdl_nodup_p2pcomp :
+    forall {sitpn decpr id__ent id__arch mm d γ},    
+      (* [sitpn] translates into [(d, γ)]. *)
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      NoDupA Peq (fs (p2pcomp γ)).
+  Proof.
+    intros until mm;  
+      functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) using sitpn_to_hvhdl_ind.
+    
+    (* Error *)
+    inversion 1.
+
+    (* OK *)
+    intros; monadInv e.
+    minv EQ4; inversion H; clear H; subst; simpl.
+    eapply gen_comp_insts_nodup_p2pcomp; eauto.
+    2, 3: rewrite <- (gen_ports_inv_p2pcomp EQ0);
+      rewrite <- (gen_arch_inv_γ EQ1);
+      rewrite <- (gen_sitpn_infos_inv_γ EQ);
+      simpl; (inversion 1 || apply NoDupA_nil).
+    rewrite <- (gen_ports_inv_lofPs EQ0),
+    <- (gen_arch_inv_lofPs EQ1).
+    lazymatch goal with
+    | [ Hwd: IsWellDefined _ |- _ ] =>
+      let NoDupPlaces := (get_nodup_places Hwd) in
+      apply (gen_sitpn_infos_sil_lofPs EQ NoDupPlaces)
+    end.
+  Qed.
   
 End Sitpn2HVhdl.
