@@ -22,8 +22,8 @@ Open Scope natset_scope.
 (** Definition of the [dom] function that yields a list of identifiers
     corresponding to the definition domain of an IdMap. *)
 
-Definition EqualDom {A} (m m' : t A) : Prop := forall (k : nat), NatMap.In k m <-> NatMap.In k m'.
-Definition dom {A : Type} (f : IdMap A) : list ident := fs (elements f).
+Definition EqualDom {A} (m m' : NatMap.t A) : Prop := forall (k : nat), NatMap.In k m <-> NatMap.In k m'.
+Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
 
 (** Defines the relation stating that a set [idset] is the
     differentiated intersection of two maps [m] and [m'] mapping

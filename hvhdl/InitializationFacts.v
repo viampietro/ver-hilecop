@@ -10,26 +10,14 @@ Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.StabilizeFacts.
+Require Import hvhdl.SSEvaluationFacts.
+Require Import hvhdl.PortMapEvaluationFacts.
 
 (** ** Facts about [vruninit] *)
 
 Section VRunInit.
-
-  Lemma vseq_inv_compstore_id :
-        forall {Δ σ Λ flag stmt σ' Λ' id__c σ__c},
-          SSEvaluation.vseq Δ σ Λ flag stmt σ' Λ' ->
-          MapsTo id__c σ__c (compstore σ) ->
-          MapsTo id__c σ__c (compstore σ').
-  Admitted.
-
-  Lemma mapop_inv_compstore_id :
-    forall {Δ Δ__c σ σ__c1 ipmap σ' id__c σ__c2},
-      PortMapEvaluation.mapop Δ Δ__c σ σ__c1 ipmap σ' ->
-      MapsTo id__c σ__c2 (compstore σ) ->
-      MapsTo id__c σ__c2 (compstore σ').
-  Admitted.
              
-  Lemma vruninit_inv_compstore_id :
+  Lemma vruninit_maps_compstore_id :
     forall {D__s Δ σ behavior σ' id__c σ__c},
       vruninit D__s Δ σ behavior σ' ->
       MapsTo id__c σ__c (compstore σ) ->
@@ -92,7 +80,7 @@ Section Init.
     match goal with
     | [ ex_MapsTo: exists _, _ , Hvr: vruninit _ _ _ _ _ |- _ ] =>
       inversion ex_MapsTo as (σ__p, MapsTo_σ__p);
-        specialize (vruninit_inv_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
+        specialize (vruninit_maps_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
         inversion ex_MapsTo_σp' as (σ__p', MapsTo_σ__p'); clear ex_MapsTo_σp'
     end.
     assert (MapsTo_rst_σ__p' : MapsTo id__p σ__p' (compstore (sstore_add Petri.rst (Vbool true) σ')))
