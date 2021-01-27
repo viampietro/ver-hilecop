@@ -13,6 +13,7 @@ Require Import hvhdl.Stabilize.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.CombinationalEvaluationFacts.
+Require Import hvhdl.WellDefinedDesign.
 
 Lemma is_last_of_trace :
   forall D__s Δ σ behavior θ σ',
@@ -56,8 +57,11 @@ Qed.
 Lemma stab_inv_s_marking :
   forall Δ σ behavior θ σ',
     stabilize hdstore Δ σ behavior θ σ' ->
-    forall id__p gm ipm opm σ__p σ__p' v,
+    forall id__p gm ipm opm σ__p σ__p' v Δ__p compids,
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+      MapsTo id__p (Component Δ__p) Δ ->
+      AreCsCompIds behavior compids ->
+      List.NoDup compids ->
       MapsTo id__p σ__p (compstore σ) ->
       MapsTo s_marking v (sigstore σ__p) ->
       MapsTo id__p σ__p' (compstore σ') ->
@@ -71,5 +75,5 @@ Proof.
   (* CASE Events *)
   - edestruct @vcomb_maps_compstore_id with (Δ := Δ) as (σ__pi, MapsTo_σ__pi); eauto.
     eapply IHstabilize; eauto.
-    eapply vcomb_inv_s_marking; eauto.  
+    eapply vcomb_inv_s_marking; eauto.
 Qed.

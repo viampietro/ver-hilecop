@@ -43,6 +43,9 @@ Proof.
     end.
 Qed.
 
+Lemma ArePIds_ex : forall lofcs, exists pids, ArePIds lofcs pids.
+Admitted.
+
 Lemma ps_in_pids :
   forall {lofcs pids id__p sl vars body},
     ArePIds lofcs pids ->
@@ -64,6 +67,9 @@ Proof.
            end.
     + apply IHFoldL; auto.
 Defined.
+
+Lemma AreCompIds_ex : forall lofcs, exists compids, AreCompIds lofcs compids.
+Admitted.
 
 Lemma comp_in_compids :
   forall {lofcs compids id__c id__e gm ipm opm},

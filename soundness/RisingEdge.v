@@ -39,8 +39,8 @@ Lemma rising_edge :
 
     (* From σ to σ' after ↑. *)
     IsInjectedDState σ (E__p τ re) σ__injr ->
-    vrising Δ σ__injr (behavior d) σ__r ->
-    stabilize Δ σ__r (behavior d) θ σ' ->
+    vrising hdstore Δ σ__injr (behavior d) σ__r ->
+    stabilize hdstore Δ σ__r (behavior d) θ σ' ->
 
     (* States s' and σ' are similar (post rising edge). *)
     SimStateAfterRE sitpn γ s' σ'.

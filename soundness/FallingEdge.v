@@ -39,8 +39,8 @@ Lemma falling_edge :
 
     (* From σ to σ' after ↓. *)
     IsInjectedDState σ (E__p τ fe) σ__injf ->
-    vfalling Δ σ__injf (behavior d) σ__f ->
-    stabilize Δ σ__f (behavior d) θ σ' ->
+    vfalling hdstore Δ σ__injf (behavior d) σ__f ->
+    stabilize hdstore Δ σ__f (behavior d) θ σ' ->
 
     (* States s' and σ' are similar (post falling edge). *)
     SimStateAfterFE sitpn γ s' σ'.

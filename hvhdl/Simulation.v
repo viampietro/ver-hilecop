@@ -169,5 +169,5 @@ Definition hfullsim
           (Δ : ElDesign)
           (d : design)
           (θ__σ : list DState) : Prop :=
-  fullsim hdstore (empty value) E__p τ Δ d θ__σ.
+  fullsim hdstore (NatMap.empty value) E__p τ Δ d θ__σ.
 

@@ -55,13 +55,13 @@ Lemma first_cycle :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* [σ0] is the initial state of [d]. *)
-    init Δ σ__e (behavior d) σ0 ->
+    init hdstore Δ σ__e (behavior d) σ0 ->
 
     (* From [σ0] to [σ] in one simulation cycle. *)
-    simcycle E__p Δ τ σ0 (behavior d) σ ->
+    simcycle hdstore E__p Δ τ σ0 (behavior d) σ ->
 
     (* From [s0] to [s] in one execution cycle, with an idle rising
        edge (where [Fired(s0) = ∅]). *)
@@ -91,7 +91,7 @@ Lemma step :
     SimEnv sitpn γ E__c E__p ->
 
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
     
     (* Starting states are similar (post fe similarity). *)
     SimStateAfterFE sitpn γ s σ ->
@@ -100,7 +100,7 @@ Lemma step :
     @SitpnCycle sitpn E__c τ s s'' ->
 
     (* One execution cycle for [d] *)
-    simcycle E__p Δ τ σ (behavior d) σ'' ->
+    simcycle hdstore E__p Δ τ σ (behavior d) σ'' ->
      
     (* Final states are similar *)
     SimStateAfterFE sitpn γ s'' σ''.
@@ -133,7 +133,7 @@ Lemma simulation :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of d. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* States s and σ are similar (after a fe). *)
     SimStateAfterFE sitpn γ s σ ->
@@ -142,7 +142,7 @@ Lemma simulation :
     SitpnExecute E__c s τ θ__s ->
     
     (* From [σ], produces trace [θ__σ] after τ execution cycles. *)
-    simloop E__p Δ σ (behavior d) τ θ__σ ->
+    simloop hdstore E__p Δ σ (behavior d) τ θ__σ ->
 
     (* Conclusion *)
     SimTrace γ θ__s θ__σ.
@@ -199,7 +199,7 @@ Proof.
        - CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].  
          Solved with [first_cycle] and [simulation] lemmas. *)
     lazymatch goal with
-    | [ Hsimloop: simloop _ _ _ _ _ _ |- _ ] =>
+    | [ Hsimloop: simloop _ _ _ _ _ _ _ |- _ ] =>
       inversion_clear Hsimloop; constructor; eauto
     end.
 Qed.

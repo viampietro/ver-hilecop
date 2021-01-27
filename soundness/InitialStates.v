@@ -91,7 +91,7 @@ Lemma init_states_eq_marking :
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -123,14 +123,14 @@ Proof.
   eapply init_s_marking_eq_nat; eauto.
   
   (* Prove [<initial_marking => M0(p)> ∈ ipm] *)
-  eapply sitpn2hvhdl_bind_init_marking; eauto.
+  (* eapply sitpn2hvhdl_bind_init_marking; eauto. *)
 
   (* [∃ σ, σ__e(id__p') = σ] *)
-  eapply elab_compid_in_compstore; eauto.
+  (* eapply elab_compid_in_compstore; eauto. *)
   
   (* Prove [id__p = id__p'] *)
-  rw_γp p id__p id__p'; assumption.    
-Qed.
+  (* rw_γp p id__p id__p'; assumption. *)    
+Admitted.
 
 (** ** Similar Initial States Lemma *)
 
@@ -144,7 +144,7 @@ Lemma sim_init_states :
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->

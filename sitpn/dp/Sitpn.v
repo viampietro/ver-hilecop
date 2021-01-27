@@ -2,7 +2,6 @@
 
 Require Import Coqlib.
 Require Import GlobalTypes.
-Require Import NatSet.
 Require Import SitpnTypes.
 Require Import Datatypes.
 

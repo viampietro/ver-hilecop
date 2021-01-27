@@ -12,6 +12,7 @@ Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.StabilizeFacts.
 Require Import hvhdl.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluationFacts.
+Require Import hvhdl.WellDefinedDesign.
 
 (** ** Facts about [vruninit] *)
 
@@ -66,28 +67,30 @@ Section Init.
   Lemma init_s_marking_eq_nat :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
-      forall id__p gm ipm opm σ__p0 n,
+      forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids,
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+        MapsTo id__p (Component Δ__p) Δ ->
+        AreCsCompIds behavior compids ->
+        List.NoDup compids ->
         List.In (associp_ ($initial_marking) (e_nat n)) ipm ->
-        (exists σ__p, MapsTo id__p σ__p (compstore σ)) ->
-        NatMap.MapsTo id__p σ__p0 (compstore σ0) ->
-        NatMap.MapsTo Place.s_marking (Vnat n) (sigstore σ__p0).
+        MapsTo id__p σ__p (compstore σ) ->
+        MapsTo id__p σ__p0 (compstore σ0) ->
+        MapsTo Place.s_marking (Vnat n) (sigstore σ__p0).
   Proof.
     inversion 1.
     intros.
 
     (* [∃ σ__p s.t. σ(id__p)(rst ← ⊥) = σ__p] *)
     match goal with
-    | [ ex_MapsTo: exists _, _ , Hvr: vruninit _ _ _ _ _ |- _ ] =>
-      inversion ex_MapsTo as (σ__p, MapsTo_σ__p);
-        specialize (vruninit_maps_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
+    | [ MapsTo_σ__p: MapsTo id__p σ__p _, Hvr: vruninit _ _ _ _ _ |- _ ] =>
+      specialize (vruninit_maps_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
         inversion ex_MapsTo_σp' as (σ__p', MapsTo_σ__p'); clear ex_MapsTo_σp'
     end.
     assert (MapsTo_rst_σ__p' : MapsTo id__p σ__p' (compstore (sstore_add Petri.rst (Vbool true) σ')))
       by assumption.
-
+    
     (* [s_marking] value stays the same during stabilization. *)
-    eapply stab_inv_s_marking; eauto.
+    eapply stab_inv_s_marking; eauto.    
 
     (* [s_marking] takes [n] during [vruninit], if [<initial_marking => n>] *)
     eapply vruninit_s_marking_eq_nat; eauto.

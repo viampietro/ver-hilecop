@@ -6,9 +6,7 @@ Require Import common.ListPlus.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HVhdlTypes.
 
-(** ** Identifiers Unicity *)
-
-(** A well-defined H-VHDL design must have unique identifiers. *)
+(** ** H-VHDL Design Declarative Part Identifiers *)
 
 Definition AreGenIds (gens : list gdecl) (genids : list ident) : Prop :=
   let gdecl2id := (fun gd : gdecl => let '(gdecl_ id τ e) := gd in id) in
@@ -21,13 +19,40 @@ Definition ArePortIds (ports : list pdecl) (portids : list ident) : Prop :=
 Definition AreSigIds (sigs : list sdecl) (sigids : list ident) : Prop :=
   Map (fun sd : sdecl => let '(sdecl_ id _) := sd in id) sigs sigids.
 
+(** ** H-VHDL Design Behavioral Part Identifiers *)
+
+Definition AreCsCompIds (cstmt : cs) (compids : list ident) : Prop :=
+  let comp2id := fun cids cstmt => match cstmt with cs_comp id _ _ _ _ => cids ++ [id] | _ => cids end in
+  FoldLCs comp2id cstmt [] compids.
+
 Definition AreCompIds (lofcs : list cs) (compids : list ident) : Prop :=
     let comp2id := fun cids cstmt => match cstmt with cs_comp id _ _ _ _ => cids ++ [id] | _ => cids end in
     FoldL comp2id lofcs [] compids.
 
+Definition AreCsPIds (cstmt : cs) (pids : list ident) : Prop :=
+  let ps2id := fun psids cstmt => match cstmt with cs_ps id _ _ _ => psids ++ [id] | _ => psids end in
+  FoldLCs ps2id cstmt [] pids.
+
 Definition ArePIds (lofcs : list cs) (pids : list ident) : Prop :=
   let ps2id := fun psids cstmt => match cstmt with cs_ps id _ _ _ => psids ++ [id] | _ => psids end in
   FoldL ps2id lofcs [] pids.
+
+(** ** Uniqueness of Behavioral Part Identifiers *)
+
+Definition CsHasUniqueCompIds (cstmt : cs) (lofcs : list cs) (compids : list ident):=
+  FlattenCs cstmt lofcs
+  /\ AreCompIds lofcs compids
+  /\ List.NoDup compids.
+
+Definition CsHasUniquePIds (cstmt : cs) (lofcs : list cs) (pids : list ident):=
+  FlattenCs cstmt lofcs
+  /\ ArePIds lofcs pids
+  /\ List.NoDup pids.
+
+Definition CsHasUniqueIds (cstmt : cs) (lofcs : list cs) (compids pids : list ident) :=
+  FlattenCs cstmt lofcs /\ AreCompIds lofcs compids /\ ArePIds lofcs pids /\ List.NoDup (compids ++ pids).
+
+(** ** Uniqueness of H-VHDL Design Ids (declarative and behavioral parts) *)
 
 Definition AreDeclPartIds (d : design) (genids portids sigids : list ident) : Prop :=
   AreGenIds (gens d) genids

@@ -321,3 +321,16 @@ Fixpoint InCs (cstmt cstmt' : cs) {struct cstmt'} : Prop :=
     InCs cstmt cstmt1 \/ InCs cstmt cstmt2
   end.
 
+(** CS version of the [FoldL] relation.  *)
+
+Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
+| FoldLCs_null : forall a, FoldLCs f cs_null a (f a cs_null)
+| FoldLCs_ps :
+    forall id__p sl vars body a,
+      FoldLCs f (cs_ps id__p sl vars body) a (f a (cs_ps id__p sl vars body))
+| FoldLCs_comp :
+    forall id__c id__e gm ipm opm a,
+      FoldLCs f (cs_comp id__c id__e gm ipm opm) a (f a (cs_comp id__c id__e gm ipm opm))
+|FoldLCs_par :
+   forall cstmt cstmt' a a' a'' ,
+     FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
