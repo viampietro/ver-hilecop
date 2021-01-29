@@ -12,9 +12,9 @@ COQC=coqc -q $(COQINCLUDES) $(COQCOPTS)
 COMMONFILES=NatMap.v NatMapFacts.v NatSet.v NMap.v NSet.v Coqlib.v GlobalTypes.v GlobalFacts.v \
 	FstSplit.v InAndNoDup.v \
 	ListPlus.v ListPlusTactics.v ListPlusFacts.v \
-	ListDep.v \
+	ListDep.v SetoidListFacts.v \
 	StateAndErrorMonad.v StateAndErrorMonadTactics.v \
-	ListMonad.v ListMonadFacts.v ListMonadTactics \
+	ListMonad.v ListMonadTactics.v ListMonadFacts.v \
 
 # Sitpn structures, semantics and token player (in sitpn/simpl/)
 
@@ -56,8 +56,10 @@ HVHDLFILES=HVhdlTypes.v AbstractSyntax.v AbstractSyntaxFacts.v AbstractSyntaxTac
 # SITPN to H-VHDL transformation.
 
 SITPN2HVHDLFILES= Sitpn2HVhdlTypes.v \
-		GenerateInfos.v GenerateArchitecture.v \
-		GeneratePorts.v	GenerateHVhdl.v \
+		GenerateInfos.v GenerateInfosFacts.v \
+		GenerateArchitecture.v GenerateArchitectureFacts.v \
+		GeneratePorts.v GeneratePortsFacts.v \
+		GenerateHVhdl.v Sitpn2HVhdl.v \
 		GenerateHVhdlFacts.v
 
 # Soundness proof, theorems and lemmas.

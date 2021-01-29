@@ -14,6 +14,7 @@ Require Import dp.SitpnTypes.
 Require Import dp.Sitpn.
 Require Import dp.SitpnSemantics.
 Require Import dp.Fired.
+Require Import dp.SitpnWellDefined.
 
 (* H-VHDL Libraries *)
 
@@ -73,8 +74,8 @@ Admitted.
 
 (* Tries to apply the [first_cycle] lemma when the goal is of the form
    [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
-Hint Resolve first_cycle : core.
-Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_cycle; eauto : core.
+Hint Resolve first_cycle : hilecop.
+Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_cycle; eauto : hilecop.
 
 (** ** Step lemma
     
@@ -118,8 +119,8 @@ Qed.
 (* Tries to apply the [step] lemma when the goal is of the form
    [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
 
-Hint Resolve step : core.
-Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply step; eauto : core.
+Hint Resolve step : hilecop.
+Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply step; eauto : hilecop.
 
 (** ** Simulation Lemma *)
 
@@ -159,20 +160,29 @@ Proof.
   - inversion_clear Hsitpnexec; inversion_clear Hhsim; constructor.
 
     (* GOAL [γ ⊢ s' ∼ σ']. Solved with [step] lemma. *)
-    + eauto.
+    + eauto with hilecop.
 
     (* Apply induction hypothesis. *)
-    + eapply IHτ with (s := s') (σ := σ'); eauto.
+    + eapply IHτ with (s := s') (σ := σ'); eauto with hilecop.
       
 Qed.
 
-Hint Resolve simulation : core.
+Hint Resolve simulation : hilecop.
 
 (** ** Behavior Preservation Theorem *)
 
-Theorem sitpn2vhdl_sound :
+(** ** Version 1 *)
+
+(** Assuming the existence of an elaborated design [Δ], a default
+    state [σ__e], an initial state [σ0], and a simulation trace [θ__σ] for
+    a given H-VHDL design [d]. *)
+
+Theorem sitpn2vhdl_sound1 :
   forall sitpn decpr id__ent id__arch E__c τ θ__s d E__p mm θ__σ γ Δ,
-      
+
+    (* [sitpn] is well-defined. *)
+    IsWellDefined sitpn ->
+    
     (* sitpn translates into (d, γ). *)
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
 
@@ -182,7 +192,7 @@ Theorem sitpn2vhdl_sound :
     (* SITPN [sitpn] yields execution trace [θ__s] after [τ] execution cycles. *)
     
     @SitpnFullExec sitpn E__c τ θ__s ->    
-
+    
     (* Design [d] yields simulation trace [θ__σ] after [τ] simulation cycles. *)
     hfullsim E__p τ Δ d θ__σ ->
     
@@ -191,16 +201,121 @@ Theorem sitpn2vhdl_sound :
 Proof.
   (* Case analysis on τ *)
   destruct τ;
-    intros *; intros Htransl Hsenv Hsitpnfexec Hhfsim;
-    inversion_clear Hsitpnfexec;
-    inversion_clear Hhfsim;
+    intros *;
+    inversion_clear 4;
+    inversion_clear 1;
 
-    (* - CASE τ = 0, GOAL [γ ⊢ s0 ∼ σ0]. Solved with [sim_init_states] lemma. 
-       - CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].  
-         Solved with [first_cycle] and [simulation] lemmas. *)
+  (* - CASE τ = 0, GOAL [γ ⊢ s0 ∼ σ0]. Solved with [sim_init_states] lemma. 
+     - CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].  
+     Solved with [first_cycle] and [simulation] lemmas. *)
     lazymatch goal with
     | [ Hsimloop: simloop _ _ _ _ _ _ _ |- _ ] =>
-      inversion_clear Hsimloop; constructor; eauto
+      inversion_clear Hsimloop; constructor; eauto with hilecop
     end.
 Qed.
+
+(** ** Version 2  *)
+
+(** Proving the existence of an elaborated design [Δ], a default state
+    [σ__e], an initial state [σ0], and a simulation trace [θ__σ] for a
+    given H-VHDL design [d].
+
+    Right now the existence theorems are declared as axioms.  *)
+
+Axiom sitpn2hvhdl_elab_ex :
+  forall sitpn decpr id__ent id__arch mm d γ,
     
+    (* sitpn translates into (d, γ). *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+
+    (* there exists an elaborated version [Δ] of [d], with a default state [σ__e] *)
+    exists Δ σ__e, edesign hdstore (NatMap.empty value) d Δ σ__e.
+
+Axiom sitpn2vhdl_init_state_ex :
+  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e,
+    
+    (* sitpn translates into (d, γ). *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+
+    (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+
+    (* There exists an initial state [σ0] of [d]. *)
+    exists σ0, init hdstore Δ σ__e (behavior d) σ0. 
+
+(** The simulation environment [E__p] is well-defined, i.e, it
+    associates a value of the right type to all the input ports of
+    [Δ]. *)
+
+Definition IsWellDefinedSimEnv (Δ : ElDesign) (E__p : nat -> Clk -> IdMap value) : Prop :=
+  forall τ clk,
+    (forall id v, MapsTo id v (E__p τ clk) -> exists t, MapsTo id (Input t) Δ /\ is_of_type v t)
+    /\ (forall id t, MapsTo id (Input t) Δ -> exists v, MapsTo id v (E__p τ clk) /\ is_of_type v t).
+
+Axiom IsWellDefinedSimEnv_ex :
+  forall Δ, exists E__p, IsWellDefinedSimEnv Δ E__p.
+
+Axiom SimEnv_ex : forall sitpn γ E__c, exists E__p, SimEnv sitpn γ E__c E__p.
+
+Axiom sitpn2vhdl_sim_ex :
+  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0 τ E__p,
+
+    
+    (* sitpn translates into (d, γ). *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+
+    (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+
+    (* An initial state [σ0] of [d]. *)
+    init hdstore Δ σ__e (behavior d) σ0 ->
+
+    (* The simulation env [E__p] is well-defined. *)
+    IsWellDefinedSimEnv Δ E__p ->
+    
+    exists θ__σ, simloop hdstore E__p Δ σ0 (behavior d) τ θ__σ.
+
+Theorem sitpn2vhdl_sound2 :
+  forall sitpn decpr id__ent id__arch mm d γ E__c τ θ__s,
+      
+    (* sitpn translates into (d, γ). *)
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+
+    (* [sitpn] is well-defined. *)
+    IsWellDefined sitpn ->
+    
+    (* SITPN [sitpn] yields execution trace [θ__s] after [τ] execution cycles. *)
+    
+    @SitpnFullExec sitpn E__c τ θ__s ->    
+
+    exists Δ,
+    forall E__p,
+      (* Simulation environment [E__p] is well-defined. *)
+      IsWellDefinedSimEnv Δ E__p ->
+
+      (* Environments are similar. *)
+      SimEnv sitpn γ E__c E__p ->
+      
+      exists θ__σ,
+        
+        (* Design [d] yields simulation trace [θ__σ] after [τ] simulation cycles. *)
+        hfullsim E__p τ Δ d θ__σ /\
+        
+        (* Traces are positionally similar. *)
+        SimTrace γ θ__s θ__σ.
+Proof.
+  intros.
+  edestruct sitpn2hvhdl_elab_ex as (Δ, (σ__e, Helab)); eauto.
+  edestruct sitpn2vhdl_init_state_ex as (σ0, Hinit); eauto.
+  exists Δ; intros.
+  edestruct @sitpn2vhdl_sim_ex with (τ := τ) as (θ__σ, Hsim); eauto.  
+  exists (σ0 :: θ__σ). split.
+
+  (* Existence of an elaborated design [Δ], a default state [σ__e], an
+     initial state [σ0], and a simulation trace [θ__σ]. *)
+  unfold hfullsim; eapply FullSim; eauto.
+
+  (* Similar traces. *)
+  eapply sitpn2vhdl_sound1; eauto.
+  unfold hfullsim; eapply FullSim; eauto.  
+Qed.

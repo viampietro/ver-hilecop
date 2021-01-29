@@ -156,4 +156,4 @@ Proof.
   eapply init_states_eq_marking; eauto.
 Admitted.
 
-Hint Resolve sim_init_states : core.
+Hint Resolve sim_init_states : hilecop.

@@ -117,6 +117,7 @@ Inductive ss : Type :=
 | ss_loop (id : ident) (e : expr) (e' : expr) (stmt : ss) (** Loop statement. *)
 | ss_falling (stmt : ss)                                  (** Falling edge block statement. *)
 | ss_rising (stmt : ss)                                   (** Rising edge block statement. *)
+| ss_rst (stmt : ss) (stmt' : ss)                         (** Reset blocks *)
 | ss_seq (stmt : ss) (stmt' : ss)                         (** Composition of seq. statements. *)
 | ss_null.                                                (** Null statement. *)
 
@@ -141,6 +142,7 @@ Notation "'For' i 'In' l 'To' u 'Loop' x " :=
 
 Notation "'Rising' stmt" := (ss_rising stmt) (at level 200) : abss_scope.
 Notation "'Falling' stmt" := (ss_falling stmt) (at level 200) : abss_scope.
+Notation "'Rst' stmt1 'Else' stmt2" := (ss_rst stmt1 stmt2) (at level 200) : abss_scope.
 
 Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) : abss_scope.
 
@@ -334,3 +336,5 @@ Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
 |FoldLCs_par :
    forall cstmt cstmt' a a' a'' ,
      FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
+
+Hint Constructors FoldLCs : core.

@@ -10,10 +10,9 @@ Open Scope abss_scope.
 (** Defines the relation that evaluates the sequential statements
     of H-VHDL. 
     
-    [vseq] does not define error cases.
- *)
+    [vseq] does not define error cases. *)
 
-Inductive seqflag : Set := fe | re | stab.
+Inductive seqflag : Set := fe | re | stab | init.
 
 Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DState -> LEnv -> Prop :=
 
@@ -294,13 +293,13 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* Removes the binding of id from the local environment. *)
       vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ (NatMap.remove id Λ)
            
-(** Evaluates a rising edge block statement when the [stab] or the [fe] flag is
-    raised (i.e, during a stabilization or a ↓ phase).
+(** Evaluates a rising edge block statement when another flag than ↑
+    is raised (i.e, during a stabilization, a ↓ or the init phase).
 
-    Does nothing; ↑ blocks do not respond during stabilization or ↓. *)
+    Does nothing; ↑ blocks only respond to ↑ flag. *)
            
-| VSeqRisingIdleOnStabAndFalling :
-    forall flag stmt, flag = stab \/ flag = fe -> vseq Δ σ Λ flag (Rising stmt) σ Λ
+| VSeqRisingDefault :
+    forall flag stmt, flag <> re -> vseq Δ σ Λ flag (Rising stmt) σ Λ
 
 (** Evaluates a rising edge block statement when the [re] flag is raised. 
     Evaluates the inner block of the rising edge statement.
@@ -313,15 +312,15 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vseq Δ σ Λ re stmt σ' Λ' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ re (ss_rising stmt) σ' Λ'
-           
-(** Evaluates a falling edge block statement when the [stab] flag or the [re] flag is
-    raised (i.e, during a stabilization or a ↑ phase).
+      vseq Δ σ Λ re (Rising stmt) σ' Λ'
 
-    Does nothing; ↓ blocks do not respond during stabilization or ↑. *)
-           
-| VSeqFallingIdleOnStabAndRising :
-    forall flag stmt, flag = stab \/ flag = re -> vseq Δ σ Λ flag (Rising stmt) σ Λ
+(** Evaluates a falling edge block statement when another flag than ↓
+    is raised (i.e, during a stabilization, a ↑ or the init phase).
+
+    Does nothing; ↓ blocks only respond to ↓ flag. *)
+                      
+| VSeqFallingDefault :
+    forall flag stmt, flag <> fe -> vseq Δ σ Λ flag (Rising stmt) σ Λ
            
 (** Evaluates a falling edge block statement when the [fe] flag is
     raised. Evaluates the inner block of the falling edge statement. *)
@@ -335,6 +334,37 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Conclusion * *)
       vseq Δ σ Λ fe (Falling stmt) σ' Λ'
 
+(** Evaluates a rst block statement when another flag than [init] is
+    raised (i.e, during a stabilization, a ↑ or a ↓ phase).
+
+    The second inner statement is evaluated. *)
+           
+| VSeqRstDefault :
+    forall flag stmt stmt' σ' Λ',
+
+      (* * Side conditions * *)
+      flag <> init ->
+      
+      (* * Premises * *)
+      vseq Δ σ Λ flag stmt' σ' Λ' ->
+
+      (* * Conclusion * *)
+      vseq Δ σ Λ flag (ss_rst stmt stmt') σ' Λ'
+
+(** Evaluates a rst block statement when the [init] flag is raised
+    (i.e, during the initialization phase).
+
+    The first inner statement is evaluated. *)
+           
+| VSeqRst :
+    forall stmt stmt' σ' Λ',
+
+      (* * Premises * *)
+      vseq Δ σ Λ init stmt σ' Λ' ->
+
+      (* * Conclusion * *)
+      vseq Δ σ Λ init (ss_rst stmt stmt') σ' Λ'
+           
 (** Evaluates the null statement. *)
 | VSeqNull :
     forall flag, vseq Δ σ Λ flag (ss_null) σ Λ

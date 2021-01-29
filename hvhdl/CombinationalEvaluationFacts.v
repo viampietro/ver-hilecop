@@ -5,6 +5,7 @@ Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.InAndNoDup.
 
+Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.CombinationalEvaluation.
 Require Import hvhdl.Place.
@@ -33,8 +34,8 @@ Proof.
   (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
   - simpl; destruct (Nat.eq_dec compid id__c).
-    + exists σ__c''; rewrite e; apply add_1; auto.
-    + exists σ__c; apply add_2; auto.
+    + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
+    + exists σ__c; apply NatMap.add_2; auto.
       eapply mapop_inv_compstore_id; eauto.
 
   (* CASE comp evaluation with no events. *)
@@ -99,13 +100,16 @@ Lemma vcomb_compid_not_in_events_2 :
     ~NatSet.In id__c (events σ).
 Admitted.
 
+Definition CsHasUniqueCompIds (behavior : cs) (compids : list ident) : Prop :=
+  AreCsCompIds behavior compids /\ List.NoDup compids.
+
 Lemma vcomb_inv_s_marking :
   forall Δ σ behavior σ',
     vcomb hdstore Δ σ behavior σ' ->
     forall id__p gm ipm opm σ__p σ__p' v Δ__p compids,
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
       MapsTo id__p (Component Δ__p) Δ ->
-      AreCsCompIds behavior compids ->
+      AreCsCompIds behavior compids -> 
       List.NoDup compids ->
       MapsTo id__p σ__p (compstore σ) ->
       MapsTo s_marking v (sigstore σ__p) ->
