@@ -47,3 +47,29 @@ Proof.
     + inversion H; rewrite (IHFlattenCs2 l0 H2); reflexivity.
     + rewrite (IHFlattenCs1 l0 H2); rewrite (IHFlattenCs2 l'0 H3); reflexivity.
 Defined.
+
+Lemma FoldLCs_ex :
+  forall {A : Type} (f : A -> cs -> A) cstmt a, exists res, FoldLCs f cstmt a res.
+Proof.
+  induction cstmt; intros; try
+  (match goal with
+   | |- exists _, FoldLCs ?f ?cstmt ?a _ =>
+     exists (f a cstmt); constructor
+   end).
+  destruct (IHcstmt1 a) as (res, FoldLCs1).
+  destruct (IHcstmt2 res) as (res', FoldLCs2).
+  eexists; econstructor.
+  eexact (FoldLCs1). eexact FoldLCs2.
+Qed.
+
+Lemma FoldLCs_determ :
+  forall {A : Type} {f : A -> cs -> A} {cstmt a res res'},
+    FoldLCs f cstmt a res ->
+    FoldLCs f cstmt a res' ->
+    res = res'.
+Proof.
+  induction cstmt; try (inversion_clear 1; inversion_clear 1; auto).
+  assert (e : a' = a'0) by (eapply IHcstmt1; eauto).
+  rewrite e in *; eapply IHcstmt2; eauto.
+Qed.
+

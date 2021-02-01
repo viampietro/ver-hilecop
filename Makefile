@@ -43,8 +43,10 @@ SITPNDPFILES=SitpnTypes.v Sitpn.v SitpnFacts.v \
 HVHDLFILES=HVhdlTypes.v AbstractSyntax.v AbstractSyntaxFacts.v AbstractSyntaxTactics.v \
 	SemanticalDomains.v Environment.v StaticExpressions.v DefaultValue.v \
 	ExpressionEvaluation.v ConstraintElaboration.v TypeElaboration.v \
-	GenericElaboration.v PortElaboration.v ArchitectureElaboration.v \
-	ValidSS.v ValidPortMap.v DesignElaboration.v Elaboration.v ElaborationFacts.v \
+	GenericElaboration.v PortElaboration.v PortElaborationFacts.v \
+	ArchitectureElaboration.v ArchitectureElaborationFacts.v \
+	ValidSS.v ValidPortMap.v DesignElaboration.v DesignElaborationFacts.v \
+	Elaboration.v \
 	SSEvaluation.v PortMapEvaluation.v \
 	Petri.v \
 	CombinationalEvaluation.v SynchronousEvaluation.v Stabilize.v \

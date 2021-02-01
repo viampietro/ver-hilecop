@@ -16,6 +16,13 @@ Inductive natinf : Set :=
 Coercion ninat : natstar >-> natinf.
 Notation "i+" := niinf (at level 0).
 
+(* Coercion from natinf to natstar given a proof that [natinf] is
+   different from [niinf]. *)
+
+Definition natinf_to_natstar (n : natinf) : n <> niinf -> natstar.
+destruct n; [contradiction | intros; exact n].
+Defined.
+
 (** Equivalence between natinf *)
 
 Definition eq_natinf (ni ni' : natinf) : Prop :=

@@ -124,6 +124,7 @@ with ebeh (D__s : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState
 
       (* Side conditions *)
       ~NatMap.In id__p Δ ->
+
       (* sl ⊆ Ins(Δ) ∪ Sigs(Δ) *)
       (forall id__s,
           NatSet.In id__s sl ->
@@ -145,6 +146,7 @@ with ebeh (D__s : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState
       
       (* Side conditions *)
       ~NatMap.In id__c Δ ->
+      ~NatMap.In id__c (compstore σ) ->
       MapsTo id__e cdesign D__s ->
       (forall g, NatMap.In g M__g -> exists t v, MapsTo g (Generic t v) Δ__c) ->
       

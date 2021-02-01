@@ -70,10 +70,10 @@ Section Init.
       forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids,
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
         MapsTo id__p (Component Δ__p) Δ ->
+        MapsTo id__p σ__p (compstore σ) ->
         AreCsCompIds behavior compids ->
         List.NoDup compids ->
         List.In (associp_ ($initial_marking) (e_nat n)) ipm ->
-        MapsTo id__p σ__p (compstore σ) ->
         MapsTo id__p σ__p0 (compstore σ0) ->
         MapsTo Place.s_marking (Vnat n) (sigstore σ__p0).
   Proof.

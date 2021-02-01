@@ -26,6 +26,8 @@ Require Import hvhdl.DesignElaboration.
 Require Import hvhdl.SynchronousEvaluation.
 Require Import hvhdl.Initialization.
 Require Import hvhdl.Stabilize.
+Require Import hvhdl.Place.
+Require Import hvhdl.Transition.
 
 (* SITPN-to-H-HVDL libraries *)
 
@@ -49,10 +51,10 @@ Definition SimEnv sitpn (γ : Sitpn2HVhdlMap sitpn) (E__c : nat -> C sitpn -> bo
     (* [E__p(τ,clk)(id__c) = E__c(τ)(c)] *)
     MapsTo id__c (Vbool (E__c τ c)) (E__p τ clk).
 
-(** Defines the general state similarity relation between an SITPN
-    state and a H-VHDL design state.  *)
+(** Defines the state similarity relation between an SITPN state and a
+    H-VHDL design state, without similarity of condition values.  *)
 
-Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+Definition SimStateNoConds {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
 
   (* Markings are similar. *)  
   (forall p id__p σ__p,
@@ -66,10 +68,10 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
 
       (* Marking of place [p] at state [s] equals value of signal
          [s_marking] at state [σ__p]. *)
-      MapsTo Place.s_marking (Vnat (M s p)) (sigstore σ__p))
+      MapsTo s_marking (Vnat (M s p)) (sigstore σ__p))
 
   (* Time counters are similar *)
-  /\ (forall (t : Ti sitpn) id__t σ__t n,
+  /\ (forall (t : Ti sitpn) id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
          InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
@@ -78,14 +80,11 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
             design state [σ]. *)
          MapsTo id__t σ__t (compstore σ) ->
 
-         (* Signal ["s_time_counter"] has value [(Vnat n)] at state [σ__t] *)
-         MapsTo Transition.s_time_counter (Vnat n) (sigstore σ__t) ->
-
          (* Then, time counter similarity is: *)
-         (upper t = i+ /\ TcLeLower s t -> I s t = n) /\
-         (upper t = i+ /\ TcGtLower s t -> proj1_sig (lower t) = n) /\
-         (forall m, upper t = ninat m /\ TcGtUpper s t -> proj1_sig m = n) /\
-         (upper t <> i+ /\ TcLeUpper s t -> I s t = n))
+         (upper t = i+ /\ TcLeLower s t -> MapsTo s_time_counter (Vnat (I s t)) (sigstore σ__t)) /\
+         (upper t = i+ /\ TcGtLower s t -> MapsTo s_time_counter (Vnat (lower t)) (sigstore σ__t)) /\
+         (forall pf : upper t <> i+, TcGtUpper s t -> MapsTo s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sigstore σ__t)) /\
+         (upper t <> i+ /\ TcLeUpper s t -> MapsTo s_time_counter (Vnat (I s t)) (sigstore σ__t)))
 
   (* Reset orders are similar. *)
   /\ (forall (t : Ti sitpn) id__t σ__t,
@@ -98,7 +97,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
          MapsTo id__t σ__t (compstore σ) ->
 
          (* Signal ["s_reinit_time_counter"] equals [reset s t] at state [σ__t] *)
-         MapsTo Transition.s_reinit_time_counter (Vbool (reset s t)) (sigstore σ__t))
+         MapsTo s_reinit_time_counter (Vbool (reset s t)) (sigstore σ__t))
 
   (* Action executions are similar. *)
   /\ (forall a id__a,
@@ -116,7 +115,13 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
          InA Fkeq (f, id__f) (f2out γ) ->
          
          (* Output port [id__f] equals [ex s (inr f)] at state [σ] *)
-         MapsTo id__f (Vbool (ex s (inr f))) (sigstore σ))
+         MapsTo id__f (Vbool (ex s (inr f))) (sigstore σ)).
+
+(** Defines the general state similarity relation between an SITPN state and a
+    H-VHDL design state, with similarity of condition values.  *)
+
+Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+  SimStateNoConds γ s σ
 
   (* Condition values are similar. *)
   /\ (forall c id__c,
@@ -134,70 +139,9 @@ Notation "γ ⊢ s '∼' σ" := (SimState _ γ s σ) (at level 50).
 
 Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
 
-  (* Markings are similar. *)  
-  (forall p id__p σ__p,
-      (* [id__p] is the identifier of the place component associated with
-         place [p] by the [γ] binder. *)
-      InA Pkeq (p, id__p) (p2pcomp γ) ->
-
-      (* [σ__p] is the current state of component [id__p] is the global
-         design state [σ]. *)
-      MapsTo id__p σ__p (compstore σ) ->
-
-      (* Marking of place [p] at state [s] equals value of signal
-         [s_marking] at state [σ__p]. *)
-      MapsTo Place.s_marking (Vnat (M s p)) (sigstore σ__p))
-
-  (* Time counters are similar *)
-  /\ (forall (t : Ti sitpn) id__t σ__t n,
-         (* [id__t] is the identifier of the T component associated with
-            transition [t] by the [γ] binder. *)
-         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
-         
-         (* [σ__t] is the current state of T component [id__t] is the global
-            design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
-
-         (* Signal ["s_time_counter"] has value [(Vnat n)] at state [σ__t] *)
-         MapsTo Transition.s_time_counter (Vnat n) (sigstore σ__t) ->
-
-         (* Then, time counter similarity is: *)
-         (upper t = i+ /\ TcLeLower s t -> I s t = n) /\
-         (upper t = i+ /\ TcGtLower s t -> proj1_sig (lower t) = n) /\
-         (forall m, upper t = ninat m /\ TcGtUpper s t -> proj1_sig m = n) /\
-         (upper t <> i+ /\ TcLeUpper s t -> I s t = n))
-
-  (* Reset orders are similar. *)
-  /\ (forall (t : Ti sitpn) id__t σ__t,
-         (* [id__t] is the identifier of the T component associated with
-            transition [t] by the [γ] binder. *)
-         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
-         
-         (* [σ__t] is the current state of T component [id__t] is the global
-            design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
-
-         (* Signal ["s_reinit_time_counter"] equals [reset s t] at state [σ__t] *)
-         MapsTo Transition.s_reinit_time_counter (Vbool (reset s t)) (sigstore σ__t))
-
-  (* Action executions are similar. *)
-  /\ (forall a id__a,
-         (* [id__a] is the output port identifier associated to action
-            [a] in the [γ] binder. *)
-         InA Akeq (a, id__a) (a2out γ) ->
-         
-         (* Output port [id__a] equals [ex s (inl a)] at state [σ] *)
-         MapsTo id__a (Vbool (ex s (inl a))) (sigstore σ))
-
-  (* Function executions are similar. *)
-  /\ (forall f id__f,
-         (* [id__f] is the output port identifier associated to function
-            [f] in the [γ] binder. *)
-         InA Fkeq (f, id__f) (f2out γ) ->
-         
-         (* Output port [id__f] equals [ex s (inr f)] at state [σ] *)
-         MapsTo id__f (Vbool (ex s (inr f))) (sigstore σ))
-       
+  (* State similarity without similar condition values. *)
+  SimStateNoConds γ s σ
+                  
   (* Sensitization is similar *)
   /\ (forall t id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
@@ -209,12 +153,13 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
          MapsTo id__t σ__t (compstore σ) ->
 
          (* Signal ["s_enabled"] equals [true] is equivalent to t ∈ Sens(M). *)
-         Sens (M s) t <-> MapsTo Transition.s_enabled (Vbool true) (sigstore σ__t)).
+         Sens (M s) t <-> MapsTo s_enabled (Vbool true) (sigstore σ__t)).
 
 (** Defines the state similarity relation, after a falling edge,
     between an SITPN state and a H-VHDL design state.  *)
 
 Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+  (* General state similarity *)
   γ ⊢ s ∼ σ 
 
   (* Fired are similar. *)
@@ -244,7 +189,7 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
          PreSum p (Fired s fired) pre__sum -> 
            
          (* [∑ pre(p,t) = σ__p("s_output_token_sum")]. *)
-         MapsTo Place.s_output_token_sum (Vnat pre__sum) (sigstore σ__p))
+         MapsTo s_output_token_sum (Vnat pre__sum) (sigstore σ__p))
 
   (* Post sum are similar. *)
   /\ (forall p id__p σ__p fired post__sum,
@@ -259,8 +204,8 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
          (* ∑ post(t,p), for all t ∈ Fired(s). *)
          PostSum p (Fired s fired) post__sum -> 
          
-         (* [∑ pre(p,t) = σ__p("s_output_token_sum")]. *)
-         MapsTo Place.s_output_token_sum (Vnat post__sum) (sigstore σ__p)).
+         (* [∑ pre(p,t) = σ__p("s_input_token_sum")]. *)
+         MapsTo s_input_token_sum (Vnat post__sum) (sigstore σ__p)).
 
 (** States that two execution trace are similar. The first list
     argument is the execution trace of an SITPN and the second list

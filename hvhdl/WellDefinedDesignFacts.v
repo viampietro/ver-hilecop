@@ -9,6 +9,49 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
 
+(** ** Facts about [AreCsCompIds]  *)
+
+Lemma AreCsCompIds_determ :
+  forall cstmt compids compids',
+    AreCsCompIds cstmt compids ->
+    AreCsCompIds cstmt compids' ->
+    compids = compids'.
+Proof. intros *; eapply FoldLCs_determ. Qed.
+
+Lemma AreCsCompIds_ex : forall cstmt, exists compids, AreCsCompIds cstmt compids.
+Proof. intros; eapply FoldLCs_ex. Qed.
+
+Lemma AreCsCompIds_app1 :
+  forall cstmt compids',
+    let comp2id :=
+        fun (cids : list HVhdlTypes.ident) (cstmt0 : cs) =>
+          match cstmt0 with
+          | cs_comp id _ _ _ _ => cids ++ [id]
+          | _ => cids
+          end in
+    AreCsCompIds cstmt compids' ->
+    forall compids, FoldLCs comp2id cstmt compids (compids ++ compids').
+Proof.
+  induction cstmt; intros; inversion H;
+    try ((rewrite app_nil_r; constructor) || (rewrite app_nil_l; constructor)).
+  destruct (AreCsCompIds_ex cstmt2) as (compids2, AreCsCompIds2).
+  constructor 4 with (a' := compids ++ a').
+  eapply IHcstmt1; eauto.
+  erewrite @FoldLCs_determ with (res := compids') (res' := a' ++ compids2); eauto.
+  rewrite app_assoc; apply IHcstmt2 with (compids := compids ++ a'); auto.
+Qed. 
+
+Lemma AreCsCompIds_app :
+  forall cstmt cstmt' compids compids',
+    AreCsCompIds cstmt compids ->
+    AreCsCompIds cstmt' compids' ->
+    AreCsCompIds (cs_par cstmt cstmt') (compids ++ compids').
+Proof.
+  intros; econstructor. eexact H.
+  apply AreCsCompIds_app1; auto.
+Qed.
+
+
 Lemma ports_in_portids :
   forall {id τ ports portids},
     (List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
@@ -68,8 +111,6 @@ Proof.
     + apply IHFoldL; auto.
 Defined.
 
-Lemma AreCompIds_ex : forall lofcs, exists compids, AreCompIds lofcs compids.
-Admitted.
 
 Lemma comp_in_compids :
   forall {lofcs compids id__c id__e gm ipm opm},

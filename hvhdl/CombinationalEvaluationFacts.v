@@ -16,6 +16,7 @@ Require Import hvhdl.PortMapEvaluation.
 Require Import hvhdl.PortMapEvaluationFacts.
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntaxTactics.
+Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.WellDefinedDesignTactics.
 
 (** ** Facts about [vcomb] *)
@@ -55,23 +56,6 @@ Lemma in_cs_comp_in_compids :
     AreCsCompIds cstmt compids ->
     InCs (cs_comp id__c id__e gm ipm opm) cstmt ->
     List.In id__c compids.
-Admitted.
-
-Lemma AreCsCompIds_app :
-  forall cstmt cstmt' compids compids',
-    AreCsCompIds cstmt compids ->
-    AreCsCompIds cstmt' compids' ->
-    AreCsCompIds (cstmt // cstmt') (compids ++ compids').
-Admitted.
-
-Lemma AreCsCompIds_ex : forall cstmt, exists compids, AreCsCompIds cstmt compids.
-Admitted.
-
-Lemma AreCsCompIds_determ :
-  forall cstmt compids compids',
-    AreCsCompIds cstmt compids ->
-    AreCsCompIds cstmt compids' ->
-    compids = compids'.
 Admitted.
 
 Lemma vcomb_inv_cstate :
