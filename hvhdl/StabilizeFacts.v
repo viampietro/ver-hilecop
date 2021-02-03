@@ -6,6 +6,7 @@ Require Import common.NatSet.
 Require Import common.ListPlus.
 
 Require Import hvhdl.Environment.
+Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.CombinationalEvaluation.
 Require Import hvhdl.HVhdlTypes.
@@ -57,13 +58,14 @@ Qed.
 Lemma stab_inv_s_marking :
   forall Δ σ behavior θ σ',
     stabilize hdstore Δ σ behavior θ σ' ->
-    forall id__p gm ipm opm σ__p σ__p' v Δ__p compids,
+    forall id__p gm ipm opm σ__p σ__p' v Δ__p compids mm,
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
       MapsTo id__p (Component Δ__p) Δ ->
       AreCsCompIds behavior compids ->
       List.NoDup compids ->
       MapsTo id__p σ__p (compstore σ) ->
       MapsTo s_marking v (sigstore σ__p) ->
+      MapsTo s_marking (Declared (Tnat 0 mm)) Δ__p ->
       MapsTo id__p σ__p' (compstore σ') ->
       MapsTo s_marking v (sigstore σ__p').
 Proof.

@@ -51,6 +51,74 @@ Proof.
   apply AreCsCompIds_app1; auto.
 Qed.
 
+Lemma AreCsCompIds_eq_app :
+  forall cstmt cstmt' compids compids' compids'',
+    AreCsCompIds cstmt compids ->
+    AreCsCompIds cstmt' compids' ->
+    AreCsCompIds (cs_par cstmt cstmt') compids'' ->
+    compids'' = compids ++ compids'.
+Proof.
+  intros; eapply AreCsCompIds_determ; eauto.
+  eapply AreCsCompIds_app; eauto.
+Qed.
+
+Lemma AreCsCompIds_compid_iff :
+  forall {behavior compids},
+    AreCsCompIds behavior compids ->
+    (forall id__c, List.In id__c compids -> exists id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) behavior)
+    /\ (forall id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) behavior -> List.In id__c compids).
+Proof.
+  induction behavior; inversion 1; (try inversion_clear 1); split;
+    tryif (solve [inversion_clear 1]) then (inversion_clear 1) else auto.
+
+  (* CASE behavior = comp(...) *)
+  - rewrite app_nil_l; inversion_clear 1;
+      [try subst; exists entid, gmap, ipmap, opmap; reflexivity | contradiction ].
+  - rewrite app_nil_l; inversion_clear 1; constructor; reflexivity.
+
+  (* CASE behavior = beh1 || beh2 *)
+  - rename a' into compids1.
+    destruct (AreCsCompIds_ex behavior2) as (compids2, AreCsCompIds2).
+    erewrite AreCsCompIds_eq_app with (compids'' := compids) (compids := compids1); eauto.
+    intros id__c In_app; destruct_in_app_or.
+    + edestruct IHbehavior1 with (compids := compids1) as ((id__e, (gm, (ipm, (opm, InCs_beh1)))), _); eauto.
+      do 4 eexists; simpl; left; eexact InCs_beh1.
+    + edestruct IHbehavior2 with (compids := compids2) as ((id__e, (gm, (ipm, (opm, InCs_beh2)))), _); eauto.
+      do 4 eexists; simpl; right; eexact InCs_beh2.
+  - rename a' into compids1.
+    destruct (AreCsCompIds_ex behavior2) as (compids2, AreCsCompIds2).
+    erewrite AreCsCompIds_eq_app with (compids'' := compids) (compids := compids1); eauto.
+    simpl; inversion_clear 1.
+    + eapply in_or_app; left; eapply IHbehavior1 with (compids := compids1); eauto.
+    + eapply in_or_app; right; eapply IHbehavior2 with (compids := compids2); eauto.
+Qed.
+
+Lemma comp_in_compids :
+  forall {lofcs compids id__c id__e gm ipm opm},
+    AreCompIds lofcs compids ->
+    List.In (cs_comp id__c id__e gm ipm opm) lofcs ->
+    List.In id__c compids.
+Proof.
+  induction 1.
+  - contradiction.
+  - inversion_clear 1.
+    + lazymatch goal with
+      | [ Heq: _ = _, Hfoldl: ListPlus.FoldL _ _ _ _ |- _ ] =>
+        rewrite Heq in Hfoldl; simpl in Hfoldl; eapply FoldL_in_acc; eauto
+      end.
+      -- apply in_last.
+      -- intros *; intros Hin;
+           lazymatch goal with
+           | |- List.In _ ((fun _ => _) _ ?b) =>
+             case b; intros; (assumption || apply (in_appl Hin))
+           end.
+    + apply IHFoldL; auto.
+Defined.
+
+Lemma AreCompIds_ex : forall lofcs, exists compids, AreCompIds lofcs compids.
+Admitted.
+
+(** ** Facts about [ArePortIds] Relation *)
 
 Lemma ports_in_portids :
   forall {id τ ports portids},
@@ -69,6 +137,8 @@ Proof.
     end.
 Qed.
 
+(** ** Facts about [AreSigIds] Relation *)
+
 Lemma sigs_in_sigids :
   forall {id τ sigs sigids},
     List.In (sdecl_ id τ) sigs ->
@@ -85,6 +155,8 @@ Proof.
         eapply Map_in; eauto
     end.
 Qed.
+
+(** ** Facts about [ArePIds] Relation *)
 
 Lemma ArePIds_ex : forall lofcs, exists pids, ArePIds lofcs pids.
 Admitted.
@@ -111,28 +183,7 @@ Proof.
     + apply IHFoldL; auto.
 Defined.
 
-
-Lemma comp_in_compids :
-  forall {lofcs compids id__c id__e gm ipm opm},
-    AreCompIds lofcs compids ->
-    List.In (cs_comp id__c id__e gm ipm opm) lofcs ->
-    List.In id__c compids.
-Proof.
-  induction 1.
-  - contradiction.
-  - inversion_clear 1.
-    + lazymatch goal with
-      | [ Heq: _ = _, Hfoldl: ListPlus.FoldL _ _ _ _ |- _ ] =>
-        rewrite Heq in Hfoldl; simpl in Hfoldl; eapply FoldL_in_acc; eauto
-      end.
-      -- apply in_last.
-      -- intros *; intros Hin;
-           lazymatch goal with
-           | |- List.In _ ((fun _ => _) _ ?b) =>
-             case b; intros; (assumption || apply (in_appl Hin))
-           end.
-    + apply IHFoldL; auto.
-Defined.
+(** ** Facts about [HasUniqueIds] Relation *)
 
 Ltac inv_hasuniqids H :=
   lazymatch type of H with

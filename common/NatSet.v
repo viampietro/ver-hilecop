@@ -15,5 +15,15 @@ Notation "{[ ]}" := empty (format "{[ ]}") : natset_scope.
 Notation "{[ x , y , .. , z ]}" := (add x (add y .. (add z empty) ..)) : natset_scope.
 Notation "{[ x ]}" := (add x empty) (at level 0) : natset_scope.
 
+(** ** Extra Facts on [NatSet] *)
+
+Lemma nIn_nIn_Union :
+  forall {x s s'}, ~NatSet.In x s -> ~NatSet.In x s' -> ~NatSet.In x (s U s').
+Proof.
+  intros *; intros nIn_s nIn_s' In_u.
+  destruct (NatSetFacts.union_1 In_u); [apply nIn_s; assumption | apply nIn_s'; assumption ].
+Qed.
+
 Export NatSet NatSetFacts.
+
 

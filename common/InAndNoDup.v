@@ -102,6 +102,8 @@ Section InAndNoDupLemmas.
       + apply IHl'; assumption.
   Qed.
 
+
+  
   (** ∀ ll : list (list), NoDup (concat ll) ⇒ ∀ l ∈ ll, NoDup l. *)
 
   Lemma nodup_concat_gen {A : Type} :
@@ -286,6 +288,20 @@ Section InAndNoDupLemmas.
         apply (IHl' Hnodup').
   Qed.
 
+  Lemma NoDup_app_cons :
+    forall {A : Type} (l m : list A),
+      List.NoDup l -> List.NoDup m ->
+      (forall a, List.In a l -> ~List.In a m) ->
+      List.NoDup (l ++ m).
+  Proof.
+    induction 1.
+    - rewrite app_nil_l; auto.
+    - intros; rewrite <- app_comm_cons.
+      apply NoDup_cons.
+      + apply not_in_app; split; [auto | firstorder].
+      + apply IHNoDup; firstorder.
+  Qed.
+  
   (** (l ++ l') ⊆ m ⇒ (l ⊆ m ∧ l' ⊆ m) *)
 
   Lemma incl_app_inv {A : Type} :

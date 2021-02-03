@@ -7,6 +7,7 @@ Require Import common.InAndNoDup.
 
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
+Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.CombinationalEvaluation.
 Require Import hvhdl.Place.
 Require Import hvhdl.AbstractSyntax.
@@ -47,17 +48,6 @@ Proof.
     unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
 Qed.
 
-Lemma nIn_nIn_Union :
-  forall {x s s'}, ~NatSet.In x s -> ~NatSet.In x s' -> ~NatSet.In x (s U s').
-Admitted.
-
-Lemma in_cs_comp_in_compids :
-  forall {cstmt compids id__c id__e gm ipm opm},
-    AreCsCompIds cstmt compids ->
-    InCs (cs_comp id__c id__e gm ipm opm) cstmt ->
-    List.In id__c compids.
-Admitted.
-
 Lemma vcomb_inv_cstate :
   forall {D__s Δ σ behavior σ' id__c σ__c},
     vcomb D__s Δ σ behavior σ' ->
@@ -87,23 +77,63 @@ Admitted.
 Definition CsHasUniqueCompIds (behavior : cs) (compids : list ident) : Prop :=
   AreCsCompIds behavior compids /\ List.NoDup compids.
 
+Lemma vcomb_place_inv_s_marking :
+  forall {Δ σ σ' v},
+    vcomb hdstore Δ σ (behavior place_design) σ' ->
+    MapsTo s_marking v (sigstore σ) ->
+    MapsTo s_marking v (sigstore σ').
+Admitted.
+
+Definition InputOf (Δ : ElDesign) id :=
+  exists t, MapsTo id (Input t) Δ.
+
+Lemma mapip_inv_sigstore :
+  forall {Δ Δ__c σ σ__c ipm σ__c'},
+    mapip Δ Δ__c σ σ__c ipm σ__c' ->
+    forall {id v},
+      ~InputOf Δ__c id ->
+      MapsTo id v (sigstore σ__c) ->
+      MapsTo id v (sigstore σ__c').
+Admitted.
+    
 Lemma vcomb_inv_s_marking :
   forall Δ σ behavior σ',
     vcomb hdstore Δ σ behavior σ' ->
-    forall id__p gm ipm opm σ__p σ__p' v Δ__p compids,
+    forall id__p gm ipm opm σ__p σ__p' v Δ__p compids mm,
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
       MapsTo id__p (Component Δ__p) Δ ->
       AreCsCompIds behavior compids -> 
       List.NoDup compids ->
       MapsTo id__p σ__p (compstore σ) ->
       MapsTo s_marking v (sigstore σ__p) ->
+      MapsTo s_marking (Declared (Tnat 0 mm)) Δ__p -> 
       MapsTo id__p σ__p' (compstore σ') ->
       MapsTo s_marking v (sigstore σ__p').
 Proof.
   induction 1; inversion 1; intros.
 
   (* CASE component with events. *)
-  - admit.
+  - subst.
+    unfold hdstore in H2.
+    assert (e : d = place_design).
+    { rewrite add_mapsto_iff in H2.
+      inversion H2 as [x | y];
+        [ apply proj1 in x; inversion x
+        | apply proj2 in y;
+          rewrite add_mapsto_iff in y;
+          inversion y as [x1 | y1];
+          [ apply proj2 in x1; symmetry; assumption
+          | apply proj1 in y1; contradiction ]
+        ].
+    }
+    rewrite e in *. simpl in H18.
+    erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__p'); eauto.
+    erewrite @MapsTo_fun with (e := σ__p) (e' := σ__c) in *; eauto.
+    eapply vcomb_place_inv_s_marking; eauto.
+    eapply mapip_inv_sigstore; eauto.
+    specialize (MapsTo_fun H3 H7) as e1; inversion_clear e1.
+    unfold InputOf; destruct 1.
+    specialize (MapsTo_fun H17 H8) as e2; inversion e2.
 
   (* CASE component with no events. *)
   - erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
@@ -138,7 +168,7 @@ Proof.
       -- apply nodup_app_not_in with (l := compids1).
          { erewrite AreCsCompIds_determ; eauto.
            apply AreCsCompIds_app; auto. }
-         { eapply in_cs_comp_in_compids; eauto. }
+         { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
       -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ'); eauto.
       
   (* CASE in right of || *)
@@ -171,9 +201,9 @@ Proof.
          { eapply NoDup_app_comm.
            erewrite AreCsCompIds_determ; eauto.
            apply AreCsCompIds_app; auto. }
-         { eapply in_cs_comp_in_compids; eauto. }
+         { eapply (AreCsCompIds_compid_iff HAreCsCompIds2); eauto. }
       -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ''); eauto.
-Admitted.
+Qed.
 
 
 

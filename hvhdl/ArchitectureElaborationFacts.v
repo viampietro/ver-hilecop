@@ -65,3 +65,26 @@ Proof. induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl]. Qed.
 
 Hint Resolve edecls_idle_gens : hvhdl.
 
+Lemma edecl_inv_Δ : 
+  forall {Δ σ Δ' ad σ' id sobj},
+    edecl Δ σ ad Δ' σ' ->
+    MapsTo id sobj Δ ->
+    MapsTo id sobj Δ'.
+Proof.
+  inversion_clear 1; intros; auto.
+  destruct (Nat.eq_dec id id0) as [e | ne]; try subst.
+  elimtype False;
+    match goal with | [ H: ~NatMap.In (elt:=_) _ _ |- _] => apply H end;
+    exists sobj; auto.
+  apply add_2; auto.
+Qed.
+
+Lemma edecls_inv_Δ : 
+  forall {Δ σ sigs Δ' σ' id sobj},
+    edecls Δ σ sigs Δ' σ' ->
+    MapsTo id sobj Δ ->
+    MapsTo id sobj Δ'.
+Proof.
+  induction 1; intros; auto.
+  apply IHedecls; eapply edecl_inv_Δ; eauto.
+Qed.

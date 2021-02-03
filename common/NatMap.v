@@ -10,6 +10,16 @@ Definition EqualDom {A} (m m' : t A) : Prop := forall (k : nat), In k m <-> In k
 Module NatMapFacts := Facts NatMap.
 Include NatMapFacts.
 
+(** ** Extra Facts on NatMap *)
+
+Lemma MapsTo_add_eqv :
+  forall {A : Type} {x : key} {e e' : A} {m},
+    NatMap.MapsTo x e (NatMap.add x e' m) -> e = e'.
+Proof.
+  intros *; erewrite (NatMapFacts.add_mapsto_iff).
+  inversion 1 as [(a, b) | (c ,d) ]; [auto | contradiction].
+Qed.
+
 (** ** Hints to solve goals with MapsTo *)
 
 Hint Resolve MapsTo_fun : mapsto.

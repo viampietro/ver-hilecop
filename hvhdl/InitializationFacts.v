@@ -67,7 +67,7 @@ Section Init.
   Lemma init_s_marking_eq_nat :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
-      forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids,
+      forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids mm,
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo id__p σ__p (compstore σ) ->
@@ -75,6 +75,7 @@ Section Init.
         List.NoDup compids ->
         List.In (associp_ ($initial_marking) (e_nat n)) ipm ->
         MapsTo id__p σ__p0 (compstore σ0) ->
+        MapsTo Place.s_marking (Declared (Tnat 0 mm)) Δ__p ->
         MapsTo Place.s_marking (Vnat n) (sigstore σ__p0).
   Proof.
     inversion 1.

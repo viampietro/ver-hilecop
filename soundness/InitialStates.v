@@ -38,6 +38,8 @@ Require Import hvhdl.Stabilize.
 Require Import hvhdl.InitializationFacts.
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.DesignElaborationFacts.
+Require Import hvhdl.PlaceElaborationFacts.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateHVhdlFacts.
@@ -46,16 +48,6 @@ Require Import sitpn2hvhdl.GenerateInfosFacts.
 Require Import soundness.SoundnessDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
-
-Lemma sitpn2hvhdl_bind_init_marking :
-  forall {sitpn decpr id__ent id__arch mm d γ},
-    (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
-    forall p id__p gm ipm opm,
-      InA Pkeq (p, id__p) (p2pcomp γ) ->
-      InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
-      List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
-Admitted.
 
 (** [sitpn2hvhdl(sitpn) = (d,γ)] and [(p, id__p) ∈ γ] and [(p, id__p') ∈
     γ] then [id__p = id__p'] *)
@@ -124,6 +116,9 @@ Proof.
 
   (* Builds [id__p' ∈ (compstore σ__e)] *)
   edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
+
+  (* Builds [Δ__p("s_marking") = Tnat 0 n] *)
+  edestruct @elab_pcomp_Δ_s_marking as (n, MapsTo_smarking); eauto.
   
   (* To prove [σ__p0("s_marking") = M0(p)] *)
   eapply init_s_marking_eq_nat; eauto.
@@ -137,7 +132,7 @@ Proof.
   - eapply sitpn2hvhdl_bind_init_marking; eauto.
 
   (* Prove [id__p = id__p'] *)
-  - rw_γp p id__p id__p'; assumption.    
+  - rw_γp p id__p id__p'; assumption.
 Qed.
 
 Lemma init_states_eq_time_counters :

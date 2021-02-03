@@ -2,10 +2,17 @@
 
 Require Import common.Coqlib.
 Require Import common.NatMap.
+Require Import common.InAndNoDup.
 
 Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.AbstractSyntaxFacts.
 Require Import hvhdl.Environment.
+Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Elaboration.
+Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.Place.
+Require Import hvhdl.HilecopDesignStore.
 
 (** ** Facts about Behavior Elaboration *)
 
@@ -113,6 +120,44 @@ Proof.
   - eapply IHebeh2; eauto.
 Qed.
 
+Lemma ebeh_compid_is_unique :
+  forall {D__s Δ σ behavior Δ' σ' id__c id__e gm ipm opm},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+    ~NatMap.In id__c Δ /\ ~NatMap.In id__c (compstore σ).
+Proof.
+  induction 1; inversion 1; auto.
+  edestruct (IHebeh2) as (nIn_Δ, nIn_cstore); eauto; split; destruct 1.
+  - apply nIn_Δ; eexists; eapply ebeh_inv_Δ; eauto.
+  - apply nIn_cstore; eexists; eapply ebeh_inv_compstore; eauto.
+Qed.
+
+Lemma ebeh_nodup_compids :
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    forall {compids},
+      AreCsCompIds behavior compids ->
+      List.NoDup compids.
+Proof.
+  induction 1; inversion_clear 1; try (rewrite app_nil_l); auto.
+
+  (* CASE (cstmt || cstmt') *)
+  rename a' into compids1.
+  edestruct @AreCsCompIds_ex with (cstmt := cstmt') as (compids2, AreCsCompIds2).
+  erewrite @FoldLCs_determ with (res := compids) (res' := compids1 ++ compids2); eauto;
+    try (apply (AreCsCompIds_app1 cstmt' compids2 AreCsCompIds2 compids1)).
+  apply NoDup_app_cons; [ apply IHebeh1; auto | apply IHebeh2; auto | ].
+
+  (* Prove [∀id ∈ compids1, id ∉ compids2] *)
+  intros id__c In_compids1 In_compids2.
+  edestruct (proj1 (AreCsCompIds_compid_iff H2)) as (id__e1, (gm1, (ipm1, (opm1, InCs_id__c1)))); eauto.
+  edestruct (proj1 (AreCsCompIds_compid_iff AreCsCompIds2)) as (id__e2, (gm2, (ipm2, (opm2, InCs_id__c2)))); eauto.
+  edestruct @ebeh_compid_in_comps with (D__s := D__s) (behavior := cstmt); eauto.
+  eapply (proj1 (ebeh_compid_is_unique H0 InCs_id__c2)); eauto.
+  exists (Component x); assumption.
+Qed.
+
+
 (** ** Facts about the [edesign] relation *)
 
 Lemma elab_compid_in_comps :
@@ -140,4 +185,9 @@ Lemma elab_nodup_compids :
     edesign D__s M__g d Δ σ__e ->
     AreCsCompIds (behavior d) compids ->
     List.NoDup compids.
-Admitted.
+Proof.
+  inversion 1.
+  eapply ebeh_nodup_compids; eauto.
+Qed.
+
+
