@@ -19,6 +19,7 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntaxTactics.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.WellDefinedDesignTactics.
+Require Import hvhdl.PlaceEvaluationFacts.
 
 (** ** Facts about [vcomb] *)
 
@@ -72,28 +73,6 @@ Lemma vcomb_compid_not_in_events_2 :
     MapsTo id__c (Component Δ__c) Δ ->
     ~NatSet.In id__c (events σ') ->
     ~NatSet.In id__c (events σ).
-Admitted.
-
-Definition CsHasUniqueCompIds (behavior : cs) (compids : list ident) : Prop :=
-  AreCsCompIds behavior compids /\ List.NoDup compids.
-
-Lemma vcomb_place_inv_s_marking :
-  forall {Δ σ σ' v},
-    vcomb hdstore Δ σ (behavior place_design) σ' ->
-    MapsTo s_marking v (sigstore σ) ->
-    MapsTo s_marking v (sigstore σ').
-Admitted.
-
-Definition InputOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (Input t) Δ.
-
-Lemma mapip_inv_sigstore :
-  forall {Δ Δ__c σ σ__c ipm σ__c'},
-    mapip Δ Δ__c σ σ__c ipm σ__c' ->
-    forall {id v},
-      ~InputOf Δ__c id ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id v (sigstore σ__c').
 Admitted.
     
 Lemma vcomb_inv_s_marking :

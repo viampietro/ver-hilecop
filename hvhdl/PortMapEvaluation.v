@@ -110,7 +110,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       events' = NatSet.add id (events σ) ->                     (* E' = E ∪ {id} *)
       
       (* S' = S(id) ← set_at(v, i, aofv) *)
-      sigstore' = NatMap.add id (Varr (set_at newv idx aofv idx_in_bounds)) (sigstore σ) ->
+      sigstore' = NatMap.add id (Varr (set_at newv idx aofv idx_in_bounds)) (sigstore σ__c) ->
       
       (* * Conclusion * *)
       vassocip Δ Δ__c σ σ__c (associp_ (id $[[ei]]) e) (MkDState sigstore' (compstore σ__c) events')

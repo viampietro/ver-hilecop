@@ -52,6 +52,8 @@ Definition IsOverrUnion (ovridden ovriding ovunion : IdMap value) :=
   (forall id v, MapsTo id v ovriding -> MapsTo id v ovunion) /\
   (forall id v, ~NatMap.In id ovriding -> MapsTo id v ovridden -> MapsTo id v ovunion).
 
+(** ** Local Environment *)
+
 (** Defines a local environment of a process
     as a map from id to couples (type * value).
  *)
@@ -69,6 +71,8 @@ Definition EmptyLEnv := NatMap.empty (type * value).
 
 Local Unset Positivity Checking.
 
+(** ** Elaborated Design *)
+
 (** Type of semantical objects that populate the design
     environment. *)
 
@@ -78,7 +82,7 @@ Inductive SemanticalObject : Type :=
 | Output (t : type)
 | Declared (t : type)
 | Process (lenv : LEnv)
-| Component (ecomp : IdMap SemanticalObject).
+| Component (Δ__c : IdMap SemanticalObject).
 
 (** Macro definition for the design environment type. 
     Mapping from identifiers to [SemanticalObject]. *)
@@ -88,6 +92,28 @@ Definition ElDesign := IdMap SemanticalObject.
 (** Defines an empty design environment. *)
 
 Definition EmptyElDesign := NatMap.empty SemanticalObject.
+
+(** *** Identifiers Qualification *)
+
+Definition GenericOf (Δ : ElDesign) id :=
+  exists t v, MapsTo id (Generic t v) Δ.
+
+Definition InputOf (Δ : ElDesign) id :=
+  exists t, MapsTo id (Input t) Δ.
+
+Definition OutputOf (Δ : ElDesign) id :=
+  exists t, MapsTo id (Output t) Δ.
+
+Definition DeclaredOf (Δ : ElDesign) id :=
+  exists t, MapsTo id (Declared t) Δ.
+
+Definition ProcessOf (Δ : ElDesign) id :=
+  exists Λ, MapsTo id (Process Λ) Δ.
+
+Definition CompOf (Δ : ElDesign) id :=
+  exists Δ__c, MapsTo id (Component Δ__c) Δ__c.
+
+(** ** Design State *)
 
 (** Defines the structure of design state. *)
 
