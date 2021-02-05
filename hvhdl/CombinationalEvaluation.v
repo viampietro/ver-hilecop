@@ -139,3 +139,4 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
       (* * Conclusion * *)
       vcomb D__s Δ σ (cs_par cstmt cstmt') merged.
 
+Hint Constructors vcomb : hvhdl.

@@ -6,6 +6,7 @@ Module NatSet := MSetWeakList.Make (Nat_as_OT).
 Include NatSet.
 
 Module NatSetFacts := Facts NatSet.
+Module NatSetProps := Properties NatSet.
 
 Declare Scope natset_scope.
 
@@ -24,6 +25,6 @@ Proof.
   destruct (NatSetFacts.union_1 In_u); [apply nIn_s; assumption | apply nIn_s'; assumption ].
 Qed.
 
-Export NatSet NatSetFacts.
+Export NatSet NatSetFacts NatSetProps.
 
 

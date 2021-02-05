@@ -1,0 +1,4 @@
+pre-all::
+	echo "Building Ver-HILECOP Project"
+	echo "Generating _CoqProject file"
+	./gen_coqp.sh

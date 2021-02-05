@@ -2,6 +2,7 @@
 
 Require Import common.Coqlib.
 Require Import common.NatSet.
+
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
 Require Import common.InAndNoDup.
@@ -20,7 +21,6 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntaxTactics.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.WellDefinedDesignTactics.
-Require Import hvhdl.PlaceEvaluationFacts.
 
 (** ** Facts about [vcomb] *)
 
@@ -50,6 +50,77 @@ Proof.
     unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
 Qed.
 
+Lemma IsMergedDState_comm :
+  forall {σ__o σ σ' σ__m},
+    IsMergedDState σ__o σ σ' σ__m <->
+    IsMergedDState σ__o σ' σ σ__m.
+Proof.
+  split; intros;
+  match goal with
+  | [ H: IsMergedDState _ _ _ _ |- _ ] =>
+    unfold IsMergedDState in H; decompose [and] H; clear H
+  end;
+  let rec solve_imds :=
+    match goal with
+    | |- IsMergedDState _ _ _ _ => split; solve_imds
+    | |- _ /\ _ => split; [solve_imds | solve_imds]
+    | |- forall (_ : _) (_ : _), ~NatSet.In _ (_ U _) -> _ -> _ =>
+      intros;
+      match goal with
+      | [ H: forall (_ : _) (_ : _), ~NatSet.In _ _ -> _ -> MapsTo _ _ (?f _),
+            H': ~NatSet.In _ _ |- MapsTo _ _ (?f _) ] =>
+        apply H; auto; do 1 intro; apply H';
+        match goal with
+        | [ H'': NatSet.In _ (_ U _) |- _ ] =>
+          rewrite union_spec in H''; inversion H'';
+          rewrite union_spec; [right; assumption | left; assumption]
+        end
+      end
+    | |- Equal _ (events ?σ U events ?σ') =>
+      transitivity (events σ' U events σ); auto with set
+    | _ => firstorder
+    end in solve_imds.
+Qed.
+
+Lemma vcomb_par_comm :
+  forall {D__s Δ σ cstmt cstmt' σ'},
+    vcomb D__s Δ σ (cstmt // cstmt') σ' <->
+    vcomb D__s Δ σ (cstmt' // cstmt) σ'.
+Proof.
+  split; inversion_clear 1.
+  all :
+    eapply @VCombPar; eauto;
+    [ transitivity (inter (events σ'0) (events σ'')); auto with set
+    | erewrite IsMergedDState_comm; auto ].
+Qed.
+
+Lemma IsMergedDState_ex :
+  forall {σ__o σ σ'}, exists σ__m, IsMergedDState σ__o σ σ' σ__m.
+Admitted.
+
+Lemma vcomb_par_assoc :
+  forall {D__s Δ σ cstmt cstmt' cstmt'' σ'},
+    vcomb D__s Δ σ (cstmt // cstmt' // cstmt'') σ' <->
+    vcomb D__s Δ σ ((cstmt // cstmt') // cstmt'')  σ'.
+Proof.
+  split.
+  (* CASE A *)
+  - inversion_clear 1.
+    inversion_clear H1.
+    rename σ'0 into σ0, σ'' into σ1, σ'1 into σ2, σ''0 into σ3.
+    assert (Equal (inter (events σ0) (events σ2)) {[]}) by admit.
+    destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4).
+    eapply @VCombPar with (σ' := σ4) (σ'' := σ3); eauto with hvhdl.
+    + admit.
+    + unfold IsMergedDState in *. decompose [and] H3; clear H3.
+      decompose [and] IsMergedDState_σ4; clear IsMergedDState_σ4.
+      decompose [and] H6; clear H6.
+      split. assumption.
+      split. assumption.
+      split. intros *; rewrite H24.
+      rewrite union_spec; inversion 1.
+Admitted
+
 Lemma vcomb_inv_cstate :
   forall {D__s Δ σ behavior σ' id__c σ__c},
     vcomb D__s Δ σ behavior σ' ->
@@ -75,105 +146,5 @@ Lemma vcomb_compid_not_in_events_2 :
     ~NatSet.In id__c (events σ') ->
     ~NatSet.In id__c (events σ).
 Admitted.
-    
-Lemma vcomb_inv_s_marking :
-  forall Δ σ behavior σ',
-    vcomb hdstore Δ σ behavior σ' ->
-    forall id__p gm ipm opm σ__p σ__p' v Δ__p compids mm,
-      InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
-      MapsTo id__p (Component Δ__p) Δ ->
-      AreCsCompIds behavior compids -> 
-      List.NoDup compids ->
-      MapsTo id__p σ__p (compstore σ) ->
-      MapsTo s_marking v (sigstore σ__p) ->
-      MapsTo s_marking (Declared (Tnat 0 mm)) Δ__p -> 
-      MapsTo id__p σ__p' (compstore σ') ->
-      MapsTo s_marking v (sigstore σ__p').
-Proof.
-  induction 1; inversion 1; intros.
-
-  (* CASE component with events. *)
-  - subst; subst_place_design.
-    match goal with
-    | [ H: MapsTo _ _ (compstore (cstore_add _ _ _)) |- _ ] => simpl in H
-    end.
-    erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__p'); eauto.    
-    erewrite @MapsTo_fun with (x := compid) (e := σ__p) (e' := σ__c) in *; eauto.
-    assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
-    inject_left e; eauto.
-    eapply vcomb_place_inv_s_marking; eauto.    
-    eapply mapip_inv_sigstore; eauto.
-    unfold InputOf; destruct 1; mapsto_discriminate.
-
-  (* CASE component with no events. *)
-  - erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-    eapply mapop_inv_compstore_id; eauto.    
-
-  (* CASE in left of || *)
-  - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
-    destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
-    eapply IHvcomb1; eauto.
-
-    (* Component ids are unique in [cstmt]. *)
-    apply @proj1 with (B := List.NoDup compids2); apply nodup_app.
-    erewrite AreCsCompIds_determ; eauto.
-    apply AreCsCompIds_app; auto.
-
-    (* 2 subcases: [id__p ∈ (events σ')] or [id__p ∉ (events σ')] *)
-    destruct (InA_dec Nat.eq_dec id__p (NatSet.elements (events σ'))); rewrite <- elements_iff in *.
-
-    (* [id__p ∈ (events σ')] *)
-    + edestruct @vcomb_maps_compstore_id with (σ' := σ') as (σ__p0, MapsTo_σ__p0); eauto.
-      erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p0); eauto.
-      apply proj2, proj2, proj2, proj2, proj2, proj1 in H2. 
-      eapply H2; eauto.
-      
-    (* [id__p ∉ (events σ')] *)
-    + eapply vcomb_inv_cstate; eauto.
-      erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-      do 7 (apply proj2 in H2); apply proj1 in H2; eapply H2; eauto.
-      eapply nIn_nIn_Union; eauto.
-      (* Prove [id__p ∉ (events σ'')] *)
-      eapply vcomb_compid_not_in_events_1; eauto.
-      -- apply nodup_app_not_in with (l := compids1).
-         { erewrite AreCsCompIds_determ; eauto.
-           apply AreCsCompIds_app; auto. }
-         { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
-      -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ'); eauto.
-      
-  (* CASE in right of || *)
-  - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
-    destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
-    eapply IHvcomb2; eauto.
-
-    (* Component ids are unique in [cstmt]. *)
-    apply @proj2 with (A := List.NoDup compids1); apply nodup_app.
-    erewrite AreCsCompIds_determ; eauto.
-    apply AreCsCompIds_app; auto.
-
-    (* 2 subcases: [id__p ∈ (events σ'')] or [id__p ∉ (events σ'')] *)
-    destruct (InA_dec Nat.eq_dec id__p (NatSet.elements (events σ''))); rewrite <- elements_iff in *.
-
-    (* [id__p ∈ (events σ'')] *)
-    + edestruct @vcomb_maps_compstore_id with (σ' := σ'') as (σ__p0, MapsTo_σ__p0); eauto.
-      erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p0); eauto.
-      apply proj2, proj2, proj2, proj2, proj2, proj2, proj1 in H2. 
-      eapply H2; eauto.
-      
-    (* [id__p ∉ (events σ')] *)
-    + eapply vcomb_inv_cstate; eauto.
-      erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-      do 7 (apply proj2 in H2); apply proj1 in H2; eapply H2; eauto.
-      eapply nIn_nIn_Union; eauto.
-      (* Prove [id__p ∉ (events σ')] *)
-      eapply vcomb_compid_not_in_events_1; eauto.
-      -- eapply nodup_app_not_in with (l := compids2).
-         { eapply NoDup_app_comm.
-           erewrite AreCsCompIds_determ; eauto.
-           apply AreCsCompIds_app; auto. }
-         { eapply (AreCsCompIds_compid_iff HAreCsCompIds2); eauto. }
-      -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ''); eauto.
-Qed.
-
 
 
