@@ -3,6 +3,7 @@
 Require Import common.Coqlib.
 Require Import common.NatSet.
 Require Import common.NatMap.
+Require Import common.NatMapTactics.
 Require Import common.InAndNoDup.
 
 Require Import hvhdl.HVhdlTypes.
@@ -92,27 +93,17 @@ Proof.
   induction 1; inversion 1; intros.
 
   (* CASE component with events. *)
-  - subst.
-    unfold hdstore in H2.
-    assert (e : d = place_design).
-    { rewrite add_mapsto_iff in H2.
-      inversion H2 as [x | y];
-        [ apply proj1 in x; inversion x
-        | apply proj2 in y;
-          rewrite add_mapsto_iff in y;
-          inversion y as [x1 | y1];
-          [ apply proj2 in x1; symmetry; assumption
-          | apply proj1 in y1; contradiction ]
-        ].
-    }
-    rewrite e in *. simpl in H18.
-    erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__p'); eauto.
-    erewrite @MapsTo_fun with (e := σ__p) (e' := σ__c) in *; eauto.
-    eapply vcomb_place_inv_s_marking; eauto.
+  - subst; subst_place_design.
+    match goal with
+    | [ H: MapsTo _ _ (compstore (cstore_add _ _ _)) |- _ ] => simpl in H
+    end.
+    erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__p'); eauto.    
+    erewrite @MapsTo_fun with (x := compid) (e := σ__p) (e' := σ__c) in *; eauto.
+    assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
+    inject_left e; eauto.
+    eapply vcomb_place_inv_s_marking; eauto.    
     eapply mapip_inv_sigstore; eauto.
-    specialize (MapsTo_fun H3 H7) as e1; inversion_clear e1.
-    unfold InputOf; destruct 1.
-    specialize (MapsTo_fun H17 H8) as e2; inversion e2.
+    unfold InputOf; destruct 1; mapsto_discriminate.
 
   (* CASE component with no events. *)
   - erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.

@@ -1,3 +1,4 @@
+CoqMakefile
 *.vo
 *.glob
 *.vok

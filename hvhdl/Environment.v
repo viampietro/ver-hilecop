@@ -111,7 +111,7 @@ Definition ProcessOf (Δ : ElDesign) id :=
   exists Λ, MapsTo id (Process Λ) Δ.
 
 Definition CompOf (Δ : ElDesign) id :=
-  exists Δ__c, MapsTo id (Component Δ__c) Δ__c.
+  exists Δ__c, MapsTo id (Component Δ__c) Δ.
 
 (** ** Design State *)
 

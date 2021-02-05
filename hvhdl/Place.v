@@ -197,11 +197,10 @@ Definition marking_ps :=
 
         (* Process body. *)
         
-        (If (#rst @= false)
-            Then ($s_marking @<== #initial_marking)
-            Else (
-              Rising ($s_marking @<== (#s_marking @+ (#s_input_token_sum @- #s_output_token_sum)))
-            )
+        (Rst ($s_marking @<== #initial_marking)
+             Else (
+               Rising ($s_marking @<== (#s_marking @+ (#s_input_token_sum @- #s_output_token_sum)))
+             )
         ).
 
 (** Process "determine_marked". *)
@@ -296,16 +295,15 @@ Definition reinit_transitions_time_evaluation_ps :=
     []
 
     (* Process body. *)
-    (If (#rst @= false)
-        Then (For i In 0 To (#output_arcs_number @- 1) Loop (reinit_transitions_time $[[ #i ]] @<== false))
-        Else (Rising
-                (For i In 0 To (#output_arcs_number @- 1) Loop
-                     (If (((output_arcs_types[[ #i ]] @= basic @|| (output_arcs_types[[ #i ]] @= test))
-                             @&& ((#s_marking @- #s_output_token_sum) @< (output_arcs_weights[[ #i ]]))
-                             @&& (#s_output_token_sum @> 0))
-                            @|| (output_transitions_fired[[ #i ]] @= true))
-                      Then (reinit_transitions_time $[[ #i ]] @<== true)
-                      Else (reinit_transitions_time $[[ #i ]] @<== false))))).
+    (Rst (For i In 0 To (#output_arcs_number @- 1) Loop (reinit_transitions_time $[[ #i ]] @<== false))
+         Else (Rising
+                 (For i In 0 To (#output_arcs_number @- 1) Loop
+                      (If (((output_arcs_types[[ #i ]] @= basic @|| (output_arcs_types[[ #i ]] @= test))
+                              @&& ((#s_marking @- #s_output_token_sum) @< (output_arcs_weights[[ #i ]]))
+                              @&& (#s_output_token_sum @> 0))
+                             @|| (output_transitions_fired[[ #i ]] @= true))
+                          Then (reinit_transitions_time $[[ #i ]] @<== true)
+                          Else (reinit_transitions_time $[[ #i ]] @<== false))))).
 
 (** Declaration of the Place design behavior. *)
 

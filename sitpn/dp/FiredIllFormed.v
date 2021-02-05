@@ -32,7 +32,7 @@ Section FiredMiscImplementation.
   | FiredSimpl_cons :
       forall m,
         Firable s t ->
-        MarkingSubPreSum (fun t' => t' >~ t = true /\ FiredSimpl s t') (M s) m ->
+        MarkingSubPreSum (fun t' => t' >~ t /\ FiredSimpl s t') (M s) m ->
         Sens m t ->
         FiredSimpl s t.
 
@@ -54,7 +54,7 @@ Section FiredMiscImplementation.
   with HasAuthFromPlace {sitpn} (s : SitpnState sitpn) (t : T sitpn) : InputOfT t -> Prop :=
     HasAuthFromPlace_ :
       forall m (p : InputOfT t),
-        MarkingSubPreSum (fun t' => t' >~ t = true /\ pre (proj1_sig p) t' <> None /\ HasAuthToFire s t') (M s) m ->
+        MarkingSubPreSum (fun t' => t' >~ t /\ pre (proj1_sig p) t' <> None /\ HasAuthToFire s t') (M s) m ->
         Sens m t ->
         @HasAuthFromPlace sitpn s t p.
   

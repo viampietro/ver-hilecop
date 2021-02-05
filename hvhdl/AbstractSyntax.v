@@ -222,7 +222,8 @@ Inductive cs : Type :=
 
 Module HVhdlCsNotations.
 
-  Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z) (at level 100) : abss_scope.
+  Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z)
+                                      (right associativity, at level 100) : abss_scope.
   Notation "pid ':' 'Process' sl vars 'Begin' stmt" :=
     (cs_ps pid sl vars stmt)
       (at level 200(* , *)
