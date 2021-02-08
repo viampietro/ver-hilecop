@@ -24,3 +24,19 @@ Ltac mapsto_discriminate_or :=
   end.
 
 Ltac mapsto_discriminate := mapsto_discriminate_simpl || mapsto_discriminate_or.
+
+Ltac rw_mapsto :=
+  match goal with
+  | [ H: _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a <-> MapsTo _ _ ?b ] =>
+    erewrite H; eauto; try (reflexivity)
+  | [ H: _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b <-> MapsTo _ _ ?a ] => 
+    erewrite <- H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a <-> MapsTo _ _ ?b ] =>
+    erewrite H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b <-> MapsTo _ _ ?a ] =>
+    erewrite <- H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a <-> MapsTo _ _ ?b ] =>
+    erewrite H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b <-> MapsTo _ _ ?a ] =>
+    erewrite <- H; eauto; try (reflexivity)
+  end.

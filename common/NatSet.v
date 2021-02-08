@@ -25,6 +25,21 @@ Proof.
   destruct (NatSetFacts.union_1 In_u); [apply nIn_s; assumption | apply nIn_s'; assumption ].
 Qed.
 
+Lemma empty_union_3 :
+  forall {s s' : NatSet.t},
+    Equal (s U s') empty -> Empty s /\ Empty s'.
+Proof.
+  split;
+    [ intros a In_empty;
+      eapply NatSetFacts.union_2 in In_empty;
+      erewrite H in In_empty;
+      erewrite <- NatSetFacts.empty_iff; eauto
+    | intros a In_empty;
+      eapply NatSetFacts.union_3 in In_empty;
+      erewrite H in In_empty;
+      erewrite <- NatSetFacts.empty_iff; eauto ].
+Qed.
+
 Export NatSet NatSetFacts NatSetProps.
 
 

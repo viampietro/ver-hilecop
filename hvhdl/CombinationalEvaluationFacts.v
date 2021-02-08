@@ -21,6 +21,7 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntaxTactics.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.WellDefinedDesignTactics.
+Require Import hvhdl.EnvironmentFacts.
 
 (** ** Facts about [vcomb] *)
 
@@ -50,38 +51,6 @@ Proof.
     unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
 Qed.
 
-Lemma IsMergedDState_comm :
-  forall {σ__o σ σ' σ__m},
-    IsMergedDState σ__o σ σ' σ__m <->
-    IsMergedDState σ__o σ' σ σ__m.
-Proof.
-  split; intros;
-  match goal with
-  | [ H: IsMergedDState _ _ _ _ |- _ ] =>
-    unfold IsMergedDState in H; decompose [and] H; clear H
-  end;
-  let rec solve_imds :=
-    match goal with
-    | |- IsMergedDState _ _ _ _ => split; solve_imds
-    | |- _ /\ _ => split; [solve_imds | solve_imds]
-    | |- forall (_ : _) (_ : _), ~NatSet.In _ (_ U _) -> _ -> _ =>
-      intros;
-      match goal with
-      | [ H: forall (_ : _) (_ : _), ~NatSet.In _ _ -> _ -> MapsTo _ _ (?f _),
-            H': ~NatSet.In _ _ |- MapsTo _ _ (?f _) ] =>
-        apply H; auto; do 1 intro; apply H';
-        match goal with
-        | [ H'': NatSet.In _ (_ U _) |- _ ] =>
-          rewrite union_spec in H''; inversion H'';
-          rewrite union_spec; [right; assumption | left; assumption]
-        end
-      end
-    | |- Equal _ (events ?σ U events ?σ') =>
-      transitivity (events σ' U events σ); auto with set
-    | _ => firstorder
-    end in solve_imds.
-Qed.
-
 Lemma vcomb_par_comm :
   forall {D__s Δ σ cstmt cstmt' σ'},
     vcomb D__s Δ σ (cstmt // cstmt') σ' <->
@@ -94,10 +63,6 @@ Proof.
     | erewrite IsMergedDState_comm; auto ].
 Qed.
 
-Lemma IsMergedDState_ex :
-  forall {σ__o σ σ'}, exists σ__m, IsMergedDState σ__o σ σ' σ__m.
-Admitted.
-
 Lemma vcomb_par_assoc :
   forall {D__s Δ σ cstmt cstmt' cstmt'' σ'},
     vcomb D__s Δ σ (cstmt // cstmt' // cstmt'') σ' <->
@@ -105,21 +70,90 @@ Lemma vcomb_par_assoc :
 Proof.
   split.
   (* CASE A *)
-  - inversion_clear 1.
-    inversion_clear H1.
-    rename σ'0 into σ0, σ'' into σ1, σ'1 into σ2, σ''0 into σ3.
-    assert (Equal (inter (events σ0) (events σ2)) {[]}) by admit.
+  - inversion_clear 1;
+      match goal with
+      | [ H: vcomb _ _ _ (_ // _) _ |- _ ] => inversion_clear H
+      end;
+      rename σ'0 into σ0, σ'' into σ1, σ'1 into σ2, σ''0 into σ3.
+
+    assert (Equal (inter (events σ0) (events σ2)) {[]}).
+    {
+      do 2 decompose_IMDS.
+      assert (Equal_empty : Equal (inter (events σ0) (events σ2 U events σ3)) {[]})
+        by (match goal with
+            | [ H: Equal _ ?u |- Equal (_ _ ?u) _ ] => rewrite <- H
+            end; assumption).
+      apply empty_is_empty_1.
+      rewrite inter_sym, union_inter_1, inter_sym in Equal_empty.
+      eapply proj1; eapply @empty_union_3 with (s := (inter (events σ0) (events σ2))); eauto.
+    }
     destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4).
     eapply @VCombPar with (σ' := σ4) (σ'' := σ3); eauto with hvhdl.
-    + admit.
-    + unfold IsMergedDState in *. decompose [and] H3; clear H3.
-      decompose [and] IsMergedDState_σ4; clear IsMergedDState_σ4.
-      decompose [and] H6; clear H6.
-      split. assumption.
-      split. assumption.
-      split. intros *; rewrite H24.
-      rewrite union_spec; inversion 1.
-Admitted
+    
+    (* [events σ4 ∩ events σ3 = ∅] *)
+    + do 3 decompose_IMDS.
+      match goal with
+      | [ H: Equal ?ev _ |- Equal (_ ?ev _) _] =>
+        rewrite H; rewrite union_inter_1
+      end.      
+      match goal with
+      | [ H: Equal ?i {[]} |- Equal (_ U ?i) {[]} ] =>
+        rewrite H; apply empty_union_1
+      end.
+      assert (Equal_empty : Equal (inter (events σ0) ((events σ2) U (events σ3))) {[]})
+        by (match goal with
+            | [ H: Equal _ ?A  |- Equal (inter _ ?A) _ ] =>
+              rewrite <- H
+            end; assumption).
+      rewrite inter_sym, union_inter_1, union_sym, inter_sym in Equal_empty.
+      eapply proj1; eapply empty_union_3; eauto.
+      
+    (* Associativity of IsMErgeddstate relation *)
+    + eapply IsMergedDState_assoc_1; eauto.
+
+  (* CASE B *)
+  - inversion_clear 1;
+      match goal with
+      | [ H: vcomb _ _ _ (_ // _) _ |- _ ] => inversion_clear H
+      end.
+    rename σ'1 into σ0, σ''0 into σ1, σ'' into σ2, σ'0 into σ3.
+    assert (Equal (inter (events σ1) (events σ2)) {[]}).
+    {
+      do 2 decompose_IMDS.
+      assert (Equal_empty : Equal (inter (events σ0 U events σ1) (events σ2) ) {[]})
+        by (match goal with
+            | [ H: Equal _ ?u |- Equal (_ ?u _) _ ] => rewrite <- H
+            end; assumption).
+      apply empty_is_empty_1.
+      rewrite union_inter_1 in Equal_empty.
+      eapply proj2; eapply @empty_union_3; eauto.
+    }
+    destruct (@IsMergedDState_ex σ σ1 σ2) as (σ4, IsMergedDState_σ4).
+    eapply @VCombPar with (σ' := σ0) (σ'' := σ4); eauto with hvhdl.
+    
+    (* [events σ0 ∩ events σ4 = ∅] *)
+    + do 3 decompose_IMDS.
+      match goal with
+      | [ H: Equal ?ev _ |- Equal (_ _ ?ev) _ ] =>
+        rewrite H; rewrite inter_sym; rewrite union_inter_1
+      end.
+      rewrite inter_sym, union_sym.
+      match goal with
+      | [ H: Equal ?i {[]} |- Equal (_ U ?i) {[]} ] =>
+        rewrite H; apply empty_union_1
+      end.
+      rewrite inter_sym.
+      assert (Equal_empty : Equal (inter (events σ0 U events σ1) (events σ2)) {[]})
+        by (match goal with
+            | [ H: Equal _ ?A  |- Equal (_ ?A  _) _ ] =>
+              rewrite <- H
+            end; assumption).
+      rewrite union_inter_1 in Equal_empty.
+      eapply proj1; eapply empty_union_3; eauto.
+
+    (* Associativity of IsMErgeddstate relation *)
+    + eapply IsMergedDState_assoc_2; eauto.
+Qed.
 
 Lemma vcomb_inv_cstate :
   forall {D__s Δ σ behavior σ' id__c σ__c},

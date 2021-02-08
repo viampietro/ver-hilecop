@@ -34,8 +34,8 @@ Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
  *)
 
 Definition IsDiffInter (m m' : IdMap value) (idset : IdSet) :=
-  (forall id, NatSet.In id idset -> forall v v', MapsTo id v m -> MapsTo id v' m' -> ~VEq v v') /\
-  (forall id v v', (MapsTo id v m /\ MapsTo id v' m' /\ ~VEq v v') -> NatSet.In id idset).
+  (forall id v v', NatSet.In id idset -> MapsTo id v m -> MapsTo id v' m' -> ~VEq v v') /\
+  (forall id v v', MapsTo id v m -> MapsTo id v' m' -> ~VEq v v' -> NatSet.In id idset).
 
 (** Defines the relation stating that a map [ovunion] results of the
     overriding union of two maps [ovridden] and [ovriding].
@@ -177,38 +177,42 @@ Definition InSStore (id : ident) (σ : DState) :=
 Definition IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
 
   (* The definition domains of [sigstore] and [compstore] must be
-     the same for [σ__o] and [σ__m]. *)
+     the same between the original state and the other states. *)
   
-  EqualDom (sigstore σ__o) (sigstore σ__m) /\
-  EqualDom (compstore σ__o) (compstore σ__m) /\
+  (* EqualDom (sigstore σ__o) (sigstore σ__m) /\ *)
+  (* EqualDom (compstore σ__o) (compstore σ__m) /\ *)
+  (* EqualDom (sigstore σ__o) (sigstore σ') /\ *)
+  (* EqualDom (compstore σ__o) (compstore σ') /\ *)
+  (* EqualDom (sigstore σ__o) (sigstore σ'') /\ *)
+  (* EqualDom (compstore σ__o) (compstore σ'') /\ *)
   
-  (* Describes the content of (sigstore σ__m) *)
+  (* Describes the content of [(sigstore σ__m)] *)
 
   (forall id v, NatSet.In id (events σ') ->
-                NatMap.MapsTo id v (sigstore σ') ->
+                NatMap.MapsTo id v (sigstore σ') <->
                 NatMap.MapsTo id v (sigstore σ__m)) /\
   (forall id v, NatSet.In id (events σ'') ->
-                NatMap.MapsTo id v (sigstore σ'') ->
+                NatMap.MapsTo id v (sigstore σ'') <->
                 NatMap.MapsTo id v (sigstore σ__m)) /\
   (forall id v,
       ~NatSet.In id ((events σ') U (events σ'')) ->
-      NatMap.MapsTo id v (sigstore σ__o) ->
+      NatMap.MapsTo id v (sigstore σ__o) <->
       NatMap.MapsTo id v (sigstore σ__m)) /\
 
-  (* Describes the content of (compstore σ__m) *)
+  (* Describes the content of [(compstore σ__m)] *)
 
   (forall id σ__c, NatSet.In id (events σ') ->
-                 NatMap.MapsTo id σ__c (compstore σ') ->
+                 NatMap.MapsTo id σ__c (compstore σ') <->
                  NatMap.MapsTo id σ__c (compstore σ__m)) /\
   (forall id σ__c, NatSet.In id (events σ'') ->
-                 NatMap.MapsTo id σ__c (compstore σ'') ->
+                 NatMap.MapsTo id σ__c (compstore σ'') <->
                  NatMap.MapsTo id σ__c (compstore σ__m)) /\
   (forall id σ__c,
       ~NatSet.In id ((events σ') U (events σ'')) ->
-      NatMap.MapsTo id σ__c (compstore σ__o) ->
+      NatMap.MapsTo id σ__c (compstore σ__o) <->
       NatMap.MapsTo id σ__c (compstore σ__m)) /\
 
-  (* Describes the content of (events σ__m) *)
+  (* Describes the content of [(events σ__m)] *)
   
   NatSet.Equal (events σ__m) ((events σ') U (events σ'')).
 
