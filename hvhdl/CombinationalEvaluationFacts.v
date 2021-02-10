@@ -87,7 +87,8 @@ Proof.
       rewrite inter_sym, union_inter_1, inter_sym in Equal_empty.
       eapply proj1; eapply @empty_union_3 with (s := (inter (events σ0) (events σ2))); eauto.
     }
-    destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4).
+    destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4);
+      (solve [do 2 decompose_IMDS; auto] || auto).
     eapply @VCombPar with (σ' := σ4) (σ'' := σ3); eauto with hvhdl.
     
     (* [events σ4 ∩ events σ3 = ∅] *)
@@ -128,7 +129,8 @@ Proof.
       rewrite union_inter_1 in Equal_empty.
       eapply proj2; eapply @empty_union_3; eauto.
     }
-    destruct (@IsMergedDState_ex σ σ1 σ2) as (σ4, IsMergedDState_σ4).
+    destruct (@IsMergedDState_ex σ σ1 σ2) as (σ4, IsMergedDState_σ4);
+      (solve [do 2 decompose_IMDS; auto] || auto).
     eapply @VCombPar with (σ' := σ0) (σ'' := σ4); eauto with hvhdl.
     
     (* [events σ0 ∩ events σ4 = ∅] *)

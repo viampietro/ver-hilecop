@@ -13,6 +13,10 @@ Require Import hvhdl.HVhdlTypes.
 
 Open Scope natset_scope.
 
+(** ** Miscellaneous Environment Definitions *)
+
+(** *** Equal Domains *)
+
 (** Defines the design environment describing H-VHDL design instances
     in the semantical world. The design environment maps identifiers
     of a certain category of constructs (e.g, constant identifiers) to
@@ -24,6 +28,24 @@ Open Scope natset_scope.
 
 Definition EqualDom {A} (m m' : NatMap.t A) : Prop := forall (k : nat), NatMap.In k m <-> NatMap.In k m'.
 Definition dom {A : Type} (f : IdMap A) : list ident := fs (NatMap.elements f).
+
+Definition EqualDom_refl : forall {A} (m : IdMap A), EqualDom m m. firstorder. Defined.
+Definition EqualDom_trans : forall {A} (m m' m'' : IdMap A), EqualDom m m' -> EqualDom m' m'' -> EqualDom m m''.
+  unfold EqualDom; intros; transitivity (NatMap.In k m'); auto.
+Defined.
+Definition EqualDom_sym : forall {A} (m m' : IdMap A), EqualDom m m' -> EqualDom m' m.
+  unfold EqualDom; symmetry; auto.
+Defined.
+
+Add Parametric Relation {A : Type} : (IdMap A) (EqualDom)
+    reflexivity proved by EqualDom_refl
+    symmetry proved by EqualDom_sym
+    transitivity proved by EqualDom_trans
+      as EqualDom_rel.           
+
+Hint Resolve EqualDom_refl : hvhdl.
+Hint Resolve EqualDom_trans : hvhdl.
+Hint Resolve EqualDom_sym : hvhdl.
 
 (** Defines the relation stating that a set [idset] is the
     differentiated intersection of two maps [m] and [m'] mapping
@@ -179,12 +201,12 @@ Definition IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
   (* The definition domains of [sigstore] and [compstore] must be
      the same between the original state and the other states. *)
   
-  (* EqualDom (sigstore σ__o) (sigstore σ__m) /\ *)
-  (* EqualDom (compstore σ__o) (compstore σ__m) /\ *)
-  (* EqualDom (sigstore σ__o) (sigstore σ') /\ *)
-  (* EqualDom (compstore σ__o) (compstore σ') /\ *)
-  (* EqualDom (sigstore σ__o) (sigstore σ'') /\ *)
-  (* EqualDom (compstore σ__o) (compstore σ'') /\ *)
+  EqualDom (sigstore σ__o) (sigstore σ__m) /\
+  EqualDom (compstore σ__o) (compstore σ__m) /\
+  EqualDom (sigstore σ__o) (sigstore σ') /\
+  EqualDom (compstore σ__o) (compstore σ') /\
+  EqualDom (sigstore σ__o) (sigstore σ'') /\
+  EqualDom (compstore σ__o) (compstore σ'') /\
   
   (* Describes the content of [(sigstore σ__m)] *)
 
@@ -250,4 +272,5 @@ Add Parametric Relation : (ElDesign) (EqGens)
 Hint Resolve EqGens_refl : hvhdl.
 Hint Resolve EqGens_trans : hvhdl.
 Hint Resolve EqGens_sym : hvhdl.
+
 
