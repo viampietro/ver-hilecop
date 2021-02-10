@@ -218,9 +218,7 @@ Proof.
   (* BASE CASE *)
   - inversion 1.
   (* IND. CASE *)
-  - unfold merge_natmap.
-    unfold fold; unfold Raw.fold; unfold flip.
-    simpl; inversion_clear 1; try subst.
+  - simpl_merge_map; inversion_clear 1; try subst.
     (* CASE k = a *)
     + case_eq (find (elt:=A) a m1). 
       (* find = Some a *)
@@ -247,6 +245,38 @@ Proof.
       inversion_clear 1; [ try subst | unfold EqualDom in EqualDom_m1m2; erewrite EqualDom_m1m2; assumption].
       exists x; eapply find_2; assumption.
       Unshelve. inversion_clear is_ok0; auto.
+Qed.
+
+Lemma merge_natmap_sound_2 :
+  forall {A : Type} s m1 m2 k (a : A),
+    ~NatSet.In k s ->
+    EqualDom m1 m2 ->
+    MapsTo k a (merge_natmap s m1 m2) ->
+    MapsTo k a m2.
+Proof.
+  destruct s; induction this0.
+  (* BASE CASE *)
+  - simpl_merge_map; auto.
+  (* IND. CASE *)
+  - simpl_merge_map; do 5 intro; intros EqualDom_m1m2; intros.
+    case_eq (find (elt:=A) a m1). 
+    (* find = Some a *)
+    intros x e; rewrite e in *.
+    eapply NatMap.add_3 with (x := a) (e' := x).
+    intro; try subst; apply H; auto with set.
+    eapply IHthis0; eauto.
+    intro; apply H; eapply InA_cons_tl; auto.
+    erewrite EqualDom_m1m2.
+    eapply EqualDom_add_1.
+    unfold  EqualDom in EqualDom_m1m2.
+    erewrite <- EqualDom_m1m2.
+    exists x; eapply find_2; eauto.
+    (* find = None *)
+    intros e; rewrite e in *.
+    eapply IHthis0; eauto.
+    intro; apply H; eapply InA_cons_tl; auto.
+    Unshelve. inversion_clear is_ok0; auto.
+    inversion_clear is_ok0; auto.
 Qed.
 
 Definition merge_sstore (σ__o σ σ' : DState) : IdMap value :=
@@ -311,13 +341,19 @@ Qed.
 
 Lemma merge_sstore_sound_2 :
   forall {id v σ__o σ σ'},
+    EqualDom (sigstore σ__o) (sigstore σ) ->
+    EqualDom (sigstore σ__o) (sigstore σ') ->
     In id (events σ') ->
+    ~In id (events σ) ->
     MapsTo id v (merge_sstore σ__o σ σ') ->
     MapsTo id v (sigstore σ').
 Proof.
-  unfold merge_sstore.
-  Search (~NatSet.In _ _).
-Admitted.
+  unfold merge_sstore; intros.
+  eapply merge_natmap_sound_1 with (m2 := (sigstore σ__o)); eauto.
+  symmetry; auto.
+  eapply merge_natmap_sound_2; eauto.
+  eapply merge_natmap_EqualDom_1; eauto.
+Qed.
 
 Lemma merge_sstore_sound_3 :
   forall {id v σ__o σ σ'},
@@ -372,10 +408,19 @@ Qed.
 
 Lemma merge_cstore_sound_2 :
   forall {id v σ__o σ σ'},
+    EqualDom (compstore σ__o) (compstore σ) ->
+    EqualDom (compstore σ__o) (compstore σ') ->
     In id (events σ') ->
+    ~In id (events σ) ->
     MapsTo id v (merge_cstore σ__o σ σ') ->
     MapsTo id v (compstore σ').
-Admitted.
+Proof.
+  unfold merge_sstore; intros.
+  eapply merge_natmap_sound_1 with (m2 := (compstore σ__o)); eauto.
+  symmetry; auto.
+  eapply merge_natmap_sound_2; eauto.
+  eapply merge_natmap_EqualDom_1; eauto.
+Qed.
 
 Lemma merge_cstore_sound_3 :
   forall {id v σ__o σ σ'},
@@ -430,17 +475,19 @@ Proof.
   unfold IsMergedDState; intros.
   exists (MkDState (merge_sstore σ__o σ σ') (merge_cstore σ__o σ σ') (events σ U events σ')).
   simpl; split_and; (auto || (try reflexivity)).
-  - admit.
-  - admit.
+  - eapply merge_natmap_EqualDom_1; symmetry;
+      eapply merge_natmap_EqualDom_1; (eauto || reflexivity).
+  - eapply merge_natmap_EqualDom_1; symmetry;
+      eapply merge_natmap_EqualDom_1; (eauto || reflexivity).
   - split; [eapply merge_sstore_compl_1; eauto | eapply merge_sstore_sound_1; eauto].
   - split; [ eapply merge_sstore_compl_2; eauto; eapply inter_empty_2; eauto
-           | eapply merge_sstore_sound_2; eauto].
+           | eapply merge_sstore_sound_2; eauto; eapply inter_empty_2; eauto].
   - split; [ eapply merge_sstore_compl_3; eauto | eapply merge_sstore_sound_3; eauto].
   - split; [ eapply merge_cstore_compl_1; eauto | eapply merge_cstore_sound_1; eauto].
   - split; [ eapply merge_cstore_compl_2; eauto; eapply inter_empty_2; eauto
-           | eapply merge_cstore_sound_2; eauto ].
+           | eapply merge_cstore_sound_2; eauto; eapply inter_empty_2; eauto ].
   - split; [ eapply merge_cstore_compl_3; eauto | eapply merge_cstore_sound_3; eauto ].
-Admitted.
+Qed.
 
 Lemma IsMergedDState_assoc_1 :
   forall {σ σ0 σ1 σ2 σ12 σ01 σ012},
