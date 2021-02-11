@@ -13,8 +13,9 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Stabilize.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
-Require Import hvhdl.CombinationalEvaluationFacts.
 Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.CombinationalEvaluationFacts.
+Require Import hvhdl.PlaceEvaluationFacts.
 
 Lemma is_last_of_trace :
   forall D__s Δ σ behavior θ σ',

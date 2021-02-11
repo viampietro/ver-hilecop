@@ -2,7 +2,9 @@
 
 Require Import common.NatMap.
 Require Import common.Coqlib.
+Require Import common.NatSet.
 
+Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
 Require Import hvhdl.PortMapEvaluation.
 
@@ -25,7 +27,7 @@ Section IPMap.
         | [ H: ~InputOf _ _, H': MapsTo _ (Input ?t) _ |- _ ] =>
           apply H; exists t; assumption
         end
-      | eapply add_2; eauto ].
+      | eapply NatMap.add_2; eauto ].
   Qed.
   
   Lemma mapip_inv_sigstore :
@@ -46,7 +48,7 @@ End IPMap.
 
 Section OPMap.
 
-  Lemma mapop_inv_compstore_id :
+  Lemma mapop_inv_compstore :
     forall {Δ Δ__c σ σ__c1 ipmap σ' id__c σ__c2},
       mapop Δ Δ__c σ σ__c1 ipmap σ' ->
       MapsTo id__c σ__c2 (compstore σ) ->
@@ -55,5 +57,26 @@ Section OPMap.
     induction 1; try subst; auto.
     induction H; try subst; auto.
   Qed.
+
+  Lemma mapop_not_in_events_if_not_assigned :
+    forall {Δ Δ__c σ σ__c opmap σ' id},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      ~NatSet.In id (events σ) ->
+      ~AssignedInOPM id opmap ->
+      ~NatSet.In id (events σ').
+  Proof.
+    induction 1; subst; auto.
+    inversion H; subst; simpl; auto.
+    all : simpl in IHmapop; intros; apply IHmapop;
+      auto; rewrite add_spec; firstorder.
+  Qed.
+
+  Lemma mapop_not_in_events_if_not_sig :
+    forall {Δ Δ__c σ σ__c opmap σ' id},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      ~NatSet.In id (events σ) ->
+      ~OutputOf Δ id ->
+      ~NatSet.In id (events σ').
+  Admitted.
   
 End OPMap.

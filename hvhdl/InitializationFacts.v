@@ -27,17 +27,17 @@ Section VRunInit.
     induction 1.
     
     (* CASE process evaluation *)
-    - exists σ__c; eapply vseq_inv_compstore_id; eauto.
+    - exists σ__c; eapply vseq_inv_compstore; eauto.
       
     (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
     - simpl; destruct (Nat.eq_dec compid id__c).
       + exists σ__c''; rewrite e; apply add_1; auto.
       + exists σ__c; apply add_2; auto.
-        eapply mapop_inv_compstore_id; eauto.
+        eapply mapop_inv_compstore; eauto.
 
     (* CASE comp evaluation with no events. *)
-    - exists σ__c; eapply mapop_inv_compstore_id; eauto.
+    - exists σ__c; eapply mapop_inv_compstore; eauto.
 
     (* CASE null *)
     - exists σ__c; assumption.

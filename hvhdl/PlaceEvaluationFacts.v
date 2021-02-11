@@ -1,5 +1,7 @@
 (** Facts about Evaluation of the Place Design Behavior *)
 
+Require Import common.Coqlib.
+Require Import common.InAndNoDup.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
@@ -9,36 +11,41 @@ Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Place.
 Require Import hvhdl.CombinationalEvaluation.
+Require Import hvhdl.SSEvaluation.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.HVhdlTypes.
-
-
+Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.CombinationalEvaluationFacts.
+Require Import hvhdl.EnvironmentFacts.
+Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.PortMapEvaluationFacts.
 
 Lemma vcomb_marking_ps_inv_sigstore :
   forall {D__s Δ σ σ' id v},
     vcomb D__s Δ σ marking_ps σ' ->
     MapsTo id v (sigstore σ) ->
     MapsTo id v (sigstore σ').
-Admitted.
+Proof.
+  unfold marking_ps.
+  inversion 1; auto.
+  do 2 (match goal with
+        | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
+          inversion H
+        end); simpl; auto.
+Qed.
 
-Lemma vcomb_sigid_not_in_events_1 :
-  forall {D__s Δ σ σ' cstmt id v},
-    vcomb D__s Δ σ cstmt σ' ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ') ->
-    ~CompOf Δ id ->
-    ~NatSet.In id (events σ').
-Admitted.
-
-Definition AssignedInCs (id : ident) (cstmt : cs) := False.
-
-Lemma vcomb_inv_sigstore_if_not_assigned :
-  forall {D__s Δ σ cstmt σ' id v},
-    vcomb D__s Δ σ cstmt σ' ->
-    MapsTo id v (sigstore σ) ->
-    ~AssignedInCs id cstmt ->
-    MapsTo id v (sigstore σ').
-Admitted.
+Lemma vcomb_marking_ps_no_events :
+  forall {D__s Δ σ σ'},
+    vcomb D__s Δ σ marking_ps σ' ->
+    Equal (events σ') {[]}.
+Proof.
+  unfold marking_ps.
+  inversion 1; auto; simpl; try reflexivity.
+  do 2 (match goal with
+        | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
+          inversion H
+        end); simpl; auto; try reflexivity.
+Qed.
 
 Lemma vcomb_place_inv_s_marking :
   forall {Δ σ σ' v m},
@@ -53,21 +60,20 @@ Proof.
   inversion_clear 1; intros.
 
   (* Use merge state definition *)
+  decompose_IMDS.
   match goal with
-  | [ H: IsMergedDState _ _ _ _ |- _ ] =>
-    do 4 (apply proj2 in H); apply proj1 in H; apply H; clear H; auto
+  | [ H: _ -> _ -> ~NatSet.In _ _ -> _ |- _ ] =>
+    erewrite <- H; clear H; auto
   end.
   apply nIn_nIn_Union.
 
   (* CASE [id ∉ (events σ'0)] *)
-  - eapply vcomb_sigid_not_in_events_1; eauto.
-    eapply vcomb_marking_ps_inv_sigstore; eauto.    
-    destruct 1; mapsto_discriminate.
+  - erewrite vcomb_marking_ps_no_events; eauto with set.
 
   (* CASE [id ∉ (events σ'')] *)
-  - eapply vcomb_sigid_not_in_events_1; eauto.
-    eapply vcomb_inv_sigstore_if_not_assigned; eauto.
+  - eapply vcomb_not_in_events_if_not_assigned; eauto.
     destruct 1; mapsto_discriminate.
+    simpl; cbv; lia.
 Qed.
 
 Lemma vcomb_inv_s_marking :
@@ -101,7 +107,7 @@ Proof.
 
   (* CASE component with no events. *)
   - erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-    eapply mapop_inv_compstore_id; eauto.    
+    eapply mapop_inv_compstore; eauto.    
 
   (* CASE in left of || *)
   - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
@@ -119,21 +125,25 @@ Proof.
     (* [id__p ∈ (events σ')] *)
     + edestruct @vcomb_maps_compstore_id with (σ' := σ') as (σ__p0, MapsTo_σ__p0); eauto.
       erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p0); eauto.
-      apply proj2, proj2, proj2, proj2, proj2, proj1 in H2. 
-      eapply H2; eauto.
+      decompose_IMDS; match goal with
+                      | [H: _ -> _ -> NatSet.In _ (events σ') -> _ |- _] =>
+                        erewrite <- H; eauto
+                      end.
       
     (* [id__p ∉ (events σ')] *)
     + eapply vcomb_inv_cstate; eauto.
       erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-      do 7 (apply proj2 in H2); apply proj1 in H2; eapply H2; eauto.
+      decompose_IMDS; match goal with
+                      | [H: _ -> _ -> ~NatSet.In _ _ -> _ |- _] =>
+                        erewrite <- H; eauto
+                      end.
       eapply nIn_nIn_Union; eauto.
       (* Prove [id__p ∉ (events σ'')] *)
       eapply vcomb_compid_not_in_events_1; eauto.
       -- apply nodup_app_not_in with (l := compids1).
-         { erewrite AreCsCompIds_determ; eauto.
-           apply AreCsCompIds_app; auto. }
+         { erewrite AreCsCompIds_determ; eauto; apply AreCsCompIds_app; auto. }
          { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
-      -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ'); eauto.
+      (* -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ'); eauto. *)
       
   (* CASE in right of || *)
   - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
@@ -151,13 +161,15 @@ Proof.
     (* [id__p ∈ (events σ'')] *)
     + edestruct @vcomb_maps_compstore_id with (σ' := σ'') as (σ__p0, MapsTo_σ__p0); eauto.
       erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p0); eauto.
-      apply proj2, proj2, proj2, proj2, proj2, proj2, proj1 in H2. 
-      eapply H2; eauto.
+      decompose_IMDS; match goal with
+                      | [H: _ -> _ -> NatSet.In _ (events σ'') -> _ |- _] =>
+                        erewrite <- H; eauto
+                      end.
       
-    (* [id__p ∉ (events σ')] *)
+    (* [id__p ∉ (events σ'')] *)
     + eapply vcomb_inv_cstate; eauto.
       erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-      do 7 (apply proj2 in H2); apply proj1 in H2; eapply H2; eauto.
+      decompose_IMDS; rw_mapsto.
       eapply nIn_nIn_Union; eauto.
       (* Prove [id__p ∉ (events σ')] *)
       eapply vcomb_compid_not_in_events_1; eauto.
@@ -166,5 +178,4 @@ Proof.
            erewrite AreCsCompIds_determ; eauto.
            apply AreCsCompIds_app; auto. }
          { eapply (AreCsCompIds_compid_iff HAreCsCompIds2); eauto. }
-      -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ''); eauto.
 Qed.

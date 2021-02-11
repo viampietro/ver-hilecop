@@ -16,7 +16,10 @@ Open Scope abss_scope.
 
 Include HVhdlCsNotations.
 
-Local Definition i := local_var.
+(** Loop variable and local variable first fresh identifiers. *)
+
+Local Definition i := 50.
+Local Definition local_var_ffid := 51.
 
 (** ** Entity part of the Place design. *)
 
@@ -24,11 +27,12 @@ Local Definition i := local_var.
 
 (** Defines the identifiers of generic constants.
     
-    Begins with i + 1 as i is the last reserved identifier.  *)
+    Begins the identifier with 1, since 0 is reserved for the clock
+    input port.  *)
 
-Definition input_arcs_number  : ident := i + 1.
-Definition output_arcs_number : ident := input_arcs_number + 1.
-Definition maximal_marking    : ident := output_arcs_number + 1.
+Definition input_arcs_number  : ident := 1.
+Definition output_arcs_number : ident := 2.
+Definition maximal_marking    : ident := 3.
 
 (** Defines the generic clause of the Place design. *)
 
@@ -41,19 +45,19 @@ Definition place_gens : list gdecl :=
 
 (** Input ports identifiers. *)
 
-Definition initial_marking          : ident := maximal_marking + 1.
-Definition input_arcs_weights       : ident := initial_marking + 1.
-Definition output_arcs_types        : ident := input_arcs_weights + 1.
-Definition output_arcs_weights      : ident := output_arcs_types + 1.
-Definition input_transitions_fired  : ident := output_arcs_weights + 1.
-Definition output_transitions_fired : ident := input_transitions_fired + 1.
+Definition initial_marking          : ident := 4.
+Definition input_arcs_weights       : ident := 5.
+Definition output_arcs_types        : ident := 6.
+Definition output_arcs_weights      : ident := 7.
+Definition input_transitions_fired  : ident := 8.
+Definition output_transitions_fired : ident := 9.
 
 (** Output ports identifiers. *)
 
-Definition output_arcs_valid       : ident := output_transitions_fired + 1.
-Definition priority_authorizations : ident := output_arcs_valid + 1.
-Definition reinit_transitions_time : ident := priority_authorizations + 1.
-Definition marked                  : ident := reinit_transitions_time + 1.
+Definition output_arcs_valid       : ident := 10.
+Definition priority_authorizations : ident := 11.
+Definition reinit_transitions_time : ident := 12.
+Definition marked                  : ident := 13.
 
 (** Port clause of the Place design. *)
 
@@ -70,7 +74,6 @@ Definition place_ports : list pdecl :=
   [
     (* Input ports. *)
   pdecl_in clk                      tind_boolean;
-  pdecl_in rst                      tind_boolean;
   pdecl_in initial_marking          (tind_natural 0 (#maximal_marking));
   pdecl_in input_arcs_weights       (weight_vector_t 0 (#input_arcs_number @- 1));
   pdecl_in output_arcs_types        (arc_vector_t 0 (#output_arcs_number @- 1));
@@ -96,9 +99,9 @@ Definition local_weight_t := tind_natural 0 (#maximal_marking).
 
 (** Declared signal identifiers. *)
 
-Definition s_input_token_sum : ident := marked + 1.
-Definition s_marking : ident := s_input_token_sum + 1.
-Definition s_output_token_sum : ident := s_marking + 1.
+Definition s_input_token_sum : ident := 14.
+Definition s_marking : ident := 15.
+Definition s_output_token_sum : ident := 16.
 
 (** Architecture declaration list. *)
 
@@ -118,11 +121,11 @@ Definition place_sigs : list sdecl :=
 (** Process "input_tokens_sum". *)
 
 (* Process id. *)
-Definition input_tokens_sum : ident := s_output_token_sum + 1.
+Definition input_tokens_sum : ident := 17.
 
 (* Process "input_tokens_sum" declarative part. *)
 
-Definition v_internal_input_token_sum : ident := local_var.
+Definition v_internal_input_token_sum : ident := local_var_ffid.
 
 (* Process "input_tokens_sum" declaration. *)
 
@@ -150,11 +153,11 @@ Definition input_tokens_sum_ps :=
 (** Process "output_tokens_sum". *)
 
 (* Process id. *)
-Definition output_tokens_sum : ident := input_tokens_sum + 1.
+Definition output_tokens_sum : ident := 18.
 
 (* Process "output_tokens_sum" declarative part. *)
 
-Definition v_internal_output_token_sum : ident := local_var.
+Definition v_internal_output_token_sum : ident := local_var_ffid.
 
 (* Process "output_tokens_sum" declaration. *)
 
@@ -182,7 +185,7 @@ Definition output_tokens_sum_ps :=
 (** Process "marking". *)
 
 (* Process id. *)
-Definition marking : ident := output_tokens_sum + 1.
+Definition marking : ident := 19.
 
 (* Process "marking" declaration. *)
 
@@ -190,7 +193,7 @@ Definition marking_ps :=
   cs_ps marking
         
         (* Sensitivity list. *)
-        {[clk, rst, initial_marking]}
+        {[clk, initial_marking]}
 
         (* Local variables. *)
         []
@@ -206,7 +209,7 @@ Definition marking_ps :=
 (** Process "determine_marked". *)
 
 (* Process id. *)
-Definition determine_marked : ident := marking + 1.
+Definition determine_marked : ident := 20.
 
 (* Process "determine_marked" declaration. *)
 
@@ -225,7 +228,7 @@ Definition determine_marked_ps :=
 (** Process "marking_validation_evaluation". *)
 
 (* Process id. *)
-Definition marking_validation_evaluation := determine_marked + 1.
+Definition marking_validation_evaluation := 21.
 
 (* Process "marking_validation_evaluation" declaration. *)
 Definition marking_validation_evaluation_ps :=
@@ -250,10 +253,10 @@ Definition marking_validation_evaluation_ps :=
 (** Process "priority_evaluation". *)
 
 (* Process id. *)
-Definition priority_evaluation := marking_validation_evaluation + 1.
+Definition priority_evaluation := 22.
 
 (* Process "priority_evaluation" local variables. *)
-Definition v_saved_output_token_sum : ident := local_var.
+Definition v_saved_output_token_sum : ident := local_var_ffid.
 
 (* Process "priority_evaluation" declaration. *)
 Definition priority_evaluation_ps :=
@@ -280,7 +283,7 @@ Definition priority_evaluation_ps :=
 (** Process "reinit_transitions_time_evaluation". *)
 
 (* Process id. *)
-Definition reinit_transitions_time_evaluation := priority_evaluation + 1.
+Definition reinit_transitions_time_evaluation := 23.
 
 (* Process "priority_evaluation" declaration. *)
 
@@ -289,7 +292,7 @@ Definition reinit_transitions_time_evaluation_ps :=
     reinit_transitions_time_evaluation
     
     (* Sensitivity list. *)
-    {[clk, rst]}
+    {[clk]}
 
     (* Local variables. *)
     []

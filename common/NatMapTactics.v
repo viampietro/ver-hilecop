@@ -31,12 +31,24 @@ Ltac rw_mapsto :=
     erewrite H; eauto; try (reflexivity)
   | [ H: _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b <-> MapsTo _ _ ?a ] => 
     erewrite <- H; eauto; try (reflexivity)
+  | [ H: _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a ] => 
+    erewrite H; eauto; try (reflexivity)
+  | [ H: _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b ] => 
+    erewrite <- H; eauto; try (reflexivity)
   | [ H: _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a <-> MapsTo _ _ ?b ] =>
     erewrite H; eauto; try (reflexivity)
   | [ H: _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b <-> MapsTo _ _ ?a ] =>
     erewrite <- H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a ] => 
+    erewrite H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b ] => 
+    erewrite <- H; eauto; try (reflexivity)
   | [ H: _ -> _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a <-> MapsTo _ _ ?b ] =>
     erewrite H; eauto; try (reflexivity)
   | [ H: _ -> _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b <-> MapsTo _ _ ?a ] =>
+    erewrite <- H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?a ] => 
+    erewrite H; eauto; try (reflexivity)
+  | [ H: _ -> _ -> _ -> MapsTo _ _ ?a <-> MapsTo _ _ ?b |- MapsTo _ _ ?b ] => 
     erewrite <- H; eauto; try (reflexivity)
   end.

@@ -1,6 +1,7 @@
 (** * Facts about H-VHDL Environment *)
 
 Require Import common.Coqlib.
+Require Import common.CoqTactics.
 Require Import common.NatSet.
 
 Require Import common.NatMap.
@@ -10,47 +11,22 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
 
-(** ** Facts about the [IsMergedDState] relation *)
+(** ** Facts about [EqualDom] equivalence *)
 
-Ltac decompose_IMDS :=
-  match goal with
-  | [ H: IsMergedDState _ _ _ _ |- _ ] =>
-    unfold IsMergedDState in H; decompose [and] H; clear H
-  end.
-
-Lemma IsMergedDState_comm :
-  forall {σ__o σ σ' σ__m},
-    IsMergedDState σ__o σ σ' σ__m <->
-    IsMergedDState σ__o σ' σ σ__m.
+Lemma EqualDom_add_1 :
+  forall {A : Type} {k} {e : A} {m},
+    NatMap.In k m ->
+    EqualDom m (NatMap.add k e m).
 Proof.
-  split; intros; decompose_IMDS;
-    let rec solve_imds :=
-        match goal with
-        | |- IsMergedDState _ _ _ _ => split; solve_imds
-        | |- _ /\ _ => split; [solve_imds | solve_imds]
-        | |- _ -> _ -> ~NatSet.In _ (_ U _) -> _ <-> _ =>
-          intros;
-            match goal with
-            | [ H: _ -> _ -> ~NatSet.In _ _ -> _ <-> MapsTo _ _ (?f _), H': ~NatSet.In _ _ |- _ <-> MapsTo _ _ (?f _) ] =>
-              apply H; auto; do 1 intro; apply H';
-                match goal with
-                | [ H'': NatSet.In _ (_ U _) |- _ ] =>
-                  rewrite union_spec in H''; inversion H''; rewrite union_spec; [right; assumption | left; assumption]
-                end
-            end
-        | |- Equal _ (events ?σ U events ?σ') =>
-          transitivity (events σ' U events σ); auto with set
-        | _ => firstorder
-        end in solve_imds.
+  split; intros.
+  destruct (Nat.eq_dec k k0); try subst.
+  exists e; apply NatMap.add_1; auto.
+  rewrite add_in_iff; right; auto.
+  destruct (Nat.eq_dec k k0); try subst; auto.
+  erewrite add_in_iff in *; firstorder.
 Qed.
 
-Definition merge_natmap {A : Type} (s : NatSet.t) (m1 m2 : NatMap.t A) : NatMap.t A :=
-  let f := fun k m =>
-             match find k m1 with
-             | Some a => NatMap.add k a m
-             | _ => m
-             end
-  in NatSet.fold f s m2.
+(** ** Facts about [merge_natmap] *)
 
 Ltac simpl_merge_map :=
   unfold merge_natmap;
@@ -138,19 +114,6 @@ Proof.
     end.    
     (* find = None *)
     intros e; rewrite e in *; eapply IHs; eauto.
-Qed.
-
-Lemma EqualDom_add_1 :
-  forall {A : Type} {k} {e : A} {m},
-    NatMap.In k m ->
-    EqualDom m (NatMap.add k e m).
-Proof.
-  split; intros.
-  destruct (Nat.eq_dec k k0); try subst.
-  exists e; apply NatMap.add_1; auto.
-  rewrite add_in_iff; right; auto.
-  destruct (Nat.eq_dec k k0); try subst; auto.
-  erewrite add_in_iff in *; firstorder.
 Qed.
 
 Lemma merge_natmap_EqualDom_1 :
@@ -279,12 +242,6 @@ Proof.
     inversion_clear is_ok0; auto.
 Qed.
 
-Definition merge_sstore (σ__o σ σ' : DState) : IdMap value :=
-  merge_natmap (events σ) (sigstore σ) (merge_natmap (events σ') (sigstore σ') (sigstore σ__o)).
-
-Definition merge_cstore (σ__o σ σ' : DState) : IdMap DState :=
-  merge_natmap (events σ) (compstore σ) (merge_natmap (events σ') (compstore σ') (compstore σ__o)).
-
 Lemma merge_sstore_compl_1 :
   forall {id v σ__o σ σ'},
     In id (events σ) ->
@@ -305,14 +262,6 @@ Proof.
   unfold merge_sstore; intros.
   eapply merge_natmap_compl_2; eauto.
   eapply merge_natmap_compl_1; eauto.
-Qed.
-
-Lemma not_in_union_2 :
-  forall [s s' : t] [x : elt], ~ In x (s U s') -> ~ In x s /\ ~ In x s'.
-Proof.
-  intros; split; intro.
-  apply H; eapply union_2; eauto.
-  apply H; eapply union_3; eauto.
 Qed.
 
 Lemma merge_sstore_compl_3 :
@@ -348,8 +297,7 @@ Lemma merge_sstore_sound_2 :
     MapsTo id v (merge_sstore σ__o σ σ') ->
     MapsTo id v (sigstore σ').
 Proof.
-  unfold merge_sstore; intros.
-  eapply merge_natmap_sound_1 with (m2 := (sigstore σ__o)); eauto.
+  intros; eapply merge_natmap_sound_1 with (m2 := (sigstore σ__o)); eauto.
   symmetry; auto.
   eapply merge_natmap_sound_2; eauto.
   eapply merge_natmap_EqualDom_1; eauto.
@@ -357,10 +305,20 @@ Qed.
 
 Lemma merge_sstore_sound_3 :
   forall {id v σ__o σ σ'},
+    EqualDom (sigstore σ__o) (sigstore σ) ->
+    EqualDom (sigstore σ__o) (sigstore σ') ->
     ~In id (events σ U events σ') ->
     MapsTo id v (merge_sstore σ__o σ σ') ->
     MapsTo id v (sigstore σ__o).
-Admitted.
+Proof.
+  unfold merge_sstore; intros.
+  eapply merge_natmap_sound_2 with (s := events σ') (m1 := sigstore σ'); eauto.
+  eapply not_in_union_2; eauto.
+  symmetry; assumption.
+  eapply merge_natmap_sound_2 with (s := events σ) (m1 := sigstore σ); eauto.
+  eapply not_in_union_2 with (s := events σ) (s' := events σ'); eauto.
+  eapply merge_natmap_EqualDom_1; eauto.
+Qed.
 
 Lemma merge_cstore_compl_1 :
   forall {id v σ__o σ σ'},
@@ -424,44 +382,54 @@ Qed.
 
 Lemma merge_cstore_sound_3 :
   forall {id v σ__o σ σ'},
+    EqualDom (compstore σ__o) (compstore σ) ->
+    EqualDom (compstore σ__o) (compstore σ') ->
     ~In id (events σ U events σ') ->
     MapsTo id v (merge_cstore σ__o σ σ') ->
     MapsTo id v (compstore σ__o).
-Admitted.
-
-Lemma inter_empty_1 :
-  forall {s s' e},
-    Equal (inter s s') {[]} ->
-    In e s ->
-    ~In e s'.
 Proof.
-  intros; intro.
-  assert (In e (inter s s')) by (eapply inter_3; eauto).
-  match goal with
-  | [ H: Equal ?I _, H': NatSet.In _ ?I |- _ ] =>
-    rewrite H in H'; inversion H'
-  end.
+  unfold merge_sstore; intros.
+  eapply merge_natmap_sound_2 with (s := events σ') (m1 := compstore σ'); eauto.
+  eapply not_in_union_2; eauto.
+  symmetry; assumption.
+  eapply merge_natmap_sound_2 with (s := events σ) (m1 := compstore σ); eauto.
+  eapply not_in_union_2 with (s := events σ) (s' := events σ'); eauto.
+  eapply merge_natmap_EqualDom_1; eauto.
 Qed.
 
-Lemma inter_empty_2 :
-  forall {s s' e},
-    Equal (inter s s') {[]} ->
-    In e s' ->
-    ~In e s.
-Proof.
-  intros; intro.
-  assert (In e (inter s s')) by (eapply inter_3; eauto).
-  match goal with
-  | [ H: Equal ?I _, H': NatSet.In _ ?I |- _ ] =>
-    rewrite H in H'; inversion H'
-  end.
-Qed.
+(** ** Facts about the [IsMergedDState] relation *)
 
-Ltac split_and :=
+Ltac decompose_IMDS :=
   match goal with
-  | |- ?A /\ ?B => split; [ split_and | split_and]
-  | _ => idtac
+  | [ H: IsMergedDState _ _ _ _ |- _ ] =>
+    unfold IsMergedDState in H; decompose [and] H; clear H
   end.
+
+Lemma IsMergedDState_comm :
+  forall {σ__o σ σ' σ__m},
+    IsMergedDState σ__o σ σ' σ__m <->
+    IsMergedDState σ__o σ' σ σ__m.
+Proof.
+  split; intros; decompose_IMDS;
+    let rec solve_imds :=
+        match goal with
+        | |- IsMergedDState _ _ _ _ => split; solve_imds
+        | |- _ /\ _ => split; [solve_imds | solve_imds]
+        | |- _ -> _ -> ~NatSet.In _ (_ U _) -> _ <-> _ =>
+          intros;
+            match goal with
+            | [ H: _ -> _ -> ~NatSet.In _ _ -> _ <-> MapsTo _ _ (?f _), H': ~NatSet.In _ _ |- _ <-> MapsTo _ _ (?f _) ] =>
+              apply H; auto; do 1 intro; apply H';
+                match goal with
+                | [ H'': NatSet.In _ (_ U _) |- _ ] =>
+                  rewrite union_spec in H''; inversion H''; rewrite union_spec; [right; assumption | left; assumption]
+                end
+            end
+        | |- Equal _ (events ?σ U events ?σ') =>
+          transitivity (events σ' U events σ); auto with set
+        | _ => firstorder
+        end in solve_imds.
+Qed.
 
 Lemma IsMergedDState_ex :
   forall {σ__o σ σ'},

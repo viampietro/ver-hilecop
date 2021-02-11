@@ -7,6 +7,7 @@ Require Import common.NatMap.
 Require Import common.NatMapTactics.
 Require Import common.InAndNoDup.
 
+Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
@@ -14,6 +15,7 @@ Require Import hvhdl.CombinationalEvaluation.
 Require Import hvhdl.Place.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HilecopDesignStore.
+Require Import hvhdl.SSEvaluation.
 Require Import hvhdl.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluation.
 Require Import hvhdl.PortMapEvaluationFacts.
@@ -34,17 +36,17 @@ Proof.
   induction 1; try (simpl; exists σ__c; assumption).
   
   (* CASE process evaluation, no events in sl *)
-  - exists σ__c; eapply vseq_inv_compstore_id; simpl; eauto.
+  - exists σ__c; eapply vseq_inv_compstore; simpl; eauto.
     
   (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
   - simpl; destruct (Nat.eq_dec compid id__c).
     + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
     + exists σ__c; apply NatMap.add_2; auto.
-      eapply mapop_inv_compstore_id; eauto.
+      eapply mapop_inv_compstore; eauto.
 
   (* CASE comp evaluation with no events. *)
-  - exists σ__c; eapply mapop_inv_compstore_id; eauto.
+  - exists σ__c; eapply mapop_inv_compstore; eauto.
 
   (* CASE par *)
   - unfold IsMergedDState in H2; apply proj2, proj1 in H2.
@@ -157,30 +159,101 @@ Proof.
     + eapply IsMergedDState_assoc_2; eauto.
 Qed.
 
+Lemma vcomb_not_in_events_if_not_assigned :
+  forall {D__s Δ σ cstmt σ' id},
+    vcomb D__s Δ σ cstmt σ' ->
+    ~CompOf Δ id ->
+    ~AssignedInCs id cstmt ->
+    ~NatSet.In id (events σ').
+Proof.
+  induction 1; (try (solve [simpl; auto with set])).
+  
+  (* CASE eventful process *)
+  - simpl; intros; eapply vseq_not_in_events_if_not_assigned; eauto with set.
+
+  (* CASE eventful component *)
+  - simpl; intros.
+    erewrite add_spec; inversion_clear 1;
+      [ subst; match goal with
+               | [ H: ~CompOf _ _ |- _ ] =>
+                 apply H; exists Δ__c; auto
+               end
+      | eapply mapop_not_in_events_if_not_assigned; eauto with set].
+
+  (* CASE eventless component *)
+  - simpl; intros;
+      eapply mapop_not_in_events_if_not_assigned; eauto with set.
+
+  (* CASE || *)
+  - simpl; intros.
+    decompose_IMDS; match goal with | [ H: Equal _ _ |- _ ] => rewrite H end.
+    apply not_in_union; [ apply IHvcomb1; auto | apply IHvcomb2; auto ].
+Qed.
+
 Lemma vcomb_inv_cstate :
   forall {D__s Δ σ behavior σ' id__c σ__c},
     vcomb D__s Δ σ behavior σ' ->
     MapsTo id__c σ__c (compstore σ) ->
     ~NatSet.In id__c (events σ') ->
     MapsTo id__c σ__c (compstore σ').
-Admitted.
+Proof.
+  induction 1; auto.
+
+  (* CASE eventful process *)
+  - intros; eapply vseq_inv_compstore; eauto.
+
+  (* CASE eventful component *)
+  - simpl; intros.
+    erewrite NatMap.add_neq_mapsto_iff; eauto.
+    eapply mapop_inv_compstore; eauto.
+    intro; subst;
+    match goal with
+    | [ H: ~NatSet.In _ _ |- _ ] => apply H; auto with set
+    end.
+
+  (* CASE eventless component *)
+  - intros; eapply mapop_inv_compstore; eauto.
+
+  (* CASE || *)
+  - intros;
+      decompose_IMDS;
+      match goal with
+      | [ H: _ -> _ -> ~NatSet.In _ _ -> _ <-> _, H': Equal _ _ |- _ ] =>
+        erewrite <- H; auto; (assumption || (rewrite <- H'; assumption))
+      end.
+Qed.
 
 Lemma vcomb_compid_not_in_events_1 :
   forall {D__s Δ σ cstmt σ' id__c Δ__c compids},
     vcomb D__s Δ σ cstmt σ' ->
-    MapsTo id__c (Component Δ__c) Δ ->
     AreCsCompIds cstmt compids ->
-    ~List.In id__c compids ->
-    ~NatSet.In id__c (events σ) ->
-    ~NatSet.In id__c (events σ').
-Admitted.
-
-Lemma vcomb_compid_not_in_events_2 :
-  forall {D__s Δ σ cstmt σ' id__c Δ__c},
-    vcomb D__s Δ σ cstmt σ' ->
     MapsTo id__c (Component Δ__c) Δ ->
-    ~NatSet.In id__c (events σ') ->
-    ~NatSet.In id__c (events σ).
+    ~List.In id__c compids ->
+    ~NatSet.In id__c (events σ').
+Proof.
+  induction 1; auto with set.
+
+  (* CASE eventful process *)
+  - intros; eapply vseq_not_in_events_if_not_sig; simpl.
+    1, 2: eauto with set.
+    1, 2: destruct 1; mapsto_discriminate.
+
+  (* CASE eventful component *)
+  - simpl; inversion_clear 1; intros.
+    rewrite add_spec; inversion_clear 1.
+    match goal with
+    | [ H: ~List.In _ _ |- _ ] =>
+      apply H; firstorder
+    end.
+    eapply mapop_not_in_events_if_not_sig; eauto with set.
+    destruct 1; mapsto_discriminate.
+
+  (* CASE eventless component *)
+  - intros; eapply mapop_not_in_events_if_not_sig; eauto with set.
+    destruct 1; mapsto_discriminate.
+
+  (* CASE || *)
+  - inversion_clear 1.
 Admitted.
 
 

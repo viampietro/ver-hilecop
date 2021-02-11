@@ -18,6 +18,8 @@ Notation "{[ x ]}" := (add x empty) (at level 0) : natset_scope.
 
 (** ** Extra Facts on [NatSet] *)
 
+Open Scope natset_scope.
+
 Lemma nIn_nIn_Union :
   forall {x s s'}, ~NatSet.In x s -> ~NatSet.In x s' -> ~NatSet.In x (s U s').
 Proof.
@@ -38,6 +40,42 @@ Proof.
       eapply NatSetFacts.union_3 in In_empty;
       erewrite H in In_empty;
       erewrite <- NatSetFacts.empty_iff; eauto ].
+Qed.
+
+Lemma not_in_union_2 :
+  forall [s s' : t] [x : elt], ~ In x (s U s') -> ~ In x s /\ ~ In x s'.
+Proof.
+  intros; split; intro.
+  apply H; eapply NatSetFacts.union_2; eauto.
+  apply H; eapply NatSetFacts.union_3; eauto.
+Qed.
+
+Lemma inter_empty_1 :
+  forall {s s' e},
+    Equal (inter s s') {[]} ->
+    In e s ->
+    ~In e s'.
+Proof.
+  intros; intro.
+  assert (In e (inter s s')) by (eapply NatSetFacts.inter_3; eauto).
+  match goal with
+  | [ H: Equal ?I _, H': NatSet.In _ ?I |- _ ] =>
+    rewrite H in H'; inversion H'
+  end.
+Qed.
+
+Lemma inter_empty_2 :
+  forall {s s' e},
+    Equal (inter s s') {[]} ->
+    In e s' ->
+    ~In e s.
+Proof.
+  intros; intro.
+  assert (In e (inter s s')) by (eapply NatSetFacts.inter_3; eauto).
+  match goal with
+  | [ H: Equal ?I _, H': NatSet.In _ ?I |- _ ] =>
+    rewrite H in H'; inversion H'
+  end.
 Qed.
 
 Export NatSet NatSetFacts NatSetProps.

@@ -188,6 +188,22 @@ Definition events_add (id : ident) (σ : DState) :=
 Definition InSStore (id : ident) (σ : DState) :=
   NatMap.In id (sigstore σ).
 
+(** Useful function to create a merged [DState] *)
+
+Definition merge_natmap {A : Type} (s : NatSet.t) (m1 m2 : NatMap.t A) : NatMap.t A :=
+  let f := fun k m =>
+             match find k m1 with
+             | Some a => NatMap.add k a m
+             | _ => m
+             end
+  in NatSet.fold f s m2.
+
+Definition merge_sstore (σ__o σ σ' : DState) : IdMap value :=
+  merge_natmap (events σ) (sigstore σ) (merge_natmap (events σ') (sigstore σ') (sigstore σ__o)).
+
+Definition merge_cstore (σ__o σ σ' : DState) : IdMap DState :=
+  merge_natmap (events σ) (compstore σ) (merge_natmap (events σ') (compstore σ') (compstore σ__o)).
+
 (** Predicate stating that a DState [σ__m] results from the
     interleaving of an origin DState [σ__o], and two DState
     [σ'] and [σ''].

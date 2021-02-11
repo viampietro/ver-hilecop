@@ -10,41 +10,29 @@ Require Import HVhdlTypes.
     identifiers. Therefore, the first generated identifier must begin
     at the last reserved identifier + 1. *)
 
-(** Defines to reserved identifiers for the clock and the reset
-    signals. Every design in H-VHDL are equipped with a clock and a
-    reset signal, which are ports in "in" mode.
-
-    We must enforce the fact that a H-VHDL must declare these two
-    ports in its port interface; [clk] and [rst] ports must be of the
-    boolean type.
- *)
+(** Defines the clock input port reserved identifier. Every design in
+    H-VHDL is equipped with an clock input port.  *)
 
 Definition clk : ident := 0.
-Definition rst : ident := 1.
 
 (** Defines reserved identifiers for the place, and the transition
     designs.  *)
 
-Definition place_entid : ident := 2.
-Definition place_archid : ident := 3.
-Definition transition_entid : ident := 4.
-Definition transition_archid : ident := 5.
+Definition place_entid : ident := 1.
+Definition place_archid : ident := 2.
+Definition transition_entid : ident := 3.
+Definition transition_archid : ident := 4.
 
 (** Reserved identifiers for the action activation and function
     execution generated processes. *)
 
-Definition action_ps_id : ident := 6.
-Definition function_ps_id : ident := 7.
-
-(** Reserved identifiers for variables. *)
-
-Definition local_var : ident := 100.
-Definition loop_var  : ident := 150.
+Definition action_ps_id : ident := 5.
+Definition function_ps_id : ident := 6.
 
 (** Defines the first fresh identifier. 
     Starts the available identifier range. *)
 
-Definition ffid : ident := 200.
+Definition ffid : ident := 10.
 
 (** Defines multiple macros that are convenient to build
     the Place and Transition designs in H-VHDL abstract syntax. 

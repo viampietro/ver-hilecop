@@ -41,7 +41,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
       vseq Δ (NoEvDState σ) Λ stab stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
+      ~NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
       NatMap.MapsTo pid (Process Λ) Δ ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)
@@ -58,7 +58,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
       vcomb D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' opmap σ' ->
+      mapop Δ Δ__c (NoEvDState σ) σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
@@ -94,7 +94,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
       (* * Premises * *)
       mapip Δ Δ__c σ σ__c ipmap σ__c' ->
       vcomb D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' opmap σ' ->
+      mapop Δ Δ__c (NoEvDState σ) σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
       
@@ -115,7 +115,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
 
 (** Evaluates the null concurrent statement. *)
 
-| VCombNull : vcomb D__s Δ σ cs_null σ 
+| VCombNull : vcomb D__s Δ σ cs_null (NoEvDState σ) 
             
 (** Evaluates the parallel execution of two combinational concurrent
     statements.  *)

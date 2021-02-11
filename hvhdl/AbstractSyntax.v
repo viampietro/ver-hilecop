@@ -339,3 +339,32 @@ Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
      FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
 
 Hint Constructors FoldLCs : core.
+
+(** ** Signal Assignment Look-up *)
+
+Fixpoint AssignedInOPM (id : ident) (opm : outputmap) :=
+  match opm with
+  | [] => False
+  | (assocop_simpl _ (Some (n_id id__a | n_xid id__a _)) | assocop_idx _ _ (n_id id__a | n_xid id__a _)) :: tl =>
+    id = id__a \/ AssignedInOPM id tl
+  | (assocop_simpl _ None) :: tl => AssignedInOPM id tl
+  end.
+
+Fixpoint AssignedInSS (id : ident) (stmt : ss) :=
+  match stmt with
+  | ss_sig ((n_id id__s) | (n_xid id__s _)) _ => id = id__s
+  | (ss_if _ stmt1 | ss_loop _ _ _ stmt1 | ss_falling stmt1 | ss_rising stmt1) =>
+    AssignedInSS id stmt1
+  | (ss_ifelse _ stmt1 stmt2 | ss_rst stmt1 stmt2 | ss_seq stmt1 stmt2) =>
+    AssignedInSS id stmt1 \/ AssignedInSS id stmt2
+  | _ => False
+  end.
+
+Fixpoint AssignedInCs (id : ident) (cstmt : cs) :=
+  match cstmt with
+  | cs_comp id__c id__e gm ipm opm => AssignedInOPM id opm
+  | cs_ps id__p sl vars body => AssignedInSS id body
+  | cs_null => False
+  | cs_par cstmt' cstmt'' =>
+    AssignedInCs id cstmt' \/ AssignedInCs id cstmt''
+  end.
