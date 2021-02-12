@@ -169,8 +169,8 @@ Section GeneratePortsAndPs.
         let (rstss, fallingss) := rst_and_falling_ss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
-        let body := (If (rst @= false) Then rstss Else (Falling fallingss)) in
-        let aps := cs_ps action_ps_id {[clk, rst]} [] body in
+        let body := (Rst rstss Else (Falling fallingss)) in
+        let aps := cs_ps action_ps_id {[clk]} [] body in
         add_cs aps.
     
   End GenerateActionPortsAndPs.
@@ -228,8 +228,8 @@ Section GeneratePortsAndPs.
         let (rstss, risingss) := rst_and_rising_ss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
-        let body := (If (rst @= false) Then rstss Else (Rising risingss)) in
-        let fps := cs_ps function_ps_id {[clk, rst]} [] body in
+        let body := (Rst rstss Else (Rising risingss)) in
+        let fps := cs_ps function_ps_id {[clk]} [] body in
         add_cs fps.
     
   End GenerateFunPortsAndPs.

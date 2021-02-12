@@ -7,6 +7,8 @@ Require Import common.NatSet.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
 Require Import hvhdl.PortMapEvaluation.
+Require Import hvhdl.HVhdlTypes.
+Require Import hvhdl.ExpressionEvaluation.
 
 (** ** Facts about Input Port Map Evaluation *)
 
@@ -41,6 +43,21 @@ Section IPMap.
     apply IHmapip; auto.
     eapply vassocip_inv_sigstore; eauto.
   Qed.
+
+  Lemma mapip_eval_simpl_associp :
+    forall {Δ Δ__c σ σ__c ipm σ__c'} {id__i : ident} {e},
+      mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      List.In (associp_ id__i e) ipm ->
+      exists v, vexpr Δ σ EmptyLEnv false e v /\
+                MapsTo id__i v (sigstore σ__c').
+  Admitted.
+
+  Lemma mapip_eq_state_if_no_events :
+    forall {Δ Δ__c σ σ__c ipm σ__c'},
+      mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      Equal (events σ__c') {[]} ->
+      σ__c = σ__c'.
+  Admitted.
   
 End IPMap.
 

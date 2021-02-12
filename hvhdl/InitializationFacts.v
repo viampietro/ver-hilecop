@@ -2,17 +2,24 @@
 
 Require Import common.Coqlib.
 Require Import common.NatMap.
+Require Import common.NatSet.
+Require Import common.InAndNoDup.
 
+Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.Initialization.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
+Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.ExpressionEvaluation.
+Require Import hvhdl.PortMapEvaluation.
 Require Import hvhdl.StabilizeFacts.
 Require Import hvhdl.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluationFacts.
-Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.EnvironmentFacts.
+Require Import hvhdl.WellDefinedDesignFacts.
 
 (** ** Facts about [vruninit] *)
 
@@ -32,8 +39,8 @@ Section VRunInit.
     (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
     - simpl; destruct (Nat.eq_dec compid id__c).
-      + exists σ__c''; rewrite e; apply add_1; auto.
-      + exists σ__c; apply add_2; auto.
+      + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
+      + exists σ__c; apply NatMap.add_2; auto.
         eapply mapop_inv_compstore; eauto.
 
     (* CASE comp evaluation with no events. *)
@@ -47,16 +54,144 @@ Section VRunInit.
       unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
   Qed.
 
-  Lemma vruninit_s_marking_eq_nat :
-    forall Δ σ behavior σ',
-      vruninit hdstore Δ σ behavior σ' ->
-      MapsTo Petri.rst (Vbool false) (sigstore σ) ->
-      forall id__p gm ipm opm σ__p' n,
-        InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
-        List.In (associp_ ($initial_marking) (e_nat n)) ipm ->
-        NatMap.MapsTo id__p σ__p' (compstore σ') ->
-        NatMap.MapsTo Place.s_marking (Vnat n) (sigstore σ__p').
+  Lemma vruninit_eq_state_if_no_events :
+    forall {D__s Δ σ cstmt σ'},
+      vruninit D__s Δ σ cstmt σ' ->
+      Equal (events σ') {[]} ->
+      σ = σ'.
   Admitted.
+
+  Lemma vruninit_inv_cstate :
+    forall {D__s Δ σ cstmt σ' id__c σ__c},
+      vruninit D__s Δ σ cstmt σ' ->
+      MapsTo id__c σ__c (compstore σ) ->
+      ~NatSet.In id__c (events σ') ->
+      MapsTo id__c σ__c (compstore σ').
+  Admitted.
+
+  Lemma vruninit_compid_not_in_events :
+    forall {D__s Δ σ cstmt σ'},
+      vruninit D__s Δ σ cstmt σ' ->
+      forall {id__c Δ__c compids},
+        AreCsCompIds cstmt compids ->
+        MapsTo id__c (Component Δ__c) Δ ->
+        ~List.In id__c compids ->
+        ~NatSet.In id__c (events σ').
+  Admitted.
+
+  Lemma vruninit_not_in_events_if_not_assigned :
+    forall {D__s Δ σ cstmt σ' id},
+      vruninit D__s Δ σ cstmt σ' ->
+      ~CompOf Δ id ->
+      ~AssignedInCs id cstmt ->
+      ~NatSet.In id (events σ').
+  Admitted.
+  
+  Lemma vruninit_par_comm :
+    forall {D__s Δ σ cstmt cstmt' σ'},
+      vruninit D__s Δ σ (cstmt // cstmt') σ' <->
+      vruninit D__s Δ σ (cstmt' // cstmt) σ'.
+  Proof.
+    split; inversion_clear 1.
+    all :
+      eapply @VRunInitPar; eauto;
+      [ transitivity (inter (events σ'0) (events σ'')); auto with set
+      | erewrite IsMergedDState_comm; auto ].
+  Qed.
+
+  Lemma vruninit_par_assoc :
+    forall {D__s Δ σ cstmt cstmt' cstmt'' σ'},
+      vruninit D__s Δ σ (cstmt // cstmt' // cstmt'') σ' <->
+      vruninit D__s Δ σ ((cstmt // cstmt') // cstmt'')  σ'.
+  Proof.
+    split.
+    (* CASE A *)
+    - inversion_clear 1;
+        match goal with
+        | [ H: vruninit _ _ _ (_ // _) _ |- _ ] => inversion_clear H
+        end;
+        rename σ'0 into σ0, σ'' into σ1, σ'1 into σ2, σ''0 into σ3.
+
+      assert (Equal (inter (events σ0) (events σ2)) {[]}).
+      {
+        do 2 decompose_IMDS.
+        assert (Equal_empty : Equal (inter (events σ0) (events σ2 U events σ3)) {[]})
+          by (match goal with
+              | [ H: Equal _ ?u |- Equal (_ _ ?u) _ ] => rewrite <- H
+              end; assumption).
+        apply empty_is_empty_1.
+        rewrite inter_sym, union_inter_1, inter_sym in Equal_empty.
+        eapply proj1; eapply @empty_union_3 with (s := (inter (events σ0) (events σ2))); eauto.
+      }
+      destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4);
+        (solve [do 2 decompose_IMDS; auto] || auto).
+      eapply @VRunInitPar with (σ' := σ4) (σ'' := σ3); eauto with hvhdl.
+      
+      (* [events σ4 ∩ events σ3 = ∅] *)
+      + do 3 decompose_IMDS.
+        match goal with
+        | [ H: Equal ?ev _ |- Equal (_ ?ev _) _] =>
+          rewrite H; rewrite union_inter_1
+        end.      
+        match goal with
+        | [ H: Equal ?i {[]} |- Equal (_ U ?i) {[]} ] =>
+          rewrite H; apply empty_union_1
+        end.
+        assert (Equal_empty : Equal (inter (events σ0) ((events σ2) U (events σ3))) {[]})
+          by (match goal with
+              | [ H: Equal _ ?A  |- Equal (inter _ ?A) _ ] =>
+                rewrite <- H
+              end; assumption).
+        rewrite inter_sym, union_inter_1, union_sym, inter_sym in Equal_empty.
+        eapply proj1; eapply empty_union_3; eauto.
+        
+      (* Associativity of IsMErgeddstate relation *)
+      + eapply IsMergedDState_assoc_1; eauto.
+
+    (* CASE B *)
+    - inversion_clear 1;
+        match goal with
+        | [ H: vruninit _ _ _ (_ // _) _ |- _ ] => inversion_clear H
+        end.
+      rename σ'1 into σ0, σ''0 into σ1, σ'' into σ2, σ'0 into σ3.
+      assert (Equal (inter (events σ1) (events σ2)) {[]}).
+      {
+        do 2 decompose_IMDS.
+        assert (Equal_empty : Equal (inter (events σ0 U events σ1) (events σ2) ) {[]})
+          by (match goal with
+              | [ H: Equal _ ?u |- Equal (_ ?u _) _ ] => rewrite <- H
+              end; assumption).
+        apply empty_is_empty_1.
+        rewrite union_inter_1 in Equal_empty.
+        eapply proj2; eapply @empty_union_3; eauto.
+      }
+      destruct (@IsMergedDState_ex σ σ1 σ2) as (σ4, IsMergedDState_σ4);
+        (solve [do 2 decompose_IMDS; auto] || auto).
+      eapply @VRunInitPar with (σ' := σ0) (σ'' := σ4); eauto with hvhdl.
+      
+      (* [events σ0 ∩ events σ4 = ∅] *)
+      + do 3 decompose_IMDS.
+        match goal with
+        | [ H: Equal ?ev _ |- Equal (_ _ ?ev) _ ] =>
+          rewrite H; rewrite inter_sym; rewrite union_inter_1
+        end.
+        rewrite inter_sym, union_sym.
+        match goal with
+        | [ H: Equal ?i {[]} |- Equal (_ U ?i) {[]} ] =>
+          rewrite H; apply empty_union_1
+        end.
+        rewrite inter_sym.
+        assert (Equal_empty : Equal (inter (events σ0 U events σ1) (events σ2)) {[]})
+          by (match goal with
+              | [ H: Equal _ ?A  |- Equal (_ ?A  _) _ ] =>
+                rewrite <- H
+              end; assumption).
+        rewrite union_inter_1 in Equal_empty.
+        eapply proj1; eapply empty_union_3; eauto.
+
+      (* Associativity of IsMErgeddstate relation *)
+      + eapply IsMergedDState_assoc_2; eauto.
+  Qed.
   
 End VRunInit.
 
@@ -64,38 +199,5 @@ End VRunInit.
 
 Section Init.
 
-  Lemma init_s_marking_eq_nat :
-    forall Δ σ behavior σ0,
-      init hdstore Δ σ behavior σ0 ->
-      forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids mm,
-        InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
-        MapsTo id__p (Component Δ__p) Δ ->
-        MapsTo id__p σ__p (compstore σ) ->
-        AreCsCompIds behavior compids ->
-        List.NoDup compids ->
-        List.In (associp_ ($initial_marking) (e_nat n)) ipm ->
-        MapsTo id__p σ__p0 (compstore σ0) ->
-        MapsTo Place.s_marking (Declared (Tnat 0 mm)) Δ__p ->
-        MapsTo Place.s_marking (Vnat n) (sigstore σ__p0).
-  Proof.
-    inversion 1.
-    intros.
-
-    (* [∃ σ__p s.t. σ(id__p)(rst ← ⊥) = σ__p] *)
-    match goal with
-    | [ MapsTo_σ__p: MapsTo id__p σ__p _, Hvr: vruninit _ _ _ _ _ |- _ ] =>
-      specialize (vruninit_maps_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
-        inversion ex_MapsTo_σp' as (σ__p', MapsTo_σ__p'); clear ex_MapsTo_σp'
-    end.
-    assert (MapsTo_rst_σ__p' : MapsTo id__p σ__p' (compstore (sstore_add Petri.rst (Vbool true) σ')))
-      by assumption.
-    
-    (* [s_marking] value stays the same during stabilization. *)
-    eapply stab_inv_s_marking; eauto.    
-
-    (* [s_marking] takes [n] during [vruninit], if [<initial_marking => n>] *)
-    eapply vruninit_s_marking_eq_nat; eauto.
-    simpl; apply add_1; reflexivity.
-  Qed.
   
 End Init.

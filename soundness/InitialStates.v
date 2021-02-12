@@ -40,6 +40,7 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.DesignElaborationFacts.
 Require Import hvhdl.PlaceElaborationFacts.
+Require Import hvhdl.PInitializationFacts.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateHVhdlFacts.

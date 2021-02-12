@@ -223,9 +223,10 @@ Proof.
       end.
 Qed.
 
-Lemma vcomb_compid_not_in_events_1 :
-  forall {D__s Δ σ cstmt σ' id__c Δ__c compids},
+Lemma vcomb_compid_not_in_events :
+  forall {D__s Δ σ cstmt σ'},
     vcomb D__s Δ σ cstmt σ' ->
+    forall {id__c Δ__c compids},
     AreCsCompIds cstmt compids ->
     MapsTo id__c (Component Δ__c) Δ ->
     ~List.In id__c compids ->
@@ -253,7 +254,17 @@ Proof.
     destruct 1; mapsto_discriminate.
 
   (* CASE || *)
-  - inversion_clear 1.
-Admitted.
+  - destruct (AreCsCompIds_ex cstmt) as (compids1, AreCsCompIds_1);
+      destruct (AreCsCompIds_ex cstmt') as (compids2, AreCsCompIds_2).
+    do 4 intro;
+      erewrite (AreCsCompIds_eq_app cstmt cstmt') with (compids'' := compids); eauto.
+    intros; decompose_IMDS;
+      match goal with
+      | [ H: Equal (events ?A) _ |- ~NatSet.In _ (events ?A) ] =>
+        rewrite H; apply not_in_union
+      end.
+    eapply IHvcomb1; eauto; eapply proj1; eapply not_app_in; eauto.
+    eapply IHvcomb2; eauto; eapply proj2; eapply not_app_in; eauto.
+Qed.
 
 

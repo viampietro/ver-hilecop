@@ -1,4 +1,4 @@
-(** Facts about Evaluation of the Place Design Behavior *)
+(** * Facts about Combinational Evaluation of the Place Design Behavior *)
 
 Require Import common.Coqlib.
 Require Import common.InAndNoDup.
@@ -139,12 +139,11 @@ Proof.
                       end.
       eapply nIn_nIn_Union; eauto.
       (* Prove [id__p ∉ (events σ'')] *)
-      eapply vcomb_compid_not_in_events_1; eauto.
-      -- apply nodup_app_not_in with (l := compids1).
-         { erewrite AreCsCompIds_determ; eauto; apply AreCsCompIds_app; auto. }
-         { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
-      (* -- eapply @vcomb_compid_not_in_events_2 with (σ' := σ'); eauto. *)
-      
+      eapply vcomb_compid_not_in_events; eauto.
+      apply nodup_app_not_in with (l := compids1).
+      { erewrite AreCsCompIds_determ; eauto; apply AreCsCompIds_app; auto. }
+      { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
+         
   (* CASE in right of || *)
   - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
     destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
@@ -172,10 +171,10 @@ Proof.
       decompose_IMDS; rw_mapsto.
       eapply nIn_nIn_Union; eauto.
       (* Prove [id__p ∉ (events σ')] *)
-      eapply vcomb_compid_not_in_events_1; eauto.
-      -- eapply nodup_app_not_in with (l := compids2).
-         { eapply NoDup_app_comm.
+      eapply vcomb_compid_not_in_events; eauto.
+      eapply nodup_app_not_in with (l := compids2).
+      { eapply NoDup_app_comm.
            erewrite AreCsCompIds_determ; eauto.
            apply AreCsCompIds_app; auto. }
-         { eapply (AreCsCompIds_compid_iff HAreCsCompIds2); eauto. }
+      { eapply (AreCsCompIds_compid_iff HAreCsCompIds2); eauto. }
 Qed.
