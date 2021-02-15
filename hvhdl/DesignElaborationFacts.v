@@ -1,6 +1,7 @@
 (** * Facts about Design Elaboration Relations *)
 
 Require Import common.Coqlib.
+Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.InAndNoDup.
 
@@ -10,9 +11,12 @@ Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Elaboration.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
+Require Import hvhdl.ValidPortMap.
+Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.ArchitectureElaborationFacts.
+Require Import hvhdl.PortElaborationFacts.
 
 (** ** Facts about Behavior Elaboration *)
 
@@ -157,6 +161,14 @@ Proof.
   exists (Component x); assumption.
 Qed.
 
+Lemma ebeh_inv_events:
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    NatSet.Equal (events σ) (events σ').
+Proof.
+  induction 1; auto with set.
+  transitivity (events σ'); auto.
+Qed.
 
 (** ** Facts about the [edesign] relation *)
 
@@ -190,4 +202,117 @@ Proof.
   eapply ebeh_nodup_compids; eauto.
 Qed.
 
+Lemma elab_empty_events:
+  forall {D__s M__g d Δ σ__e},
+    edesign D__s M__g d Δ σ__e ->
+    NatSet.Equal (events σ__e) {[]}.
+Proof.
+  inversion 1; subst.
+  erewrite <- ebeh_inv_events; eauto.
+  erewrite <- edecls_inv_events; eauto.
+  erewrite <- eports_inv_events; eauto.
+  simpl; auto with set.
+Qed.
+
+Lemma ebeh_empty_events_for_comps:
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    forall { id__c id__e gm ipm opm σ__c'},
+      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+      MapsTo id__c σ__c' (compstore σ') ->
+      NatSet.Equal (events σ__c') {[]}.
+Proof.
+  induction 1; try (solve [inversion 1]).
+  
+  (* CASE comp *)
+  - inversion_clear 1; simpl; intros.
+    erewrite @MapsTo_add_eqv with (e := σ__c'); eauto.
+    eapply elab_empty_events; eauto.
+
+  (* CASE || *)
+  - inversion_clear 1; simpl; intros.
+    (* SUBCASE comp ∈ cstmt *)
+    eapply IHebeh1; eauto.
+    edestruct @ebeh_compid_in_compstore
+      with (D__s := D__s) (behavior := cstmt)
+      as (σ__c0', MapsTo_σ'); eauto.
+    assert (MapsTo id__c σ__c0' (compstore σ''))
+      by (eapply ebeh_inv_compstore; eauto).
+    erewrite MapsTo_fun with (e := σ__c'); eauto.
+    (* SUBCASE comp ∈ cstmt' *)
+    eapply IHebeh2; eauto.
+Qed.
+
+Lemma elab_empty_events_for_comps:
+  forall {D__s M__g d Δ σ__e},
+    edesign D__s M__g d Δ σ__e ->
+    forall {id__c id__e gm ipm opm σ__ce},
+      InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+      MapsTo id__c σ__ce (compstore σ__e) ->
+      NatSet.Equal (events σ__ce) {[]}.
+Proof.
+  inversion 1.
+  eapply ebeh_empty_events_for_comps; eauto.
+Qed.
+
+Lemma elab_input :
+  forall {D__s M__g d Δ σ__e id τ},
+    edesign D__s M__g d Δ σ__e ->
+    List.In (pdecl_in id τ) (ports d) ->
+    InputOf Δ id.
+Proof.
+  inversion 1; subst; intros.
+  edestruct @eports_input with (Δ := Δ0) as (t, MapsTo_Δ'); eauto. 
+  exists t; eapply ebeh_inv_Δ; eauto.
+  eapply edecls_inv_Δ; eauto.
+Qed.
+
+Lemma ebeh_input_of_comp :
+  forall {D__s Δ σ behavior Δ' σ' id__c id__e gm ipm opm d__e Δ__c id τ},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+    MapsTo id__e d__e D__s ->
+    MapsTo id__c (Component Δ__c) Δ' ->
+    List.In (pdecl_in id τ) (ports d__e) ->
+    InputOf Δ__c id.
+Proof.
+  induction 1; try (solve [inversion 1]).
+
+  (* CASE comp *)
+  - inversion_clear 1; simpl; intros.
+    assert (e : Component Δ__c = Component Δ__c0)
+      by (eapply @MapsTo_add_eqv; eauto).
+    inject_left e.
+    eapply elab_input; eauto.
+    erewrite MapsTo_fun with (e := cdesign); eauto.
+    
+  (* CASE || *)
+  - inversion_clear 1; simpl; intros.
+    (* SUBCASE comp ∈ cstmt *)
+    eapply IHebeh1; eauto.
+    Search ebeh.
+    edestruct @ebeh_compid_in_comps
+      with (D__s := D__s) (behavior := cstmt)
+      as (Δ__c0, MapsTo_Δ__c0); eauto.
+    assert (MapsTo id__c (Component Δ__c0) Δ'')
+      by (eapply ebeh_inv_Δ; eauto).
+    assert (e : Component Δ__c = Component  Δ__c0)
+      by (eapply MapsTo_fun; eauto).
+    inject_left e; auto.
+    (* SUBCASE comp ∈ cstmt' *)
+    eapply IHebeh2; eauto.
+Qed.
+
+Lemma elab_input_of_comp :
+  forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm d__e Δ__c id τ},
+    edesign D__s M__g d Δ σ__e ->
+    InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+    MapsTo id__e d__e D__s ->
+    MapsTo id__c (Component Δ__c) Δ ->
+    List.In (pdecl_in id τ) (ports d__e) ->
+    InputOf Δ__c id.
+Proof.
+  inversion 1.
+  eapply ebeh_input_of_comp; eauto.
+Qed.
 

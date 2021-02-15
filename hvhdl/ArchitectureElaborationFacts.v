@@ -88,3 +88,19 @@ Proof.
   induction 1; intros; auto.
   apply IHedecls; eapply edecl_inv_Δ; eauto.
 Qed.
+
+Lemma edecl_inv_events :
+  forall {Δ σ ad Δ' σ'},
+    edecl Δ σ ad Δ' σ' ->
+    NatSet.Equal (events σ) (events σ').
+Proof. induction 1; auto with set. Qed.
+
+Lemma edecls_inv_events : 
+  forall {Δ σ sigs Δ' σ'},
+    edecls Δ σ sigs Δ' σ' ->
+    NatSet.Equal (events σ) (events σ').
+Proof.
+  induction 1; auto with set.
+  transitivity (events σ'); [
+    eapply edecl_inv_events; eauto | auto].
+Qed.

@@ -16,6 +16,8 @@ Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.ArchitectureElaborationFacts.
 Require Import hvhdl.DesignElaborationFacts.
 
+(** ** Place Declared Signal Elaboration *)
+
 Lemma edecl_s_marking :
   forall {Δ σ Δ' σ'},
     edecl Δ σ (sdecl_ s_marking local_weight_t) Δ' σ' ->
@@ -85,3 +87,18 @@ Proof.
   inversion 1.
   eapply ebeh_pcomp_Δ_s_marking; eauto.
 Qed.
+
+(** ** Place Port Elaboration *)
+
+Lemma elab_pcomp_Δ_init_marking :
+  forall {d Δ σ__e id__p gm ipm opm Δ__p},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+    MapsTo id__p (Component Δ__p) Δ ->
+    InputOf Δ__p initial_marking.
+Proof.
+  inversion 1; subst; intros; eapply @elab_input_of_comp with (d__e := place_design); eauto.
+  apply add_2; [discriminate | apply add_1; auto].
+  firstorder.
+Qed.
+

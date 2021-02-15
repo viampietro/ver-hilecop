@@ -82,10 +82,34 @@ Section VRunInit.
   Lemma vruninit_not_in_events_if_not_assigned :
     forall {D__s Δ σ cstmt σ' id},
       vruninit D__s Δ σ cstmt σ' ->
+      ~NatSet.In id (events σ) ->
       ~CompOf Δ id ->
       ~AssignedInCs id cstmt ->
       ~NatSet.In id (events σ').
-  Admitted.
+  Proof.
+    induction 1; (try (solve [simpl; auto with set])).
+    
+    (* CASE eventful process *)
+    - simpl; intros; eapply vseq_not_in_events_if_not_assigned; eauto with set.
+
+    (* CASE eventful component *)
+    - simpl; intros.
+      erewrite add_spec; inversion_clear 1;
+        [ subst; match goal with
+                 | [ H: ~CompOf _ _ |- _ ] =>
+                   apply H; exists Δ__c; auto
+                 end
+        | eapply mapop_not_in_events_if_not_assigned; eauto with set].
+
+    (* CASE eventless component *)
+    - simpl; intros;
+        eapply mapop_not_in_events_if_not_assigned; eauto with set.
+
+    (* CASE || *)
+    - simpl; intros.
+      decompose_IMDS; match goal with | [ H: Equal _ _ |- _ ] => rewrite H end.
+      apply not_in_union; [ apply IHvruninit1; auto | apply IHvruninit2; auto ].
+  Qed.
   
   Lemma vruninit_par_comm :
     forall {D__s Δ σ cstmt cstmt' σ'},

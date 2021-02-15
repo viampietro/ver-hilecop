@@ -7,7 +7,7 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
 Require Import hvhdl.Elaboration.
 
-Lemma eport_idle_gens :
+Lemma eport_inv_gens :
   forall {Δ σ pd Δ' σ'},
     eport Δ σ pd Δ' σ' ->
     EqGens Δ Δ'.
@@ -42,9 +42,9 @@ Proof.
     ].
 Qed.
 
-Hint Resolve eport_idle_gens : hvhdl.
+Hint Resolve eport_inv_gens : hvhdl.
 
-Lemma eports_idle_gens :
+Lemma eports_inv_gens :
   forall {Δ σ ports Δ' σ'},
     eports Δ σ ports Δ' σ' ->
     EqGens Δ Δ'.
@@ -52,36 +52,92 @@ Proof.
   induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl].
 Qed.
 
-Hint Resolve eports_idle_gens : hvhdl.
+Hint Resolve eports_inv_gens : hvhdl.
 
-Lemma eport_elab_idle_sigma :
-  forall Δ σ id' τ Δ' σ' id v,
-    (eport Δ σ (pdecl_out id' τ) Δ' σ' \/ eport Δ σ (pdecl_in id' τ) Δ' σ') ->
-    id' <> id ->
+Lemma eport_inv_sigma :
+  forall Δ σ pd Δ' σ' id v,
+    eport Δ σ pd Δ' σ' ->
     MapsTo id v (sigstore σ) ->
     MapsTo id v (sigstore σ').
 Proof.
   inversion_clear 1;
-    lazymatch goal with
-    | [ H: eport _ _ _ _ _ |- _ ] =>
-      inversion_clear H; simpl; apply add_2
+  intros; simpl; apply add_2; auto;
+    match goal with
+    | [ H: ~InSStore _ _ |- _ ] =>
+      intro; subst; apply H; exists v; auto
     end.
 Qed.
 
-Hint Resolve eport_elab_idle_sigma : hvhdl.
+Hint Resolve eport_inv_sigma : hvhdl.
 
-Lemma eports_elab_idle_sigma :
+Lemma eports_inv_sigma :
   forall Δ σ ports Δ' σ' id v,
     eports Δ σ ports Δ' σ' ->
-    ~(exists τ, List.In (pdecl_in id τ) ports \/ List.In (pdecl_out id τ) ports) ->
     MapsTo id v (sigstore σ) ->
     MapsTo id v (sigstore σ').
 Proof.
-  induction 1; auto.
-  intros Hnex Hmapsto.
-  apply IHeports. firstorder.
-  destruct pd;
-    (destruct (Nat.eq_dec portid id);
-     [ elimtype False; apply Hnex; exists τ; rewrite e; firstorder |
-       eauto with hvhdl ]).
+  induction 1; auto; intros.
+  apply IHeports; eauto with hvhdl.
+Qed.
+
+Lemma eport_inv_events :
+  forall {Δ σ pd Δ' σ'},
+    eport Δ σ pd Δ' σ' ->
+    NatSet.Equal (events σ) (events σ').
+Proof. induction 1; auto with set. Qed.
+
+Lemma eports_inv_events :
+  forall Δ σ ports Δ' σ',
+    eports Δ σ ports Δ' σ' ->
+    NatSet.Equal (events σ) (events σ').
+Proof.
+  induction 1; auto with set.
+  transitivity (events σ'); [
+    eapply eport_inv_events; eauto
+  | auto].
+Qed.
+
+Lemma eport_inv_Δ :
+  forall Δ σ pd Δ' σ' id sobj,
+    eport Δ σ pd Δ' σ' ->
+    MapsTo id sobj Δ ->
+    MapsTo id sobj Δ'.
+Proof.
+  inversion_clear 1;
+    intros; simpl; apply add_2; auto;
+      match goal with
+      | [ H: ~NatMap.In _ _ |- _ ] =>
+        intro; subst; apply H; exists sobj; auto
+      end.
+Qed.
+
+Hint Resolve eport_inv_Δ : hvhdl.
+
+Lemma eports_inv_Δ :
+  forall Δ σ ports Δ' σ' id sobj,
+    eports Δ σ ports Δ' σ' ->
+    MapsTo id sobj Δ ->
+    MapsTo id sobj Δ'.
+Proof.
+  induction 1; auto; intros.
+  apply IHeports; eauto with hvhdl.
+Qed.
+
+Lemma eport_input :
+  forall {Δ σ Δ' σ' id τ},
+    eport Δ σ (pdecl_in id τ) Δ' σ' ->
+    InputOf Δ' id.
+Proof. inversion 1; exists t0; auto with mapsto. Qed.
+
+Lemma eports_input :
+  forall {Δ σ ports Δ' σ' id τ},
+    eports Δ σ ports Δ' σ' ->
+    List.In (pdecl_in id τ) ports ->
+    InputOf Δ' id.
+Proof.
+  induction 1; try (solve [inversion 1]).
+  inversion 1.
+  subst; edestruct @eport_input; eauto;
+    exists x; eapply eports_inv_Δ; eauto.
+  eapply IHeports; eauto.
 Qed.

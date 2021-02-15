@@ -132,8 +132,14 @@ Proof.
   (* Prove [<initial_marking => M0(p)> ∈ ipm] *)
   - eapply sitpn2hvhdl_bind_init_marking; eauto.
 
+  (* Prove [initial_marking ∈ Ins(Δ__p) *)
+  - eapply elab_pcomp_Δ_init_marking; eauto.
+    
   (* Prove [id__p = id__p'] *)
   - rw_γp p id__p id__p'; assumption.
+
+  (* Prove [s_marking ∉ (events σ__pe)] *)
+  - erewrite elab_empty_events_for_comps; eauto with set.
 Qed.
 
 Lemma init_states_eq_time_counters :
