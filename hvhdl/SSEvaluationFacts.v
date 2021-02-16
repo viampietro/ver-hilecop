@@ -3,11 +3,14 @@
 Require Import common.NatMap.
 Require Import common.NatSet.
 
+Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SSEvaluation.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.ExpressionEvaluation.
+
+Open Scope abss_scope.
 
 Lemma vseq_inv_compstore :
   forall {Δ σ Λ flag stmt σ' Λ' id__c σ__c},
@@ -35,4 +38,7 @@ Lemma vseq_not_in_events_if_not_sig :
     ~DeclaredOf Δ id ->
     ~NatSet.In id (events σ').
 Admitted.
+
+
+     
 

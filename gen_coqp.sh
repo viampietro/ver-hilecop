@@ -2,7 +2,7 @@
 
 if [ -e _CoqProject ]; then
     echo "Saving old _CoqProject file to _CoqProject.copy"
-    mv _CoqProject _CoqProject.old
+    mv _CoqProject _CoqProject.copy
 fi
 
 echo "-R common/ hilecop.common

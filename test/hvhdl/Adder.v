@@ -58,7 +58,7 @@ Definition add_ps : cs := cs_ps add_ps_id {[ a, b ]} [] (s_add @<== (#a @|| #b))
 (** Process "publish" (synchronous) *)
 
 Definition publish_ps_id : ident := S add_ps_id.
-Definition publish_ps : cs := cs_ps publish_ps_id {[ clk, rst ]} [] (Falling (o @<== #s_add)).
+Definition publish_ps : cs := cs_ps publish_ps_id {[ clk ]} [] (Falling (o @<== #s_add)).
 
 (** ** Adder design *)
 Definition adder_id__e : ident := S publish_ps_id.

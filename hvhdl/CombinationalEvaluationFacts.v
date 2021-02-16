@@ -246,11 +246,11 @@ Proof.
     | [ H: ~List.In _ _ |- _ ] =>
       apply H; firstorder
     end.
-    eapply mapop_not_in_events_if_not_sig; eauto with set.
-    destruct 1; mapsto_discriminate.
-
+    eapply mapop_not_in_events_if_not_sig; eauto with set;
+      destruct 1; mapsto_discriminate.
+    
   (* CASE eventless component *)
-  - intros; eapply mapop_not_in_events_if_not_sig; eauto with set.
+  - intros; eapply mapop_not_in_events_if_not_sig; eauto with set;
     destruct 1; mapsto_discriminate.
 
   (* CASE || *)

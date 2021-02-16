@@ -316,3 +316,12 @@ Proof.
   eapply ebeh_input_of_comp; eauto.
 Qed.
 
+Lemma elab_validipm :
+  forall {D__s M__g d Δ σ__e},
+    edesign D__s M__g d Δ σ__e ->
+    forall {id__c id__e gm ipm opm Δ__c},
+      InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+      MapsTo id__c (Component Δ__c) Δ ->
+      exists formals, listipm Δ Δ__c σ__e [] ipm formals /\ checkformals Δ__c formals.
+Proof.
+Admitted.

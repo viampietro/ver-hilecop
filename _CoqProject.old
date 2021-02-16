@@ -54,6 +54,7 @@
 ./hvhdl/StaticExpressions.v
 ./hvhdl/TypeElaboration.v
 ./hvhdl/PortElaboration.v
+./hvhdl/PInitializationFacts.v
 ./hvhdl/PortMapEvaluation.v
 ./hvhdl/DesignElaboration.v
 ./hvhdl/HilecopDesignStore.v
@@ -75,6 +76,7 @@
 ./hvhdl/Stabilize.v
 ./hvhdl/WellDefinedDesignFacts.v
 ./hvhdl/PortElaborationFacts.v
+./hvhdl/PCombinationalEvaluationFacts.v
 ./hvhdl/DesignElaborationFacts.v
 ./hvhdl/WellDefinedDesignTactics.v
 ./hvhdl/DefaultValue.v
@@ -83,13 +85,15 @@
 ./hvhdl/ConstraintElaboration.v
 ./hvhdl/Transition.v
 ./hvhdl/SSEvaluation.v
+./hvhdl/EnvironmentTactics.v
 ./hvhdl/ArchitectureElaboration.v
 ./hvhdl/CombinationalEvaluation.v
 ./hvhdl/SSEvaluationFacts.v
 ./hvhdl/WellDefinedDesign.v
 ./hvhdl/PlaceElaborationFacts.v
-./hvhdl/PlaceEvaluationFacts.v
+./hvhdl/.#EnvironmentFacts.v
 ./hvhdl/Elaboration.v
+./hvhdl/PStabilizeFacts.v
 ./hvhdl/ExpressionEvaluation.v
 ./hvhdl/Petri.v
 ./sitpn/simpl/SitpnWellDefTime.v

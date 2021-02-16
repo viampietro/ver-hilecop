@@ -24,6 +24,9 @@ with arrofvalues : Type :=
 | Arr_one : value -> arrofvalues
 | Arr_cons : value -> arrofvalues -> arrofvalues.
 
+Scheme value_ind_mut := Induction for value Sort Prop
+  with arrofvalues_ind_mut := Induction for arrofvalues Sort Prop.
+
 (* Conversion from [arrofvalues] to [list value] *)
 
 Fixpoint aofv2list (aofv : arrofvalues) {struct aofv} : list (value) :=
@@ -158,25 +161,6 @@ with arris_of_type : arrofvalues -> nat -> type -> Prop :=
       arris_of_type aofv size t ->
       arris_of_type (Arr_cons v aofv) (S size) t.
 
-(** Specifies the equality relation between two values without
-    describing the error cases.
- *)
-
-Inductive VEq : value -> value -> Prop :=
-| VEq_bool : forall b b', b = b' -> VEq (Vbool b) (Vbool b')
-| VEq_nat  : forall n n', n = n' -> VEq (Vnat n) (Vnat n')
-| VEq_arr : forall a a', ArrOfVEq a a' -> VEq (Varr a) (Varr a')
-
-with ArrOfVEq : arrofvalues -> arrofvalues -> Prop :=
-
-| ArrOfVEq_one : forall v v', VEq v v' -> ArrOfVEq (Arr_one v) (Arr_one v')
-| ArrOfVEq_cons :
-    forall v v' aofv aofv',
-      VEq v v' ->
-      ArrOfVEq aofv aofv' ->
-      ArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv').
-
-
 (** Specifies the equality relation between two values,
     and the result of the equality evaluation;
     result can either be an error (i.e, [None]), or
@@ -226,6 +210,45 @@ with OArrOfVEq : arrofvalues -> arrofvalues -> option bool -> Prop :=
       OVEq v v' None ->
       OArrOfVEq aofv aofv' optb ->
       OArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv') None.
+
+Hint Constructors OVEq : hvhdl.
+Hint Constructors OArrOfVEq : hvhdl.
+
+Scheme OVEq_ind_mut := Induction for OVEq Sort Prop
+  with OArrOfVEq_ind_mut := Induction for OArrOfVEq Sort Prop.
+
+(** Wrapper around the [OVEq] relation *)
+
+Definition VEq x y := OVEq x y (Some true).
+
+Definition VEq_refl : forall x, VEq x x.
+Proof. unfold VEq.
+       apply (value_ind_mut
+                (fun x => OVEq x x (Some true))
+                (fun x => OArrOfVEq x x (Some true)));
+         intros; auto with hvhdl.
+Qed.
+
+Definition VEq_sym : forall x y, VEq x y -> VEq y x.
+Proof. unfold VEq; intros.       
+       apply (OVEq_ind_mut
+                (fun x y o _ => OVEq y x o)
+                (fun x y o _ => OArrOfVEq y x o));
+         auto with hvhdl.
+       intros; apply OVEq_Err; firstorder.
+       intros; eapply OArrOfVEqCons_Err; eauto.
+Defined.
+
+Definition VEq_trans :
+  forall x y z, VEq x y -> VEq y z -> VEq x z.
+Proof.
+Admitted.
+
+Add Parametric Relation : (value) (VEq)
+    reflexivity proved by VEq_refl
+    symmetry proved by VEq_sym
+    transitivity proved by VEq_trans
+      as VEq_rel.
 
 (** Implements the equality operator between two values.
     

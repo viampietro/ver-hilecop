@@ -107,7 +107,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       NatMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value ≠ current value *)
-      events' = NatSet.add id (events σ) ->                     (* E' = E ∪ {id} *)
+      events' = NatSet.add id (events σ__c) ->                     (* E' = E ∪ {id} *)
       
       (* S' = S(id) ← set_at(v, i, aofv) *)
       sigstore' = NatMap.add id (Varr (set_at newv idx aofv idx_in_bounds)) (sigstore σ__c) ->

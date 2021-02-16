@@ -120,11 +120,14 @@ Proof.
 
   (* Builds [Δ__p("s_marking") = Tnat 0 n] *)
   edestruct @elab_pcomp_Δ_s_marking as (n, MapsTo_smarking); eauto.
+
+  (* Builds proof that [ipm] is well-formed *)
+  edestruct @elab_validipm as (formals, (listipm_ipm, checkformals_ipm)); eauto.
   
   (* To prove [σ__p0("s_marking") = M0(p)] *)
   eapply init_s_marking_eq_nat; eauto.
-
-  (* 3 subgoals left. *)
+  
+  (* 4 subgoals left. *)
   
   (* Prove [NoDup compids] *)
   - eapply elab_nodup_compids; eauto.
