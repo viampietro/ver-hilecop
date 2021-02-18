@@ -54,7 +54,7 @@ Inductive vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     Only possible when outmode is true.
  *)
   
-| VEXprOut (id : ident) (t : type) (v : value) :
+| VExprOut (id : ident) (t : type) (v : value) :
 
     (* * Side conditions * *)
     MapsTo id (Output t) Δ ->   (* id ∈ Outs(Δ) and Δ(id) = t *)
@@ -80,7 +80,7 @@ Inductive vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 
 (** Evaluates an indexed out port identifier. *)
   
-| VEXprIdxOut (id : ident) (ei : expr):
+| VExprIdxOut (id : ident) (ei : expr):
     forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
            (idx_in_bounds : i - l < length aofv),
 
@@ -307,4 +307,10 @@ with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       vexpr Δ σ Λ outmode e v ->
       vagofexprs Δ σ Λ outmode agofe arrofv ->
       vagofexprs Δ σ Λ outmode (agofe_cons e agofe) (Arr_cons v arrofv).
+
+Hint Constructors vexpr : hvhdl.
+Hint Constructors vagofexprs : hvhdl.
+
+Scheme vexpr_ind_mut := Induction for vexpr Sort Prop
+  with vagofexprs_ind_mut := Induction for vagofexprs Sort Prop.
 

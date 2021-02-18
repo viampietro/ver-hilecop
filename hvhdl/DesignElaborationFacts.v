@@ -1,9 +1,11 @@
 (** * Facts about Design Elaboration Relations *)
 
 Require Import common.Coqlib.
+Require Import common.CoqTactics.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.InAndNoDup.
+Require Import common.NatMapTactics.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
@@ -17,56 +19,43 @@ Require Import hvhdl.ValidPortMap.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.ArchitectureElaborationFacts.
 Require Import hvhdl.PortElaborationFacts.
+Require Import hvhdl.ValidPortMapFacts.
 
 (** ** Facts about Behavior Elaboration *)
 
-Lemma ebeh_elab_idle_sigma :
-  forall D__s Δ σ beh Δ' σ' id v,
-    ebeh D__s Δ σ beh Δ' σ' ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ').
-Proof. induction 1; intros; auto. Defined.
-
-Lemma ebeh_idle_gens :
+Lemma ebeh_eq_gens :
   forall {D__s Δ σ behavior Δ' σ'},
     ebeh D__s Δ σ behavior Δ' σ' ->
     EqGens Δ Δ'.
 Proof.
   induction 1; (reflexivity || auto).
-  3 : { transitivity Δ'; eauto with hvhdl. }
-  all : unfold EqGens; intros id0 t0;
-    let tac id := (specialize (Nat.eq_dec id id0) as Hsum; inversion_clear Hsum as [Heq_id | Hneq_id]) in
-    (tac id__p || tac id__c).
-  2, 4:
-    split; intros Hmap;
-    [ let apply_add_2 sobj := ltac: (apply (add_2 sobj Hneq_id Hmap)) in
-      (apply_add_2 (Process Λ) || apply_add_2 (Component Δ__c))
-    | apply (add_3 Hneq_id Hmap)
-    ].
-  1, 2: 
-    split; intros Hmap; rewrite Heq_id in *;
-    [ elimtype False;
-      lazymatch goal with
-      | [ H: ~NatMap.In (elt:=SemanticalObject) _ _, _: MapsTo _ (Generic ?t1 ?v0) _ |- _ ] => 
-        apply H; exists (Generic t1 v0); assumption
-      end
-    |
-    let tac sobj :=
-        (lazymatch goal with
-         | [ _: MapsTo _ (Generic ?t1 ?v0) _ |- _ ] =>
-           rewrite (add_mapsto_iff Δ id0 id0 sobj (Generic t1 v0)) in Hmap
-         end;
-         firstorder;
-         lazymatch goal with
-         | [ Heq_semobj: _ = Generic _ _ |- _ ] =>
-           inversion Heq_semobj
-         end
-        )
-    in (tac (Process Λ) || tac (Component Δ__c))
-    ].
+  unfold EqGens; intros; try solve_mapsto_iff.
+  unfold EqGens; intros; try solve_mapsto_iff.
+  transitivity Δ'; eauto with hvhdl.
 Qed.
 
-Hint Resolve ebeh_idle_gens : hvhdl.
+Hint Resolve ebeh_eq_gens : hvhdl.
+
+Lemma ebeh_eq_sigs :
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    EqSigs Δ Δ'.
+Proof.
+  induction 1; (reflexivity || auto).
+  unfold EqSigs; intros; split_and; do 2 intro; try solve_mapsto_iff.
+  unfold EqSigs; intros; split_and; do 2 intro; try solve_mapsto_iff.
+  transitivity Δ'; eauto with hvhdl.
+Qed.
+
+Lemma ebeh_eq_sstore :
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    EqSStore σ σ'.
+Proof.
+  induction 1; try reflexivity.
+  unfold EqSStore; simpl; reflexivity.
+  transitivity σ'; auto.
+Qed.
 
 Lemma ebeh_inv_Δ :
   forall {D__s Δ σ behavior Δ' σ' id sobj},
@@ -78,10 +67,17 @@ Proof.
   match goal with
    | [ H: ~NatMap.In (elt:=_) ?id2 _ |- MapsTo ?id1 _ (add ?id2 _ _) ] =>
        destruct (Nat.eq_dec id2 id1) as [e | ne];
-       [elimtype False; apply H; exists sobj; rewrite e; assumption
-       | eapply add_2; eauto]
+         [elimtype False; apply H; exists sobj; rewrite e; assumption
+         | eapply add_2; eauto]
   end.
 Qed.
+
+Lemma ebeh_inv_sigstore :
+  forall D__s Δ σ beh Δ' σ' id v,
+    ebeh D__s Δ σ beh Δ' σ' ->
+    MapsTo id v (sigstore σ) ->
+    MapsTo id v (sigstore σ').
+Proof. induction 1; intros; auto. Defined.
 
 Lemma ebeh_inv_compstore :
   forall {D__s Δ σ behavior Δ' σ' id σ__c},
@@ -316,6 +312,47 @@ Proof.
   eapply ebeh_input_of_comp; eauto.
 Qed.
 
+Lemma ebeh_validipm :
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    forall {id__c id__e gm ipm opm Δ__c},
+      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+      MapsTo id__c (Component Δ__c) Δ' ->
+      exists formals, listipm Δ' Δ__c σ' [] ipm formals /\ checkformals Δ__c formals.
+Proof.
+  induction 1; try (solve [inversion 1]).
+
+  (* CASE comp *)
+  - inversion 1; subst; intros.
+    assert (e : Component Δ__c0 = Component Δ__c).
+    erewrite @MapsTo_add_eqv with (e := Component Δ__c0) (e' := Component Δ__c); eauto.
+    inject_left e.
+    match goal with
+    | [ H: validipm _ _ _ _ _ |- _ ] =>
+      unfold validipm in H; destruct H; exists formals; split; auto
+    end.
+    (* SUBCASE listpipm *)
+    erewrite @listipm_eq_iff_eq_sigs with (Δ2 := Δ) (σ2 := σ); eauto.
+    (* Prove EqGens, EqSigs and EqSStore *)
+    split; unfold EqGens; intros; try solve_mapsto_iff.
+    split; unfold EqIns; intros; try solve_mapsto_iff.
+    split; unfold EqOuts; intros; try solve_mapsto_iff.
+    unfold EqDecls; intros; try solve_mapsto_iff.
+    simpl; firstorder.
+
+  (* CASE || *)
+  - inversion 1; [intros | eapply IHebeh2; eauto].
+    edestruct @ebeh_compid_in_comps with (D__s := D__s) (behavior := cstmt); eauto.
+    edestruct IHebeh1 as (formals, (listipm1, checkformals1)); eauto.
+    assert (MapsTo id__c (Component x) Δ'') by (eapply ebeh_inv_Δ; eauto).
+    assert (e : Component Δ__c = Component x) by (eapply MapsTo_fun; eauto).
+    inject_left e.
+    exists formals; split; [|auto].
+    erewrite <- listipm_eq_iff_eq_sigs; eauto.    
+    split; [eapply ebeh_eq_gens; eauto | eapply ebeh_eq_sigs; eauto ].
+    eapply ebeh_eq_sstore; eauto.
+Qed.
+
 Lemma elab_validipm :
   forall {D__s M__g d Δ σ__e},
     edesign D__s M__g d Δ σ__e ->
@@ -324,4 +361,6 @@ Lemma elab_validipm :
       MapsTo id__c (Component Δ__c) Δ ->
       exists formals, listipm Δ Δ__c σ__e [] ipm formals /\ checkformals Δ__c formals.
 Proof.
-Admitted.
+  inversion 1.
+  eapply ebeh_validipm; eauto.
+Qed.

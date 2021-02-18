@@ -4,6 +4,7 @@
 
 Require Import Setoid.
 Require Import common.Coqlib.
+Require Import common.CoqTactics.
 Require Import common.ListPlus.
 Require Import common.GlobalTypes.
 
@@ -285,8 +286,236 @@ Add Parametric Relation : (ElDesign) (EqGens)
     transitivity proved by EqGens_trans
       as EqGens_rel.           
 
+(** Enable rewriting [MapsTo id (Generic t v) Δ1] into  
+    [MapsTo id (Generic t) Δ2] if [EqGens Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) (v : value) : (MapsTo id (Generic t v)) 
+    with signature (@EqGens ==> impl) as eqgens_mapsto_mor.
+Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
+
 Hint Resolve EqGens_refl : hvhdl.
 Hint Resolve EqGens_trans : hvhdl.
 Hint Resolve EqGens_sym : hvhdl.
 
+(** *** Input Port Set Equivalence *)
+
+Definition EqIns (Δ Δ' : ElDesign) :=
+  forall id t,
+    MapsTo id (Input t) Δ <-> MapsTo id (Input t) Δ'.
+
+Definition EqIns_refl : forall (Δ : ElDesign), EqIns Δ Δ. firstorder. Defined.
+Definition EqIns_trans : forall (Δ Δ' Δ'' : ElDesign), EqIns Δ Δ' -> EqIns Δ' Δ'' -> EqIns Δ Δ''.
+  unfold EqIns; intros; transitivity (MapsTo id (Input t0) Δ'); auto.
+Defined.
+Definition EqIns_sym : forall (Δ Δ' : ElDesign), EqIns Δ Δ' -> EqIns Δ' Δ.
+  unfold EqIns; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (ElDesign) (EqIns)
+    reflexivity proved by EqIns_refl
+    symmetry proved by EqIns_sym
+    transitivity proved by EqIns_trans
+      as EqIns_rel.
+
+(** Rewrite [MapsTo id (Input t) Δ1] into  
+    [MapsTo id (Input t) Δ2] if [EqIns Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Input t)) 
+    with signature (@EqIns ==> impl) as eqins_mapsto_in_mor.
+Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
+
+(** *** Output Port Set Equivalence *)
+
+Definition EqOuts (Δ Δ' : ElDesign) :=
+  forall id t,
+    MapsTo id (Output t) Δ <-> MapsTo id (Output t) Δ'.
+
+Definition EqOuts_refl : forall (Δ : ElDesign), EqOuts Δ Δ. firstorder. Defined.
+Definition EqOuts_trans : forall (Δ Δ' Δ'' : ElDesign), EqOuts Δ Δ' -> EqOuts Δ' Δ'' -> EqOuts Δ Δ''.
+  unfold EqOuts; intros; transitivity (MapsTo id (Output t0) Δ'); auto.
+Defined.
+Definition EqOuts_sym : forall (Δ Δ' : ElDesign), EqOuts Δ Δ' -> EqOuts Δ' Δ.
+  unfold EqOuts; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (ElDesign) (EqOuts)
+    reflexivity proved by EqOuts_refl
+    symmetry proved by EqOuts_sym
+    transitivity proved by EqOuts_trans
+      as EqOuts_rel.
+
+(** Rewrite [MapsTo id (Output t) Δ1] into  
+    [MapsTo id (Output t) Δ2] if [EqOuts Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Output t)) 
+    with signature (@EqOuts ==> impl) as eqouts_mapsto_out_mor.
+Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
+
+(** *** Declared Signal Set Equivalence *)
+
+Definition EqDecls (Δ Δ' : ElDesign) :=
+  forall id t,
+    MapsTo id (Declared t) Δ <-> MapsTo id (Declared t) Δ'.
+
+Definition EqDecls_refl : forall (Δ : ElDesign), EqDecls Δ Δ. firstorder. Defined.
+Definition EqDecls_trans : forall (Δ Δ' Δ'' : ElDesign), EqDecls Δ Δ' -> EqDecls Δ' Δ'' -> EqDecls Δ Δ''.
+  unfold EqDecls; intros; transitivity (MapsTo id (Declared t0) Δ'); auto.
+Defined.
+Definition EqDecls_sym : forall (Δ Δ' : ElDesign), EqDecls Δ Δ' -> EqDecls Δ' Δ.
+  unfold EqDecls; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (ElDesign) (EqDecls)
+    reflexivity proved by EqDecls_refl
+    symmetry proved by EqDecls_sym
+    transitivity proved by EqDecls_trans
+      as EqDecls_rel.
+
+(** Enable rewriting [MapsTo id (Declared t) Δ1] into  
+    [MapsTo id (Declared t) Δ2] if [EqDecls Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Declared t)) 
+    with signature (@EqDecls ==> impl) as eqdecls_mapsto_decl_mor.
+Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
+
+(** *** Signal (Input, Output and Declared) Set Equivalence *)
+
+Definition EqSigs (Δ Δ' : ElDesign) :=
+  EqIns Δ Δ' /\ EqOuts Δ Δ' /\ EqDecls Δ Δ'.
+
+Definition EqSigs_refl : forall (Δ : ElDesign), EqSigs Δ Δ. firstorder. Defined.
+Definition EqSigs_trans : forall (Δ Δ' Δ'' : ElDesign), EqSigs Δ Δ' -> EqSigs Δ' Δ'' -> EqSigs Δ Δ''.
+  unfold EqSigs; intros; decompose [and] H; decompose [and] H0.
+  split_and; transitivity Δ'; auto.
+Defined.
+Definition EqSigs_sym : forall (Δ Δ' : ElDesign), EqSigs Δ Δ' -> EqSigs Δ' Δ.
+  unfold EqSigs; intros; decompose [and] H.
+  split_and; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (ElDesign) (EqSigs)
+    reflexivity proved by EqSigs_refl
+    symmetry proved by EqSigs_sym
+    transitivity proved by EqSigs_trans
+      as EqSigs_rel.
+
+(** Enable rewriting [MapsTo id (Declared t) Δ1] into  
+    [MapsTo id (Declared t) Δ2] if [EqSigs Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Declared t)) 
+    with signature (@EqSigs ==> impl) as eqsigs_mapsto_decl_mor.
+Proof. intros x y H; do 2 (apply proj2 in H); rewrite H; unfold impl; auto. Qed.
+
+(** Enable rewriting [MapsTo id (Output t) Δ1] into  
+    [MapsTo id (Output t) Δ2] if [EqSigs Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Output t)) 
+    with signature (@EqSigs ==> impl) as eqsigs_mapsto_out_mor.
+Proof. intros x y H; apply proj2, proj1 in H. rewrite H; unfold impl; auto. Qed.
+
+(** Enable rewriting [MapsTo id (Input t) Δ1] into  
+    [MapsTo id (Input t) Δ2] if [EqSigs Δ1 Δ2]. *)
+
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Input t)) 
+    with signature (@EqSigs ==> impl) as eqsigs_mapsto_in_mor.
+Proof. intros x y H; apply proj1 in H; rewrite H; unfold impl; auto. Qed.
+
+(** *** Process and Component Instance Set Equivalence *)
+
+Definition EqPs (Δ Δ' : ElDesign) :=
+  forall id Λ,
+    MapsTo id (Process Λ) Δ <-> MapsTo id (Process Λ) Δ'.
+
+Definition EqComps (Δ Δ' : ElDesign) :=
+  forall id Δ__c,
+    MapsTo id (Component Δ__c) Δ <-> MapsTo id (Component Δ__c) Δ'.
+
+(** ** Equivalence Relations between Design States *)
+
+(** *** Signal Store Equivalence *)
+
+Definition EqSStore (σ σ' : DState) :=
+  forall id v,
+    MapsTo id v (sigstore σ) <-> MapsTo id v (sigstore σ').
+
+Definition EqSStore_refl : forall (σ : DState), EqSStore σ σ. firstorder. Defined.
+Definition EqSStore_trans : forall (σ σ' σ'' : DState), EqSStore σ σ' -> EqSStore σ' σ'' -> EqSStore σ σ''.
+  unfold EqSStore; intros; transitivity (MapsTo id v (sigstore σ')); auto.
+Defined.
+Definition EqSStore_sym : forall (σ σ' : DState), EqSStore σ σ' -> EqSStore σ' σ.
+  unfold EqSStore; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (DState) (EqSStore)
+    reflexivity proved by EqSStore_refl
+    symmetry proved by EqSStore_sym
+    transitivity proved by EqSStore_trans
+      as EqSStore_rel.
+
+(** Enable rewriting [MapsTo id v (sigstore σ1)] into  
+    [MapsTo id v (sigstore σ2)] if [EqSStore σ1 σ2]. *)
+
+Add Parametric Morphism (id : ident) (v : value) : (fun σ => MapsTo id v (sigstore σ)) 
+    with signature (@EqSStore ==> impl) as eqsstore_mapsto_mor.
+Proof. intros x y H; unfold EqSStore in H; erewrite H; unfold impl; eauto. Qed.
+
+(** *** Component Store Equivalence *)
+
+Definition EqCStore (σ σ' : DState) :=
+  forall id σ__c,
+    MapsTo id σ__c (compstore σ) <-> MapsTo id σ__c (compstore σ').
+
+Definition EqCStore_refl : forall (σ : DState), EqCStore σ σ. firstorder. Defined.
+Definition EqCStore_trans : forall (σ σ' σ'' : DState), EqCStore σ σ' -> EqCStore σ' σ'' -> EqCStore σ σ''.
+  unfold EqCStore; intros; transitivity (MapsTo id σ__c (compstore σ')); auto.
+Defined.
+Definition EqCStore_sym : forall (σ σ' : DState), EqCStore σ σ' -> EqCStore σ' σ.
+  unfold EqCStore; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (DState) (EqCStore)
+    reflexivity proved by EqCStore_refl
+    symmetry proved by EqCStore_sym
+    transitivity proved by EqCStore_trans
+      as EqCStore_rel.
+
+(** *** Events Set Equivalence *)
+
+Definition EqEvs (σ σ' : DState) :=
+  NatSet.Equal (events σ) (events σ').
+
+Definition EqEvs_refl : forall (σ : DState), EqEvs σ σ. firstorder. Defined.
+Definition EqEvs_trans : forall (σ σ' σ'' : DState), EqEvs σ σ' -> EqEvs σ' σ'' -> EqEvs σ σ''.
+  unfold EqEvs; intros; transitivity (events σ'); auto.
+Defined.
+Definition EqEvs_sym : forall (σ σ' : DState), EqEvs σ σ' -> EqEvs σ' σ.
+  unfold EqEvs; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (DState) (EqEvs)
+    reflexivity proved by EqEvs_refl
+    symmetry proved by EqEvs_sym
+    transitivity proved by EqEvs_trans
+      as EqEvs_rel.
+
+(** *** Design State Equivalence *)
+
+Definition EqDState (σ σ' : DState) :=
+  EqSStore σ σ' /\ EqCStore σ σ' /\ EqEvs σ σ'.
+
+Definition EqDState_refl : forall (σ : DState), EqDState σ σ. firstorder. Defined.
+Definition EqDState_trans : forall (σ σ' σ'' : DState), EqDState σ σ' -> EqDState σ' σ'' -> EqDState σ σ''.
+  unfold EqDState; intros; decompose [and] H; decompose [and] H0.
+  split_and; transitivity σ'; auto.
+Defined.
+Definition EqDState_sym : forall (σ σ' : DState), EqDState σ σ' -> EqDState σ' σ.
+  unfold EqDState; intros; decompose [and] H.
+  split_and; symmetry; auto.
+Defined.
+
+Add Parametric Relation : (DState) (EqDState)
+    reflexivity proved by EqDState_refl
+    symmetry proved by EqDState_sym
+    transitivity proved by EqDState_trans
+      as EqDState_rel.
 

@@ -11,6 +11,9 @@ Require Import hvhdl.PortMapEvaluation.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.ValidPortMap.
+Require Import hvhdl.SemanticalDomains.
+
+Require Import hvhdl.EnvironmentFacts.
 
 (** ** Facts about Input Port Map Evaluation *)
 
@@ -73,21 +76,17 @@ Section IPMap.
     intros; apply IHmapip; auto.
     eapply vassocip_not_in_events_if_not_input; eauto.
   Qed.
-
+  
   Lemma vassocip_eval_simpl_associp :
     forall {Δ Δ__c σ σ__c σ__c'} {id : ident} {e},
       vassocip Δ Δ__c σ σ__c (associp_ id e) σ__c' ->
       exists v, vexpr Δ σ EmptyLEnv false e v /\
                 MapsTo id v (sigstore σ__c').
-  Admitted.
-
-  Lemma listipm_unique_simpl_associp :
-    forall {Δ Δ__c σ ipm} {id__i : ident} {formals formals'},
-      listipm Δ Δ__c σ formals ipm formals' ->
-      List.In (id__i, None) formals ->
-      (~(exists e, List.In (associp_ id__i e) ipm) /\
-       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm)).
-  Admitted.
+  Proof. inversion 1.
+         subst; simpl; exists newv; auto with mapsto.
+         subst; simpl; exists currv; split; [ | auto].
+         erewrite <- OVEq_eq_1; eauto.
+  Qed.
 
   Lemma mapip_inv_if_not_assoc :
     forall {Δ Δ__c σ σ__c ipm σ__c'} {id__i : ident} {v},
@@ -96,6 +95,14 @@ Section IPMap.
       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm) ->
       MapsTo id__i v (sigstore σ__c) ->
       MapsTo id__i v (sigstore σ__c').
+  Admitted.
+  
+  Lemma listipm_unique_simpl_associp :
+    forall {Δ Δ__c σ ipm} {id__i : ident} {formals formals'},
+      listipm Δ Δ__c σ formals ipm formals' ->
+      List.In (id__i, None) formals ->
+      (~(exists e, List.In (associp_ id__i e) ipm) /\
+       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm)).
   Admitted.
   
   Lemma mapip_eval_simpl_associp :
