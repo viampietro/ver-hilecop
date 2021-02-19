@@ -8,6 +8,7 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.StaticExpressions.
+Require Import hvhdl.HVhdlTypes.
 
 Require Import hvhdl.ExpressionEvaluationFacts.
 Require Import hvhdl.StaticExpressionsFacts.
@@ -27,7 +28,7 @@ Section ListIPM.
     1,3: eapply EAssocipSimple; eauto;
       erewrite vexpr_eq_iff_eq_sigs; eauto;
         try ((split; symmetry; firstorder) || (symmetry; eauto)).
-    all: eapply EAssocipPartial with (t := t); eauto;
+    all: eapply EAssocipPartial with (t := t0); eauto;
       [ erewrite is_gstatic_expr_eq_iff_eq_gens; eauto;
         try ((symmetry; firstorder) || firstorder)
       | erewrite vexpr_eq_iff_eq_sigs; eauto;
@@ -49,7 +50,58 @@ Section ListIPM.
         erewrite eassocip_eq_iff_eq_sigs; eauto;
           [split; symmetry; firstorder | symmetry; auto].
   Qed.
+
+  Lemma eassocip_unique_simpl_associp :
+    forall {Δ Δ__c σ formals asip formals'},
+      eassocip Δ Δ__c σ formals asip formals' ->
+      forall {id__i : ident},
+        List.In (id__i, None) formals ->
+        (~(exists e, (associp_ id__i e) = asip) /\
+         ~(exists e e__i, (associp_ (n_xid id__i e__i) e) = asip)).
+  Proof.
+    inversion 1; subst; intros id__i In_formals.
+    rename H2 into nex_1.
+    destruct (Nat.eq_dec id__i id) as [eq1 | neq1].
+    subst; exfalso; apply nex_1; exists None; assumption.
+    split.
+    destruct 1 as (e0, e1); inject_left e1; contradiction.
+    destruct 1 as (e0, (e__i, e1)); inversion e1. 
+    destruct (Nat.eq_dec id__i id) as [eq1 | neq1].
+    subst; contradiction.
+    split.
+    destruct 1 as (e0, e1); inversion e1.
+    destruct 1 as (e0, (e__i, e1)); inject_left e1; contradiction.
+  Qed.
+
+  Lemma eassocip_inv_formals :
+    forall {Δ Δ__c σ formals asip formals'},
+      eassocip Δ Δ__c σ formals asip formals' ->
+      forall {f : ident * option nat},
+        List.In f formals ->
+        List.In f formals'.
+  Proof. inversion 1; auto with datatypes. Qed.
   
+  Lemma listipm_unique_simpl_associp :
+    forall {Δ Δ__c σ ipm formals formals'},
+      listipm Δ Δ__c σ formals ipm formals' ->
+      forall {id__i : ident},
+      List.In (id__i, None) formals ->
+      (~(exists e, List.In (associp_ id__i e) ipm) /\
+       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm)).
+  Proof.
+    induction 1; split.
+    destruct 1 as (e, In_nil); inversion In_nil.
+    destruct 1 as (e, (e__i, In_nil)); inversion In_nil.
+    destruct 1 as (e, [eq1 | In_lofasips]).
+    edestruct @eassocip_unique_simpl_associp with (Δ := Δ) as (nex_1, nex_2); eauto.
+    edestruct @IHlistipm as (nex_1, nex_2); eauto.
+    eapply eassocip_inv_formals; eauto.
+    destruct 1 as (e, (e__i, [eq1 | In_lofasips])).
+    edestruct @eassocip_unique_simpl_associp with (Δ := Δ) as (nex_1, nex_2); eauto.
+    edestruct @IHlistipm as (nex_1, nex_2); eauto.
+    eapply eassocip_inv_formals; eauto.
+  Qed.
+
 End ListIPM.
 
 

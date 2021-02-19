@@ -15,11 +15,15 @@ Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.PortMapEvaluation.
+Require Import hvhdl.SSEvaluation.
+
 Require Import hvhdl.StabilizeFacts.
 Require Import hvhdl.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluationFacts.
 Require Import hvhdl.EnvironmentFacts.
 Require Import hvhdl.WellDefinedDesignFacts.
+
+Require Import hvhdl.EnvironmentTactics.
 
 (** ** Facts about [vruninit] *)
 
@@ -54,11 +58,35 @@ Section VRunInit.
       unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
   Qed.
 
+  Lemma vseq_eq_state_if_no_events :
+    forall {Δ σ Λ flag stmt σ' Λ'},
+      vseq Δ σ Λ flag stmt σ' Λ' ->
+      Equal (events σ') {[]} ->
+      σ = σ'.
+  Admitted.
+
+  Lemma mapop_eq_state_if_no_events :
+    forall {Δ Δ__c σ σ__c opmap σ'},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      Equal (events σ') {[]} ->
+      σ = σ'.
+  Admitted.
+  
   Lemma vruninit_eq_state_if_no_events :
     forall {D__s Δ σ cstmt σ'},
       vruninit D__s Δ σ cstmt σ' ->
       Equal (events σ') {[]} ->
       σ = σ'.
+  Proof.
+    induction 1; auto.
+    (* CASE process *)
+    eapply vseq_eq_state_if_no_events; eauto.
+    (* CASE eventful component *)
+    simpl; intros; exfalso; eapply add_empty_false; eauto.
+    (* CASE eventless component *)
+    eapply mapop_eq_state_if_no_events; eauto.
+    (* CASE || *)
+    rename H2 into IMDS; erw_IMDS_events_m IMDS; intros Equal_U.
   Admitted.
 
   Lemma vruninit_inv_cstate :

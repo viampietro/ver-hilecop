@@ -1,5 +1,6 @@
 (** * Facts about Port Map Evaluation *)
 
+Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.Coqlib.
 Require Import common.NatSet.
@@ -14,6 +15,7 @@ Require Import hvhdl.ValidPortMap.
 Require Import hvhdl.SemanticalDomains.
 
 Require Import hvhdl.EnvironmentFacts.
+Require Import hvhdl.ValidPortMapFacts.
 
 (** ** Facts about Input Port Map Evaluation *)
 
@@ -88,22 +90,48 @@ Section IPMap.
          erewrite <- OVEq_eq_1; eauto.
   Qed.
 
+  Lemma vassocip_inv_if_not_assoc :
+    forall {Δ Δ__c σ σ__c asip σ__c'},
+      vassocip Δ Δ__c σ σ__c asip σ__c' ->
+      forall {id__i : ident} {v},
+        ~(exists e, (associp_ id__i e) = asip) ->
+        ~(exists e e__i, (associp_ (n_xid id__i e__i) e) = asip) ->
+        MapsTo id__i v (sigstore σ__c) ->
+        MapsTo id__i v (sigstore σ__c').
+  Proof.
+    inversion 1; subst; simpl; auto.
+    all : intros id__i v nex_1 nex_2; intros.
+    destruct (Nat.eq_dec id__i id) as [eq1 | neq1].
+    subst; elimtype False; apply nex_1; exists e; reflexivity.
+    eauto with mapsto.
+    destruct (Nat.eq_dec id__i id) as [eq1 | neq1].
+    subst; elimtype False; apply nex_2; exists e, ei; reflexivity.
+    eauto with mapsto.
+  Qed.
+  
   Lemma mapip_inv_if_not_assoc :
-    forall {Δ Δ__c σ σ__c ipm σ__c'} {id__i : ident} {v},
+    forall {Δ Δ__c σ σ__c ipm σ__c'},
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      forall {id__i : ident} {v},
       ~(exists e, List.In (associp_ id__i e) ipm) ->
       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm) ->
       MapsTo id__i v (sigstore σ__c) ->
       MapsTo id__i v (sigstore σ__c').
-  Admitted.
+  Proof.
+    induction 1; auto.
+    intros id__i v nex_1 nex_2; intros.
+    apply IHmapip.
+    destruct 1 as (e, In_lofasips).
+    apply nex_1; exists e; auto.
+    destruct 1 as (e, (e__i, In_lofasips)).
+    apply nex_2; exists e, e__i; auto.
+    eapply vassocip_inv_if_not_assoc; eauto.
+    destruct 1 as (e, e1).
+    apply nex_1; exists e; rewrite e1; auto with datatypes.
+    destruct 1 as (e, (e__i, e1)).
+    apply nex_2; exists e, e__i; rewrite e1; auto with datatypes.
+  Qed.
   
-  Lemma listipm_unique_simpl_associp :
-    forall {Δ Δ__c σ ipm} {id__i : ident} {formals formals'},
-      listipm Δ Δ__c σ formals ipm formals' ->
-      List.In (id__i, None) formals ->
-      (~(exists e, List.In (associp_ id__i e) ipm) /\
-       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm)).
-  Admitted.
   
   Lemma mapip_eval_simpl_associp :
     forall {Δ Δ__c σ σ__c ipm σ__c'} ,
@@ -129,13 +157,49 @@ Section IPMap.
     inversion 1; subst.
     intros; eapply IHmapip; eauto.
   Qed.
-
+  
+  Lemma vassocip_no_events :
+    forall {Δ Δ__c σ σ__c asip σ__c'},
+      vassocip Δ Δ__c σ σ__c asip σ__c' ->
+      Equal (events σ__c') {[]} ->
+      Equal (events σ__c) {[]}.
+  Proof.
+    inversion 1; subst; simpl; auto;
+    intros; exfalso; eapply add_empty_false; eauto.
+  Qed.
+  
+  Lemma mapip_no_events :
+    forall {Δ Δ__c σ σ__c ipm σ__c'},
+      mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      Equal (events σ__c') {[]} ->
+      Equal (events σ__c) {[]}.
+  Proof.
+    induction 1; auto.
+    intros; eapply vassocip_no_events; eauto.
+  Qed.
+  
+  Lemma vassocip_eq_state_if_no_events :
+    forall {Δ Δ__c σ σ__c asip σ__c'},
+      vassocip Δ Δ__c σ σ__c asip σ__c' ->
+      Equal (events σ__c') {[]} ->
+      σ__c = σ__c'.
+  Proof.
+    inversion 1; auto; subst; simpl;
+      intros; exfalso; eapply add_empty_false; eauto.
+  Qed.
+  
   Lemma mapip_eq_state_if_no_events :
     forall {Δ Δ__c σ σ__c ipm σ__c'},
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
       Equal (events σ__c') {[]} ->
       σ__c = σ__c'.
-  Admitted.
+  Proof.
+    induction 1; auto.
+    intros Equal_emp.
+    transitivity σ__c'; auto.
+    eapply vassocip_eq_state_if_no_events; eauto.
+    eapply mapip_no_events; eauto.
+  Qed.
   
 End IPMap.
 

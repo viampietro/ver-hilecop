@@ -78,6 +78,14 @@ Proof.
   end.
 Qed.
 
+Lemma add_empty_false :
+  forall x s, NatSet.Equal (x U+ s) {[]} -> False.
+Proof. unfold Equal.
+       intros x s In_iff.
+       rewrite <- (NatSetFacts.empty_iff x).
+       rewrite <- In_iff; auto with set.
+Qed.
+
 Export NatSet NatSetFacts NatSetProps.
 
 
