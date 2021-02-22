@@ -164,16 +164,17 @@ Section PVRunInit.
       vruninit hdstore Δ σ behavior σ' ->
       forall id__p gm ipm opm σ__p σ__p' n Δ__p compids m formals,
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+        AreCsCompIds behavior compids -> 
+        List.NoDup compids ->
         List.In (associp_ ($initial_marking) (e_nat n)) ipm ->
+        Equal (events σ) {[]} ->
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo id__p σ__p (compstore σ) ->
+        NatMap.MapsTo id__p σ__p' (compstore σ') ->
+        listipm Δ Δ__p σ [] ipm formals ->
         InputOf Δ__p initial_marking ->
         MapsTo s_marking (Declared (Tnat 0 m)) Δ__p ->
         ~NatSet.In s_marking (events σ__p) ->
-        listipm Δ Δ__p σ [] ipm formals ->
-        AreCsCompIds behavior compids -> 
-        List.NoDup compids ->
-        NatMap.MapsTo id__p σ__p' (compstore σ') ->
         NatMap.MapsTo Place.s_marking (Vnat n) (sigstore σ__p').
   Proof.
     induction 1; try (solve [inversion 1]).
@@ -198,7 +199,8 @@ Section PVRunInit.
         [ | eapply mapop_inv_compstore; eauto].
       (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
       erewrite mapip_eq_state_if_no_events; eauto;
-        erewrite vruninit_eq_state_if_no_events; eauto.
+      [ pattern σ__c'; erewrite vruninit_eq_state_if_no_events; eauto
+      | erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto ].
       (* With no events, s_marking ⇐ initial_marking happened,
          but both already had the same value. *)
       assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
@@ -223,29 +225,25 @@ Section PVRunInit.
         erewrite AreCsCompIds_determ; eauto.
         eapply AreCsCompIds_app; eauto.
         
-        (* 2 subcases: [id__p ∈ (events σ')] or [id__p ∉ (events σ')] *)
+        (* [σ'(id__p) = σ__p'] *)
         destruct (In_dec id__p (events σ')).
-
+        
+        (* 2 subcases: [id__p ∈ (events σ')] or [id__p ∉ (events σ')] *)
+        
         (* [id__p ∈ (events σ')] *)
-        -- decompose_IMDS;
-             match goal with
-             | [H: _ -> _ -> NatSet.In _ (events σ') -> _ |- _] =>
-               erewrite H; eauto
-             end.
+        -- rename H2 into IMDS; erw_IMDS_cstore_1 IMDS; eauto.
 
         (* [id__p ∉ (events σ')] *)
         -- eapply vruninit_inv_cstate; eauto.
-           decompose_IMDS; match goal with
-                           | [H: _ -> _ -> ~NatSet.In _ _ -> _ |- _] =>
-                             erewrite H; eauto; eapply nIn_nIn_Union; eauto
-                           end.           
+           rename H2 into IMDS; erw_IMDS_cstore_m IMDS; eauto.
+           eapply not_in_union; eauto.
 
            (* Prove [id__p ∉ (events σ'')] *)
            eapply vruninit_compid_not_in_events; eauto.
            apply nodup_app_not_in with (l := compids1).
            { erewrite AreCsCompIds_determ; eauto; apply AreCsCompIds_app; auto. }
            { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
-
+           
       (* SUBCASE [comp ∈ cstmt'] *)
       + intros; eapply IHvruninit2; eauto; clear IHvruninit1 IHvruninit2.
 
@@ -254,22 +252,17 @@ Section PVRunInit.
         erewrite AreCsCompIds_determ; eauto.
         eapply AreCsCompIds_app; eauto.
         
-        (* 2 subcases: [id__p ∈ (events σ'')] or [id__p ∉ (events σ'')] *)
+        (* [σ''(id__p) = σ__p'] *)
         destruct (In_dec id__p (events σ'')).
-
+        
+        (* 2 subcases: [id__p ∈ (events σ'')] or [id__p ∉ (events σ'')] *)
         (* [id__p ∈ (events σ'')] *)
-        -- decompose_IMDS;
-             match goal with
-             | [H: _ -> _ -> NatSet.In _ (events σ'') -> _ |- _] =>
-               erewrite H; eauto
-             end.
+        -- rename H2 into IMDS; erw_IMDS_cstore_2 IMDS; eauto.
 
         (* [id__p ∉ (events σ'')] *)
         -- eapply vruninit_inv_cstate; eauto.
-           decompose_IMDS; match goal with
-                           | [H: _ -> _ -> ~NatSet.In _ _ -> _ |- _] =>
-                             erewrite H; eauto; eapply nIn_nIn_Union; eauto
-                           end.           
+           rename H2 into IMDS; erw_IMDS_cstore_m IMDS; eauto.
+           eapply not_in_union; eauto.
 
            (* Prove [id__p ∉ (events σ')] *)
            eapply vruninit_compid_not_in_events; eauto.
@@ -291,6 +284,7 @@ Section PInit.
       Initialization.init hdstore Δ σ behavior σ0 ->
       forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids mm formals,
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+        Equal (events σ) {[]} ->
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo id__p σ__p (compstore σ) ->
         AreCsCompIds behavior compids ->

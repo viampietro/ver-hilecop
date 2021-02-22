@@ -268,5 +268,27 @@ Section OPMap.
     intros; apply IHmapop; auto.
     eapply vassocop_not_in_events_if_not_sig; eauto.
   Qed.
+
+  Lemma vassocop_eq_state_if_no_events :
+    forall {Δ Δ__c σ σ__c asop σ'},
+      vassocop Δ Δ__c σ σ__c asop σ' ->
+      Equal (events σ') {[]} ->
+      σ = σ'.
+  Proof.
+    induction 1; try reflexivity; subst; simpl;
+      intros; contrad_add_empty.
+  Qed.
+    
+  Lemma mapop_eq_state_if_no_events :
+    forall {Δ Δ__c σ σ__c opmap σ'},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      Equal (events σ') {[]} ->
+      σ = σ'.
+  Proof.
+    induction 1; auto.
+    transitivity σ'; auto.
+    eapply vassocop_eq_state_if_no_events; eauto.
+    rewrite IHmapop; auto.
+  Qed.
   
 End OPMap.

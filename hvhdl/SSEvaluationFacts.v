@@ -1,5 +1,6 @@
 (** * Facts about Evaluation of Sequantial Statements *)
 
+Require Import common.Coqlib.
 Require Import common.NatMap.
 Require Import common.NatSet.
 
@@ -37,8 +38,28 @@ Lemma vseq_not_in_events_if_not_sig :
     ~OutputOf Δ id  ->
     ~DeclaredOf Δ id ->
     ~NatSet.In id (events σ').
-Admitted.
-
-
+Proof.
+  induction 1; auto; subst; simpl; intros.
+  all :
+    destruct (Nat.eq_dec id id0) as [eq | neq]; [
+    subst;
+    match goal with
+    | [ Hor: _ _ (_ ?t) _ \/ _, Hndecl: ~DeclaredOf _ _, Hnout: ~OutputOf _ _ |- _ ] =>
+      inversion Hor; [ exfalso; apply Hndecl; exists t; auto |
+                       exfalso; apply Hnout; exists t; auto ]
+    end
+  |
+  rewrite add_spec; destruct 1; [contradiction | auto]
+  ].
+Qed.
      
-
+Lemma vseq_eq_state_if_no_events :
+  forall {Δ σ Λ flag stmt σ' Λ'},
+    vseq Δ σ Λ flag stmt σ' Λ' ->
+    Equal (events σ') {[]} ->
+    σ = σ'.
+Proof.
+  induction 1; auto; subst; simpl; intros.
+  3, 4: transitivity σ'; [rewrite IHvseq1; auto; rewrite IHvseq2; auto | rewrite IHvseq2; auto].
+  1, 2: contrad_add_empty.
+Qed.

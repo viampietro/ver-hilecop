@@ -27,7 +27,7 @@ Proof.
   destruct (NatSetFacts.union_1 In_u); [apply nIn_s; assumption | apply nIn_s'; assumption ].
 Qed.
 
-Lemma empty_union_3 :
+Lemma union_empty :
   forall {s s' : NatSet.t},
     Equal (s U s') empty -> Empty s /\ Empty s'.
 Proof.
@@ -40,6 +40,24 @@ Proof.
       eapply NatSetFacts.union_3 in In_empty;
       erewrite H in In_empty;
       erewrite <- NatSetFacts.empty_iff; eauto ].
+Qed.
+
+Lemma union_empty_l :
+  forall {s s' : NatSet.t},
+    Equal (s U s') empty -> Equal s empty.
+Proof.
+  intros.
+  eapply NatSetProps.empty_is_empty_1.
+  eapply (union_empty H).
+Qed.
+
+Lemma union_empty_r :
+  forall {s s' : NatSet.t},
+    Equal (s U s') empty -> Equal s' empty.
+Proof.
+  intros.
+  eapply NatSetProps.empty_is_empty_1.
+  eapply (union_empty H).
 Qed.
 
 Lemma not_in_union_2 :
@@ -86,6 +104,19 @@ Proof. unfold Equal.
        rewrite <- In_iff; auto with set.
 Qed.
 
-Export NatSet NatSetFacts NatSetProps.
+(** ** Tactics for NatSet *)
 
+Ltac contrad_add_empty :=
+  match goal with
+  | [ H: NatSet.Equal (_ U+ _) {[]} |- _ ] =>
+    exfalso; eapply add_empty_false; eauto
+  end.
+
+Ltac contrad_not_in_add :=
+  match goal with
+  | [ H: ~NatSet.In ?x (?x U+ _) |- _ ] =>
+    exfalso; apply H; auto with set
+  end.
+  
+Export NatSet NatSetFacts NatSetProps.
 

@@ -1,7 +1,9 @@
 (** * Facts about Initialization *)
 
 Require Import common.Coqlib.
+Require Import common.CoqTactics.
 Require Import common.NatMap.
+Require Import common.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
@@ -58,36 +60,34 @@ Section VRunInit.
       unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
   Qed.
 
-  Lemma vseq_eq_state_if_no_events :
-    forall {Δ σ Λ flag stmt σ' Λ'},
-      vseq Δ σ Λ flag stmt σ' Λ' ->
-      Equal (events σ') {[]} ->
-      σ = σ'.
-  Admitted.
-
-  Lemma mapop_eq_state_if_no_events :
-    forall {Δ Δ__c σ σ__c opmap σ'},
-      mapop Δ Δ__c σ σ__c opmap σ' ->
-      Equal (events σ') {[]} ->
-      σ = σ'.
-  Admitted.
-  
   Lemma vruninit_eq_state_if_no_events :
     forall {D__s Δ σ cstmt σ'},
       vruninit D__s Δ σ cstmt σ' ->
       Equal (events σ') {[]} ->
-      σ = σ'.
+      EqDState σ σ'.
   Proof.
-    induction 1; auto.
+    induction 1; try reflexivity.
     (* CASE process *)
-    eapply vseq_eq_state_if_no_events; eauto.
+    intro; erewrite vseq_eq_state_if_no_events; eauto; reflexivity.
     (* CASE eventful component *)
     simpl; intros; exfalso; eapply add_empty_false; eauto.
     (* CASE eventless component *)
-    eapply mapop_eq_state_if_no_events; eauto.
+    intro; erewrite mapop_eq_state_if_no_events; eauto; reflexivity.
     (* CASE || *)
     rename H2 into IMDS; erw_IMDS_events_m IMDS; intros Equal_U.
-  Admitted.
+    unfold EqDState; split_and.
+    unfold EqSStore; intros.
+    erw_IMDS_sstore_m IMDS; try reflexivity.
+    intros In_empty; rewrite Equal_U in In_empty;
+      rewrite empty_iff in In_empty; contradiction.
+    unfold EqCStore; intros.
+    erw_IMDS_cstore_m IMDS; try reflexivity.
+    intros In_empty; rewrite Equal_U in In_empty;
+      rewrite empty_iff in In_empty; contradiction.
+    unfold EqEvs.
+    erw_IMDS_events_m IMDS; rewrite Equal_U.
+    rewrite IHvruninit1; apply (union_empty_l Equal_U).    
+  Qed.
 
   Lemma vruninit_inv_cstate :
     forall {D__s Δ σ cstmt σ' id__c σ__c},
@@ -95,16 +95,39 @@ Section VRunInit.
       MapsTo id__c σ__c (compstore σ) ->
       ~NatSet.In id__c (events σ') ->
       MapsTo id__c σ__c (compstore σ').
-  Admitted.
+  Proof.
+    induction 1; auto; simpl.
+    (* CASE process *)
+    intros; eapply vseq_inv_compstore; eauto.
+    (* CASE eventful comp *)
+    intros; eapply NatMap.add_2; eauto.
+    intro; subst; contrad_not_in_add.
+    eapply mapop_inv_compstore; eauto.
+    (* CASE eventless comp *)
+    intros; eapply mapop_inv_compstore; eauto.
+    (* CASE || *)
+    rename H2 into IMDS; intros.
+    erw_IMDS_cstore_m <- IMDS; auto.
+    erw_IMDS_events_m <- IMDS; auto.
+  Qed.
 
   Lemma vruninit_compid_not_in_events :
     forall {D__s Δ σ cstmt σ'},
       vruninit D__s Δ σ cstmt σ' ->
       forall {id__c Δ__c compids},
         AreCsCompIds cstmt compids ->
+        Equal (events σ) {[]} ->
         MapsTo id__c (Component Δ__c) Δ ->
         ~List.In id__c compids ->
         ~NatSet.In id__c (events σ').
+  Proof.
+    induction 1; auto; simpl.
+    (* CASE process *)
+    intros *; intros AreCsCompIds_ Equal_empty; intros.
+    eapply vseq_not_in_events_if_not_sig; eauto.
+    rewrite Equal_empty; auto with set.
+    1,2 : destruct 1; mapsto_discriminate.
+    (* CASE  *)
   Admitted.
 
   Lemma vruninit_not_in_events_if_not_assigned :
@@ -173,7 +196,7 @@ Section VRunInit.
               end; assumption).
         apply empty_is_empty_1.
         rewrite inter_sym, union_inter_1, inter_sym in Equal_empty.
-        eapply proj1; eapply @empty_union_3 with (s := (inter (events σ0) (events σ2))); eauto.
+        eapply proj1; eapply @union_empty with (s := (inter (events σ0) (events σ2))); eauto.
       }
       destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4);
         (solve [do 2 decompose_IMDS; auto] || auto).
@@ -195,7 +218,7 @@ Section VRunInit.
                 rewrite <- H
               end; assumption).
         rewrite inter_sym, union_inter_1, union_sym, inter_sym in Equal_empty.
-        eapply proj1; eapply empty_union_3; eauto.
+        eapply proj1; eapply union_empty; eauto.
         
       (* Associativity of IsMErgeddstate relation *)
       + eapply IsMergedDState_assoc_1; eauto.
@@ -215,7 +238,7 @@ Section VRunInit.
               end; assumption).
         apply empty_is_empty_1.
         rewrite union_inter_1 in Equal_empty.
-        eapply proj2; eapply @empty_union_3; eauto.
+        eapply proj2; eapply @union_empty; eauto.
       }
       destruct (@IsMergedDState_ex σ σ1 σ2) as (σ4, IsMergedDState_σ4);
         (solve [do 2 decompose_IMDS; auto] || auto).
@@ -239,7 +262,7 @@ Section VRunInit.
                 rewrite <- H
               end; assumption).
         rewrite union_inter_1 in Equal_empty.
-        eapply proj1; eapply empty_union_3; eauto.
+        eapply proj1; eapply union_empty; eauto.
 
       (* Associativity of IsMErgeddstate relation *)
       + eapply IsMergedDState_assoc_2; eauto.

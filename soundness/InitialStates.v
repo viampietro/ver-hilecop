@@ -127,8 +127,11 @@ Proof.
   (* To prove [σ__p0("s_marking") = M0(p)] *)
   eapply init_s_marking_eq_nat; eauto.
   
-  (* 4 subgoals left. *)
-  
+  (* 6 subgoals left. *)
+
+  (* Prove [(events σ__e) = ∅] *)
+  - eapply elab_empty_events; eauto.
+    
   (* Prove [NoDup compids] *)
   - eapply elab_nodup_compids; eauto.
     

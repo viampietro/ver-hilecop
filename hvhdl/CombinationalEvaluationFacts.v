@@ -87,7 +87,7 @@ Proof.
             end; assumption).
       apply empty_is_empty_1.
       rewrite inter_sym, union_inter_1, inter_sym in Equal_empty.
-      eapply proj1; eapply @empty_union_3 with (s := (inter (events σ0) (events σ2))); eauto.
+      eapply proj1; eapply @union_empty with (s := (inter (events σ0) (events σ2))); eauto.
     }
     destruct (@IsMergedDState_ex σ σ0 σ2) as (σ4, IsMergedDState_σ4);
       (solve [do 2 decompose_IMDS; auto] || auto).
@@ -109,7 +109,7 @@ Proof.
               rewrite <- H
             end; assumption).
       rewrite inter_sym, union_inter_1, union_sym, inter_sym in Equal_empty.
-      eapply proj1; eapply empty_union_3; eauto.
+      eapply proj1; eapply union_empty; eauto.
       
     (* Associativity of IsMErgeddstate relation *)
     + eapply IsMergedDState_assoc_1; eauto.
@@ -129,7 +129,7 @@ Proof.
             end; assumption).
       apply empty_is_empty_1.
       rewrite union_inter_1 in Equal_empty.
-      eapply proj2; eapply @empty_union_3; eauto.
+      eapply proj2; eapply @union_empty; eauto.
     }
     destruct (@IsMergedDState_ex σ σ1 σ2) as (σ4, IsMergedDState_σ4);
       (solve [do 2 decompose_IMDS; auto] || auto).
@@ -153,7 +153,7 @@ Proof.
               rewrite <- H
             end; assumption).
       rewrite union_inter_1 in Equal_empty.
-      eapply proj1; eapply empty_union_3; eauto.
+      eapply proj1; eapply union_empty; eauto.
 
     (* Associativity of IsMErgeddstate relation *)
     + eapply IsMergedDState_assoc_2; eauto.

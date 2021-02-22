@@ -479,6 +479,13 @@ Add Parametric Relation : (DState) (EqCStore)
     transitivity proved by EqCStore_trans
       as EqCStore_rel.
 
+(** Enable rewriting [MapsTo id v (compstore σ1)] into  
+    [MapsTo id v (compstore σ2)] if [EqSStore σ1 σ2]. *)
+
+Add Parametric Morphism (id : ident) (σ__c : DState) : (fun σ => MapsTo id σ__c (compstore σ)) 
+    with signature (@EqCStore ==> impl) as eqcstore_mapsto_mor.
+Proof. intros x y H; unfold EqCStore in H; erewrite H; unfold impl; eauto. Qed.
+
 (** *** Events Set Equivalence *)
 
 Definition EqEvs (σ σ' : DState) :=
@@ -497,6 +504,13 @@ Add Parametric Relation : (DState) (EqEvs)
     symmetry proved by EqEvs_sym
     transitivity proved by EqEvs_trans
       as EqEvs_rel.
+
+(** Enable rewriting [(events σ1)] into  
+    [(events σ2)] if [EqEvs σ1 σ2]. *)
+
+Add Parametric Morphism : (events) 
+    with signature (@EqEvs ==> Equal) as eqevs_events_mor.
+Proof. unfold EqEvs; auto. Qed.
 
 (** *** Design State Equivalence *)
 
@@ -519,3 +533,22 @@ Add Parametric Relation : (DState) (EqDState)
     transitivity proved by EqDState_trans
       as EqDState_rel.
 
+(** Enable rewriting [MapsTo id v (sigstore σ1)] into  
+    [MapsTo id v (sigstore σ2)] if [EqDState σ1 σ2]. *)
+
+Add Parametric Morphism (id : ident) (v : value) : (fun σ => MapsTo id v (sigstore σ)) 
+    with signature (@EqDState ==> impl) as eqdstate_mapsto_sstore_mor.
+Proof. intros x y H; apply proj1 in H; intro; pattern y; rewrite <- H; auto. Qed.
+
+(** Enable rewriting [MapsTo id σ__c (compstore σ1)] into  
+    [MapsTo id σ__c (compstore σ2)] if [EqDState σ1 σ2]. *)
+
+Add Parametric Morphism (id : ident) (σ__c : DState) : (fun σ => MapsTo id σ__c (compstore σ)) 
+    with signature (@EqDState ==> impl) as eqdstate_mapsto_cstore_mor.
+Proof. intros x y H; apply proj2, proj1 in H; intro; pattern y; rewrite <- H; auto. Qed.
+
+(** Enable rewriting [events σ1] into [events σ2] if [EqDState σ1 σ2]. *)
+
+Add Parametric Morphism : (events) 
+    with signature (@EqDState ==> Equal) as eqdstate_events_mor.
+Proof. intros x y H; apply proj2, proj2 in H; rewrite <- H; reflexivity. Qed.
