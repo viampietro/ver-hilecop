@@ -72,4 +72,4 @@ Definition prio_iso_pls_dec : forall x y : T sitpn_iso_pls, {x >~ y} + {~x >~ y}
 
 Require Import sitpn2hvhdl.GenerateHVhdl.
 
-Compute (sitpn_to_hvhdl sitpn_iso_pls prio_iso_pls_dec 0 0 1).
+(* Compute (sitpn_to_hvhdl sitpn_iso_pls prio_iso_pls_dec 0 0 1). *)

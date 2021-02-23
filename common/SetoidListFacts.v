@@ -55,6 +55,7 @@ Proof.
 Qed.
 
 Hint Resolve InA_eqk : setoidl.
+Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk; eauto : setoidl.
 
 Lemma InA_setv_inv :
   forall {A B : Type} {x y : A} {z v : B} {eqk eqv l} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}},
@@ -197,3 +198,11 @@ Proof.
 Qed.
 
 Hint Resolve NoDupA_setv_cons : setoidl.
+
+Lemma NoDupA_tl (A : Type) :
+  forall {eqA : A -> A -> Prop} {a : A} {l : list A},
+    NoDupA eqA (a :: l) ->
+    NoDupA eqA l.
+Proof. inversion 1; auto. Qed.
+
+Hint Resolve NoDupA_tl : setoidl.

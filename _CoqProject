@@ -54,6 +54,7 @@
 ./hvhdl/StaticExpressions.v
 ./hvhdl/TypeElaboration.v
 ./hvhdl/PortElaboration.v
+./hvhdl/ValidPortMapFacts.v
 ./hvhdl/PInitializationFacts.v
 ./hvhdl/PortMapEvaluation.v
 ./hvhdl/DesignElaboration.v
@@ -66,6 +67,8 @@
 ./hvhdl/Simulation.v
 ./hvhdl/Place.v
 ./hvhdl/CombinationalEvaluationFacts.v
+./hvhdl/ExpressionEvaluationFacts.v
+./hvhdl/StaticExpressionsFacts.v
 ./hvhdl/HVhdlTypes.v
 ./hvhdl/StabilizeFacts.v
 ./hvhdl/PortMapEvaluationFacts.v

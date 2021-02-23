@@ -4,6 +4,7 @@ CoqMakefile
 *.vok
 *.vos
 *.#*
+*.copy
 
 \#*
 *~

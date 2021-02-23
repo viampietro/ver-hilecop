@@ -111,6 +111,15 @@ Section VRunInit.
     erw_IMDS_events_m <- IMDS; auto.
   Qed.
 
+  Lemma AreCsCompIds_ex_app :
+    forall (cstmt1 cstmt2 : cs) (compids : list ident),
+      AreCsCompIds (cstmt1 // cstmt2) compids ->
+      exists compids1 compids2,
+        AreCsCompIds cstmt1 compids1 /\
+        AreCsCompIds cstmt2 compids2 /\ 
+        compids = compids1 ++ compids2.
+  Admitted.
+  
   Lemma vruninit_compid_not_in_events :
     forall {D__s Δ σ cstmt σ'},
       vruninit D__s Δ σ cstmt σ' ->
@@ -127,8 +136,29 @@ Section VRunInit.
     eapply vseq_not_in_events_if_not_sig; eauto.
     rewrite Equal_empty; auto with set.
     1,2 : destruct 1; mapsto_discriminate.
-    (* CASE  *)
-  Admitted.
+    (* CASE eventful component *)
+    inversion 1; subst; intros Equal_emp MapsTo_comp nIn_compid.
+    rewrite add_spec; destruct 1; [subst; apply nIn_compid; auto with datatypes | ].
+    eapply mapop_not_in_events_if_not_sig; eauto.
+    rewrite Equal_emp; auto with set.
+    1,2 : destruct 1; mapsto_discriminate.
+    (* CASE eventless component *)
+    inversion 1; subst; intros Equal_emp MapsTo_comp nIn_compid.
+    eapply mapop_not_in_events_if_not_sig; eauto.
+    rewrite Equal_emp; auto with set.
+    1,2 : destruct 1; mapsto_discriminate.
+    (* CASE Null *)
+    do 4 intro; intros Equal_emp MapsTo_comp nIn_compid.
+    rewrite Equal_emp; auto with set.
+    (* CASE || *)
+    intros *; intros AreCsCompIds_par Equal_emp MapsTo_comp nIn_compids.
+    rename H2 into IMDS; erw_IMDS_events_m IMDS.
+    edestruct AreCsCompIds_ex_app
+      as (compids1, (compids2, (AreCsCompIds1, (AreCsCompIds2, e))));
+      eauto; subst.      
+    apply not_in_union; [eapply IHvruninit1; eauto with datatypes
+                        | eapply IHvruninit2; eauto with datatypes].
+  Qed.
 
   Lemma vruninit_not_in_events_if_not_assigned :
     forall {D__s Δ σ cstmt σ' id},

@@ -1,5 +1,6 @@
 (** * Facts about the H-VHDL Generating Functions *)
 
+Require Import String.
 Require Import common.Coqlib.
 Require Import common.GlobalFacts.
 Require Import common.FstSplit.
@@ -96,7 +97,7 @@ Section GeneratePlaceCompInst.
 
   (** *** P Component Generation *)
   
-  Lemma gen_p_comp_inst_inv_p_comp :
+  Lemma gen_pcomp_inst_inv_p_comp_1 :
     forall {sitpn x y s v s' id__p gm ipm opm},
       generate_place_comp_inst sitpn y s = OK v s' ->
       ~Peq x y ->
@@ -113,6 +114,16 @@ Section GeneratePlaceCompInst.
           [ apply InA_setv_inv; auto | right; assumption ].
   Qed.
 
+  Lemma gen_pcomp_inst_inv_p_comp_2 :
+    forall {sitpn x y s v s' id__p gm ipm opm},
+      generate_place_comp_inst sitpn y s = OK v s' ->
+      ~Peq x y ->
+      InA Pkeq (x, id__p) (p2pcomp (γ s')) ->
+      InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
+      InA Pkeq (x, id__p) (p2pcomp (γ s)) /\
+      InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s).
+  Admitted.
+  
   Lemma gen_p_comp_inst_p_comp :
     forall {sitpn p s v s'},
       generate_place_comp_inst sitpn p s = OK v s' ->
@@ -160,9 +171,9 @@ Section GeneratePlaceCompInst.
         end.
         specialize (IHm s x s0 EQ Hnodup_tl p HIn_ntl) as (id__p, (gm, (ipm, (opm, (Hγ, Hincs_comp))))).
 
-        (* Apply gen_p_comp_inst_inv_p_comp *)
+        (* Apply gen_pcomp_inst_inv_p_comp_1 *)
         assert (nPeq : ~Peq p b) by (eapply InA_neqA; eauto).
-        specialize (gen_p_comp_inst_inv_p_comp EQ0 nPeq Hγ Hincs_comp) as (Hγ', Hincs_comp').
+        specialize (gen_pcomp_inst_inv_p_comp_1 EQ0 nPeq Hγ Hincs_comp) as (Hγ', Hincs_comp').
         exists id__p, gm, ipm, opm; auto.
   Qed.
   
@@ -246,7 +257,65 @@ Section GeneratePlaceCompInst.
         || (eapply IHm; eauto; inversion Hnd; assumption)
       end.
   Qed.
-    
+
+  (** *** Bind initial marking *)
+
+  Lemma InputMap_to_AST_In_inl :
+    forall sitpn imap s ipm s' id e,
+      InputMap_to_AST sitpn imap s = OK ipm s' ->
+      List.In (id, inl e) imap ->
+      List.In (associp_ id e) ipm.
+  Admitted.
+  
+  Lemma gen_pcomp_inst_bind_init_marking :
+    forall {sitpn p s v s' g i o},
+      generate_place_comp_inst sitpn p s = OK v s' ->
+      ~(exists id__p gm ipm opm,
+           InA Pkeq (p, id__p) (p2pcomp (γ s))
+           /\ InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s)) ->
+      InA Pkeq (p, (g, i, o)) (plmap (arch s)) ->
+      List.In (initial_marking, inl (e_nat (M0 p))) i ->
+      forall (id__p : ident) (gm : genmap) (ipm : inputmap) (opm : outputmap),
+        InA Pkeq (p, id__p) (p2pcomp (γ s')) ->
+        InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
+        List.In (associp_ initial_marking (M0 p)) ipm.
+  Proof.
+    intros until o; intros e; minv e.
+    shelf_state EQ5.
+    inversion_clear 5; [
+      match goal with | [ H: cs_comp _ _ _ _ _ = _ |- _ ] => inject_left H end
+    | ].
+    (* CASE comp are equal *)
+    eapply InputMap_to_AST_In_inl; eauto.
+  Admitted.
+  
+  Lemma iter_gen_pcomp_inst_bind_init_marking :
+    forall {sitpn pls} {s v s'},
+      iter (generate_place_comp_inst sitpn) pls s = OK v s' ->
+      IsWellDefined sitpn ->
+      NoDupA Peq pls ->
+      forall p id__p gm ipm opm,
+        InA Peq p pls ->
+        InA Pkeq (p, id__p) (p2pcomp (γ s')) ->
+        InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
+        List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
+  Proof.
+    intros until pls;
+      functional induction (iter (generate_place_comp_inst sitpn) pls) using iter_ind;
+      try (solve [inversion 4]).
+    intros s v s' e; monadInv e; intros IWD_sitpn NoDupA_pls.
+    inversion_clear 1.
+    (* CASE [Peq p b] *)
+    erewrite (wi_M0 (wi_funs IWD_sitpn)); eauto.
+    do 1 intro; eapply @gen_pcomp_inst_bind_init_marking with (p := b);
+      eauto with setoidl.
+    (* CASE [p ∈ tl] *)
+    intros; eapply IHm with (s' := s0) (id__p := id__p) (gm := gm) (opm := opm);
+      eauto with setoidl; inversion NoDupA_pls; subst.
+    eapply gen_pcomp_inst_inv_p_comp_2; eauto with setoidl.
+    eapply gen_pcomp_inst_inv_p_comp_2; eauto with setoidl.
+  Qed.
+  
 End GeneratePlaceCompInst.
 
 (** ** Facts about Generation of T Component Instances *)
@@ -365,8 +434,7 @@ Section Sitpn2HVhdl.
     <- (gen_arch_inv_lofPs EQ1).
     lazymatch goal with
     | [ Hwd: IsWellDefined _ |- _ ] =>
-      let NoDupPlaces := (get_nodup_places Hwd) in
-      apply (gen_sitpn_infos_sil_lofPs EQ NoDupPlaces)
+      apply (gen_sitpn_infos_sil_lofPs EQ (nodup_pls (wi_fsets Hwd)))
     end.
   Qed.
 
@@ -409,20 +477,25 @@ Section Sitpn2HVhdl.
     <- (gen_arch_inv_lofPs EQ1).
     lazymatch goal with
     | [ Hwd: IsWellDefined _ |- _ ] =>
-      let NoDupPlaces := (get_nodup_places Hwd) in
-      apply (gen_sitpn_infos_sil_lofPs EQ NoDupPlaces)
+      apply (gen_sitpn_infos_sil_lofPs EQ (nodup_pls (wi_fsets Hwd)))
     end.
   Qed.
 
   Lemma gen_pcomp_insts_bind_init_marking :
     forall {sitpn s v s'},
       generate_place_comp_insts sitpn s = OK v s' ->
+      IsWellDefined sitpn ->
+      Sig_in_List (lofPs s) ->
       forall p id__p gm ipm opm,
         InA Pkeq (p, id__p) (p2pcomp (γ s')) ->
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
         List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
   Proof.
-  Admitted.
+    intros until s'; intros e; minv e.
+    intros IWD_sitpn SIL_lofPs; intros.
+    eapply iter_gen_pcomp_inst_bind_init_marking; eauto;
+    destruct SIL_lofPs; auto.
+  Qed.
 
   Lemma gen_tcomp_insts_gen_only_tcomp :
     forall {sitpn s v s'},
@@ -436,6 +509,8 @@ Section Sitpn2HVhdl.
   Lemma gen_comp_insts_bind_init_marking :
     forall {sitpn s v s'},
       generate_comp_insts sitpn s = OK v s' ->
+      IsWellDefined sitpn ->
+      Sig_in_List (lofPs s) ->
       forall p id__p gm ipm opm,
         InA Pkeq (p, id__p) (p2pcomp (γ s')) ->
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
@@ -452,6 +527,7 @@ Section Sitpn2HVhdl.
     forall {sitpn decpr id__ent id__arch mm d γ},
       (* [sitpn] translates into [(d, γ)]. *)
       sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
       forall p id__p gm ipm opm,
         InA Pkeq (p, id__p) (p2pcomp γ) ->
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -464,9 +540,13 @@ Section Sitpn2HVhdl.
     inversion 1.
 
     (* OK *)
-    intros; monadInv e.
+    do 3 intro; intros IWD_sitpn; intros; monadInv e.
     minv EQ4; inversion H; clear H; subst; simpl.
     eapply gen_comp_insts_bind_init_marking; eauto.
+    erewrite <- gen_ports_inv_lofPs; eauto.
+    erewrite <- gen_arch_inv_lofPs; eauto.
+    eapply gen_sitpn_infos_sil_lofPs; eauto.
+    exact (nodup_pls (wi_fsets IWD_sitpn)).    
   Qed.
   
 End Sitpn2HVhdl.

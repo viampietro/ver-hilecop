@@ -1408,7 +1408,6 @@ Section MySection.
   Variable n : nat.
   
   Definition GtN := NatSubsetMap.t (fun m => m > n).
-  Print GtN.
   
   Variable o_gt_n : 1 > n.
 

@@ -127,12 +127,31 @@ Definition AllConflictsSolved (sitpn : Sitpn) :=
     an implementation-dependent property.
  *)
 
-Definition AreWellImplementedFiniteSets (sitpn : Sitpn) : Prop :=
-  NoDup (places sitpn)
-  /\ NoDup (transitions sitpn)
-  /\ NoDup (conditions sitpn)
-  /\ NoDup (actions sitpn)
-  /\ NoDup (functions sitpn).
+Record AreWellImplementedFiniteSets (sitpn : Sitpn) : Prop :=
+  {
+  nodup_pls : NoDup (places sitpn);
+  nodup_trs : NoDup (transitions sitpn);
+  nodup_conds : NoDup (conditions sitpn);
+  nodup_actions : NoDup (actions sitpn);
+  nodup_funs : NoDup (functions sitpn);
+  }.
+
+(* Defines a predicate stating that the functions [pre, post, M0, I__s,
+   has_C, has_A, has_F] and also the [pr] relation of a given [sitpn],
+   yield the same value for inputs that verify the [seq] relation.
+   
+ *)
+
+Record AreWellImplementedFunsAndRel (sitpn : Sitpn) := {
+  wi_pre : forall p1 p2 t1 t2, Peq p1 p2 -> Teq t1 t2 -> @pre sitpn p1 t1 = @pre sitpn p2 t2;
+  wi_post : forall p1 p2 t1 t2, Peq p1 p2 -> Teq t1 t2 -> @post sitpn t1 p1 = @post sitpn t2 p2;
+  wi_M0 : forall p1 p2, Peq p1 p2 -> @M0 sitpn p1 = @M0 sitpn p2;
+  wi_Is : forall t1 t2, Teq t1 t2 -> @Is sitpn t1 = @Is sitpn t2;
+  wi_has_C : forall t1 t2 c1 c2, Teq t1 t2 -> Ceq c1 c2 -> @has_C sitpn t1 c1 = @has_C sitpn t2 c2;
+  wi_has_A : forall p1 p2 a1 a2, Peq p1 p2 -> Aeq a1 a2 -> @has_A sitpn p1 a1 = @has_A sitpn p2 a2;
+  wi_has_F : forall t1 t2 f1 f2, Teq t1 t2 -> Feq f1 f2 -> @has_F sitpn t1 f1 = @has_F sitpn t2 f2;
+  wi_pr : forall t1 t2 t3 t4, Teq t1 t2 -> Teq t3 t4 -> @pr sitpn t1 t3 <-> @pr sitpn t2 t4;
+  }.
 
 (** Defines a predicate stating that an [Sitpn] is well-defined, that is: 
 
@@ -144,14 +163,17 @@ Definition AreWellImplementedFiniteSets (sitpn : Sitpn) : Prop :=
       or another mean of mutual exclusion.
  *)
 
-Definition IsWellDefined (sitpn : Sitpn) :=
-  places sitpn <> nil
-  /\ transitions sitpn <> nil
-  /\ HasNoIsolatedPlace sitpn
-  /\ HasNoIsolatedTransition sitpn
-  /\ PriorityRelIsWellDefined sitpn
-  /\ AllConflictsSolved sitpn
+Record IsWellDefined (sitpn : Sitpn) :=
+  {
+  pls_not_empty : places sitpn <> nil;
+  trs_not_empty : transitions sitpn <> nil;
+  no_iso_pl : HasNoIsolatedPlace sitpn;
+  no_iso_tr : HasNoIsolatedTransition sitpn;
+  pr_wd : PriorityRelIsWellDefined sitpn;
+  all_confl_solved : AllConflictsSolved sitpn;
                               
   (* Implementation-dependent property. *)
-  /\ AreWellImplementedFiniteSets sitpn.
+  wi_fsets : AreWellImplementedFiniteSets sitpn;
+  wi_funs : AreWellImplementedFunsAndRel sitpn;
+  }.
 

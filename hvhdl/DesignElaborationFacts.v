@@ -286,7 +286,6 @@ Proof.
   - inversion_clear 1; simpl; intros.
     (* SUBCASE comp ∈ cstmt *)
     eapply IHebeh1; eauto.
-    Search ebeh.
     edestruct @ebeh_compid_in_comps
       with (D__s := D__s) (behavior := cstmt)
       as (Δ__c0, MapsTo_Δ__c0); eauto.
