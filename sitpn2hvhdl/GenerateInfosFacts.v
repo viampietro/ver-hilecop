@@ -264,3 +264,16 @@ Proof.
   eapply tmap_aux_sil_lofPs; eauto;
     [intros; left; exact (proj2_sig p) | inversion 1].
 Qed.
+
+Lemma gen_sitpn_infos_inv_arch :
+  forall {sitpn decpr s v s'},
+    generate_sitpn_infos sitpn decpr s = OK v s' ->
+    arch s = arch s'.
+Admitted.
+
+Lemma gen_sitpn_infos_inv_beh :
+  forall {sitpn decpr s v s'},
+    generate_sitpn_infos sitpn decpr s = OK v s' ->
+    beh s = beh s'.
+Admitted.
+

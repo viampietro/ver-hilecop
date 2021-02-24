@@ -5,6 +5,8 @@ Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListMonadTactics.
 
+Require Import hvhdl.AbstractSyntax.
+
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 
 (** ** Facts about Action Port Generation *)
@@ -138,3 +140,16 @@ Proof.
   <- (gen_aports_inv_lofPs EQ);
     reflexivity.
 Qed.
+
+Lemma gen_ports_inv_arch :
+  forall {sitpn s v s'},
+    @generate_ports sitpn s = OK v s' ->
+    arch s = arch s'.
+Admitted.
+
+Lemma gen_ports_inv_no_comps_in_beh :
+  forall {sitpn s v s'},
+    @generate_ports sitpn s = OK v s' ->
+    ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s)) ->
+    ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s')).
+Admitted.
