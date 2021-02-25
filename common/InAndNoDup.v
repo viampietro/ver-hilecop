@@ -14,7 +14,7 @@ Section InAndNoDupLemmas.
   Lemma in_appl : forall {A : Type} {l m} {a : A}, In a l -> In a (l ++ m).
     intros *; intros Hin; apply in_or_app; left; assumption.
   Defined.
-
+  
   Lemma in_appr : forall {A : Type} {l m} {a : A}, In a m -> In a (l ++ m).
     intros *; intros Hin; apply in_or_app; right; assumption.
   Defined.
@@ -536,6 +536,9 @@ Section InAndNoDupLemmas.
   Qed.
 
 End InAndNoDupLemmas.
+
+Hint Resolve in_appl in_appr in_last : core.
+
 
 (** ** Misc. tactics for [In] and [NoDup] predicates *)
 

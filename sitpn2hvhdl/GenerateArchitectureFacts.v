@@ -134,6 +134,16 @@ Section GenInterconn.
     solve_listm EQ3; unfold get_actual_of_out_port in EQ1; destrm EQ1.
     monadInv EQ1; destrm EQ2; inversion EQ2; auto.
   Qed.
+
+  Lemma connect_fired_port_inv_plmap :
+    forall {sitpn} {e} {t : T sitpn} {s v s'},
+      connect_fired_port e t s = OK v s' ->
+      plmap (arch s) = plmap (arch s').
+  Proof.
+    intros *; intros e1; monadFullInv e1. 
+    solve_listm EQ3; unfold get_actual_of_out_port in EQ1; destrm EQ1.
+    monadInv EQ1; destrm EQ2; inversion EQ2; auto.
+  Qed.
   
   Lemma connect_fired_ports_inv_γ :
     forall {sitpn} {lofTs : list (T sitpn)} {s v s'},
@@ -152,6 +162,15 @@ Section GenInterconn.
     intros *; intros e; unfold connect_fired_ports in e; solve_listm e.
     intros; eapply connect_fired_port_inv_lofPs; eauto.
   Qed.
+
+  Lemma connect_fired_ports_inv_plmap :
+    forall {sitpn} {lofTs : list (T sitpn)} {s v s'},
+      connect_fired_ports lofTs s = OK v s' ->
+      plmap (arch s) = plmap (arch s').            
+  Proof.
+    intros *; intros e; unfold connect_fired_ports in e; solve_listm e.
+    intros; eapply connect_fired_port_inv_plmap; eauto.
+  Qed.
   
   Lemma connect_inv_γ :
     forall {sitpn xcomp ycomp id__x id__y} {s : Sitpn2HVhdlState sitpn} {v s'},
@@ -163,6 +182,12 @@ Section GenInterconn.
     forall {sitpn xcomp ycomp id__x id__y} {s : Sitpn2HVhdlState sitpn} {v s'},
       connect xcomp ycomp id__x id__y s  = OK v s' ->
       lofPs s = lofPs s'.
+  Proof. intros until s'; intros e; minv e; simpl; reflexivity. Qed.
+
+  Lemma connect_inv_plmap :
+    forall {sitpn xcomp ycomp id__x id__y} {s : Sitpn2HVhdlState sitpn} {v s'},
+      connect xcomp ycomp id__x id__y s  = OK v s' ->
+      plmap (arch s) = plmap (arch s').
   Proof. intros until s'; intros e; minv e; simpl; reflexivity. Qed.
   
   Lemma connect_poutputs_inv_γ :
@@ -190,7 +215,20 @@ Section GenInterconn.
     destrm EQ0; monadInv EQ0; rewrite (connect_inv_lofPs EQ); clear EQ.
     minv EQ1; auto.
   Qed.
-    
+
+  Lemma connect_poutputs_inv_plmap :
+    forall {sitpn} {pinfo : PlaceInfo sitpn} {hcomp s v s'},
+      connect_place_outputs pinfo hcomp s = OK v s' ->
+      plmap (arch s) = plmap (arch s').
+  Proof.
+    intros *; intros e; unfold connect_place_outputs in e; solve_listm e.
+    intros *; intros e; monadInv e; minv EQ; solve_listm EQ3. 
+    rewrite (connect_inv_plmap EQ1); clear EQ1.
+    destrm EQ2; monadInv EQ2; rewrite (connect_inv_plmap EQ); clear EQ.
+    destrm EQ0; monadInv EQ0; rewrite (connect_inv_plmap EQ); clear EQ.
+    minv EQ1; auto.
+  Qed.
+  
   Lemma interconnect_p_inv_γ :
     forall {sitpn} {p : P sitpn} {s v s'},
       interconnect_p p s = OK v s' ->
@@ -218,12 +256,44 @@ Section GenInterconn.
     erewrite connect_fired_ports_inv_lofPs; eauto.
     erewrite connect_poutputs_inv_lofPs; eauto.  
   Qed.
-
+  
   Lemma interconnect_p_pcomp :
     forall {sitpn p s v s'},
       @interconnect_p sitpn p s = OK v s' ->
       exists g i o, InA Pkeq (p, (g, i, o)) (plmap (arch s')).
-  Admitted.
+  Proof.
+    intros until s'; intros e; minv e.
+    destruct x2 as ((g1, i1), o1).
+    exists g1, i1, o1; eauto with setoidl.
+  Qed.
+
+  Lemma interconnect_p_inv_pcomp :
+    forall {sitpn p1 s v s'},
+      @interconnect_p sitpn p1 s = OK v s' ->
+      forall p2,
+      (exists g i o, InA Pkeq (p2, (g, i, o)) (plmap (arch s))) ->
+      (exists g i o, InA Pkeq (p2, (g, i, o)) (plmap (arch s'))).
+  Proof.
+    intros until s'; intros e p2; minv e.
+    destruct (Peqdec p1 p2) as [Peq_ | nPeq].
+    (* CASE [Peq p1 p2] *)
+    destruct x2 as ((g1, i1), o1).
+    exists g1, i1, o1; eauto with setoidl.
+    (* CASE [~Peq p1 p2] *)
+    destruct 1 as (g1, (i1, (o1, InA_plmap))).
+    exists g1, i1, o1.
+    eapply InA_setv_inv; eauto.
+    assert (e : plmap (arch s0) = plmap (arch s5)).
+    { rewrite (getv_inv_state EQ4).
+      rewrite (getv_inv_state EQ5).
+      rewrite (connect_fired_ports_inv_plmap EQ3).
+      rewrite (connect_fired_ports_inv_plmap EQ0).
+      rewrite (connect_poutputs_inv_plmap EQ2).
+      reflexivity.
+    }
+    rewrite <- e; auto.
+    intros Peq_; symmetry in Peq_; contradiction.
+  Qed.
   
   Lemma iter_interconnect_p_pcomp :
     forall {sitpn pls s v s'},
@@ -239,27 +309,21 @@ Section GenInterconn.
     - inversion 3.
 
     (* IND. CASE *)
-    - intros;
-        lazymatch goal with
-        | [ Hm : (do _ <- _; _) _ = _, Hin: InA _ _ (_ :: _) |- _ ] =>
-          inversion_clear Hin as [ e1 e2 Peq_pb | e1 e2 HIn_ntl ]; monadInv Hm
-        end.
+    - intros *; intros e NoDupA_pls p InA_pls;
+        inversion_clear InA_pls as [ e1 e2 Peq_pb | e1 e2 InA_ntl ];
+        monadInv e.
 
       (* CASE a = n *)
       + edestruct (interconnect_p_pcomp EQ0) as (g, (i, (o, InA_plmap))).
         exists g, i, o; symmetry in Peq_pb; auto with setoidl.
 
       (* CASE n ∈ tl *)
-      + lazymatch goal with
-        | [ H: NoDupA _ _ |- _ ] => inversion_clear H as [ | e1 e2 Hnotin_a_tl Hnodup_tl ]
+      + eapply interconnect_p_inv_pcomp; eauto.
+        eapply IHm; eauto.
+        lazymatch goal with
+        | [ H: NoDupA _ _ |- _ ] => inversion_clear H; auto
         end.
-        (* specialize (IHm s x s0 EQ Hnodup_tl p HIn_ntl) as (id__p, (gm, (ipm, (opm, (Hγ, Hincs_comp))))). *)
-
-        (* (* Apply gen_pcomp_inst_inv_p_comp_1 *) *)
-        (* assert (nPeq : ~Peq p b) by (eapply InA_neqA; eauto). *)
-        (* specialize (gen_pcomp_inst_inv_p_comp_1 EQ0 nPeq Hγ Hincs_comp) as (Hγ', Hincs_comp'). *)
-        (* exists id__p, gm, ipm, opm; auto. *)
-  Admitted.
+  Qed.
   
   Lemma gen_interconnections_pcomp : 
     forall {sitpn s v s'},

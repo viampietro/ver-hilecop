@@ -6,6 +6,7 @@ Require Import common.ListPlus.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListMonad.
+Require Import common.SetoidListFacts.
 
 (** ** Facts about [getv] *)
 
@@ -24,9 +25,7 @@ Section GetV.
     functional induction (@getv state A B eqk eqk_dec x l) using getv_ind;
       intros v s' e; (try monadInv e; auto || eapply IHm; eauto).
   Qed.
-
-  Hint Resolve getv_inv_state : listmonad.
-
+  
   Lemma getv_compl :
     forall {state A B : Type} {l : list (A * B)}
            {eqk} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}}
@@ -34,35 +33,70 @@ Section GetV.
       let eqkv := fun x y => eqk (fst x) (fst y) /\ snd x = snd y in
       InA eqkv (x, v) l ->
       NoDupA eqk (fs l) ->
+      Equivalence eqk ->
       getv eqk_dec x l s = OK v s.
   Proof.
     induction l; try (solve [inversion 1]).
     (* IND. CASE *)
-    simpl; destruct a; do 3 intro; destruct (eqk_dec x a).
-    inversion_clear 1.
-    destruct H0 as (eqk_, eq_); simpl in eq_; rewrite eq_.
-    unfold Ret; reflexivity.
-  Admitted.
+    inversion_clear 1; cbn.
+    (* SUBCASE eqkv (x, v) a *)
+    destruct a; intro NoDupA_fs; destruct (eqk_dec x a).
+    (* eqk x a *)
+    destruct H0 as (eqk_, eqv_); simpl in eqv_; rewrite eqv_.
+    reflexivity.
+    (* ~eqk x a *)
+    destruct H0 as (eqk_, eqv_); contradiction.
+    (* SUBCASE [InA eqkv (x, v) l] *)
+    destruct a; intro NoDupA_fs; destruct (eqk_dec x a).
+    (* eqk x a *)
+    intros; exfalso; eauto with setoidl.
+    (* ~eqk x a *)
+    eapply IHl; eauto with setoidl.
+  Qed.
   
 End GetV.
 
+Hint Resolve getv_inv_state : listmonad.
+
 (** ** Facts about [foldl] *)
 
-Remark foldl_inv_state :
-  forall {state A B : Type} {f : B -> A -> Mon B} {l b0} {s : state} {v s'}
-         {Q : state -> state -> Prop},
-    fold_left f l b0 s = OK v s' ->
-    Reflexive Q ->
-    Transitive Q ->
-    (forall b a s0 v0 s0', f b a s0 = OK v0 s0' -> Q s0 s0') ->
-    Q s s'.
-Proof.
-  induction l; simpl; intros b0 s v s' Q e; monadInv e; intros Qrefl Qtrans f_inv;
-    [ apply Qrefl
-    | apply Qtrans with (y := s0);
-      [apply (f_inv b0 a s x s0 EQ)
-      | apply IHl with (b0 := x) (v := v); auto]].
-Qed.
+Section FoldL.
+
+  Remark foldl_inv_state :
+    forall {state A B : Type} {f : B -> A -> Mon B} {l b0} {s : state} {v s'}
+           {Q : state -> state -> Prop},
+      fold_left f l b0 s = OK v s' ->
+      Reflexive Q ->
+      Transitive Q ->
+      (forall b a s0 v0 s0', f b a s0 = OK v0 s0' -> Q s0 s0') ->
+      Q s s'.
+  Proof.
+    induction l; simpl; intros b0 s v s' Q e; monadInv e; intros Qrefl Qtrans f_inv;
+      [ apply Qrefl
+      | apply Qtrans with (y := s0);
+        [apply (f_inv b0 a s x s0 EQ)
+        | apply IHl with (b0 := x) (v := v); auto]].
+  Qed.
+
+  Remark foldl_build_list_by_app :
+    forall {state A B : Type} {f : list B -> A -> Mon (list B)} {lofAs lofBs1 lofBs2} {s : state} {s'},
+      fold_left f lofAs lofBs1 s = OK lofBs2 s' ->
+      (forall lofBs3 a s1 lofBs5 s2,
+          f lofBs3 a s1 = OK lofBs5 s2 ->
+          exists lofBs4, lofBs5 = lofBs3 ++ lofBs4) ->
+      forall b, In b lofBs1 -> In b lofBs2.
+  Proof.
+    induction lofAs; simpl; intros *; intros e; monadInv e.
+    (* BASE CASE *)
+    trivial.
+    (* IND. CASE *)
+    intros; eapply IHlofAs; eauto.
+    edestruct H; eauto; subst; auto.
+  Qed.
+  
+End FoldL.
+
+
 
 Remark iter_inv_state :
   forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}
