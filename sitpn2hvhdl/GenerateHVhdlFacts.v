@@ -43,7 +43,7 @@ Section InputMap2AST.
   Qed.
 
   Lemma InputMap_to_AST_inv_state :
-    forall sitpn imap s ipm s',
+    forall {sitpn imap s ipm s'},
       InputMap_to_AST sitpn imap s = OK ipm s' ->
       s = s'.
   Proof.
@@ -99,7 +99,7 @@ Section OutputMap2AST.
   Qed.
 
   Lemma OutputMap_to_AST_inv_state :
-    forall sitpn omap s opm s',
+    forall {sitpn omap s opm s'},
       OutputMap_to_AST sitpn omap s = OK opm s' ->
       s = s'.
   Proof.
@@ -158,7 +158,7 @@ Section GeneratePlaceCompInst.
         specialize (getv_inv_state EQ4) as e1;
         specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
         rewrite <- e2, <- e1; clear e1 e2; simpl;
-          [ apply InA_setv_inv; auto | right; assumption ].
+          [ apply InA_setv_inv_1; auto | right; assumption ].
   Qed.
 
   Lemma gen_pcomp_inst_inv_p_comp_2 :
@@ -167,9 +167,30 @@ Section GeneratePlaceCompInst.
       ~Peq x y ->
       InA Pkeq (x, id__p) (p2pcomp (γ s')) ->
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
+      ~(exists p1 id__p1, InA Pkeq (p1, id__p1) (p2pcomp (γ s)) /\ id__p1 >= nextid s) ->
       InA Pkeq (x, id__p) (p2pcomp (γ s)) /\
       InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s).
-  Admitted.
+  Proof.
+    intros until opm; intros e nPeq InA_p2pcomp InCs_beh; minv e; shelf_state EQ5.
+    (* Stores the first subgoal (need it in the second subgoal). *)
+    assert (InA_p2pcomp0 : InA Pkeq (x, id__p) (p2pcomp (γ s0))).
+    { eapply @InA_setv_inv_2 with (eqk_dec := Peqdec) (v := nextid s0); eauto.
+      change (setv Peqdec y (nextid s0) (p2pcomp (γ s0))) with (p2pcomp (γ s)).
+      assert (e : p2pcomp (γ s4) = (p2pcomp (γ s))).
+      { rewrite (getv_inv_state EQ5), (InputMap_to_AST_inv_state EQ3),
+        (OutputMap_to_AST_inv_state EQ2); reflexivity. }
+      rewrite <- e; auto. }
+    intros nex_InA; split; auto.
+    (* SUBGOAL [comp(id__p, "place", ...) ∈ (beh s0)] *)
+    destruct InCs_beh as [eq_comp | InCs_beh4].
+    (* CASE comp. are equal. *)
+    inject_left eq_comp; exfalso; apply nex_InA; exists x, (nextid s0); auto.
+    (* CASE [comp ∈ beh s0] *)
+    assert (e : beh s = beh s4).
+    { rewrite (getv_inv_state EQ5), (InputMap_to_AST_inv_state EQ3),
+      (OutputMap_to_AST_inv_state EQ2); reflexivity. }
+    change (beh s0) with (beh s); rewrite e; auto.
+  Qed.
   
   Lemma gen_p_comp_inst_p_comp :
     forall {sitpn p s v s'},
@@ -307,7 +328,38 @@ Section GeneratePlaceCompInst.
 
   (** *** Bind initial marking *)
 
-  Lemma gen_p_comp_inst_inv_nextid :
+  Lemma gen_p_comp_inst_inv_nextid_2 :
+    forall {sitpn p s v s'},
+      generate_place_comp_inst sitpn p s = OK v s' ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s)) /\ id__p >= nextid s) ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s')) /\ id__p >= nextid s').
+  Proof.
+    intros until s'; intros e; minv e; shelf_state EQ5.
+    intros nex_InA; destruct 1 as (p1, (id__p1, (InA_p2pcomp0, GE_nxtid0))).
+    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
+    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
+    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
+    change (p2pcomp (γ s))
+      with (setv Peqdec p (nextid s0) (p2pcomp (γ s0))) in InA_p2pcomp0.
+    edestruct @InA_setv_fst_or_in_tl as [(Peq_, e) | InA_beh0]; eauto.
+    (* CASE [Peq p1 p] and [id__p1 = nextid s0] *)
+    subst; change (nextid s) with (S (nextid s0)) in GE_nxtid0; lia.
+    (* CASE [InA Pkeq (p1, id__p1) (p2pcomp (γ s0))] *)
+    apply nex_InA; exists p1, id__p1; split;
+      [ assumption | change (nextid s) with (S (nextid s0)) in GE_nxtid0; lia ].
+  Qed.
+
+  Lemma iter_gen_pcomp_inst_inv_nextid_2 :
+    forall {sitpn pls} {s v s'},
+      iter (generate_place_comp_inst sitpn) pls s = OK v s' ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s)) /\ id__p >= nextid s) ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s')) /\ id__p >= nextid s').
+  Proof.
+    intros until s'; intros e; solve_listm e.
+    intros; eapply gen_p_comp_inst_inv_nextid_2; eauto.
+  Qed.
+  
+  Lemma gen_p_comp_inst_inv_nextid_1 :
     forall {sitpn p s v s'},
       generate_place_comp_inst sitpn p s = OK v s' ->
       ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s) /\ id__c >= nextid s) ->
@@ -330,14 +382,14 @@ Section GeneratePlaceCompInst.
     split; auto; cbn in GE_nxtid; lia.
   Qed.
     
-  Lemma iter_gen_pcomp_inst_inv_nextid :
+  Lemma iter_gen_pcomp_inst_inv_nextid_1 :
     forall {sitpn pls} {s v s'},
       iter (generate_place_comp_inst sitpn) pls s = OK v s' ->
       ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s) /\ id__c >= nextid s) ->
       ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s') /\ id__c >= nextid s').
   Proof.
     intros until s'; intros e; solve_listm e.
-    intros; eapply gen_p_comp_inst_inv_nextid; eauto.
+    intros; eapply gen_p_comp_inst_inv_nextid_1; eauto.
   Qed.
   
   Lemma gen_pcomp_inst_bind_init_marking :
@@ -353,8 +405,7 @@ Section GeneratePlaceCompInst.
         NoDupA Peq (fs (p2pcomp (γ s))) ->
         List.In (associp_ initial_marking (M0 p)) ipm.
   Proof.
-    intros until o; intros e; minv e.
-    shelf_state EQ5.
+    intros until o; intros e; minv e; shelf_state EQ5.
     inversion_clear 1 as [eq_comp | InCs_beh].
     (* CASE comp are equal *)
     inject_left eq_comp.
@@ -380,7 +431,14 @@ Section GeneratePlaceCompInst.
     forall {sitpn pls} {s v s'},
       iter (generate_place_comp_inst sitpn) pls s = OK v s' ->
       arch s = arch s'.
-  Admitted.
+  Proof. intros *; intros e; solve_listm e.
+         intros *; intros e; minv e.
+         shelf_state EQ5; change (arch s0) with (arch s1).
+         rewrite (getv_inv_state EQ5),
+         (InputMap_to_AST_inv_state EQ3),
+         (OutputMap_to_AST_inv_state EQ2).
+         reflexivity.
+  Qed.
   
   Lemma iter_gen_pcomp_inst_bind_init_marking :
     forall {sitpn pls} {s v s'},
@@ -392,6 +450,7 @@ Section GeneratePlaceCompInst.
         InA Pkeq (p, id__p) (p2pcomp (γ s')) ->
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') ->
         NoDupA Peq (fs (plmap (arch s))) ->
+        ~(exists p1 id__p1, InA Pkeq (p1, id__p1) (p2pcomp (γ s)) /\ id__p1 >= nextid s) ->
         ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s) /\ id__c >= nextid s) ->
         InA Pkeq (p, (g, i, o)) (plmap (arch s)) ->
         List.In (initial_marking, inl (e_nat (M0 p))) i ->
@@ -412,7 +471,7 @@ Section GeneratePlaceCompInst.
       eauto with setoidl.
     (* SUBCASE [∄ comp((nextid s0),...) ∈ (beh s0)] *)
     destruct 1 as (id__e, (g0, (i0, (o0, InCs_behs0)))).
-    eapply iter_gen_pcomp_inst_inv_nextid; eauto.
+    eapply iter_gen_pcomp_inst_inv_nextid_1; eauto.
     exists (nextid s0), id__e, g0, i0, o0; auto.
     (* SUBCASE [(b, (g, i, o)) ∈ (plmap (arch s0))] *)
     erewrite <- iter_gen_pcomp_inst_inv_arch; eauto with setoidl.
@@ -424,8 +483,8 @@ Section GeneratePlaceCompInst.
     (* CASE [p ∈ tl] *)
     intros; eapply IHm with (s' := s0) (id__p := id__p) (gm := gm) (opm := opm);
       eauto with setoidl; inversion NoDupA_pls; subst.
-    eapply gen_pcomp_inst_inv_p_comp_2; eauto with setoidl.
-    eapply gen_pcomp_inst_inv_p_comp_2; eauto with setoidl.
+    all : eapply gen_pcomp_inst_inv_p_comp_2; eauto with setoidl;
+      eapply iter_gen_pcomp_inst_inv_nextid_2; eauto.
   Qed.
 
   Lemma gen_pcomp_insts_bind_init_marking :
@@ -436,6 +495,7 @@ Section GeneratePlaceCompInst.
       NoDupA Peq (fs (plmap (arch s))) ->
       NoDupA Peq (fs (p2pcomp (γ s))) ->
       (forall p, InA Peq p (lofPs s) -> ~ InA Peq p (fs (p2pcomp (γ s)))) ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s)) /\ id__p >= nextid s) ->
       ~(exists id__c id__e gm ipm opm,
            InCs (cs_comp id__c id__e gm ipm opm) (beh s) /\ id__c >= nextid s) ->
       forall p id__p gm ipm opm g i o,
@@ -624,9 +684,6 @@ Section Sitpn2HVhdl.
       apply (gen_sitpn_infos_sil_lofPs EQ (nodup_pls (wi_fsets Hwd)))
     end.
   Qed.
-
-
-
   
   Lemma gen_comp_insts_bind_init_marking :
     forall {sitpn s v s'},
@@ -636,6 +693,7 @@ Section Sitpn2HVhdl.
       NoDupA Peq (fs (plmap (arch s))) ->
       NoDupA Peq (fs (p2pcomp (γ s))) ->
       (forall p, InA Peq p (lofPs s) -> ~ InA Peq p (fs (p2pcomp (γ s)))) ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s)) /\ id__p >= nextid s) ->
       ~(exists id__c id__e gm ipm opm,
            InCs (cs_comp id__c id__e gm ipm opm) (beh s) /\ id__c >= nextid s) ->
       forall p id__p gm ipm opm g i o,
@@ -700,6 +758,12 @@ Section Sitpn2HVhdl.
       erewrite <- gen_arch_inv_γ; eauto;
         erewrite <- gen_sitpn_infos_inv_γ; eauto;
            (cbn; eapply NoDupA_nil || inversion 2).
+
+    (* SUBGOAL [∄ (p, id__p) ∈ (p2pcomp (γ s)) s.t. id__p > nextid s1] *)
+    erewrite <- gen_ports_inv_p2pcomp; eauto.
+    erewrite <- gen_arch_inv_γ; eauto.
+    erewrite <- gen_sitpn_infos_inv_γ; eauto.
+    simpl; destruct 1 as (p1, (id__p1, (InA_, _))); inversion InA_.
     
     (* SUBGOAL [∄ comp(id__c, id__e, gm, ipm, opm) ∈ (beh s1) /\ id__c >= nextid s1] *)
     destruct 1 as (id__c, (id__e, (gm0, (ipm0, (opm0, (InCs_beh, GE_id__c)))))).

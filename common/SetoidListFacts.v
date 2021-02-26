@@ -52,7 +52,7 @@ Section InAFacts.
       | apply InA_cons_tl; auto].
   Qed.
   
-  Lemma InA_setv_inv :
+  Lemma InA_setv_inv_1 :
     forall {A B : Type} {x y : A} {z v : B} {eqk eqv l} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}},
       let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
       InA eqkv (x, z) l ->
@@ -68,6 +68,15 @@ Section InAFacts.
     apply (Equivalence_Transitive x a y) in e; [contradiction | auto].
   Qed.
 
+  Lemma InA_setv_inv_2 :
+    forall {A B : Type} {eqk} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {x : A} {z : B} {l} {y v eqv},
+      let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
+      InA eqkv (x, z) (setv eqk_dec y v l) ->
+      ~eqk x y ->
+      Equivalence eqk ->
+      InA eqkv (x, z) l.
+  Admitted.
+  
   Lemma InA_setv :
     forall {A B : Type} {x : A} {z : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l},
       let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
@@ -81,6 +90,18 @@ Section InAFacts.
     apply InA_cons_tl; apply IHl0; auto.
   Qed.
 
+  Lemma InA_setv_fst_or_in_tl :
+    forall {A B : Type} {y : A} {v2 : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l} {x v1},
+      let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
+      InA eqkv (x, v1) (setv eqk_dec y v2 l) ->
+      (eqk x y /\ eqv v1 v2) \/ InA eqkv (x, v1) l.
+  Proof.
+    intros until l; functional induction (setv eqk_dec y v2 l) using setv_ind.
+    inversion_clear 1; [ left; auto | inversion H0 ].
+    inversion_clear 1; [ left; auto | right; auto ].
+    inversion_clear 1; [ left; auto | right; auto ].
+  Admitted.
+  
   Lemma InA_notin_fs_setv_inv {A B : Type} :
     forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}}
            {y} (b : B) {l : list (A * B)} {x},
@@ -107,8 +128,6 @@ Section InAFacts.
       ~InA eqA y l ->
       ~eqA x y.
   Proof. intros; intro; specialize (InA_eqA H H2 H0); contradiction. Qed.
-
-
   
 End InAFacts.
 
@@ -117,7 +136,7 @@ Hint Extern 1 (InA _ _ (fs _)) => eapply InA_fst_split; eauto : setoidl.
 Hint Resolve not_InA_fst_split : setoidl.
 Hint Resolve InA_eqk : setoidl.
 Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk; eauto : setoidl.
-Hint Resolve InA_setv_inv : setoidl.
+Hint Resolve InA_setv_inv_1 : setoidl.
 Hint Resolve InA_setv : setoidl.
 Hint Extern 1 (InA _ (?x, ?z) (setv _ ?x ?z _)) => apply InA_setv : setoidl.
 Hint Resolve InA_notin_fs_setv_inv : setoidl.

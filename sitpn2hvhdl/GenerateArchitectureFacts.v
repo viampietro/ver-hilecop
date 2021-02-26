@@ -282,7 +282,7 @@ Section GenInterconn.
     (* CASE [~Peq p1 p2] *)
     destruct 1 as (g1, (i1, (o1, InA_plmap))).
     exists g1, i1, o1.
-    eapply InA_setv_inv; eauto.
+    eapply InA_setv_inv_1; eauto.
     assert (e : plmap (arch s0) = plmap (arch s5)).
     { rewrite (getv_inv_state EQ4).
       rewrite (getv_inv_state EQ5).
