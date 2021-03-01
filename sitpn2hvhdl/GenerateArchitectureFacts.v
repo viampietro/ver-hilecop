@@ -383,13 +383,13 @@ Proof.
   eapply gen_interconnections_pcomp; eauto.
 Qed.
 
-Lemma gen_arch_nodup_plmap : 
+Lemma gen_arch_sil_plmap : 
   forall {sitpn mm s v s'},
     @generate_architecture sitpn mm s = OK v s' ->
     Sig_in_List (lofPs s) ->
     (forall p, ~InA Peq p (fs (plmap (arch s)))) ->
     NoDupA Peq (fs (plmap (arch s))) ->
-    NoDupA Peq (fs (plmap (arch s'))).
+    Sig_in_List (fs (plmap (arch s'))).
 Admitted.
 
 Lemma gen_arch_inv_beh : 

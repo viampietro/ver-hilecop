@@ -76,8 +76,8 @@ Section GeneratePortsAndPs.
 
       match opt_marked_actual with
       (* Case where marked is connected to a name.  Then, adds the
-       equivalent expression at the end of lofexprs, and returns the
-       triplet (architecture, nextid, lofexprs). *)
+         equivalent expression at the end of lofexprs, and returns the
+         triplet (architecture, nextid, lofexprs). *)
       | Some (inl optn) =>
         match optn with
         | Some n => Ret (lofexprs ++ [e_name n])
@@ -85,14 +85,14 @@ Section GeneratePortsAndPs.
                       ++ $$p ++ " is open.")
         end
       (* Error case, the [marked] port is connected to a list of names
-       is the output port map of [pcomp], albeit it must be of scalar
-       type (boolean).  *)
+         in the output port map of [pcomp], albeit it must be of scalar
+         type (boolean).  *)
       | Some (inr _) => Err ("connect_marked_port: the marked port of place "
                                ++ $$p ++ " must be of scalar type.")%string
       (* Case where marked is not connected yet. Then, adds a new
-       interconnection signal to the arch's declaration list and at
-       the end of the lofexprs, modifies the output port map of
-       place p, and returns the resulting triplet. *)
+         interconnection signal to the arch's declaration list and at
+         the end of the lofexprs, modifies the output port map of
+         place p, and returns the resulting triplet. *)
       | None =>
         do id <- get_nextid;
         do pcomp' <- connect_out_port Place.marked (inl (Some ($id))) pcomp;

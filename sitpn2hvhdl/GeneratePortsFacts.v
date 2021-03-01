@@ -1,9 +1,14 @@
 (** * Facts about Port Generation and Connection *)
 
 Require Import String.
+Require Import common.Coqlib.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListMonadTactics.
+Require Import common.ListPlus.
+Require Import common.SetoidListFacts.
+
+Require Import sitpn.dp.SitpnLib.
 
 Require Import hvhdl.AbstractSyntax.
 
@@ -43,6 +48,74 @@ Section GenActionPorts.
     solve_listm EQ0; intros *; intros e; minv e.
     shelf_state EQ5; change (lofPs s) with (lofPs s2); solve_listm EQ5.
   Qed.
+
+  Lemma foldl_gen_aport_and_ss_inv_plmap :
+    forall {sitpn acts ss_pair s v s'},
+      ListMonad.fold_left (generate_action_port_and_ss sitpn) acts ss_pair s = OK v s' ->
+      plmap (arch s) = plmap (arch s').
+  Proof.
+    intros *; intros e; solve_listm e.
+    intros *; intros e; minv e.
+    shelf_state EQ4; change (arch s1) with (arch s0); solve_listm EQ4.
+  Qed.
+  
+  Lemma connect_marked_port_sil_plmap :
+    forall {sitpn lofexprs p s v s'},
+      connect_marked_port sitpn lofexprs p s = OK v s' ->
+      Sig_in_List (fs (plmap (arch s))) ->
+      Sig_in_List (fs (plmap (arch s'))).
+  Proof.
+    intros *; intros e; minv e.
+    solve_listm EQ1; auto.
+    solve_listm EQ1; eauto with setoidl.
+    destruct 1 as (InA_plmap2, NoDupA_plmap2); split.
+    intros.
+    eapply InA_fs_InA_fs_setv; eauto.
+    eapply NoDupA_setv_cons; eauto.
+  Qed.
+
+  Lemma connect_marked_port_inv_plmap :
+    forall {sitpn lofexprs p s v s'},
+      connect_marked_port sitpn lofexprs p s = OK v s' ->
+      Sig_in_List (fs (plmap (arch s))) ->
+      forall {p g i o},
+        InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
+        exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
+  Admitted.
+  
+  Lemma iter_add_amap_entry_inv_plmap :
+    forall {sitpn acts s v s'},
+      ListMonad.iter (add_action_map_entry sitpn) acts s = OK v s' ->
+      forall {p g i o},
+        Sig_in_List (fs (plmap (arch s))) ->
+        InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
+        Sig_in_List (fs (plmap (arch s'))) /\ exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
+  Proof.
+    intros *; intros e; solve_listm e.
+    unfold Transitive; intros.
+    edestruct H as (SIL, (o1, InA_plmapy)); eauto.
+    intros *; intros e; minv e; solve_listm EQ2.
+    unfold connect_marked_ports in EQ1; solve_listm EQ1.
+    unfold Transitive; intros.
+    edestruct H as (SIL, (o1, InA_plmapy)); eauto.
+    split.
+    eapply connect_marked_port_sil_plmap; eauto.
+    eapply connect_marked_port_inv_plmap; eauto.
+  Qed.
+  
+  Lemma gen_aports_inv_plmap :
+    forall {sitpn s v s'},
+      generate_action_ports_and_ps sitpn s = OK v s' ->
+      Sig_in_List (fs (plmap (arch s))) ->
+      forall {p g i o},
+        InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
+        exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
+  Proof.
+    intros *; intros e SIL; minv e; eauto.
+    intros *; intros InA_plmap0.
+    rewrite <- (foldl_gen_aport_and_ss_inv_plmap EQ0).
+    edestruct @iter_add_amap_entry_inv_plmap with (sitpn := sitpn) as (o1, InA_plmap1); eauto.    
+  Qed.
   
 End GenActionPorts.
 
@@ -77,7 +150,15 @@ Section GenFunPorts.
     solve_listm EQ0; intros *; intros e; minv e.
     shelf_state EQ5; change (lofPs s) with (lofPs s2); solve_listm EQ5.
   Qed.
-
+  
+  Lemma gen_fports_inv_plmap :
+    forall {sitpn s v s'},
+      generate_fun_ports_and_ps sitpn s = OK v s' ->
+      forall {p g i o},
+        InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
+        exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
+  Proof.
+  Admitted.
   
 End GenFunPorts.
 
@@ -112,6 +193,19 @@ Section GenCondPorts.
     unfold connect_in_cond_ports in EQ4; solve_listm EQ4.
     intros *; intros e; minv e; solve_listm EQ1.
   Qed.
+
+  Lemma gen_cports_inv_plmap :
+    forall {sitpn s v s'},
+      generate_and_connect_cond_ports sitpn s = OK v s' ->
+      plmap (arch s) = plmap (arch s').
+  Proof.
+    intros *; intros e; minv e; solve_listm EQ0.
+    intros *; intros e; minv e.
+    shelf_state EQ5; change (plmap (arch s)) with (plmap (arch s1)).
+    solve_listm EQ5.
+    unfold connect_in_cond_ports in EQ4; solve_listm EQ4.
+    intros *; intros e; minv e; solve_listm EQ1.
+  Qed.
   
 End GenCondPorts.
 
@@ -141,10 +235,27 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma gen_ports_inv_arch :
+Lemma gen_ports_inv_plmap :
   forall {sitpn s v s'},
     @generate_ports sitpn s = OK v s' ->
-    arch s = arch s'.
+    Sig_in_List (fs (plmap (arch s))) ->
+    forall {p g i o},
+      InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
+      exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
+Proof.
+  intros *; intros e SIL; monadInv e.
+  rewrite <- (gen_cports_inv_plmap EQ2).
+  intros *; intros InA_plmap.
+  edestruct @gen_aports_inv_plmap with (sitpn := sitpn); eauto.
+  eapply @gen_fports_inv_plmap with (sitpn := sitpn); eauto.
+Qed.
+
+Lemma gen_ports_sil_plmap :
+  forall {sitpn s v s'},
+    @generate_ports sitpn s = OK v s' ->
+    Sig_in_List (fs (plmap (arch s))) ->
+    Sig_in_List (fs (plmap (arch s'))).
+Proof.
 Admitted.
 
 Lemma gen_ports_inv_no_comps_in_beh :

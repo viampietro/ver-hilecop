@@ -69,13 +69,25 @@ Section InAFacts.
   Qed.
 
   Lemma InA_setv_inv_2 :
-    forall {A B : Type} {eqk} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {x : A} {z : B} {l} {y v eqv},
+    forall {A B : Type} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {y v l} {x : A} {z : B},
       let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
       InA eqkv (x, z) (setv eqk_dec y v l) ->
       ~eqk x y ->
       Equivalence eqk ->
       InA eqkv (x, z) l.
-  Admitted.
+  Proof.
+    intros until l.
+    functional induction (setv eqk_dec y v l) using setv_ind;
+      intros *; intros InA_setv neqk Equiv_eqk.
+    (* CASE l = [] *)
+    inversion_clear InA_setv as [ y0 a and_ | a l InA_nil ];
+      [ destruct and_; contradiction | inversion InA_nil ].
+    (* CASE fst hd = y *)
+    inversion_clear InA_setv as [ y0 l and_ | y0 l InA_tl ]; auto.
+    destruct and_; contradiction.
+    (* CASE ind. call *)
+    inversion_clear InA_setv as [ y0 l and_ | y0 l InA_tl ]; auto.
+  Qed.
   
   Lemma InA_setv :
     forall {A B : Type} {x : A} {z : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l},
@@ -99,8 +111,9 @@ Section InAFacts.
     intros until l; functional induction (setv eqk_dec y v2 l) using setv_ind.
     inversion_clear 1; [ left; auto | inversion H0 ].
     inversion_clear 1; [ left; auto | right; auto ].
-    inversion_clear 1; [ left; auto | right; auto ].
-  Admitted.
+    inversion_clear 1; [ right; auto | auto ].
+    edestruct IHl0 as [and_ | InA_tl ]; eauto.
+  Qed.
   
   Lemma InA_notin_fs_setv_inv {A B : Type} :
     forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}}
@@ -128,6 +141,37 @@ Section InAFacts.
       ~InA eqA y l ->
       ~eqA x y.
   Proof. intros; intro; specialize (InA_eqA H H2 H0); contradiction. Qed.
+
+  Lemma nInA_eqA {A : Type} :
+    forall {eqA : A -> A -> Prop} {x y} {l : list A},
+      Equivalence eqA ->
+      eqA x y ->
+      ~InA eqA x l ->
+      ~InA eqA y l.
+  Proof.
+    intros *; intros Equiv_eqA eqA_xy nInA InA_y.
+    apply nInA; eauto; symmetry in eqA_xy; eauto.
+    eapply InA_eqA; eauto.
+  Qed.
+
+  Lemma InA_fs_InA_fs_setv :
+    forall {A B : Type} {eqk} {eqk_dec : forall x y : A, {eqk x y} + {~ eqk x y}} {y b}
+           {l : list (A * B)} {x},
+      Equivalence eqk ->
+      InA eqk x (fs l) ->
+      InA eqk x (fs (setv eqk_dec y b l)).
+  Proof.
+    intros until l; functional induction (setv eqk_dec y b l) using setv_ind.
+    inversion 2.
+    rewrite fs_eq_cons_app; cbn; intros x Equiv_eqk InA_.
+    rewrite fs_eq_cons_app; cbn.
+    inversion_clear InA_ as [z l eqk_xa | z l InA_tl]; [ | eauto].
+    eapply InA_cons_hd; transitivity a; auto.
+    symmetry; auto.
+    rewrite fs_eq_cons_app; cbn; intros x Equiv_eqk InA_.
+    rewrite fs_eq_cons_app; cbn.
+    inversion InA_; auto.
+  Qed.
   
 End InAFacts.
 
@@ -141,11 +185,27 @@ Hint Resolve InA_setv : setoidl.
 Hint Extern 1 (InA _ (?x, ?z) (setv _ ?x ?z _)) => apply InA_setv : setoidl.
 Hint Resolve InA_notin_fs_setv_inv : setoidl.
 Hint Resolve InA_neqA : setoidl.
-     
+Hint Resolve nInA_eqA : setoidl.
+
 (** ** Facts about [NoDupA] *)
 
 Section NoDupAFacts.
 
+  Lemma NoDupA_tl (A : Type) :
+    forall {eqA : A -> A -> Prop} {a : A} {l : list A},
+      NoDupA eqA (a :: l) ->
+      NoDupA eqA l.
+  Proof. inversion 1; auto. Qed.
+  
+  Lemma NoDupA_fs_tl (A B : Type) :
+    forall {eqA : A -> A -> Prop} {a : A} {b : B} {l : list (A * B)},
+      NoDupA eqA (fs ((a, b) :: l)) ->
+      NoDupA eqA (fs l).
+  Proof.  intros *; rewrite fs_eq_cons_app; simpl; inversion 1; auto. Qed.
+
+  Hint Resolve NoDupA_tl : setoidl.
+  Hint Resolve NoDupA_fs_tl : setoidl.
+  
   Lemma NoDupA_fs_eqk_eq (A : Type) {B : Type} :
     forall {eqk : A -> A -> Prop} {l : list (A * B)} {a b b'},
       Equivalence eqk ->
@@ -201,34 +261,21 @@ Section NoDupAFacts.
   Lemma NoDupA_setv_cons (A : Type) {B : Type} :
     forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {a b} {l : list (A * B)},
       Equivalence eqk ->
-      ~InA eqk a (fs l) ->
       NoDupA eqk (fs l) ->
       NoDupA eqk (fs (setv eqk_dec a b l)).
   Proof.  
     intros until l; functional induction (setv eqk_dec a b l) using setv_ind.
     - intros; apply NoDupA_singleton.
-    - intros Heq Hnin; elimtype False; apply Hnin.
-      rewrite fs_eq_cons_app; simpl; apply InA_cons_hd; assumption.
-    - do 2 (rewrite fs_eq_cons_app; simpl).
-      intros; apply NoDupA_cons;
-        lazymatch goal with
-        | [ H: NoDupA _ (_ :: _) |- _ ] =>
-          inversion_clear H as [  | x l Hnin Hnd ];
-            (apply InA_notin_fs_setv_inv; auto) || (apply IHl0; auto)
-        end.
+    - intros Equiv_eqk NoDupA_; rewrite fs_eq_cons_app; cbn.
+      apply NoDupA_cons; eauto with setoidl.
+      rewrite fs_eq_cons_app in NoDupA_; cbn in NoDupA_.
+      inversion_clear NoDupA_; eauto with setoidl.
+      eapply nInA_eqA; eauto.
+      symmetry; auto.
+    - rewrite fs_eq_cons_app; cbn; intros Equiv_eqk NoDupA_.
+      rewrite fs_eq_cons_app; cbn.
+      eapply NoDupA_cons; inversion_clear NoDupA_; eauto with setoidl.
   Qed.
-
-  Lemma NoDupA_tl (A : Type) :
-    forall {eqA : A -> A -> Prop} {a : A} {l : list A},
-      NoDupA eqA (a :: l) ->
-      NoDupA eqA l.
-  Proof. inversion 1; auto. Qed.
-  
-  Lemma NoDupA_fs_tl (A B : Type) :
-    forall {eqA : A -> A -> Prop} {a : A} {b : B} {l : list (A * B)},
-      NoDupA eqA (fs ((a, b) :: l)) ->
-      NoDupA eqA (fs l).
-  Proof.  intros *; rewrite fs_eq_cons_app; simpl; inversion 1; auto. Qed.
   
 End NoDupAFacts.
 

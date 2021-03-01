@@ -582,6 +582,23 @@ Section GenerateTransCompInst.
     eapply iter_gen_tcomp_inst_inv_p2pcomp; eauto.
   Qed.
 
+  Lemma gen_tcomp_inst_gen_only_tcomp :
+    forall {sitpn t s v s'},
+      generate_trans_comp_inst sitpn t s = OK v s' ->
+      forall {id__c id__e gm ipm opm},
+        id__e <> Petri.transition_entid ->
+        InCs (cs_comp id__c id__e gm ipm opm) (beh s') ->
+        InCs (cs_comp id__c id__e gm ipm opm) (beh s).
+  Proof.
+    intros *; intros e; minv e; shelf_state EQ4.
+    inversion_clear 2 as [eq_comp | InCs_beh5 ];
+      [ inject_left eq_comp; contradiction | ].
+    change (beh s0) with (beh s).
+    rewrite (getv_inv_state EQ4),
+    (InputMap_to_AST_inv_state EQ2),
+    (OutputMap_to_AST_inv_state EQ0); auto.
+  Qed.
+  
   Lemma gen_tcomp_insts_gen_only_tcomp :
     forall {sitpn s v s'},
       generate_trans_comp_insts sitpn s = OK v s' ->
@@ -589,7 +606,11 @@ Section GenerateTransCompInst.
         id__e <> Petri.transition_entid ->
         InCs (cs_comp id__c id__e gm ipm opm) (beh s') ->
         InCs (cs_comp id__c id__e gm ipm opm) (beh s).
-  Admitted.
+  Proof.
+    intros *; intros e; minv e.
+    pattern s0, s'; solve_listm EQ0.
+    intros *; eapply gen_tcomp_inst_gen_only_tcomp; eauto.
+  Qed.
   
 End GenerateTransCompInst.
 
@@ -730,10 +751,18 @@ Section Sitpn2HVhdl.
     do 3 intro; intros IWD_sitpn; intros; monadInv e.
     minv EQ4; inversion H; clear H; subst; simpl.
 
-    (* Builds [InA Peq (p, (g, i, o)) (plmap (arch s0))] *)
-    edestruct @gen_arch_pcomp with (p := p) as (g, (i, (o, InA_plmap))); eauto.
+    (* Builds [InA Peq (p, (g, i, o)) (plmap (arch s0))],
+       and [InA Peq (p, (g, i, o')) (plmap (arch s1))]
+     *)
+    edestruct @gen_arch_pcomp with (p := p) as (g, (i, (o, InA_plmap0))); eauto.
     eapply gen_sitpn_infos_sil_lofPs; eauto.
     exact (nodup_pls (wi_fsets IWD_sitpn)).
+    edestruct @gen_ports_inv_plmap with (p := p) as (o', InA_plmap1); eauto.
+    eapply gen_arch_sil_plmap; eauto.
+    eapply gen_sitpn_infos_sil_lofPs; eauto.
+    exact (nodup_pls (wi_fsets IWD_sitpn)).
+    erewrite <- gen_sitpn_infos_inv_arch; eauto; cbn; inversion 1.
+    erewrite <- gen_sitpn_infos_inv_arch; eauto; cbn; auto.
     
     (* Apply gen_comp_insts_bind_init_marking, solve the generated
        subgoals. *)
@@ -746,8 +775,8 @@ Section Sitpn2HVhdl.
     exact (nodup_pls (wi_fsets IWD_sitpn)).
 
     (* SUBGOAL [NoDupA Peq (fs (plmap (arch s1)))] *)
-    erewrite <- gen_ports_inv_arch; eauto.
-    eapply gen_arch_nodup_plmap; eauto.
+    eapply gen_ports_sil_plmap; eauto.
+    eapply gen_arch_sil_plmap; eauto.
     eapply gen_sitpn_infos_sil_lofPs; eauto.
     exact (nodup_pls (wi_fsets IWD_sitpn)).
     erewrite <- gen_sitpn_infos_inv_arch; eauto; cbn; inversion 1.
@@ -759,7 +788,7 @@ Section Sitpn2HVhdl.
         erewrite <- gen_sitpn_infos_inv_γ; eauto;
            (cbn; eapply NoDupA_nil || inversion 2).
 
-    (* SUBGOAL [∄ (p, id__p) ∈ (p2pcomp (γ s)) s.t. id__p > nextid s1] *)
+    (* SUBGOAL [∄ (p, id__p) ∈ (p2pcomp (γ s)) s.t. id__p >= nextid s1] *)
     erewrite <- gen_ports_inv_p2pcomp; eauto.
     erewrite <- gen_arch_inv_γ; eauto.
     erewrite <- gen_sitpn_infos_inv_γ; eauto.
@@ -773,9 +802,6 @@ Section Sitpn2HVhdl.
     destruct 1 as (id__c1, (id__e1, (gm1, (ipm1, (opm1, e))))); inversion e.
     exists id__c, id__e, gm0, ipm0, opm0; auto.
     
-    (* SUBGOAL [(p, (g, i, o)) ∈ (plmap (arch s1))] *)
-    erewrite <- gen_ports_inv_arch; eauto.
-
     (* SUBGOAL [(initial_marking, inl (M0 p)) ∈ i] *)
     eapply gen_arch_bind_init_marking; eauto.
   Qed.
