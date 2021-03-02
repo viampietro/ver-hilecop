@@ -212,10 +212,10 @@ Section InAFacts.
 End InAFacts.
 
 Hint Resolve InA_fst_split : setoidl.
-Hint Extern 1 (InA _ _ (fs _)) => eapply InA_fst_split; eauto : setoidl.
+Hint Extern 1 (InA _ _ (fs _)) => eapply InA_fst_split : setoidl.
 Hint Resolve not_InA_fst_split : setoidl.
 Hint Resolve InA_eqk : setoidl.
-Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk; eauto : setoidl.
+Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk : setoidl.
 Hint Resolve InA_setv_inv_1 : setoidl.
 Hint Resolve InA_setv_inv_2 : setoidl.
 Hint Resolve InA_setv : setoidl.

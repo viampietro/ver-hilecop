@@ -101,8 +101,6 @@ Section InAndNoDupLemmas.
         rewrite <- H; assumption.
       + apply IHl'; assumption.
   Qed.
-
-
   
   (** ∀ ll : list (list), NoDup (concat ll) ⇒ ∀ l ∈ ll, NoDup l. *)
 
