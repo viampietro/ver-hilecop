@@ -24,6 +24,7 @@ Require Import hvhdl.AbstractSyntaxTactics.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.WellDefinedDesignTactics.
 Require Import hvhdl.EnvironmentFacts.
+Require Import hvhdl.EnvironmentTactics.
 
 (** ** Facts about [vcomb] *)
 
@@ -257,12 +258,9 @@ Proof.
   - destruct (AreCsCompIds_ex cstmt) as (compids1, AreCsCompIds_1);
       destruct (AreCsCompIds_ex cstmt') as (compids2, AreCsCompIds_2).
     do 4 intro;
-      erewrite (AreCsCompIds_eq_app cstmt cstmt') with (compids'' := compids); eauto.
-    intros; decompose_IMDS;
-      match goal with
-      | [ H: Equal (events ?A) _ |- ~NatSet.In _ (events ?A) ] =>
-        rewrite H; apply not_in_union
-      end.
+      erewrite (AreCsCompIds_eq_app cstmt cstmt' compids1 compids2)
+        with (compids'' := compids); eauto.
+    rename H2 into IMDS; erw_IMDS_events_m IMDS; intros; apply not_in_union.
     eapply IHvcomb1; eauto; eapply proj1; eapply not_app_in; eauto.
     eapply IHvcomb2; eauto; eapply proj2; eapply not_app_in; eauto.
 Qed.

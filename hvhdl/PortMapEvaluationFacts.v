@@ -151,9 +151,7 @@ Section IPMap.
     inversion H2; subst. inversion H5; subst.
     eapply mapip_inv_if_not_assoc; eauto.
     eapply proj1; eapply listipm_unique_simpl_associp; eauto.
-    apply in_last.
     eapply proj2; eapply listipm_unique_simpl_associp; eauto.
-    apply in_last.
     inversion 1; subst.
     intros; eapply IHmapip; eauto.
   Qed.

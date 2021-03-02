@@ -4,6 +4,7 @@ Require Import String.
 Require Import common.Coqlib.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
+Require Import common.ListMonadFacts.
 Require Import common.ListMonadTactics.
 Require Import common.ListPlus.
 Require Import common.SetoidListFacts.
@@ -13,9 +14,9 @@ Require Import sitpn.dp.SitpnLib.
 Require Import hvhdl.AbstractSyntax.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
+Require Import sitpn2hvhdl.GenerateArchitectureFacts.
 
 (** ** Facts about Action Port Generation *)
-
 
 Section GenActionPorts.
   
@@ -73,15 +74,34 @@ Section GenActionPorts.
     eapply InA_fs_InA_fs_setv; eauto.
     eapply NoDupA_setv_cons; eauto.
   Qed.
-
+  
   Lemma connect_marked_port_inv_plmap :
-    forall {sitpn lofexprs p s v s'},
-      connect_marked_port sitpn lofexprs p s = OK v s' ->
+    forall {sitpn lofexprs p1 s v s'},
+      connect_marked_port sitpn lofexprs p1 s = OK v s' ->
       Sig_in_List (fs (plmap (arch s))) ->
-      forall {p g i o},
-        InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
-        exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
-  Admitted.
+      forall {p2 g i o},
+        InA Pkeq (p2, (g , i, o)) (plmap (arch s)) ->
+        exists o', InA Pkeq (p2, (g, i, o')) (plmap (arch s')).
+  Proof.
+    intros *; intros e SIL; minv e.
+    solve_listm EQ1; intros; exists o0; assumption.
+    rewrite <- (getv_inv_state EQ1); intros.
+    destruct (Peqdec p1 p2) as [ Peq_ | nPeq ].
+    (* CASE [Peq p1 p2] *)
+    assert (InA Pkeq (p1, (g, i, o)) (plmap (arch s0)))
+      by (eapply getv_correct; eauto).
+    assert (InA Pkeq (p1, (g0, i0, o0)) (plmap (arch s0)))
+      by (symmetry in Peq_; eapply InA_eqk; eauto).
+    assert (e : (g, i, o) = (g0, i0, o0)).
+    eapply @NoDupA_fs_eqk_eq with (eqk := Peq); eauto with typeclass_instances.
+    apply SIL.
+    inject_left e.
+    exists (setv Nat.eq_dec Place.marked (inl (Some (n_id (nextid s0)))) o0).
+    eapply InA_setv_eqk; eauto; symmetry; assumption.
+    (* CASE [~Peq p1 p2] *)
+    exists o0; eapply InA_setv_inv_1; eauto.
+    intros Peq_; symmetry in Peq_; contradiction.
+  Qed.
   
   Lemma iter_add_amap_entry_inv_plmap :
     forall {sitpn acts s v s'},
@@ -154,11 +174,16 @@ Section GenFunPorts.
   Lemma gen_fports_inv_plmap :
     forall {sitpn s v s'},
       generate_fun_ports_and_ps sitpn s = OK v s' ->
-      forall {p g i o},
-        InA Pkeq (p, (g , i, o)) (plmap (arch s)) ->
-        exists o', InA Pkeq (p, (g, i, o')) (plmap (arch s')).
+      plmap (arch s) = plmap (arch s').
   Proof.
-  Admitted.
+    intros *; intros e; minv e; auto.
+    transitivity (plmap (arch s1)).
+    solve_listm EQ2; intros *; intros e; minv e; solve_listm EQ3.
+    unfold connect_fired_ports in EQ2; solve_listm EQ2.
+    intros *; intros e1; minv e1; solve_listm EQ2.
+    solve_listm EQ0; intros *; intros e; minv e.
+    shelf_state EQ5; change (plmap (arch s)) with (plmap (arch s2)); solve_listm EQ5.
+  Qed.
   
 End GenFunPorts.
 
@@ -247,7 +272,7 @@ Proof.
   rewrite <- (gen_cports_inv_plmap EQ2).
   intros *; intros InA_plmap.
   edestruct @gen_aports_inv_plmap with (sitpn := sitpn); eauto.
-  eapply @gen_fports_inv_plmap with (sitpn := sitpn); eauto.
+  rewrite <- (gen_fports_inv_plmap EQ1); eauto.
 Qed.
 
 Lemma gen_ports_sil_plmap :

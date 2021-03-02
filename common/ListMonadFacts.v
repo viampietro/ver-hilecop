@@ -53,10 +53,23 @@ Section GetV.
     (* ~eqk x a *)
     eapply IHl; eauto with setoidl.
   Qed.
+
+  Lemma getv_correct :
+    forall {A B state : Type} {eqk} {eqk_dec : forall x y : A, {eqk x y} + {~eqk x y}}
+           {x : A} {l : list (A * B)} {s : state} {v s'},
+      let eqkv := fun x0 y0 : A * B => eqk (fst x0) (fst y0) /\ eq (snd x0) (snd y0) in
+      ListMonad.getv eqk_dec x l s = OK v s' -> InA eqkv (x, v) l.
+  Proof.
+    intros until l;
+      functional induction (@getv state A B eqk eqk_dec x l) using @getv_ind;
+      intros *; intros e; [ minv e | minv e; eauto with setoidl | eauto ].
+  Qed.
   
 End GetV.
 
 Hint Resolve getv_inv_state : listmonad.
+Hint Resolve getv_compl : listmonad.
+Hint Resolve getv_correct : listmonad.
 
 (** ** Facts about [foldl] *)
 

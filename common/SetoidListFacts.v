@@ -24,6 +24,9 @@ Section InAFacts.
       + right; apply IHl with (b := b0); auto.
   Qed.
 
+  Hint Resolve InA_fst_split : setoidl.
+  Hint Extern 1 (InA _ _ (fs _)) => eapply InA_fst_split; eauto : setoidl.
+  
   (* Version of [not_in_fst_split] for setoid lists. *)
 
   Lemma not_InA_fst_split {A B : Type} :
@@ -38,6 +41,8 @@ Section InAFacts.
       specialize (InA_fst_split b0 Hin) as Hnotin_a1.
       contradiction.
   Qed.
+
+  Hint Resolve not_InA_fst_split : setoidl.
   
   Lemma InA_eqk :
     forall {A B : Type} {eqk : A -> A -> Prop} (eqv : B -> B -> Prop) {x y z l},
@@ -51,6 +56,9 @@ Section InAFacts.
       [ destruct y0 as (a, b); apply InA_cons_hd; firstorder
       | apply InA_cons_tl; auto].
   Qed.
+
+  Hint Resolve InA_eqk : setoidl.
+  Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk; eauto : setoidl.
   
   Lemma InA_setv_inv_1 :
     forall {A B : Type} {x y : A} {z v : B} {eqk eqv l} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}},
@@ -68,6 +76,8 @@ Section InAFacts.
     apply (Equivalence_Transitive x a y) in e; [contradiction | auto].
   Qed.
 
+  Hint Resolve InA_setv_inv_1 : setoidl.
+  
   Lemma InA_setv_inv_2 :
     forall {A B : Type} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {y v l} {x : A} {z : B},
       let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
@@ -88,6 +98,8 @@ Section InAFacts.
     (* CASE ind. call *)
     inversion_clear InA_setv as [ y0 l and_ | y0 l InA_tl ]; auto.
   Qed.
+
+  Hint Resolve InA_setv_inv_2 : setoidl.
   
   Lemma InA_setv :
     forall {A B : Type} {x : A} {z : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l},
@@ -102,6 +114,8 @@ Section InAFacts.
     apply InA_cons_tl; apply IHl0; auto.
   Qed.
 
+  Hint Resolve InA_setv : setoidl.
+  
   Lemma InA_setv_fst_or_in_tl :
     forall {A B : Type} {y : A} {v2 : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l} {x v1},
       let eqkv := (fun x y => eqk (fst x) (fst y) /\ eqv (snd x) (snd y)) in
@@ -134,6 +148,8 @@ Section InAFacts.
         ].
   Qed.
 
+  Hint Resolve InA_notin_fs_setv_inv : setoidl.
+  
   Lemma InA_neqA {A : Type} :
     forall {eqA : A -> A -> Prop} {x y} {l : list A},
       Equivalence eqA ->
@@ -142,6 +158,8 @@ Section InAFacts.
       ~eqA x y.
   Proof. intros; intro; specialize (InA_eqA H H2 H0); contradiction. Qed.
 
+  Hint Resolve InA_neqA : setoidl.
+  
   Lemma nInA_eqA {A : Type} :
     forall {eqA : A -> A -> Prop} {x y} {l : list A},
       Equivalence eqA ->
@@ -154,6 +172,8 @@ Section InAFacts.
     eapply InA_eqA; eauto.
   Qed.
 
+  Hint Resolve nInA_eqA : setoidl.
+  
   Lemma InA_fs_InA_fs_setv :
     forall {A B : Type} {eqk} {eqk_dec : forall x y : A, {eqk x y} + {~ eqk x y}} {y b}
            {l : list (A * B)} {x},
@@ -172,6 +192,22 @@ Section InAFacts.
     rewrite fs_eq_cons_app; cbn.
     inversion InA_; auto.
   Qed.
+
+  Hint Resolve nInA_eqA : setoidl.
+
+  Lemma InA_setv_eqk :
+    forall {A B : Type} {y : A} {z : B} {eqk : A -> A -> Prop} {eqv : B -> B -> Prop}
+           {eqk_dec : forall x0 y0 : A, {eqk x0 y0} + {~ eqk x0 y0}} {l : list (A * B)} {x : A},
+      let eqkv := fun x0 y : A * B => eqk (fst x0) (fst y) /\ eqv (snd x0) (snd y) in
+      Equivalence eqk -> Equivalence eqv -> eqk x y -> InA eqkv (x, z) (setv eqk_dec y z l).
+  Proof.
+    intros until l; functional induction (setv eqk_dec y z l) using setv_ind.
+    constructor 1; cbn; split; eauto with relations.
+    constructor 1; cbn; split; eauto with relations.
+    constructor 2; eauto.
+  Qed.
+
+  Hint Resolve InA_setv_eqk : setoidl.
   
 End InAFacts.
 
@@ -181,11 +217,14 @@ Hint Resolve not_InA_fst_split : setoidl.
 Hint Resolve InA_eqk : setoidl.
 Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk; eauto : setoidl.
 Hint Resolve InA_setv_inv_1 : setoidl.
+Hint Resolve InA_setv_inv_2 : setoidl.
 Hint Resolve InA_setv : setoidl.
 Hint Extern 1 (InA _ (?x, ?z) (setv _ ?x ?z _)) => apply InA_setv : setoidl.
 Hint Resolve InA_notin_fs_setv_inv : setoidl.
 Hint Resolve InA_neqA : setoidl.
 Hint Resolve nInA_eqA : setoidl.
+Hint Resolve InA_fs_InA_fs_setv : setoidl.
+Hint Resolve InA_setv_eqk : setoidl.
 
 (** ** Facts about [NoDupA] *)
 

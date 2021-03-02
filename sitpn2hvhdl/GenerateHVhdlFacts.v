@@ -272,7 +272,7 @@ Section GeneratePlaceCompInst.
         specialize (getv_inv_state EQ4) as e1;
         specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
         rewrite <- e2, <- e1; clear e1 e2; simpl.
-    apply NoDupA_setv_cons; auto.
+    do 1 intro; apply NoDupA_setv_cons; auto.
   Qed.
 
   Lemma gen_p_comp_inst_inv_p2pcomp :
