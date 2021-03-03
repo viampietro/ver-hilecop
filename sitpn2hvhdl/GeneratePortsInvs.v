@@ -96,8 +96,7 @@ Section GenActionPortsInvs.
     exists (setv Nat.eq_dec Place.marked (inl (Some (n_id (nextid s0)))) o0).
     eapply InA_setv_eqk; eauto; symmetry; assumption.
     (* CASE [~Peq p1 p2] *)
-    exists o0; eapply InA_setv_inv_1; eauto.
-    intros Peq_; symmetry in Peq_; contradiction.
+    exists o0; eapply InA_setv_inv_1; eauto.    
   Qed.
   
   Lemma iter_add_amap_entry_inv_plmap :
@@ -147,6 +146,28 @@ Section GenActionPortsInvs.
     solveSInv EQ5; auto.
     solveSInv EQ5; auto; eapply SIL_fs_setv.
   Qed.
+
+  Lemma gen_aports_inv_no_comps_in_beh :
+    forall {sitpn s v s'},
+      generate_action_ports_and_ps sitpn s = OK v s' ->
+      ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s)) ->
+      ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s')).      
+  Proof.
+    intros *; intros e; minv e; auto; simpl.
+    assert (e : beh s0 = beh s5).
+    {
+      transitivity (beh s1).
+      solve_listm EQ2; intros *; intros e.
+      minv e; solve_listm EQ3.
+      unfold connect_marked_ports in EQ2; solve_listm EQ2.
+      intros *; intros e1; minv e1; solve_listm EQ2.
+      solve_listm EQ0; intros *; intros e; minv e.
+      shelf_state EQ5; change (beh s) with (beh s2); solve_listm EQ5.
+    }
+    inject_left e.
+    intros nex_InCs; destruct 1 as (id__c, (id__e, (gm, (ipm, (opm, [eq_ | InCs_])))));
+      [ inversion eq_ | apply  nex_InCs; exists id__c, id__e, gm, ipm, opm; assumption ].
+  Qed.
   
 End GenActionPortsInvs.
 
@@ -195,6 +216,26 @@ Section GenFunPortsInvs.
     solve_listm EQ0; intros *; intros e; minv e.
     shelf_state EQ5; change (plmap (arch s)) with (plmap (arch s2)); solve_listm EQ5.
   Qed.
+
+  Lemma gen_fports_inv_no_comps_in_beh :
+    forall {sitpn s v s'},
+      generate_fun_ports_and_ps sitpn s = OK v s' ->
+      ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s)) ->
+      ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s')).
+  Proof.
+    intros *; intros e; minv e; auto.
+    assert (e : beh s0 = beh s5).
+    { transitivity (beh s1).
+      solve_listm EQ2; intros *; intros e; minv e; solve_listm EQ3.
+      unfold connect_fired_ports in EQ2; solve_listm EQ2.
+      intros *; intros e1; minv e1; solve_listm EQ2.
+      solve_listm EQ0; intros *; intros e; minv e.
+      shelf_state EQ5; change (beh s) with (beh s2); solve_listm EQ5.
+    }
+    inject_left e.
+    intros nex_InCs; destruct 1 as (id__c, (id__e, (gm, (ipm, (opm, [eq_ | InCs_])))));
+      [ inversion eq_ | apply  nex_InCs; exists id__c, id__e, gm, ipm, opm; assumption ].
+  Qed.
   
 End GenFunPortsInvs.
 
@@ -207,13 +248,12 @@ Section GenCondPorts.
       generate_and_connect_cond_ports sitpn s = OK v s' ->
       p2pcomp (γ s) = p2pcomp (γ s').
   Proof.
-    intros *; intros e; minv e.
-    solve_listm EQ0.
-    intros *; intros e; minv e.
-    shelf_state EQ5; change (p2pcomp (γ s)) with (p2pcomp (γ s1)).
-    solve_listm EQ5.
-    unfold connect_in_cond_ports in EQ4; solve_listm EQ4.
-    intros *; intros e; minv e; solve_listm EQ1.
+    intros *; intros e; minv e;
+      solve_listm EQ0; intros *; intros e; minv e; shelf_state EQ5;
+        change (p2pcomp (γ s)) with (p2pcomp (γ s1));
+        solve_listm EQ5;
+        unfold connect_in_cond_ports in EQ4; solve_listm EQ4;
+          intros *; intros e; minv e; solve_listm EQ1.
   Qed.
 
   Lemma gen_cports_inv_lofPs :
@@ -225,6 +265,20 @@ Section GenCondPorts.
     solve_listm EQ0.
     intros *; intros e; minv e.
     shelf_state EQ5; change (lofPs s) with (lofPs s1).
+    solve_listm EQ5.
+    unfold connect_in_cond_ports in EQ4; solve_listm EQ4.
+    intros *; intros e; minv e; solve_listm EQ1.
+  Qed.
+
+  Lemma gen_cports_inv_beh :
+    forall {sitpn s v s'},
+      generate_and_connect_cond_ports sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof.
+    intros *; intros e; minv e.
+    solve_listm EQ0.
+    intros *; intros e; minv e.
+    shelf_state EQ5; change (beh s) with (beh s1).
     solve_listm EQ5.
     unfold connect_in_cond_ports in EQ4; solve_listm EQ4.
     intros *; intros e; minv e; solve_listm EQ1.
@@ -302,4 +356,10 @@ Lemma gen_ports_inv_no_comps_in_beh :
     @generate_ports sitpn s = OK v s' ->
     ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s)) ->
     ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s')).
-Admitted.
+Proof.
+  intros *; intros e; monadInv e.
+  intros nex_InCs_comp.
+  rewrite <- (gen_cports_inv_beh EQ2); eauto.
+  eapply gen_fports_inv_no_comps_in_beh; eauto.
+  eapply gen_aports_inv_no_comps_in_beh; eauto.
+Qed.

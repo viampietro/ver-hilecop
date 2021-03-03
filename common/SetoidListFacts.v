@@ -315,6 +315,22 @@ Section NoDupAFacts.
       rewrite fs_eq_cons_app; cbn.
       eapply NoDupA_cons; inversion_clear NoDupA_; eauto with setoidl.
   Qed.
+
+  Lemma NoDupA_app_comm :
+    forall {A : Type} {eqA : A -> A -> Prop} {l m},
+      Equivalence eqA ->
+      NoDupA eqA (l ++ m) -> NoDupA eqA (m ++ l).
+  Proof.
+    induction m.
+    rewrite app_nil_l, app_nil_r; auto.
+    intros Equiv_eqA NoDupA_.
+    rewrite <- app_comm_cons.
+    constructor; eapply NoDupA_swap in NoDupA_; eauto; inversion_clear NoDupA_; eauto.
+    intros InA_app1; apply H.
+    rewrite InA_app_iff; rewrite InA_app_iff in InA_app1; firstorder.
+  Qed.
+
+  Hint Resolve NoDupA_app_comm : setoidl.
   
 End NoDupAFacts.
 
@@ -322,6 +338,7 @@ Hint Rewrite NoDupA_fs_eqk_eq : setoidl.
 Hint Resolve NoDupA_setv_cons : setoidl.
 Hint Resolve NoDupA_tl : setoidl.
 Hint Resolve NoDupA_fs_tl : setoidl.
+Hint Resolve NoDupA_app_comm : setoidl.
 
 (** ** Facts about both [InA] and [NoDupA] *)
 

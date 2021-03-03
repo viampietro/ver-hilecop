@@ -64,7 +64,7 @@ Section GetV.
       functional induction (@getv state A B eqk eqk_dec x l) using @getv_ind;
       intros *; intros e; [ minv e | minv e; eauto with setoidl | eauto ].
   Qed.
-  
+
 End GetV.
 
 Hint Resolve getv_inv_state : listmonad.
@@ -108,8 +108,6 @@ Section FoldL.
   Qed.
   
 End FoldL.
-
-
 
 Remark iter_inv_state :
   forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}

@@ -108,8 +108,6 @@ Proof.
       apply H2.
 Qed.
 
-
-
 (** For all pairs in l, in there are no duplicates in the first 
     elements of the pairs in l, then there are no duplicates in l. *)
 

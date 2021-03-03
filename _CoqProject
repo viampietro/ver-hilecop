@@ -5,11 +5,17 @@
 -R soundness/ hilecop.soundness
 -R test/ hilecop.test
 ./sitpn2hvhdl/GeneratePortsFacts.v
+./sitpn2hvhdl/Sitpn2HVhdlFacts.v
 ./sitpn2hvhdl/GeneratePorts.v
+./sitpn2hvhdl/Sitpn2HVhdlInvs.v
 ./sitpn2hvhdl/GenerateInfosFacts.v
 ./sitpn2hvhdl/GenerateArchitectureFacts.v
+./sitpn2hvhdl/GeneratePortsInvs.v
+./sitpn2hvhdl/GenerateInfosInvs.v
+./sitpn2hvhdl/GenerateArchitectureInvs.v
 ./sitpn2hvhdl/GenerateInfos.v
 ./sitpn2hvhdl/GenerateArchitecture.v
+./sitpn2hvhdl/GenerateHVhdlInvs.v
 ./sitpn2hvhdl/Sitpn2HVhdl.v
 ./sitpn2hvhdl/GenerateHVhdlFacts.v
 ./sitpn2hvhdl/GenerateHVhdl.v
@@ -26,6 +32,7 @@
 ./common/Coqlib.v
 ./common/ListMonadTactics.v
 ./common/CoqTactics.v
+./common/ListLib.v
 ./common/StateAndErrorMonad.v
 ./common/ListPlusTactics.v
 ./common/DFMapWeakList.v
