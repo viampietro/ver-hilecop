@@ -185,31 +185,49 @@ Proof.
                 [ eapply f_inv; eauto | eapply IHl; eauto ] ].
 Qed.
 
-Remark map_aux_inv_state :
-  forall {state B C : Type} {l} {f : B -> Mon C} {m} {s : state} {v s'}
-         {Q : state -> state -> Prop},
-    map_aux f l m s = OK v s' ->
-    Reflexive Q ->
-    Transitive Q ->
-    (forall b s1 c s2, f b s1 = OK c s2 -> Q s1 s2) ->
-    Q s s'.
-Proof.
-  induction l; simpl; intros f m s v s' Q e Qrefl Qtrans f_inv; minv e.
-  apply Qrefl.
-  apply Qtrans with (y := s0).
-  eapply f_inv; eauto.
-  eapply IHl; eauto.
-Qed.
+(** ** Facts about [map] *)
 
-Remark map_inv_state :
-  forall {state B C : Type} {l} {f : B -> Mon C} {s : state} {v s'}
-         {Q : state -> state -> Prop},
-    map f l s = OK v s' ->
-    Reflexive Q ->
-    Transitive Q ->
-    (forall b s1 c s2, f b s1 = OK c s2 -> Q s1 s2) ->
-    Q s s'.
-Proof. intros; eapply map_aux_inv_state; eauto. Qed.
+Section Map.
+
+  Remark map_aux_inv_state :
+    forall {state B C : Type} {l} {f : B -> Mon C} {m} {s : state} {v s'}
+           {Q : state -> state -> Prop},
+      map_aux f l m s = OK v s' ->
+      Reflexive Q ->
+      Transitive Q ->
+      (forall b s1 c s2, f b s1 = OK c s2 -> Q s1 s2) ->
+      Q s s'.
+  Proof.
+    induction l; simpl; intros f m s v s' Q e Qrefl Qtrans f_inv; minv e.
+    apply Qrefl.
+    apply Qtrans with (y := s0).
+    eapply f_inv; eauto.
+    eapply IHl; eauto.
+  Qed.
+
+  Remark map_inv_state :
+    forall {state B C : Type} {l} {f : B -> Mon C} {s : state} {v s'}
+           {Q : state -> state -> Prop},
+      map f l s = OK v s' ->
+      Reflexive Q ->
+      Transitive Q ->
+      (forall b s1 c s2, f b s1 = OK c s2 -> Q s1 s2) ->
+      Q s s'.
+  Proof. intros; eapply map_aux_inv_state; eauto. Qed.
+
+  Lemma map_aux_inv_acc :
+    forall {state A B : Type} {l : list A} {f : A -> Mon B}
+           {m : list B} {s : state} {m' s'}
+           {eqB : B -> B -> Prop},
+      map_aux f l m s = OK m' s' ->
+      forall b, InA eqB b m -> InA eqB b m'.
+  Proof.
+    induction l; intros *; intros e; minv e;
+      [ auto | intros; eapply IHl; eauto;
+               rewrite InA_app_iff; left; assumption ].
+  Qed.
+  
+End Map.
 
 Remark tmap_aux_inv_state :
   forall {state A B C : Type} {l : list A} {f : B -> Mon C} {m Inl2B} {s : state} {v s'}

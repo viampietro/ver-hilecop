@@ -365,7 +365,7 @@ Section GenInterconnInvs.
     intros *; intros e; minv e.
     assert (e : (plmap (arch s0)) = (plmap (arch s5))).
     { 
-      erewrite @getv_inv_state with (s := s0) (s' := s4); eauto.
+      rewrite (getv_inv_state EQ4).
       rewrite (getv_inv_state EQ5).
       rewrite (connect_fired_ports_inv_plmap EQ3).
       rewrite (connect_fired_ports_inv_plmap EQ0).

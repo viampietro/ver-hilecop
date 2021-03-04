@@ -203,9 +203,7 @@ Section GeneratePlaceCompInst.
     eapply gen_p_comp_inst_nodup_p2pcomp; eauto;
       lazymatch goal with
       | [ Hnd: NoDupA _ (?a :: ?tl), Hnin: forall _, _ -> ~_ |- _ ] =>
-        (eapply iter_gen_pcomp_inst_inv_nodup_p2pcomp; eauto; [
-           apply Hnin; apply InA_cons_hd; reflexivity
-         | inversion Hnd; assumption])
+        (eapply iter_gen_pcomp_inst_inv_nodup_p2pcomp; eauto; inversion Hnd; assumption)
         || (eapply IHm; eauto; inversion Hnd; assumption)
       end.
   Qed.
