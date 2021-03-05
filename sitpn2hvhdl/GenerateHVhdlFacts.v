@@ -121,8 +121,7 @@ Section GeneratePlaceCompInst.
 
       (* CASE a = n *)
       + specialize (gen_p_comp_inst_p_comp EQ0) as (id__p, (gm, (ipm, (opm, (Hin_γs', Hin_behs'))))).
-        exists id__p, gm, ipm, opm; split; [ | auto].
-        eapply InA_eqk; eauto; symmetry; assumption.        
+        exists id__p, gm, ipm, opm; split; [ eauto with setoidl | auto].
 
       (* CASE n ∈ tl *)
       + lazymatch goal with
@@ -455,6 +454,10 @@ Section Sitpn2HVhdl.
     
     (* SUBGOAL [(initial_marking, inl (M0 p)) ∈ i] *)
     eapply gen_arch_bind_init_marking; eauto.
+    eapply gen_sitpn_infos_sil_lofPs; eauto.
+    exact (nodup_pls (wi_fsets IWD_sitpn)).
+    erewrite <- gen_sitpn_infos_inv_arch; eauto; cbn; auto.
+    inversion 1.
   Qed.
   
 End Sitpn2HVhdl.

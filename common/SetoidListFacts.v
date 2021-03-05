@@ -208,6 +208,26 @@ Section InAFacts.
   Qed.
 
   Hint Resolve InA_setv_eqk : setoidl.
+
+  Lemma InA_eq_In :
+    forall [A : Type] (l : list A) (x : A),
+      InA eq x l -> List.In x l.
+  Proof. induction 1; auto.
+         rewrite H; auto with datatypes.
+  Qed.
+
+  Hint Resolve InA_eq_In : setoidl.
+  
+  Lemma InA_eq_pair_In :
+    forall [A B : Type] (l : list (A * B)) (x : A) (y : B),
+      InA (fun x1 y1 => fst x1 = fst y1 /\ snd x1 = snd y1) (x, y) l -> List.In (x, y) l.
+  Proof. induction 1; auto.
+         destruct y0 as (a, b).
+         cbn in H; destruct H as (e1, e2); rewrite e1, e2.
+         auto with datatypes.
+  Qed.
+
+  Hint Resolve InA_eq_pair_In : setoidl.
   
 End InAFacts.
 
@@ -225,6 +245,8 @@ Hint Resolve InA_neqA : setoidl.
 Hint Resolve nInA_eqA : setoidl.
 Hint Resolve InA_fs_InA_fs_setv : setoidl.
 Hint Resolve InA_setv_eqk : setoidl.
+Hint Resolve InA_eq_In : setoidl.
+Hint Resolve InA_eq_pair_In : setoidl.
 
 (** ** Facts about [NoDupA] *)
 
@@ -249,10 +271,10 @@ Section NoDupAFacts.
     forall {eqk : A -> A -> Prop} {l : list (A * B)} {a b b'},
       Equivalence eqk ->
       NoDupA eqk (fs l) ->
-      let eqkv := (fun x y => eqk (fst x) (fst y) /\ eq (snd x) (snd y)) in
+      let eqkv := (fun x y => eqk (fst x) (fst y) /\ (snd x) = (snd y)) in
       InA eqkv (a, b) l ->
       InA eqkv (a, b') l ->
-      eq b b'.
+      b = b'.
   Proof.
     induction l.
     
@@ -297,6 +319,8 @@ Section NoDupAFacts.
       + eapply IHl; eauto.
   Qed.
 
+  Hint Resolve NoDupA_fs_eqk_eq : setoidl.
+  
   Lemma NoDupA_setv_cons (A : Type) {B : Type} :
     forall {eqk : A -> A -> Prop} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {a b} {l : list (A * B)},
       Equivalence eqk ->
@@ -316,6 +340,8 @@ Section NoDupAFacts.
       eapply NoDupA_cons; inversion_clear NoDupA_; eauto with setoidl.
   Qed.
 
+  Hint Resolve NoDupA_setv_cons : setoidl.
+  
   Lemma NoDupA_app_comm :
     forall {A : Type} {eqA : A -> A -> Prop} {l m},
       Equivalence eqA ->
@@ -334,7 +360,7 @@ Section NoDupAFacts.
   
 End NoDupAFacts.
 
-Hint Rewrite NoDupA_fs_eqk_eq : setoidl.
+Hint Resolve NoDupA_fs_eqk_eq : setoidl.
 Hint Resolve NoDupA_setv_cons : setoidl.
 Hint Resolve NoDupA_tl : setoidl.
 Hint Resolve NoDupA_fs_tl : setoidl.
@@ -358,7 +384,7 @@ Section InAAnDNoDupAFacts.
   Qed.
   
   Hint Resolve neqk_if_InA_NoDupA : setoidl.
-  Hint Extern 1 False => eapply neqk_if_InA_NoDupA; eauto : setoidl.
+  Hint Extern 1 False => eapply neqk_if_InA_NoDupA : setoidl.
   
   Lemma eqv_if_InA_NoDupA_setv :
     forall {A B : Type} {eqk : A -> A -> Prop} {eqk_dec : forall x0 y : A, {eqk x0 y} + {~ eqk x0 y}}
@@ -380,8 +406,11 @@ Section InAAnDNoDupAFacts.
       [ simpl in eqkv_; destruct eqkv_; contradiction |
         intros; eapply IHl0; eauto with setoidl ].
   Qed.
+
+  Hint Resolve eqv_if_InA_NoDupA_setv : setoidl.
   
 End InAAnDNoDupAFacts.
 
 Hint Resolve neqk_if_InA_NoDupA : setoidl.
-Hint Extern 1 False => eapply neqk_if_InA_NoDupA; eauto : setoidl.
+Hint Extern 1 False => eapply neqk_if_InA_NoDupA : setoidl.
+Hint Resolve eqv_if_InA_NoDupA_setv : setoidl.

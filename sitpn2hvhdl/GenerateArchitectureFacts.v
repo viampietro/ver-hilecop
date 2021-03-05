@@ -194,7 +194,8 @@ Section GenInterconn.
         InA Peq p pls ->
         exists g i o, InA Pkeq (p, (g, i, o)) (plmap (arch s')).
   Proof.
-    intros until pls; functional induction (iter (@interconnect_p sitpn) pls) using iter_ind.
+    intros until pls;
+      functional induction (iter (@interconnect_p sitpn) pls) using iter_ind.
 
     (* BASE CASE *)
     - inversion 3.
@@ -226,89 +227,6 @@ Section GenInterconn.
     intros *; intros e; minv e.
     inversion 1; intros; eapply iter_interconnect_p_pcomp; eauto.    
   Qed.
-
-  Lemma interconnect_p_inv_InA_plmap :
-    forall {sitpn x y pcomp s v s'},
-      @interconnect_p sitpn y s = OK v s' ->
-      ~Peq x y ->
-      InA Pkeq (x, pcomp) (plmap (arch s')) ->
-      InA Pkeq (x, pcomp) (plmap (arch s)).
-  Admitted.
-    
-  Lemma interconnect_p_inv_pcomp_imap :
-    forall {sitpn p s v s'},
-      @interconnect_p sitpn p s = OK v s' ->
-      forall g1 i1 o1 g2 i2 o2,
-        InA Pkeq (p, (g1, i1, o1)) (plmap (arch s)) ->
-        InA Pkeq (p, (g2, i2, o2)) (plmap (arch s')) ->
-        forall id es,
-          id <> input_transitions_fired ->
-          id <> output_transitions_fired ->
-          List.In (id, es) i1 ->
-          List.In (id, es) i2.
-  Admitted.
-
-  Lemma iter_interconnect_p_inv_InA_plmap :
-    forall {sitpn pls} {s v s'},
-      iter (@interconnect_p sitpn) pls s = OK v s' ->
-      forall p pcomp,
-        ~InA Peq p pls ->
-        InA Pkeq (p, pcomp) (plmap (arch s)) ->
-        InA Pkeq (p, pcomp) (plmap (arch s')).
-  Admitted.
-  
-  Lemma iter_interconnect_p_inv_pcomp_imap :
-    forall {sitpn pls s v s'},
-      iter (@interconnect_p sitpn) pls s = OK v s' ->
-      Sig_in_List (fs (plmap (arch s))) ->
-      NoDupA Peq pls ->
-      forall p g1 i1 o1 g2 i2 o2,
-        InA Peq p pls ->
-        InA Pkeq (p, (g1, i1, o1)) (plmap (arch s)) ->
-        InA Pkeq (p, (g2, i2, o2)) (plmap (arch s')) ->
-        forall id es,
-          id <> input_transitions_fired ->
-          id <> output_transitions_fired ->
-          List.In (id, es) i1 ->
-          List.In (id, es) i2.
-  Proof.
-    intros until pls; functional induction (iter (@interconnect_p sitpn) pls) using iter_ind.
-
-    (* CASE pls = [] *)
-    - inversion 4.
-
-    (* CASE [a :: pls] *)
-    - intros *; intros e; monadInv e; intros SIL_plmap NoDupA_pls.
-      inversion_clear 1 as [ y l Peq_pb | y l InA_tl].
-
-      (* SUBCASE [Peq p b] *)
-      intros; eapply interconnect_p_inv_pcomp_imap; eauto 2 with setoidl.
-      eapply iter_interconnect_p_inv_InA_plmap; eauto;
-        (solve [inversion NoDupA_pls; auto] || solve [eauto with setoidl]).
-
-      (* SUBCASE [p ∈ tl] *)
-      do 2 intro; eapply IHm with (s' := s0); eauto with setoidl.
-      eapply interconnect_p_inv_InA_plmap; eauto.
-      inversion NoDupA_pls; eauto with setoidl.
-  Qed.
-       
-  Lemma gen_interconnections_inv_pcomp_imap : 
-    forall {sitpn s v s'},
-      @generate_interconnections sitpn s = OK v s' ->
-      Sig_in_List (lofPs s) ->
-      Sig_in_List (fs (plmap (arch s))) ->
-      forall p g1 i1 o1 g2 i2 o2,
-        InA Pkeq (p, (g1, i1, o1)) (plmap (arch s)) ->
-        InA Pkeq (p, (g2, i2, o2)) (plmap (arch s')) ->
-        forall id es,
-          id <> input_transitions_fired ->
-          id <> output_transitions_fired ->
-          List.In (id, es) i1 ->
-          List.In (id, es) i2.
-  Proof.
-    intros *; intros e; minv e; intros SIL_lofps SIL_plmap; intros.
-    eapply iter_interconnect_p_inv_pcomp_imap; eauto.
-  Admitted.
   
 End GenInterconn.
 

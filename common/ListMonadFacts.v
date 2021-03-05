@@ -106,6 +106,18 @@ Section FoldL.
     intros; eapply IHlofAs; eauto.
     edestruct H; eauto; subst; auto.
   Qed.
+
+  Remark foldl_inv_val :
+    forall {state A B : Type}
+           {f : B -> A -> Mon B}
+           {lofAs b1 b2} {s : state} {s'}
+           {Q : B -> B -> Prop},
+      fold_left f lofAs b1 s = OK b2 s' ->
+      Reflexive Q ->
+      Transitive Q ->
+      (forall b3 a s1 b4 s2, f b3 a s1 = OK b4 s2 -> Q b3 b4) ->
+      Q b1 b2.
+  Admitted.
   
 End FoldL.
 
