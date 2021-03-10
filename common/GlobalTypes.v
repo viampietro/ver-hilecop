@@ -1,6 +1,6 @@
 (** * Global type definitions. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import String.
 Require Import Ascii.
 Require Import HexString.

@@ -4,7 +4,7 @@
     The result is the addition of entries refering to generic constant
     declarations in the design environment.  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.

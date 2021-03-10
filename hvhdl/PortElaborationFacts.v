@@ -1,11 +1,11 @@
 (** * Facts about Port Elaboration Relations *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
-Require Import hvhdl.Elaboration.
+Require Import hvhdl.HVhdlElaborationLib.
 
 Lemma eport_inv_gens :
   forall {Δ σ pd Δ' σ'},

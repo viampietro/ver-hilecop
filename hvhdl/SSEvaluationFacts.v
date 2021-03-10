@@ -1,6 +1,6 @@
 (** * Facts about Evaluation of Sequantial Statements *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatSet.
 

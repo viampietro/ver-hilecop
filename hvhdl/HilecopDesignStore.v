@@ -30,6 +30,16 @@ Proof.
     ].
 Defined.
 
+Lemma is_transition_design :
+  forall {d}, MapsTo Petri.transition_entid d hdstore -> d = transition_design.
+Proof.
+  intros *; unfold hdstore.
+  rewrite add_mapsto_iff.
+  inversion 1 as [x | y];
+    [ destruct x; symmetry; assumption
+    | destruct y; contradiction].
+Defined.
+
 (** ** Tactics for the HILECOP Design Store *)
 
 Ltac subst_place_design1 H :=
@@ -42,4 +52,16 @@ Ltac subst_place_design :=
   match goal with
   | [ H: MapsTo Petri.place_entid ?d hdstore |- _ ] =>
     subst_place_design1 H
+  end.
+
+Ltac subst_transition_design1 H :=
+  match type of H with
+  | MapsTo Petri.transition_entid ?d hdstore =>
+    specialize (is_transition_design H); intros; subst d
+  end.
+
+Ltac subst_transition_design :=
+  match goal with
+  | [ H: MapsTo Petri.transition_entid ?d hdstore |- _ ] =>
+    subst_transition_design1 H
   end.

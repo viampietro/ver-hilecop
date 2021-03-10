@@ -4,7 +4,7 @@
     VHDL listing from SITPNs.
  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.

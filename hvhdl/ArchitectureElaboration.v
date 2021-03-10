@@ -6,7 +6,7 @@
     and the mapping from declared signal id to their default value in
     the design state [dstate] (σ).  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.

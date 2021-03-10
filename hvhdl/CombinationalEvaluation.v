@@ -3,7 +3,7 @@
 (** Defines the relation that evaluates combinational concurrent
     statements; used in the stabilization phases. *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatSet.
 

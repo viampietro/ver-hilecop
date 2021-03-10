@@ -3,7 +3,7 @@
 (** Definitions, lemmas and tactics pertaining to the combination of
     the [fst] and [split] functions on lists of couples.  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import Coq.Setoids.Setoid.
 
 (** Proves a property over the combination of fst and split functions. *)

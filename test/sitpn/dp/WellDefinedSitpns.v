@@ -1,6 +1,6 @@
 (** * Well-defined instances of Sitpn. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import GlobalTypes.

@@ -1,6 +1,6 @@
 (** * Facts about Port Map Validity *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 
 Require Import hvhdl.Environment.
 Require Import hvhdl.ValidPortMap.

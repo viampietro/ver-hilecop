@@ -1,6 +1,6 @@
 (** * Misc. definitions for the SITPN semantics. *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.ListPlus.
@@ -69,12 +69,12 @@ Defined.
     than the upper bound of the time interval associated to [t], i.e,
     I(t) > upper(Is(t)) *)
 
-Definition TcGtUpper sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+Definition TcGtUpper sitpn (s : SitpnState sitpn) : Ti sitpn -> Prop.
   refine (fun tex => (let '(exist _ t pf) := tex in _));
   destruct Is;
     [ match goal with
       | [ i: TimeInterval |- _ ] =>
-        refine (forall pf_bnotinf, gt_nat_natinf (I s tex) (b i) pf_bnotinf)
+        refine (gt_nat_natinf (I s tex) (b i))
       end
     | contradiction].
 Defined.
@@ -90,6 +90,32 @@ Definition upper sitpn : {t | @Is sitpn t <> None} -> natinf.
       end
     | contradiction].
 Defined.
+
+Definition it_of_Ti sitpn (t__i : Ti sitpn) : { i : TimeInterval | Is t__i = Some i}.
+  refine (let '(exist _ t pf) := t__i in _);
+    destruct Is;
+    [ exact (exist _ t0 eq_refl)
+    | contradiction].
+Defined.
+
+Definition TcLeUpper2 sitpn (s : SitpnState sitpn) : {t | @Is sitpn t <> None} -> Prop.
+  refine (fun tex => (let '(exist _ t pf) := tex in _));
+    destruct Is;
+    [ match goal with
+      | [ i: TimeInterval |- _ ] =>
+        refine (forall pf_bnotinf, le_nat_natinf (I s tex) (b i) pf_bnotinf)
+      end
+    | contradiction].
+Defined.
+
+Definition upper2 sitpn (t__i : Ti sitpn) : natinf := b (proj1_sig (it_of_Ti t__i)).
+
+(** States that the time counter of transition [t] is strictly greater
+    than the upper bound of the time interval associated to [t], i.e,
+    I(t) > upper(Is(t)) *)
+
+Definition TcGtUpper2 sitpn (s : SitpnState sitpn) (t__i : Ti sitpn) : Prop :=
+  gt_nat_natinf (I s t__i) (b (proj1_sig (it_of_Ti t__i))).
 
 (** States that the time counter of transition [t] is less than or
     equal to the lower bound of the time interval associated to [t],

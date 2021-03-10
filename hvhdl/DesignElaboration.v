@@ -4,7 +4,7 @@
     of the behavioral part of a H-VHDL design.
  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.

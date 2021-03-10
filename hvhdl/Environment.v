@@ -3,7 +3,7 @@
 (** Module defining the components of the simulation environment.  *)
 
 Require Import Setoid.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.CoqTactics.
 Require Import common.ListPlus.
 Require Import common.GlobalTypes.

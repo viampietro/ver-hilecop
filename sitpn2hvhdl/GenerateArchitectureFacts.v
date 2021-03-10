@@ -1,7 +1,7 @@
 (** * Facts about Architecture Generation *)
 
 Require Import String.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.

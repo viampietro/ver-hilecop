@@ -3,7 +3,7 @@
     A static expression is either locally or globally static.
  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import Environment.

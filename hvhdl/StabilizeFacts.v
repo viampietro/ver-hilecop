@@ -1,6 +1,6 @@
 (** * Facts about Stabilization *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatSet.
 Require Import common.ListPlus.

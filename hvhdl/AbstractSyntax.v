@@ -2,7 +2,7 @@
 (** *  Abstract syntax of H-VHDL    *)
 (*!============================!*)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import HVhdlTypes.
 

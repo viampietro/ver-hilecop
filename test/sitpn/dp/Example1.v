@@ -1,6 +1,6 @@
 (** * Implementation of [Sitpn] instance example 1 *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import sitpn.dp.Sitpn.

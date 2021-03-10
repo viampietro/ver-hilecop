@@ -1,6 +1,6 @@
 (** * H-VHDL Simple Adder Design *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.ListPlus.

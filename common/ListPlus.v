@@ -3,7 +3,7 @@
     and the proofs.
  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import common.GlobalFacts.
 Require Import SetoidList.
 Require Import Omega.

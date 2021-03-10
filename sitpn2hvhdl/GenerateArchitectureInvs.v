@@ -1,7 +1,7 @@
 (** * Architecture Generation and State Invariants *)
 
 Require Import String.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListLib.
@@ -65,6 +65,23 @@ Section GenPMapInvs.
     intros; eapply gen_pmap_entry_inv_lofPs; eauto.
   Qed.
 
+  Lemma gen_pmap_entry_inv_lofTs :
+    forall {sitpn} {p : P sitpn} {mm s v s'},
+      generate_place_map_entry p mm s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. try solve_gen_pmap_entry_sinv. Qed.
+
+  Lemma gen_pmap_inv_lofTs :
+    forall {sitpn mm s v s'},
+      @generate_place_map sitpn mm s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros until s'; intros e; minv e.
+    pattern s0, s3.
+    eapply map_inv_state; eauto with typeclass_instances; cbn.
+    intros; eapply gen_pmap_entry_inv_lofTs; eauto.
+  Qed.
+  
   Lemma gen_pmap_entry_inv_beh :
     forall {sitpn} {p : P sitpn} {mm s v s'},
       generate_place_map_entry p mm s = OK v s' ->
@@ -120,6 +137,23 @@ Section GenTMapInvs.
     pattern s0, s3.
     eapply map_inv_state; eauto with typeclass_instances; cbn.
     intros; eapply gen_tmap_entry_inv_lofPs; eauto.
+  Qed.
+
+  Lemma gen_tmap_entry_inv_lofTs :
+    forall {sitpn} {t : T sitpn} {s v s'},
+      generate_trans_map_entry t s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros until s'; intros e; minv e; solve_listm EQ1. Qed.
+
+  Lemma gen_tmap_inv_lofTs :
+    forall {sitpn s v s'},
+      @generate_trans_map sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros until s'; intros e; minv e.
+    pattern s0, s3.
+    eapply map_inv_state; eauto with typeclass_instances; cbn.
+    intros; eapply gen_tmap_entry_inv_lofTs; eauto.
   Qed.
 
   Lemma gen_tmap_entry_inv_plmap :
@@ -189,6 +223,12 @@ Section GenInterconnInvs.
       connect_fired_port e t s = OK v s' ->
       beh s = beh s'.
   Proof. intros *; intros e1; minv e1; solve_listm EQ1. Qed.
+
+  Lemma connect_fired_port_inv_lofTs :
+    forall {sitpn} {e} {t : T sitpn} {s v s'},
+      connect_fired_port e t s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros *; intros e1; minv e1; solve_listm EQ1. Qed.
       
   Lemma connect_fired_ports_inv_γ :
     forall {sitpn} {lofTs : list (T sitpn)} {s v s'},
@@ -205,6 +245,15 @@ Section GenInterconnInvs.
   Proof.
     intros *; intros e; unfold connect_fired_ports in e; solve_listm e.
     intros; eapply connect_fired_port_inv_lofPs; eauto.
+  Qed.
+
+  Lemma connect_fired_ports_inv_lofTs :
+    forall {sitpn} {trs : list (T sitpn)} {s v s'},
+      connect_fired_ports trs s = OK v s' ->
+      lofTs s = lofTs s'.            
+  Proof.
+    intros *; intros e; unfold connect_fired_ports in e; solve_listm e.
+    intros; eapply connect_fired_port_inv_lofTs; eauto.
   Qed.
 
   Lemma connect_fired_ports_inv_plmap :
@@ -248,6 +297,18 @@ Section GenInterconnInvs.
       connect xcomp ycomp id__x id__y s  = OK v s' ->
       beh s = beh s'.
   Proof. intros until s'; intros e; minv e; simpl; reflexivity. Qed.
+
+  Lemma connect_inv_lofTs :
+    forall {sitpn xcomp ycomp id__x id__y} {s : Sitpn2HVhdlState sitpn} {v s'},
+      connect xcomp ycomp id__x id__y s  = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros until s'; intros e; minv e; simpl; reflexivity. Qed.
+
+  Lemma connect_inv_comp_maps :
+    forall {sitpn gx ix ox gy iy oy id__x id__y} {s : Sitpn2HVhdlState sitpn} {v s'},
+      connect (gx, ix, ox) (gy, iy, oy) id__x id__y s = OK v s' ->
+      exists ox' iy', v = ((gx, ix, ox'), (gy, iy', oy)).
+  Proof. intros *; intros e; minv e; eauto. Qed.
   
   Lemma connect_poutputs_inv_γ :
     forall {sitpn} {pinfo : PlaceInfo sitpn} {hcomp s v s'},
@@ -301,6 +362,68 @@ Section GenInterconnInvs.
     minv EQ1; auto.
   Qed.
 
+  Lemma connect_poutputs_inv_lofTs :
+    forall {sitpn} {pinfo : PlaceInfo sitpn} {hcomp s v s'},
+      connect_place_outputs pinfo hcomp s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros *; intros e; unfold connect_place_outputs in e; solve_listm e.
+    intros *; intros e; monadInv e; minv EQ; solve_listm EQ3. 
+    rewrite (connect_inv_lofTs EQ1); clear EQ1.
+    destrm EQ2; monadInv EQ2; rewrite (connect_inv_lofTs EQ); clear EQ.
+    destrm EQ0; monadInv EQ0; rewrite (connect_inv_lofTs EQ); clear EQ.
+    minv EQ1; auto.
+  Qed.
+
+  Lemma foldl_connect_ptot_inv_gmap_imap :
+    forall {sitpn} {trs : list (T sitpn)} {hcomp1 s hcomp2 s'},
+      fold_left (fun pcomp t => connect_popmap_to_tipmap pcomp t) trs hcomp1 s = OK hcomp2 s' ->
+      forall g i o, hcomp1 = (g, i, o) -> exists o', hcomp2 = (g, i, o').
+  Proof.
+    intros *; intros e.
+    pattern hcomp1, hcomp2.
+    eapply foldl_inv_val; eauto with typeclass_instances.
+    unfold Transitive; intros; edestruct H; eauto.
+    intros *; intros e1; cbn in e1. monadInv e1.
+    destruct b3 as ((g3, i3), o3).
+    destruct x as ((gx, ix), ox).
+    edestruct (@connect_inv_comp_maps sitpn) as (o3', (ix', eq_x0)); eauto.
+    clear EQ1.
+    rewrite eq_x0 in EQ2; clear eq_x0; monadInv EQ2.
+    edestruct (@connect_inv_comp_maps sitpn) as (o3'', (ix'', eq_x)); eauto.
+    clear EQ0.
+    rewrite eq_x in EQ1; clear eq_x; monadInv EQ1.
+    edestruct (@connect_inv_comp_maps sitpn) as (o3''', (ix''', eq_x1)); eauto.
+    clear EQ0.
+    rewrite eq_x1 in EQ2; clear eq_x1; minv EQ2.
+    intros *; intros eq_comp; inject_left eq_comp.
+    exists o3'''; reflexivity.
+  Qed.
+  
+  Lemma connect_poutputs_inv_gmap_imap :
+    forall {sitpn} {pinfo : PlaceInfo sitpn} {g i o s v s'},
+      connect_place_outputs pinfo (g, i, o) s = OK v s' ->
+      exists o', (g, i, o') = v.
+  Proof.
+    intros *; intros e; unfold connect_place_outputs in e.
+    edestruct (@foldl_connect_ptot_inv_gmap_imap sitpn) as (o', eq_v); eauto.
+  Qed.    
+  
+  Ltac rw_plmap_interconnect_p :=
+    match goal with
+    | [ E0: ListMonad.getv _ _ _ ?s0 = OK _ ?s1,
+            E1: ListMonad.getv _ _ _ ?s1 = OK _ ?s2,
+                E2: connect_fired_ports _ ?s2 = OK _ ?s3,
+                    E3: connect_fired_ports _ ?s3 = OK _ ?s4,
+                        E4: connect_place_outputs _ _ ?s4 = OK _ ?s5
+        |- _ ] =>
+      rewrite (getv_inv_state E0),
+      (getv_inv_state E1),
+      (connect_fired_ports_inv_plmap E2),
+      (connect_fired_ports_inv_plmap E3),
+      (connect_poutputs_inv_plmap E4)
+    end.
+  
   Lemma interconnect_p_inv_γ :
     forall {sitpn} {p : P sitpn} {s v s'},
       interconnect_p p s = OK v s' ->
@@ -329,20 +452,19 @@ Section GenInterconnInvs.
     erewrite connect_poutputs_inv_lofPs; eauto.  
   Qed.
 
-  Ltac rw_plmap_interconnect_p :=
-    match goal with
-    | [ E0: ListMonad.getv _ _ _ ?s0 = OK _ ?s1,
-            E1: ListMonad.getv _ _ _ ?s1 = OK _ ?s2,
-                E2: connect_fired_ports _ ?s2 = OK _ ?s3,
-                    E3: connect_fired_ports _ ?s3 = OK _ ?s4,
-                        E4: connect_place_outputs _ _ ?s4 = OK _ ?s5
-        |- _ ] =>
-      rewrite (getv_inv_state E0),
-      (getv_inv_state E1),
-      (connect_fired_ports_inv_plmap E2),
-      (connect_fired_ports_inv_plmap E3),
-      (connect_poutputs_inv_plmap E4)
-    end.
+  Lemma interconnect_p_inv_lofTs :
+    forall {sitpn} {p : P sitpn} {s v s'},
+      interconnect_p p s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros until s'; intros e; minv e; simpl.
+    solve_listm EQ4; solve_listm EQ5.
+    transitivity (lofTs s3).
+    erewrite connect_fired_ports_inv_lofTs; eauto.
+    transitivity (lofTs s2).
+    erewrite connect_fired_ports_inv_lofTs; eauto.
+    erewrite connect_poutputs_inv_lofTs; eauto.  
+  Qed.
   
   Lemma interconnect_p_inv_pcomp :
     forall {sitpn p1 s v s'},
@@ -389,26 +511,7 @@ Section GenInterconnInvs.
     erewrite connect_fired_ports_inv_beh; eauto.
     erewrite connect_poutputs_inv_beh; eauto.
   Qed.
-  
-  Lemma gen_interconnections_inv_sil_plmap :
-    forall {sitpn s v s'},
-      @generate_interconnections sitpn s = OK v s' ->
-      Sig_in_List (fs (plmap (arch s))) ->
-      Sig_in_List (fs (plmap (arch s'))).
-  Proof.
-    intros *; intros e; solveSInv e.
-    intros; eapply interconnect_p_inv_sil_plmap; eauto.
-  Qed.
 
-  Lemma gen_interconnections_inv_beh :
-    forall {sitpn s v s'},
-      @generate_interconnections sitpn s = OK v s' ->
-      beh s = beh s'.
-  Proof.
-    intros *; intros e; solveSInv e.
-    intros; eapply interconnect_p_inv_beh; eauto.
-  Qed.  
-  
   Lemma interconnect_p_inv_InA_plmap_1 :
     forall {sitpn x y pcomp s v s'},
       @interconnect_p sitpn y s = OK v s' ->
@@ -431,46 +534,6 @@ Section GenInterconnInvs.
     rw_plmap_interconnect_p; eauto with setoidl.
   Qed.
 
-  Lemma connect_inv_comp_maps :
-    forall {sitpn gx ix ox gy iy oy id__x id__y} {s : Sitpn2HVhdlState sitpn} {v s'},
-      connect (gx, ix, ox) (gy, iy, oy) id__x id__y s = OK v s' ->
-      exists ox' iy', v = ((gx, ix, ox'), (gy, iy', oy)).
-  Proof. intros *; intros e; minv e; eauto. Qed.
-  
-  Lemma foldl_connect_ptot_inv_gmap_imap :
-    forall {sitpn} {trs : list (T sitpn)} {hcomp1 s hcomp2 s'},
-      fold_left (fun pcomp t => connect_popmap_to_tipmap pcomp t) trs hcomp1 s = OK hcomp2 s' ->
-      forall g i o, hcomp1 = (g, i, o) -> exists o', hcomp2 = (g, i, o').
-  Proof.
-    intros *; intros e.
-    pattern hcomp1, hcomp2.
-    eapply foldl_inv_val; eauto with typeclass_instances.
-    unfold Transitive; intros; edestruct H; eauto.
-    intros *; intros e1; cbn in e1. monadInv e1.
-    destruct b3 as ((g3, i3), o3).
-    destruct x as ((gx, ix), ox).
-    edestruct (@connect_inv_comp_maps sitpn) as (o3', (ix', eq_x0)); eauto.
-    clear EQ1.
-    rewrite eq_x0 in EQ2; clear eq_x0; monadInv EQ2.
-    edestruct (@connect_inv_comp_maps sitpn) as (o3'', (ix'', eq_x)); eauto.
-    clear EQ0.
-    rewrite eq_x in EQ1; clear eq_x; monadInv EQ1.
-    edestruct (@connect_inv_comp_maps sitpn) as (o3''', (ix''', eq_x1)); eauto.
-    clear EQ0.
-    rewrite eq_x1 in EQ2; clear eq_x1; minv EQ2.
-    intros *; intros eq_comp; inject_left eq_comp.
-    exists o3'''; reflexivity.
-  Qed.
-  
-  Lemma connect_poutputs_inv_gmap_imap :
-    forall {sitpn} {pinfo : PlaceInfo sitpn} {g i o s v s'},
-      connect_place_outputs pinfo (g, i, o) s = OK v s' ->
-      exists o', (g, i, o') = v.
-  Proof.
-    intros *; intros e; unfold connect_place_outputs in e.
-    edestruct (@foldl_connect_ptot_inv_gmap_imap sitpn) as (o', eq_v); eauto.
-  Qed.    
-  
   Lemma interconnect_p_inv_pcomp_imap :
     forall {sitpn p s v s'},
       @interconnect_p sitpn p s = OK v s' ->
@@ -569,6 +632,27 @@ Section GenInterconnInvs.
       inversion NoDupA_pls; eauto with setoidl.
   Qed.
   
+  Lemma gen_interconnections_inv_sil_plmap :
+    forall {sitpn s v s'},
+      @generate_interconnections sitpn s = OK v s' ->
+      Sig_in_List (fs (plmap (arch s))) ->
+      Sig_in_List (fs (plmap (arch s'))).
+  Proof.
+    intros *; intros e; solveSInv e.
+    intros; eapply interconnect_p_inv_sil_plmap; eauto.
+  Qed.
+
+  Lemma gen_interconnections_inv_beh :
+    forall {sitpn s v s'},
+      @generate_interconnections sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof.
+    intros *; intros e; solveSInv e.
+    intros; eapply interconnect_p_inv_beh; eauto.
+  Qed.  
+  
+
+  
   Lemma gen_interconnections_inv_pcomp_imap : 
     forall {sitpn s v s'},
       @generate_interconnections sitpn s = OK v s' ->
@@ -621,6 +705,21 @@ Proof.
   solve_listm EQ1; intros; eapply gen_tmap_entry_inv_lofPs; eauto.
   change (lofPs s5) with (lofPs s1).
   solve_listm EQ3; intros; eapply interconnect_p_inv_lofPs; eauto.
+Qed.
+
+Lemma gen_arch_inv_lofTs :
+  forall {sitpn mm s v s'},
+    @generate_architecture sitpn mm s = OK v s' ->
+    lofTs s = lofTs s'.
+Proof.
+  intros until s'; intros e; monadFullInv e.
+  shelf_state EQ1; shelf_state EQ3.
+  transitivity (lofTs s4).
+  solve_listm EQ; intros; eapply gen_pmap_entry_inv_lofTs; eauto.
+  change (lofTs s4) with (lofTs s); transitivity (lofTs s5).
+  solve_listm EQ1; intros; eapply gen_tmap_entry_inv_lofTs; eauto.
+  change (lofTs s5) with (lofTs s1).
+  solve_listm EQ3; intros; eapply interconnect_p_inv_lofTs; eauto.
 Qed.
 
 Lemma gen_arch_inv_beh :

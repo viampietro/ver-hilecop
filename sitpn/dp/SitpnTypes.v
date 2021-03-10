@@ -3,7 +3,7 @@
 (** Defines the global types used in the definition of the SITPN
     structure and the SITPN semantics. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import NatSet.
 Require Import GlobalTypes.
 
@@ -66,10 +66,10 @@ Definition eq_nat_natinf (n : nat) (ni : natinf) : ni <> i+ -> Prop :=
 
 (** Defines the greater than relation between a nat and natinf. *)
 
-Definition gt_nat_natinf (n : nat) (ni : natinf) : ni <> i+ -> Prop :=
-  match ni return ni <> i+ -> Prop with
-  | i+ => (fun pf : i+ <> i+ => match neqinf pf with end) 
-  | ninat m => (fun _ => n > m)
+Definition gt_nat_natinf (n : nat) (ni : natinf) : Prop :=
+  match ni with
+  | i+ => False
+  | ninat m => n > m
   end.
 
 (** States that N is dijoint from {+∞}. *)

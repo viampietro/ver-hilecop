@@ -2,7 +2,7 @@
 
 Require Import NatMap.
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.InAndNoDup.
 Require Import common.GlobalTypes.
 Require Import common.ListPlus.

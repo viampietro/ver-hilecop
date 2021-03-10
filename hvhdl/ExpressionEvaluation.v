@@ -1,7 +1,7 @@
 (** Module that implement the relation evaluating H-VHDL
     expressions. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import ListPlus.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.

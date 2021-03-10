@@ -4,7 +4,7 @@
     encountered in the component instantiation statements that are
     part of the description of an H-VHDL design's behavior.  *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 
 Require Import hvhdl.Environment.

@@ -1,6 +1,6 @@
 (** * More Facts about Setoid Lists *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.ListPlus.
 Require Import common.FstSplit.
 

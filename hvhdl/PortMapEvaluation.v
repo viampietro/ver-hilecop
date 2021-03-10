@@ -6,7 +6,7 @@
     port map entry) transforms the state of the component instance
     (resp. the embedding design) in a certain manner. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import NatSet.
 Require Import NatMap.

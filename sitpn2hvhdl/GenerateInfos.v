@@ -1,6 +1,6 @@
 (** * Types and functions used by the generateInfo function. *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.ListPlus.
 Require Import dp.Sitpn.

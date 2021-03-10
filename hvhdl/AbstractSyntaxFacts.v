@@ -1,6 +1,6 @@
 (** * Facts about H-VHDL Abstract Syntax *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import hvhdl.AbstractSyntax.
 
 Lemma flatten_cs_ex : forall beh, exists lofcs, FlattenCs beh lofcs.

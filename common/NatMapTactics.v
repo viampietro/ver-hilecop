@@ -1,6 +1,6 @@
 (** * Facts about NatMap *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import NatMap.
 
 (** Looks for two MapsTo proofs where the same key maps to two
@@ -8,7 +8,7 @@ Require Import NatMap.
     two different constructors). *)
 
 Ltac mapsto_discriminate_simpl :=
-  lazymatch goal with
+  match goal with
   | [ H1: MapsTo ?k ?v1 ?m, H2: MapsTo ?k ?v2 ?m |- _ ] =>
     generalize (MapsTo_fun H1 H2); intros e;
     tryif (assert_fails (discriminate e))
@@ -19,6 +19,13 @@ Ltac mapsto_discriminate_simpl :=
     tryif (assert_fails (discriminate e))
     then fail "Term" v1 "=" v2 "is not discriminable"
     else discriminate e
+  | [ H1: exists x, MapsTo ?k ?v1 ?m, H2: MapsTo ?k ?v2 ?m |- _ ] =>
+    destruct H1; mapsto_discriminate_simpl
+  | [ H1: exists x y, MapsTo ?k ?v1 ?m, H2: MapsTo ?k ?v2 ?m |- _ ] =>
+    let x := fresh "x" in
+    let y := fresh "y" in
+    let MapsTo_ := fresh "MapsTo" in
+    destruct H1 as (x, (y, MapsTo_)); mapsto_discriminate_simpl
   | _ => fail "MapsTo proofs not found"
   end.
 

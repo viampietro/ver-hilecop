@@ -1,6 +1,6 @@
 (** * Facts about Expression Evaluation *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 
 Require Import hvhdl.Environment.

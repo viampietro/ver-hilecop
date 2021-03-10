@@ -1,6 +1,6 @@
 (** * Sitpn semantics definition. *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import ListPlus.
 Require Import dp.Sitpn.

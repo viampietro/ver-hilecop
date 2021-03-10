@@ -1,6 +1,6 @@
 (** * Well-definition predicate for the Sitpn Structure. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import dp.Sitpn.
 Require Import dp.SitpnFacts.

@@ -1,6 +1,6 @@
 (** * Facts about Well-defined H-VHDL Designs *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.InAndNoDup.
 Require Import common.ListPlusFacts.
 Require Import common.ListPlusTactics.

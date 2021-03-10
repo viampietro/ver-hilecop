@@ -1,7 +1,7 @@
 (** * H-VHDL Generation Functions and State Invariants *)
 
 Require Import String.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
@@ -90,7 +90,21 @@ End HComp2CompInstInvs.
 (** ** Generation of P Component Instances and State Invariants *)
 
 Section GeneratePlaceCompInst.
-
+  
+  Lemma gen_pcomp_insts_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_place_comp_insts sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros *; intros e; minv e.
+    solve_listm EQ0.
+    intros *; intros e; minv e.
+    shelf_state EQ5.
+    rewrite <- (OutputMap_to_AST_inv_state EQ2).
+    rewrite <- (InputMap_to_AST_inv_state EQ3).
+    rewrite <- (getv_inv_state EQ5); cbn; reflexivity.
+  Qed.
+  
   (** *** P Component Generation *)
   
   Lemma gen_pcomp_inst_inv_p_comp_1 :
@@ -292,6 +306,23 @@ End GeneratePlaceCompInst.
 (** ** Generation of T Component Instances and State Invariants *)
 
 Section GenerateTransCompInstInvs.
+
+  Lemma gen_tcomp_inst_inv_t_comp_1 :
+    forall {sitpn x y s v s' id__t gm ipm opm},
+      generate_trans_comp_inst sitpn y s = OK v s' ->
+      ~Teq x y ->
+      InA Tkeq (x, id__t) (t2tcomp (γ s)) ->
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s) ->
+      InA Tkeq (x, id__t) (t2tcomp (γ s')) /\
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s').
+  Proof.
+    intros until opm; intros e; intros.
+    minv e; shelf_state EQ4.
+    erewrite <- @OutputMap_to_AST_inv_state with (s' := s5); eauto.
+    erewrite <- @InputMap_to_AST_inv_state with (s' := s2); eauto.
+    erewrite <- @getv_inv_state with (s' := s1); eauto; cbn.
+    split; eauto with setoidl.
+  Qed.
 
   Lemma gen_t_comp_inst_inv_p2pcomp :
     forall {sitpn t s v s'},

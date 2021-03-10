@@ -1,6 +1,6 @@
 (** * Facts about Elaboration of Place Design *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.InAndNoDup.
 
@@ -8,7 +8,7 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
-Require Import hvhdl.Elaboration.
+Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.Place.

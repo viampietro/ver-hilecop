@@ -1,6 +1,6 @@
 (** * More Facts about Lists *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.InAndNoDup.
 Require Import common.FstSplit.
 Require Import common.ListPlus.

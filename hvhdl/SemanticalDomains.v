@@ -2,7 +2,7 @@
 
 (** Module defining the semantics domains used in H-VHDL semantics. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import AbstractSyntax.
 Require Import GlobalTypes.
 

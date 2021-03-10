@@ -1,7 +1,7 @@
 (** * Port Generation/Connection and State Invariants *)
 
 Require Import String.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
@@ -45,6 +45,21 @@ Section GenActionPortsInvs.
     intros *; intros e1; minv e1; solve_listm EQ2.
     solve_listm EQ0; intros *; intros e; minv e.
     shelf_state EQ5; change (lofPs s) with (lofPs s2); solve_listm EQ5.
+  Qed.
+
+  Lemma gen_aports_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_action_ports_and_ps sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros *; intros e; minv e; auto; simpl.
+    transitivity (lofTs s1).
+    solve_listm EQ2; intros *; intros e.
+    minv e; solve_listm EQ3.
+    unfold connect_marked_ports in EQ2; solve_listm EQ2.
+    intros *; intros e1; minv e1; solve_listm EQ2.
+    solve_listm EQ0; intros *; intros e; minv e.
+    shelf_state EQ5; change (lofTs s) with (lofTs s2); solve_listm EQ5.
   Qed.
 
   Lemma foldl_gen_aport_and_ss_inv_plmap :
@@ -202,6 +217,20 @@ Section GenFunPortsInvs.
     solve_listm EQ0; intros *; intros e; minv e.
     shelf_state EQ5; change (lofPs s) with (lofPs s2); solve_listm EQ5.
   Qed.
+
+  Lemma gen_fports_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_fun_ports_and_ps sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros *; intros e; minv e; auto.
+    transitivity (lofTs s1).
+    solve_listm EQ2; intros *; intros e; minv e; solve_listm EQ3.
+    unfold connect_fired_ports in EQ2; solve_listm EQ2.
+    intros *; intros e1; minv e1; solve_listm EQ2.
+    solve_listm EQ0; intros *; intros e; minv e.
+    shelf_state EQ5; change (lofTs s) with (lofTs s2); solve_listm EQ5.
+  Qed.
   
   Lemma gen_fports_inv_plmap :
     forall {sitpn s v s'},
@@ -270,6 +299,20 @@ Section GenCondPorts.
     intros *; intros e; minv e; solve_listm EQ1.
   Qed.
 
+  Lemma gen_cports_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_and_connect_cond_ports sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros *; intros e; minv e.
+    solve_listm EQ0.
+    intros *; intros e; minv e.
+    shelf_state EQ5; change (lofTs s) with (lofTs s1).
+    solve_listm EQ5.
+    unfold connect_in_cond_ports in EQ4; solve_listm EQ4.
+    intros *; intros e; minv e; solve_listm EQ1.
+  Qed.
+  
   Lemma gen_cports_inv_beh :
     forall {sitpn s v s'},
       generate_and_connect_cond_ports sitpn s = OK v s' ->
@@ -322,6 +365,18 @@ Proof.
   rewrite <- (gen_cports_inv_lofPs EQ2),
   <- (gen_fports_inv_lofPs EQ1),
   <- (gen_aports_inv_lofPs EQ);
+    reflexivity.
+Qed.
+
+Lemma gen_ports_inv_lofTs :
+  forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit}
+         {s' : Sitpn2HVhdlState sitpn},
+    generate_ports s = OK v s' -> lofTs s = lofTs s'.
+Proof.
+  intros *; intros e; monadInv e.
+  rewrite <- (gen_cports_inv_lofTs EQ2),
+  <- (gen_fports_inv_lofTs EQ1),
+  <- (gen_aports_inv_lofTs EQ);
     reflexivity.
 Qed.
 

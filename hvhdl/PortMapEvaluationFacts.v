@@ -2,7 +2,7 @@
 
 Require Import common.NatSet.
 Require Import common.NatMap.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 

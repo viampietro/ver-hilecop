@@ -1,6 +1,6 @@
 (** * Sitpn and Sitpn state definitions. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import SitpnTypes.
 Require Import Datatypes.

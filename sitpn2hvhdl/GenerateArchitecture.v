@@ -1,6 +1,6 @@
 (** * Generation of the architecture body of a H-VHDL design. *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.ListPlus.
 Require Import common.ListDep.

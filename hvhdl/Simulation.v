@@ -9,7 +9,7 @@
       needed to simulate a H-VHDL design (elaboration and simulation).
  *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 
 Require Import dp.SitpnTypes.

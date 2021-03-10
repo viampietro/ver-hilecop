@@ -1,6 +1,6 @@
 (** * General Facts about the Sitpn Structure. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalFacts.
 Require Import dp.Sitpn.
 
@@ -59,6 +59,7 @@ Definition Teq' sitpn (Q : T sitpn -> Prop) (t t' : Tsubset Q) : Prop :=
 Definition Tkeq sitpn {A : Type} (p p' : T sitpn * A) : Prop :=
   Teq (fst p) (fst p') /\ snd p = snd p'.
 
+Arguments Teq {sitpn}.
 Arguments Tkeq {sitpn A}.
 
 (** The equivalence relation [Teq] is decidable. *)

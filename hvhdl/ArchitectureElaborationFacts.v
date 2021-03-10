@@ -1,11 +1,11 @@
 (** * Facts about Architecture Elaboration Relation *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
-Require Import hvhdl.Elaboration.
+Require Import hvhdl.HVhdlElaborationLib.
 
 Lemma edecls_elab_idle_sigma :
   forall Δ σ sigs Δ' σ',
@@ -103,4 +103,23 @@ Proof.
   induction 1; auto with set.
   transitivity (events σ'); [
     eapply edecl_inv_events; eauto | auto].
+Qed.
+
+Lemma edecl_decl :
+  forall {Δ σ Δ' σ' id τ},
+    edecl Δ σ (sdecl_ id τ) Δ' σ' ->
+    DeclaredOf Δ' id.
+Proof. inversion 1; exists t0; auto with mapsto. Qed.
+
+Lemma edecls_decl :
+  forall {Δ σ sigs Δ' σ' id τ},
+    edecls Δ σ sigs Δ' σ' ->
+    List.In (sdecl_ id τ) sigs ->
+    DeclaredOf Δ' id.
+Proof.
+  induction 1; try (solve [inversion 1]).
+  inversion 1.
+  subst; edestruct @edecl_decl; eauto;
+    exists x; eapply edecls_inv_Δ; eauto.
+  eapply IHedecls; eauto.
 Qed.

@@ -1,7 +1,7 @@
 (** * Facts about Port Generation and Connection *)
 
 Require Import String.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListMonadFacts.

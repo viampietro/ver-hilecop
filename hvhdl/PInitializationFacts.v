@@ -1,32 +1,22 @@
 (** * Facts about Initialization and Place Design *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
-Require Import hvhdl.HVhdlTypes.
-Require Import hvhdl.Environment.
-Require Import hvhdl.Initialization.
-Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.SemanticalDomains.
-Require Import hvhdl.Place.
-Require Import hvhdl.HilecopDesignStore.
-Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.ExpressionEvaluation.
-Require Import hvhdl.PortMapEvaluation.
-Require Import hvhdl.EnvironmentTactics.
-Require Import hvhdl.SSEvaluation.
+Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlSimulationLib.
+Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.ValidPortMap.
 
 Require Import hvhdl.StabilizeFacts.
 Require Import hvhdl.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluationFacts.
-Require Import hvhdl.EnvironmentFacts.
-Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.InitializationFacts.
 Require Import hvhdl.PStabilizeFacts.
+Require Import hvhdl.InitializationTactics.
 
 (** ** Facts about [vruninit] and Place Design *)
 
@@ -218,59 +208,9 @@ Section PVRunInit.
         destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
       
       (* SUBCASE [comp ∈ cstmt] *)
-      + intros; eapply IHvruninit1; eauto; clear IHvruninit1 IHvruninit2.
-
-        (* Component ids are unique in [cstmt]. *)
-        eapply proj1; eapply nodup_app.
-        erewrite AreCsCompIds_determ; eauto.
-        eapply AreCsCompIds_app; eauto.
-        
-        (* [σ'(id__p) = σ__p'] *)
-        destruct (In_dec id__p (events σ')).
-        
-        (* 2 subcases: [id__p ∈ (events σ')] or [id__p ∉ (events σ')] *)
-        
-        (* [id__p ∈ (events σ')] *)
-        -- rename H2 into IMDS; erw_IMDS_cstore_1 IMDS; eauto.
-
-        (* [id__p ∉ (events σ')] *)
-        -- eapply vruninit_inv_cstate; eauto.
-           rename H2 into IMDS; erw_IMDS_cstore_m IMDS; eauto.
-           eapply not_in_union; eauto.
-
-           (* Prove [id__p ∉ (events σ'')] *)
-           eapply vruninit_compid_not_in_events; eauto.
-           apply nodup_app_not_in with (l := compids1).
-           { erewrite AreCsCompIds_determ; eauto; apply AreCsCompIds_app; auto. }
-           { eapply (AreCsCompIds_compid_iff HAreCsCompIds1); eauto. }
-           
+      + intros; eapply IHvruninit1; eauto; [ solve_nodup_compids_l | solve_vruninit_par_l ].        
       (* SUBCASE [comp ∈ cstmt'] *)
-      + intros; eapply IHvruninit2; eauto; clear IHvruninit1 IHvruninit2.
-
-        (* Component ids are unique in [cstmt]. *)
-        eapply @proj2; eapply nodup_app.
-        erewrite AreCsCompIds_determ; eauto.
-        eapply AreCsCompIds_app; eauto.
-        
-        (* [σ''(id__p) = σ__p'] *)
-        destruct (In_dec id__p (events σ'')).
-        
-        (* 2 subcases: [id__p ∈ (events σ'')] or [id__p ∉ (events σ'')] *)
-        (* [id__p ∈ (events σ'')] *)
-        -- rename H2 into IMDS; erw_IMDS_cstore_2 IMDS; eauto.
-
-        (* [id__p ∉ (events σ'')] *)
-        -- eapply vruninit_inv_cstate; eauto.
-           rename H2 into IMDS; erw_IMDS_cstore_m IMDS; eauto.
-           eapply not_in_union; eauto.
-
-           (* Prove [id__p ∉ (events σ')] *)
-           eapply vruninit_compid_not_in_events; eauto.
-           eapply nodup_app_not_in with (l := compids2).
-           { eapply NoDup_app_comm.
-             erewrite AreCsCompIds_determ; eauto.
-             apply AreCsCompIds_app; auto. }
-           { eapply (AreCsCompIds_compid_iff HAreCsCompIds2); eauto. }
+      + intros; eapply IHvruninit2; eauto; [ solve_nodup_compids_r | solve_vruninit_par_r ].
   Qed.
   
 End PVRunInit.
@@ -281,7 +221,7 @@ Section PInit.
 
   Lemma init_s_marking_eq_nat :
     forall Δ σ behavior σ0,
-      Initialization.init hdstore Δ σ behavior σ0 ->
+      init hdstore Δ σ behavior σ0 ->
       forall id__p gm ipm opm σ__p σ__p0 n Δ__p compids mm formals,
         InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
         Equal (events σ) {[]} ->
@@ -300,7 +240,7 @@ Section PInit.
     inversion 1.
     intros.
 
-    (* [∃ σ__p s.t. σ(id__p)(rst ← ⊥) = σ__p] *)
+    (* [∃ σ__p s.t. σ(id__p) = σ__p] *)
     match goal with
     | [ MapsTo_σ__p: MapsTo id__p σ__p _, Hvr: vruninit _ _ _ _ _ |- _ ] =>
       specialize (vruninit_maps_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';

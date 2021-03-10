@@ -1,6 +1,6 @@
 (** * Facts about Design Elaboration Relations *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.CoqTactics.
 Require Import common.NatSet.
 Require Import common.NatMap.
@@ -11,7 +11,7 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
-Require Import hvhdl.Elaboration.
+Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
@@ -263,6 +263,17 @@ Proof.
   eapply edecls_inv_Δ; eauto.
 Qed.
 
+Lemma elab_decl :
+  forall {D__s M__g d Δ σ__e id τ},
+    edesign D__s M__g d Δ σ__e ->
+    List.In (sdecl_ id τ) (sigs d) ->
+    DeclaredOf Δ id.
+Proof.
+  inversion 1; subst; intros.
+  edestruct @edecls_decl with (Δ := Δ') as (t, MapsTo_Δ'); eauto. 
+  exists t; eapply ebeh_inv_Δ; eauto.
+Qed.
+
 Lemma ebeh_input_of_comp :
   forall {D__s Δ σ behavior Δ' σ' id__c id__e gm ipm opm d__e Δ__c id τ},
     ebeh D__s Δ σ behavior Δ' σ' ->
@@ -309,6 +320,54 @@ Lemma elab_input_of_comp :
 Proof.
   inversion 1.
   eapply ebeh_input_of_comp; eauto.
+Qed.
+
+Lemma ebeh_decl_of_comp :
+  forall {D__s Δ σ behavior Δ' σ' id__c id__e gm ipm opm d__e Δ__c id τ},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+    MapsTo id__e d__e D__s ->
+    MapsTo id__c (Component Δ__c) Δ' ->
+    List.In (sdecl_ id τ) (sigs d__e) ->
+    DeclaredOf Δ__c id.
+Proof.
+  induction 1; try (solve [inversion 1]).
+
+  (* CASE comp *)
+  - inversion_clear 1; simpl; intros.
+    assert (e : Component Δ__c = Component Δ__c0)
+      by (eapply @MapsTo_add_eqv; eauto).
+    inject_left e.
+    eapply elab_decl; eauto.
+    erewrite MapsTo_fun with (e := cdesign); eauto.
+    
+  (* CASE || *)
+  - inversion_clear 1; simpl; intros.
+    (* SUBCASE comp ∈ cstmt *)
+    eapply IHebeh1; eauto.
+    edestruct @ebeh_compid_in_comps
+      with (D__s := D__s) (behavior := cstmt)
+      as (Δ__c0, MapsTo_Δ__c0); eauto.
+    assert (MapsTo id__c (Component Δ__c0) Δ'')
+      by (eapply ebeh_inv_Δ; eauto).
+    assert (e : Component Δ__c = Component  Δ__c0)
+      by (eapply MapsTo_fun; eauto).
+    inject_left e; auto.
+    (* SUBCASE comp ∈ cstmt' *)
+    eapply IHebeh2; eauto.
+Qed.
+
+Lemma elab_decl_of_comp :
+  forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm d__e Δ__c id τ},
+    edesign D__s M__g d Δ σ__e ->
+    InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+    MapsTo id__e d__e D__s ->
+    MapsTo id__c (Component Δ__c) Δ ->
+    List.In (sdecl_ id τ) (sigs d__e) ->
+    DeclaredOf Δ__c id.
+Proof.
+  inversion 1.
+  eapply ebeh_decl_of_comp; eauto.
 Qed.
 
 Lemma ebeh_validipm :

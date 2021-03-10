@@ -1,7 +1,7 @@
 (** * Facts about the H-VHDL Generating Functions *)
 
 Require Import String.
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
@@ -261,13 +261,116 @@ End GeneratePlaceCompInst.
 (** ** Facts about Generation of T Component Instances *)
 
 Section GenerateTransCompInst.
-      
+
+  Lemma gen_tcomp_inst_t_comp :
+    forall {sitpn} {t : T sitpn} {s v s'},
+      generate_trans_comp_inst sitpn t s = OK v s' ->
+      exists id__t gm ipm opm,
+        InA Tkeq (t, id__t) (t2tcomp (γ s'))
+        /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s').
+  Proof.
+    intros until s'; intros e; minv e.
+    exists (nextid s0), g, x0, x2; split; eauto with setoidl.
+  Qed.
+
+  Lemma iter_gen_tcomp_inst_t_comp :
+    forall {sitpn trs} {s v s'},
+      iter (generate_trans_comp_inst sitpn) trs s = OK v s' ->
+      NoDupA Teq trs ->
+      forall t, InA Teq t trs ->
+                exists id__t gm ipm opm,
+                  InA Tkeq (t, id__t) (t2tcomp (γ s')) /\
+                  InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s').
+  Proof.
+    intros until trs;
+      functional induction (iter (generate_trans_comp_inst sitpn) trs) using iter_ind.
+
+    (* BASE CASE *)
+    - inversion 3.
+
+    (* IND. CASE *)
+    - intros *; intros e NoDupA_trs t;
+        inversion_clear 1 as [ e1 e2 Teq_tb | e1 e2 InA_tl ]; monadInv e.
+
+      (* CASE [Teq t b] *)
+      + edestruct (@gen_tcomp_inst_t_comp sitpn) as (id__t, (gm, (ipm, (opm, (InA_t2tcomp, InCs_)))));
+          eauto.
+        exists id__t, gm, ipm, opm; split; eauto with setoidl.
+
+      (* CASE [t ∈ tl] *)
+      + edestruct (IHm s x s0) as (id__t, (gm, (ipm, (opm, (InA_t2tcomp, InCs_)))));
+          eauto with setoidl.
+        exists id__t, gm, ipm, opm; eapply gen_tcomp_inst_inv_t_comp_1; eauto.
+        inversion NoDupA_trs; eauto with setoidl.
+  Qed.
+
+  Lemma gen_tcomp_insts_t_comp :
+    forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
+      generate_trans_comp_insts sitpn s = OK v s' ->
+      Sig_in_List (lofTs s) ->
+      forall t,
+      exists id__t gm ipm opm,
+        InA Tkeq (t, id__t) (t2tcomp (γ s')) /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s').
+  Proof.
+    intros *; intros e; minv e; intros SIL t.
+    eapply iter_gen_tcomp_inst_t_comp; eauto;
+      [ apply (proj2 SIL) | apply ((proj1 SIL) t)].
+  Qed.
+  
 End GenerateTransCompInst.
 
 (** ** Facts about SITPN-to-H-VHDL Transformation Function *)
 
 Section Sitpn2HVhdl.
+    
+  Lemma gen_comp_insts_t_comp :
+    forall {sitpn s v s'},
+      generate_comp_insts sitpn s = OK v s' ->
+      Sig_in_List (lofTs s) ->
+      forall t, exists id__t gm ipm opm,
+          InA Tkeq (t, id__t) (t2tcomp (γ s')) /\
+          InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s').
+  Proof.
+    intros *; intros e; monadInv e; intros SIL t.
+    eapply gen_tcomp_insts_t_comp; eauto.
+    erewrite <- gen_pcomp_insts_inv_lofTs; eauto.
+  Qed.
   
+  Lemma sitpn2hvhdl_t_comp :
+    forall {sitpn decpr id__ent id__arch mm d γ},
+      (* [sitpn] translates into [(d, γ)]. *)
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      forall t, exists id__t gm ipm opm,
+          (* [γ(t) = id__t] *)
+          InA Tkeq (t, id__t) (t2tcomp γ)
+          /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d).
+  Proof.
+    intros *. 
+    functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) using sitpn_to_hvhdl_ind.
+
+    (* ERROR CASE *)
+    inversion 1.
+
+    (* OK CASE *)
+    monadInv e.
+    minv EQ4; intros e IWD; inject_left e; cbn.
+    eapply gen_comp_insts_t_comp; eauto.
+
+    (* Prove [Sig_in_List (lofTs s1)] *)
+    rewrite <- (gen_ports_inv_lofTs EQ0),
+    <- (gen_arch_inv_lofTs EQ1).
+    apply (gen_sitpn_infos_sil_lofTs EQ (nodup_trs (wi_fsets IWD))).
+  Qed.
+  
+  Lemma sitpn2hvhdl_nodup_t2tcomp :
+    forall {sitpn decpr id__ent id__arch mm d γ},    
+      (* [sitpn] translates into [(d, γ)]. *)
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      NoDupA Teq (fs (t2tcomp γ)).
+  Admitted.
+    
   Lemma gen_comp_insts_p_comp :
     forall {sitpn s v s'},
       generate_comp_insts sitpn s = OK v s' ->

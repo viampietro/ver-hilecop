@@ -9,7 +9,7 @@
  
  *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import GlobalTypes.
 Require Import SemanticalDomains.
 

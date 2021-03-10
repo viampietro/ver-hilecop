@@ -1,46 +1,23 @@
 (** * Similar Initial States *)
 
 Require Import String.
-Require Import common.Coqlib.
-Require Import common.InAndNoDup.
+Require Import common.CoqLib.
+Require Import common.CoqTactics.
 Require Import common.GlobalTypes.
-Require Import common.NatMap.
-Require Import common.FstSplit.
 Require Import common.GlobalFacts.
-Require Import common.SetoidListFacts.
+Require Import common.NatMap.
+Require Import common.ListLib.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
-Require Import common.ListPlus.
-Require Import common.ListMonad.
-Require Import common.ListMonadFacts.
-Require Import common.ListMonadTactics.
-Require Import common.ListDep.
 
-Require Import sitpn.dp.Sitpn.
-Require Import sitpn.dp.SitpnTypes.
-Require Import sitpn.dp.SitpnSemanticsDefs.
-Require Import sitpn.dp.SitpnSemantics.
-Require Import sitpn.dp.SitpnFacts.
-Require Import sitpn.dp.SitpnWellDefined.
-Require Import sitpn.dp.SitpnWellDefinedTactics.
+Require Import sitpn.dp.SitpnLib.
 
-Require Import hvhdl.HVhdlTypes.
-Require Import hvhdl.SemanticalDomains.
-Require Import hvhdl.DesignElaboration.
-Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxTactics.
-Require Import hvhdl.HilecopDesignStore.
-Require Import hvhdl.Initialization.
-Require Import hvhdl.Environment.
-Require Import hvhdl.Place.
-Require Import hvhdl.ExpressionEvaluation.
-Require Import hvhdl.Stabilize.
-Require Import hvhdl.InitializationFacts.
-Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.WellDefinedDesignFacts.
-Require Import hvhdl.DesignElaborationFacts.
-Require Import hvhdl.PlaceElaborationFacts.
-Require Import hvhdl.PInitializationFacts.
+Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlElaborationLib.
+Require Import hvhdl.HVhdlElaborationFactsLib.
+Require Import hvhdl.HVhdlHilecopLib.
+Require Import hvhdl.HVhdlHilecopFactsLib.
+Require Import hvhdl.HVhdlSimulationLib.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateHVhdlFacts.
@@ -49,29 +26,6 @@ Require Import sitpn2hvhdl.GenerateInfosFacts.
 Require Import soundness.SoundnessDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
-
-(** [sitpn2hvhdl(sitpn) = (d,γ)] and [(p, id__p) ∈ γ] and [(p, id__p') ∈
-    γ] then [id__p = id__p'] *)
-
-Ltac rw_γp p id__p id__p' :=
-  lazymatch type of p with
-  | P _ =>
-    let tpp := (type of p) in
-    lazymatch goal with
-    | [ H: sitpn_to_hvhdl ?sitpn _ _ _ _ = inl (_, ?γ), Hwd: IsWellDefined ?sitpn |- _ ] =>
-      specialize (sitpn2hvhdl_nodup_p2pcomp H Hwd); intros Hnodup_p2pcomp;
-      lazymatch goal with
-      | [ H: InA _ (p, id__p) (p2pcomp γ), H': InA _ (p, id__p') (p2pcomp γ) |- _ ] =>
-        rewrite <- (NoDupA_fs_eqk_eq (P sitpn) (Equivalence_Peq sitpn) Hnodup_p2pcomp H H');
-        clear Hnodup_p2pcomp
-      end
-    | _ => fail "Found no term of type (sitpn_to_hvhdl ?sitpn ?decpr ?id__ent ?id__arch ?mm = inl (?d, ?γ))"
-    end
-  | _ =>
-    let tpp := (type of p) in
-    fail "Term" p "is of type" tpp
-         "while it is expected to be of type P ?sitpn" 
-  end.
 
 Lemma init_states_eq_marking :
   forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
@@ -103,7 +57,7 @@ Lemma init_states_eq_marking :
 Proof.
   intros.
 
-  (* Builds the premises of the [init_states_eq_marking] lemma. *)
+  (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
   (* Builds [comp(id__p', "place", gm, ipm, opm) ∈ (behavior d)] *)
   edestruct @sitpn2hvhdl_p_comp with (sitpn := sitpn) (p := p)
@@ -118,7 +72,7 @@ Proof.
   (* Builds [id__p' ∈ (compstore σ__e)] *)
   edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
 
-  (* Builds [Δ__p("s_marking") = Tnat 0 n] *)
+  (* Builds [Δ__p("s_marking") = Declared (Tnat 0 n)] *)
   edestruct @elab_pcomp_Δ_s_marking as (n, MapsTo_smarking); eauto.
 
   (* Builds proof that [ipm] is well-formed *)
@@ -129,24 +83,27 @@ Proof.
   
   (* 6 subgoals left. *)
 
-  (* Prove [(events σ__e) = ∅] *)
+  (* Proves [(events σ__e) = ∅] *)
   - eapply elab_empty_events; eauto.
     
-  (* Prove [NoDup compids] *)
+  (* Proves [NoDup compids] *)
   - eapply elab_nodup_compids; eauto.
     
-  (* Prove [<initial_marking => M0(p)> ∈ ipm] *)
+  (* Proves [<initial_marking => M0(p)> ∈ ipm] *)
   - eapply sitpn2hvhdl_bind_init_marking; eauto.
 
-  (* Prove [initial_marking ∈ Ins(Δ__p) *)
+  (* Proves [initial_marking ∈ Ins(Δ__p) *)
   - eapply elab_pcomp_Δ_init_marking; eauto.
     
-  (* Prove [id__p = id__p'] *)
-  - rw_γp p id__p id__p'; assumption.
+  (* Proves [id__p = id__p'] *)
+  - erewrite NoDupA_fs_eqk_eq with (eqk := @Peq sitpn) (b := id__p'); eauto.
+    eapply sitpn2hvhdl_nodup_p2pcomp; eauto.
 
-  (* Prove [s_marking ∉ (events σ__pe)] *)
+  (* Proves [s_marking ∉ (events σ__pe)] *)
   - erewrite elab_empty_events_for_comps; eauto with set.
 Qed.
+
+(** ** Initial States Equal Time Counters *)
 
 Lemma init_states_eq_time_counters :
   forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
@@ -163,16 +120,78 @@ Lemma init_states_eq_time_counters :
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
     
-    forall (t : Ti sitpn) (id__t : ident) (σ__t : DState),
+    forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
       InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
-      MapsTo id__t σ__t (compstore σ0) ->
-      (upper t = i+ /\ TcLeLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t)) /\
-      (upper t = i+ /\ TcGtLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (lower t)) (sigstore σ__t)) /\
+      MapsTo id__t σ__t0 (compstore σ0) ->
+      (upper t = i+ /\ TcLeLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t0)) /\
+      (upper t = i+ /\ TcGtLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (lower t)) (sigstore σ__t0)) /\
       (forall pf : upper t <> i+, TcGtUpper (s0 sitpn) t ->
-                   MapsTo Transition.s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sigstore σ__t)) /\
-      (upper t <> i+ /\ TcLeUpper (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t)).
-Admitted.
+                   MapsTo Transition.s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sigstore σ__t0)) /\
+      (upper t <> i+ /\ TcLeUpper (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t0)).
+Proof.
+  intros *; intros IWD e Helab Hinit; intros t id__t σ__t0; intros InA_γ Mapsto_σ0.
+  cbn; split_and.
+  
+  (* CASE [upper(I__s(t)) = ∞ and s0.I(t) ≤ lower(I__s(t))] 
+     and [upper(I__s(t)) ≠ ∞ and s0.I(t) ≤ upper(I__s(t))] *)
+  - intros.
 
+    (* Builds the premises of the [init_s_tc_eq_O] lemma. *)
+    
+    (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *)
+    edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t)
+      as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto.
+
+    (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
+    destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_).
+    
+    (* Builds [id__t' ∈ (compstore σ__e)] *)
+    edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
+
+    (* Builds [id__t' ∈ Comps(Δ)] *)
+    edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto.
+    
+    (* To prove [σ__t0("s_tc") = 0] *)
+    eapply init_s_tc_eq_O; eauto.
+
+    (* 5 SUBGOALS left *)
+
+    (* Proves [NoDup compids] *)
+    eapply elab_nodup_compids; eauto.
+
+    (* Proves [(events σ__e) = ∅] *)
+    eapply elab_empty_events; eauto.
+    
+    (* Proves [DeclaredOf Δ__t "s_tc"] *)
+    eapply @elab_tcomp_Δ_s_tc; eauto.
+
+    (* Proves ["s_tc" ∉ (events σ__pe)] *)
+    erewrite elab_empty_events_for_comps; eauto with set.
+    
+    (* Proves [id__t = id__t'] *)
+    erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
+      eapply sitpn2hvhdl_nodup_t2tcomp; eauto.
+  
+  (* CASE [upper(I__s(t)) = ∞ and s0.I(t) > lower(I__s(t))] *)
+  - destruct 1 as (upper_, TcGtLower_).
+    unfold TcGtLower in TcGtLower_.
+    destruct t in TcGtLower_; cbn in TcGtLower_.
+    destruct (Is x).
+    destruct (a t0).
+    cbn in TcGtLower_; lia.
+    contradiction.
+    
+  (* CASE [upper(I__s(t)) ≠ ∞ and s0.I(t) > upper(I__s(t))] *)
+  - intros upper_ TcGtUpper_.
+    unfold TcGtUpper in TcGtUpper_; cbn in TcGtUpper_.
+    destruct t in TcGtUpper_.
+    destruct (Is x).
+    destruct (b t0) in TcGtUpper_; cbn in TcGtUpper_; lia.
+    contradiction.
+
+  (* LAST CASE, can be merged with the first one  *)
+  - admit.
+Admitted.
 
 Lemma init_states_eq_reset_orders :
   forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
@@ -189,9 +208,9 @@ Lemma init_states_eq_reset_orders :
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
     
-    (forall (t : Ti sitpn) (id__t : ident) (σ__t : DState),
-        InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) -> MapsTo id__t σ__t (compstore σ0) ->
-        MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sigstore σ__t)).
+    (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
+        InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) -> MapsTo id__t σ__t0 (compstore σ0) ->
+        MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sigstore σ__t0)).
 Admitted.
 
 Lemma init_states_eq_actions :

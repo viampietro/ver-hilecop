@@ -8,7 +8,7 @@
     from port id to their default value in the design state [σ]
     (σ).  *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import AbstractSyntax.
 Require Import SemanticalDomains.

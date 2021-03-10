@@ -1,6 +1,6 @@
 (** * Facts about the [In] and [NoDup] predicates. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import FstSplit.
 
 (** Lemmas and tactics pertaining to the [In] and [NoDup] predicates

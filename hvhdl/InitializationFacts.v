@@ -1,6 +1,6 @@
 (** * Facts about Initialization *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.CoqTactics.
 Require Import common.NatMap.
 Require Import common.NatMapTactics.

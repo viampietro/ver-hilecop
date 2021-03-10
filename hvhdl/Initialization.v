@@ -40,7 +40,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     forall pid sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ Λ init stmt σ' Λ' ->
+      vseq Δ σ Λ initl stmt σ' Λ' ->
       
       (* * Side conditions * *)
       

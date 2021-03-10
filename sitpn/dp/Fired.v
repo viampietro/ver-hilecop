@@ -1,6 +1,6 @@
 (** * Definition of the fired set of transitions *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import common.GlobalTypes.

@@ -1,6 +1,6 @@
 (** * Primary ports generation. *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.ListPlus.
 Require Import common.ListDep.

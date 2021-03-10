@@ -12,7 +12,7 @@ Open Scope abss_scope.
     
     [vseq] does not define error cases. *)
 
-Inductive seqflag : Set := fe | re | stab | init.
+Inductive seqflag : Set := fe | re | stab | initl.
 
 Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DState -> LEnv -> Prop :=
 
@@ -294,7 +294,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ (NatMap.remove id Λ)
            
 (** Evaluates a rising edge block statement when another flag than ↑
-    is raised (i.e, during a stabilization, a ↓ or the init phase).
+    is raised (i.e, during a stabilization, a ↓ or the initl phase).
 
     Does nothing; ↑ blocks only respond to ↑ flag. *)
            
@@ -315,7 +315,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vseq Δ σ Λ re (Rising stmt) σ' Λ'
 
 (** Evaluates a falling edge block statement when another flag than ↓
-    is raised (i.e, during a stabilization, a ↑ or the init phase).
+    is raised (i.e, during a stabilization, a ↑ or the initl phase).
 
     Does nothing; ↓ blocks only respond to ↓ flag. *)
                       
@@ -343,7 +343,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     forall flag stmt stmt' σ' Λ',
 
       (* * Side conditions * *)
-      flag <> init ->
+      flag <> initl ->
       
       (* * Premises * *)
       vseq Δ σ Λ flag stmt' σ' Λ' ->
@@ -360,10 +360,10 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     forall stmt stmt' σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ Λ init stmt σ' Λ' ->
+      vseq Δ σ Λ initl stmt σ' Λ' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ init (ss_rst stmt stmt') σ' Λ'
+      vseq Δ σ Λ initl (ss_rst stmt stmt') σ' Λ'
            
 (** Evaluates the null statement. *)
 | VSeqNull :

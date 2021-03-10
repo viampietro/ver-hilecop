@@ -1,7 +1,7 @@
 (** Defines types that are used both in the
     syntactical and semantical part of H-VHDL. *)
 
-Require Import Coqlib.
+Require Import CoqLib.
 Require Export NatMap.
 Require Export NatSet.
 

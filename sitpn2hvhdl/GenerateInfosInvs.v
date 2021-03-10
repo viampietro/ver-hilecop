@@ -1,6 +1,6 @@
 (** * Sitpn Information Generation Functions and State Invariants *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
@@ -42,6 +42,12 @@ Section TInfosInvs.
     forall {sitpn s v s'},
       generate_trans_infos sitpn s = OK v s' ->
       lofPs s = lofPs s'.
+  Proof. solveInfosSInv. Qed.
+
+  Lemma gen_tinfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_trans_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
   Proof. solveInfosSInv. Qed.
 
   Lemma gen_tinfos_inv_arch :
@@ -135,6 +141,12 @@ Section PInfosInvs.
       lofPs s = lofPs s'.
   Proof. solvePInfosSInv. Qed.
 
+  Lemma gen_pinfos_inv_lofTs :
+    forall {sitpn decpr s v s'},
+      generate_place_infos sitpn decpr s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. solvePInfosSInv. Qed.
+
   Lemma gen_pinfos_inv_arch :
     forall {sitpn decpr s v s'},
       generate_place_infos sitpn decpr s = OK v s' ->
@@ -165,6 +177,12 @@ Section InterprInfosInvs.
       lofPs s = lofPs s'.
   Proof. solveInfosSInv. Qed.
 
+  Lemma gen_cinfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_cond_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. solveInfosSInv. Qed.
+
   Lemma gen_cinfos_inv_arch :
     forall {sitpn s v s'},
       generate_cond_infos sitpn s = OK v s' ->
@@ -189,6 +207,12 @@ Section InterprInfosInvs.
       lofPs s = lofPs s'.
   Proof. solveInfosSInv. Qed.
 
+  Lemma gen_ainfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_action_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. solveInfosSInv. Qed.
+
   Lemma gen_ainfos_inv_arch :
     forall {sitpn s v s'},
       generate_action_infos sitpn s = OK v s' ->
@@ -211,6 +235,12 @@ Section InterprInfosInvs.
     forall {sitpn s v s'},
       generate_fun_infos sitpn s = OK v s' ->
       lofPs s = lofPs s'.
+  Proof. solveInfosSInv. Qed.
+
+  Lemma gen_finfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_fun_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
   Proof. solveInfosSInv. Qed.
 
   Lemma gen_finfos_inv_arch :

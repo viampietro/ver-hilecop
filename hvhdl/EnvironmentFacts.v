@@ -1,6 +1,6 @@
 (** * Facts about H-VHDL Environment *)
 
-Require Import common.Coqlib.
+Require Import common.CoqLib.
 Require Import common.CoqTactics.
 Require Import common.NatSet.
 

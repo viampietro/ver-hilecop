@@ -2,7 +2,7 @@
 
 Require Import List.
 Require Import ListPlus.
-Require Import Coqlib.
+Require Import CoqLib.
 Require Import GlobalTypes.
 Require Import Nat.
 
