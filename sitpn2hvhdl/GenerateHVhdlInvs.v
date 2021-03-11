@@ -91,22 +91,6 @@ End HComp2CompInstInvs.
 
 Section GeneratePlaceCompInst.
   
-  Lemma gen_pcomp_insts_inv_lofTs :
-    forall {sitpn s v s'},
-      generate_place_comp_insts sitpn s = OK v s' ->
-      lofTs s = lofTs s'.
-  Proof.
-    intros *; intros e; minv e.
-    solve_listm EQ0.
-    intros *; intros e; minv e.
-    shelf_state EQ5.
-    rewrite <- (OutputMap_to_AST_inv_state EQ2).
-    rewrite <- (InputMap_to_AST_inv_state EQ3).
-    rewrite <- (getv_inv_state EQ5); cbn; reflexivity.
-  Qed.
-  
-  (** *** P Component Generation *)
-  
   Lemma gen_pcomp_inst_inv_p_comp_1 :
     forall {sitpn x y s v s' id__p gm ipm opm},
       generate_place_comp_inst sitpn y s = OK v s' ->
@@ -155,8 +139,6 @@ Section GeneratePlaceCompInst.
     change (beh s0) with (beh s); rewrite e; auto.
   Qed.
   
-  (** *** NoDup in p2pcomp *)
-  
   Lemma gen_p_comp_inst_nodup_p2pcomp :
     forall {sitpn p s v s'},
       generate_place_comp_inst sitpn p s = OK v s' ->
@@ -185,6 +167,50 @@ Section GeneratePlaceCompInst.
         specialize (HComp_to_comp_inst_inv_state EQ2) as e2;
         rewrite <- e2, <- e1; clear e1 e2; simpl;
           eapply InA_notin_fs_setv_inv; eauto.
+  Qed.
+
+  Lemma gen_p_comp_inst_inv_nextid_2 :
+    forall {sitpn p s v s'},
+      generate_place_comp_inst sitpn p s = OK v s' ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s)) /\ id__p >= nextid s) ->
+      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s')) /\ id__p >= nextid s').
+  Proof.
+    intros until s'; intros e; minv e; shelf_state EQ5.
+    intros nex_InA; destruct 1 as (p1, (id__p1, (InA_p2pcomp0, GE_nxtid0))).
+    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
+    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
+    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
+    change (p2pcomp (γ s))
+      with (setv Peqdec p (nextid s0) (p2pcomp (γ s0))) in InA_p2pcomp0.
+    edestruct @InA_setv_fst_or_in_tl as [(Peq_, e) | InA_beh0]; eauto.
+    (* CASE [Peq p1 p] and [id__p1 = nextid s0] *)
+    subst; change (nextid s) with (S (nextid s0)) in GE_nxtid0; lia.
+    (* CASE [InA Pkeq (p1, id__p1) (p2pcomp (γ s0))] *)
+    apply nex_InA; exists p1, id__p1; split;
+      [ assumption | change (nextid s) with (S (nextid s0)) in GE_nxtid0; lia ].
+  Qed.
+
+  Lemma gen_p_comp_inst_inv_nextid_1 :
+    forall {sitpn p s v s'},
+      generate_place_comp_inst sitpn p s = OK v s' ->
+      ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s) /\ id__c >= nextid s) ->
+      ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s') /\ id__c >= nextid s').
+  Proof.
+    intros until s'; intros e; minv e; shelf_state EQ5.
+    intros nex_InCs; destruct 1 as (id__c, (id__e, (g1, (i1, (o1, (InCs_or, GE_nxtid)))))).
+    destruct InCs_or as [eq_comp | InCs_beh ].
+    (* CASE comp. are equal *)
+    inject_left eq_comp.
+    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
+    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
+    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
+    change (nextid s) with (S (nextid s0)) in GE_nxtid; lia.
+    (* CASE [comp(id__c, id__e, g1, i1, o1) ∈ (beh s4)] *)
+    apply nex_InCs; exists id__c, id__e, g1, i1, o1.
+    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
+    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
+    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
+    split; auto; cbn in GE_nxtid; lia.
   Qed.
 
   Lemma iter_gen_pcomp_inst_inv_nodup_p2pcomp :
@@ -221,30 +247,7 @@ Section GeneratePlaceCompInst.
         || (eapply IHm; eauto; inversion Hnd; assumption)
       end.
   Qed.
-
-  (** *** Bind initial marking *)
-
-  Lemma gen_p_comp_inst_inv_nextid_2 :
-    forall {sitpn p s v s'},
-      generate_place_comp_inst sitpn p s = OK v s' ->
-      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s)) /\ id__p >= nextid s) ->
-      ~(exists p id__p, InA Pkeq (p, id__p) (p2pcomp (γ s')) /\ id__p >= nextid s').
-  Proof.
-    intros until s'; intros e; minv e; shelf_state EQ5.
-    intros nex_InA; destruct 1 as (p1, (id__p1, (InA_p2pcomp0, GE_nxtid0))).
-    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
-    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
-    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
-    change (p2pcomp (γ s))
-      with (setv Peqdec p (nextid s0) (p2pcomp (γ s0))) in InA_p2pcomp0.
-    edestruct @InA_setv_fst_or_in_tl as [(Peq_, e) | InA_beh0]; eauto.
-    (* CASE [Peq p1 p] and [id__p1 = nextid s0] *)
-    subst; change (nextid s) with (S (nextid s0)) in GE_nxtid0; lia.
-    (* CASE [InA Pkeq (p1, id__p1) (p2pcomp (γ s0))] *)
-    apply nex_InA; exists p1, id__p1; split;
-      [ assumption | change (nextid s) with (S (nextid s0)) in GE_nxtid0; lia ].
-  Qed.
-
+  
   Lemma iter_gen_pcomp_inst_inv_nextid_2 :
     forall {sitpn pls} {s v s'},
       iter (generate_place_comp_inst sitpn) pls s = OK v s' ->
@@ -253,29 +256,6 @@ Section GeneratePlaceCompInst.
   Proof.
     intros until s'; intros e; solve_listm e.
     intros; eapply gen_p_comp_inst_inv_nextid_2; eauto.
-  Qed.
-  
-  Lemma gen_p_comp_inst_inv_nextid_1 :
-    forall {sitpn p s v s'},
-      generate_place_comp_inst sitpn p s = OK v s' ->
-      ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s) /\ id__c >= nextid s) ->
-      ~(exists id__c id__e g i o, InCs (cs_comp id__c id__e g i o) (beh s') /\ id__c >= nextid s').
-  Proof.
-    intros until s'; intros e; minv e; shelf_state EQ5.
-    intros nex_InCs; destruct 1 as (id__c, (id__e, (g1, (i1, (o1, (InCs_or, GE_nxtid)))))).
-    destruct InCs_or as [eq_comp | InCs_beh ].
-    (* CASE comp. are equal *)
-    inject_left eq_comp.
-    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
-    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
-    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
-    change (nextid s) with (S (nextid s0)) in GE_nxtid; lia.
-    (* CASE [comp(id__c, id__e, g1, i1, o1) ∈ (beh s4)] *)
-    apply nex_InCs; exists id__c, id__e, g1, i1, o1.
-    assert (s = s2) by (eapply getv_inv_state; eauto); subst.
-    assert (s = s3) by (eapply InputMap_to_AST_inv_state; eauto); subst.
-    assert (s = s4) by (eapply OutputMap_to_AST_inv_state; eauto); subst.
-    split; auto; cbn in GE_nxtid; lia.
   Qed.
     
   Lemma iter_gen_pcomp_inst_inv_nextid_1 :
@@ -300,7 +280,21 @@ Section GeneratePlaceCompInst.
          (OutputMap_to_AST_inv_state EQ2).
          reflexivity.
   Qed.
-    
+
+  Lemma gen_pcomp_insts_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_place_comp_insts sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof.
+    intros *; intros e; minv e.
+    solve_listm EQ0.
+    intros *; intros e; minv e.
+    shelf_state EQ5.
+    rewrite <- (OutputMap_to_AST_inv_state EQ2).
+    rewrite <- (InputMap_to_AST_inv_state EQ3).
+    rewrite <- (getv_inv_state EQ5); cbn; reflexivity.
+  Qed.
+  
 End GeneratePlaceCompInst.
 
 (** ** Generation of T Component Instances and State Invariants *)
@@ -334,16 +328,7 @@ Section GenerateTransCompInstInvs.
       specialize (HComp_to_comp_inst_inv_state EQ0) as e2;
       rewrite <- e2, <- e1; clear e1 e2; simpl; reflexivity.
   Qed.
-  
-  Lemma iter_gen_tcomp_inst_inv_p2pcomp :
-    forall {sitpn trs s v s'},
-      iter (generate_trans_comp_inst sitpn) trs s = OK v s' ->
-      p2pcomp (γ s) = p2pcomp (γ s').
-  Proof.
-    intros until s'; intros e; solveSInv e.
-    intros; eapply gen_t_comp_inst_inv_p2pcomp; eauto.
-  Qed.
-  
+
   Lemma gen_t_comp_inst_inv_in_beh :
     forall {sitpn t s v s'},
       generate_trans_comp_inst sitpn t s = OK v s' ->
@@ -357,6 +342,43 @@ Section GenerateTransCompInstInvs.
     intros; right; assumption.
   Qed.
 
+  Lemma gen_t_comp_inst_nodup_t2tcomp :
+    forall {sitpn t s v s'},
+      generate_trans_comp_inst sitpn t s = OK v s' ->
+      ~InA Teq t (fs (t2tcomp (γ s))) ->
+      NoDupA Teq (fs (t2tcomp (γ s))) ->
+      NoDupA Teq (fs (t2tcomp (γ s'))).
+  Proof.
+    intros until s'; intros e; minv e.
+    erewrite <- @OutputMap_to_AST_inv_state with (s' := s5); eauto.
+    erewrite <- @InputMap_to_AST_inv_state with (s' := s2); eauto.
+    erewrite <- @getv_inv_state with (s' := s1); eauto; cbn.
+    do 1 intro; eauto with setoidl.
+  Qed.
+
+  Lemma gen_t_comp_inst_inv_t2tcomp :
+    forall {sitpn x y s v s'},
+      generate_trans_comp_inst sitpn y s = OK v s' ->
+      ~Teq y x ->
+      ~InA Teq x (fs (t2tcomp (γ s))) ->
+      ~InA Teq x (fs (t2tcomp (γ s'))).
+  Proof.
+    intros *; intros e; intros; minv e.
+    erewrite <- @OutputMap_to_AST_inv_state with (s' := s5); eauto.
+    erewrite <- @InputMap_to_AST_inv_state with (s' := s2); eauto.
+    erewrite <- @getv_inv_state with (s' := s1); eauto; cbn.
+    eauto with setoidl.
+  Qed.
+  
+  Lemma iter_gen_tcomp_inst_inv_p2pcomp :
+    forall {sitpn trs s v s'},
+      iter (generate_trans_comp_inst sitpn) trs s = OK v s' ->
+      p2pcomp (γ s) = p2pcomp (γ s').
+  Proof.
+    intros until s'; intros e; solveSInv e.
+    intros; eapply gen_t_comp_inst_inv_p2pcomp; eauto.
+  Qed.
+
   Lemma iter_gen_tcomp_inst_inv_in_beh :
     forall {sitpn trs s v s'},
       iter (generate_trans_comp_inst sitpn) trs s = OK v s' ->
@@ -365,7 +387,42 @@ Section GenerateTransCompInstInvs.
     intros until s'; intros e; solveSInv e.
     intros; eapply gen_t_comp_inst_inv_in_beh; eauto.
   Qed.
+
+  Lemma iter_gen_tcomp_inst_inv_nodup_t2tcomp :
+    forall {sitpn trs} {s v s'},
+      iter (generate_trans_comp_inst sitpn) trs s = OK v s' ->
+      forall t,
+        ~InA Teq t (fs (t2tcomp (γ s))) ->
+        ~InA Teq t trs ->
+        ~InA Teq t (fs (t2tcomp (γ s'))).
+  Proof.
+    intros until trs;
+      functional induction (iter (generate_trans_comp_inst sitpn) trs) using iter_ind;
+      intros s v s' e; monadInv e; auto; intros *; intros nInA_t2tcomp nInA_trs.
+    eapply gen_t_comp_inst_inv_t2tcomp; eauto.
+    intros Teq_; apply nInA_trs; symmetry in Teq_; auto.
+  Qed.
   
+  Lemma iter_gen_tcomp_inst_nodup_t2tcomp :
+    forall {sitpn trs s v s'},
+      iter (generate_trans_comp_inst sitpn) trs s = OK v s' ->
+      NoDupA Teq trs ->
+      (forall t, InA Teq t trs -> ~InA Teq t (fs (t2tcomp (γ s)))) ->
+      NoDupA Teq (fs (t2tcomp (γ s))) ->
+      NoDupA Teq (fs (t2tcomp (γ s'))).
+  Proof.
+    intros until trs;
+      functional induction (iter (generate_trans_comp_inst sitpn) trs) using iter_ind;
+      intros s v s' e; monadInv e; auto; intros.
+    
+    eapply gen_t_comp_inst_nodup_t2tcomp; eauto;
+      lazymatch goal with
+      | [ Hnd: NoDupA _ (?a :: ?tl), Hnin: forall _, _ -> ~_ |- _ ] =>
+        (eapply iter_gen_tcomp_inst_inv_nodup_t2tcomp; eauto; inversion Hnd; assumption)
+        || (eapply IHm; eauto; inversion Hnd; assumption)
+      end.
+  Qed.
+
   Lemma gen_tcomp_insts_inv_p_comp :
     forall {sitpn s v s' p id__p gm ipm opm},
       generate_trans_comp_insts sitpn s = OK v s' ->
@@ -418,15 +475,28 @@ Section GenerateTransCompInstInvs.
     pattern s0, s'; solve_listm EQ0.
     intros *; eapply gen_tcomp_inst_gen_only_tcomp; eauto.
   Qed.
+
+  Lemma gen_tcomp_insts_nodup_t2tcomp :
+    forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v s'},
+      generate_trans_comp_insts sitpn s = OK v s' ->
+      Sig_in_List (lofTs s) ->
+      (forall t, ~InA Teq t (fs (t2tcomp (γ s)))) ->
+      NoDupA Teq (fs (t2tcomp (γ s))) ->
+      NoDupA Teq (fs (t2tcomp (γ s'))).
+  Proof.
+    intros *; intros e; minv e; intros SIL nInA.
+    eapply iter_gen_tcomp_inst_nodup_t2tcomp; eauto.
+    exact (proj2 SIL).
+  Qed.
   
 End GenerateTransCompInstInvs.
 
 (** ** P and T Component Instances Generation Function and State Invariants *)
 
 Section GenCompInstsInvs.
-    
+
   Lemma gen_comp_insts_nodup_p2pcomp :
-    forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v : unit} {s' : Sitpn2HVhdlState sitpn},
+    forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v s'},
       generate_comp_insts sitpn s = OK v s' ->
       Sig_in_List (lofPs s) ->
       (forall p, ~InA Peq p (fs (p2pcomp (γ s)))) ->
@@ -438,5 +508,28 @@ Section GenCompInstsInvs.
     minv EQ; eapply iter_gen_pcomp_inst_nodup_p2pcomp; eauto.
     apply (proj2 H).
   Qed.
-    
+
+  Lemma gen_pcomp_insts_inv_t2tcomp :
+    forall {sitpn s v s'},
+      generate_place_comp_insts sitpn s = OK v s' ->
+      t2tcomp (γ s) = t2tcomp (γ s').
+  Admitted.
+
+
+  
+  Lemma gen_comp_insts_nodup_t2tcomp :
+    forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v s'},
+      generate_comp_insts sitpn s = OK v s' ->
+      Sig_in_List (lofTs s) ->
+      (forall t, ~InA Teq t (fs (t2tcomp (γ s)))) ->
+      NoDupA Teq (fs (t2tcomp (γ s))) ->
+      NoDupA Teq (fs (t2tcomp (γ s'))).
+  Proof.
+    intros *; intros e; monadInv e.
+    erewrite @gen_pcomp_insts_inv_t2tcomp with (s' := s0); eauto.
+    erewrite @gen_pcomp_insts_inv_lofTs with (s' := s0); eauto.
+    eapply gen_tcomp_insts_nodup_t2tcomp; eauto.
+  Qed.
+
+  
 End GenCompInstsInvs.

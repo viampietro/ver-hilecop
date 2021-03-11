@@ -51,12 +51,13 @@ Section PVRunInit.
     match goal with
     | [ H: ~NatMap.In _ _, H': InputOf _ _ |- _ ] =>
       let Hf := fresh "H" in
-      elimtype False; apply H; destruct H' as (x, Hf); exists (Input x); auto
+      elimtype False; apply H; destruct H' as (x, Hf);
+        exists (Input x); auto
     end.
     match goal with
     | [ H: InputOf _ _ |- _ ] => destruct H; mapsto_discriminate
     end.
-    (* CASE no event on s_marking *)
+    (* CASE no event on [s_marking] *)
     match goal with
     | [ H: vexpr _ _ _ _ _ _ |- _ ] =>
       inversion_clear H
@@ -69,7 +70,8 @@ Section PVRunInit.
     match goal with
     | [ H: ~NatMap.In _ _, H': InputOf _ _ |- _ ] =>
       let Hf := fresh "H" in
-      elimtype False; apply H; destruct H' as (x, Hf); exists (Input x); auto
+      elimtype False; apply H; destruct H' as (x, Hf);
+        exists (Input x); auto
     end.
     match goal with
     | [ H: InputOf _ _ |- _ ] => destruct H; mapsto_discriminate
@@ -111,7 +113,8 @@ Section PVRunInit.
     match goal with
     | [ H: ~NatMap.In _ _, H': InputOf _ _ |- _ ] =>
       let Hf := fresh "H" in
-      elimtype False; apply H; destruct H' as (x, Hf); exists (Input x); auto
+      elimtype False; apply H; destruct H' as (x, Hf);
+        exists (Input x); auto
     end.
     match goal with
     | [ H: InputOf _ _ |- _ ] => destruct H; mapsto_discriminate

@@ -11,18 +11,70 @@ Require Import hvhdl.HVhdlSimulationFactsLib.
 Require Import hvhdl.PInitializationFacts.
 Require Import hvhdl.TStabilizeFacts.
 Require Import hvhdl.InitializationTactics.
+Require Import hvhdl.SSEvaluationTactics.
+Require Import hvhdl.ExpressionEvaluationTactics.
 
 (** ** Facts about [vruninit] and Place Design *)
 
 Section TVRunInit.
 
+  Lemma vruninit_tc_ps_assign_s_tc :
+    forall {Δ σ σ'},
+      vruninit hdstore Δ σ time_counter_ps σ' ->
+      MapsTo s_time_counter (Vnat 0) (sigstore σ').
+  Proof.
+    inversion_clear 1; intros.
+    vseqinv_cl; [contradiction | ].
+    vseqinv_cl; subst; cbn.
+    vexprinv_cl; eauto with mapsto.
+    inversion H0 in H5.
+    erewrite <- OVEq_eq_1 with (val2 := currv) in H4; eauto.
+  Qed.
+
+  Lemma vruninit_tc_ps_no_events_s_tc :
+    forall {Δ σ σ'},
+      vruninit hdstore Δ σ time_counter_ps σ' ->
+      ~NatSet.In s_time_counter (events σ') ->
+      MapsTo s_time_counter (Vnat 0) (sigstore σ).
+  Proof.
+    inversion_clear 1; intros.
+    vseqinv_cl; [contradiction | ].
+    vseqinv_cl; subst; cbn.
+    cbn in H; contrad_not_in_add.
+    inversion H0 in H6.
+    erewrite <- OVEq_eq_1 with (val2 := currv) in H5; eauto.
+  Qed.
+  
   Lemma vruninit_transition_s_tc_eq_O :    
     forall Δ σ σ',
       vruninit hdstore Δ σ transition_behavior σ' ->
       ~NatSet.In s_time_counter (events σ) ->
       DeclaredOf Δ s_time_counter ->
       MapsTo s_time_counter (Vnat 0) (sigstore σ').
-  Admitted.
+  Proof.
+    intros *; unfold transition_behavior.
+    rewrite vruninit_par_comm, <- vruninit_par_assoc.
+    do 2 (rewrite vruninit_par_comm,
+          <- vruninit_par_assoc,
+          <- vruninit_par_assoc).
+    inversion_clear 1; intros; rename H3 into IMDS.
+
+    (* 2 CASES: [s_tc ∈ events σ'0] or [s_tc ∉ events σ'0] *)
+    destruct (In_dec s_time_counter (events σ'0)).
+    
+    (* CASE [s_tc ∈ (events σ'0)] *)
+    - erw_IMDS_sstore_1 <- IMDS; eauto.
+      eapply vruninit_tc_ps_assign_s_tc; eauto with set.
+
+    (* CASE [s_marking ∉ (events σ'0)], 
+       then [σ("s_tc") = σ'0("s_tc")] *)
+    - erw_IMDS_sstore_m <- IMDS.
+      eapply vruninit_tc_ps_no_events_s_tc; eauto.
+      eapply not_in_union; eauto.
+      eapply vruninit_not_in_events_if_not_assigned; eauto.
+      destruct 1; unfold DeclaredOf in *; mapsto_discriminate.
+      simpl; cbv; lia.
+  Qed.
   
   Lemma vruninit_s_tc_eq_O :
     forall Δ σ behavior σ',

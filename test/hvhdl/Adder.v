@@ -12,7 +12,7 @@ Require Import hvhdl.AbstractSyntaxFacts.
 Require Import hvhdl.AbstractSyntaxTactics.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
-Require Import hvhdl.Elaboration.
+Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Petri.
 Require Import hvhdl.WellDefinedDesign.

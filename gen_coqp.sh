@@ -12,4 +12,4 @@ echo "-R common/ hilecop.common
 -R soundness/ hilecop.soundness
 -R test/ hilecop.test" > _CoqProject
 
-find -name *.v >> _CoqProject
+find -name *.v ! -path "./*/\.*" >> _CoqProject
