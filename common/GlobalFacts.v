@@ -20,36 +20,36 @@ Section SigEq.
   Variable P : A -> Prop.
   Variable eqA_dec : forall x y : A, {x = y} + {x <> y}.
   
-  (** Two sigs are seq-equivalent if there first element is Leibniz's equal. *)
+  (** Two sigs are P1SigEq-equivalent if there first element is Leibniz's equal. *)
   
-  Definition seq (u v : {a : A | P a}) : Prop :=
+  Definition P1SigEq (u v : {a : A | P a}) : Prop :=
     proj1_sig u = proj1_sig v.
 
-  (* Relation [seq] is reflexive. *)
+  (* Relation [P1SigEq] is reflexive. *)
   
-  Lemma seq_refl : forall x : {a : A | P a}, seq x x. reflexivity. Defined.
+  Lemma P1SigEq_refl : forall x : {a : A | P a}, P1SigEq x x. reflexivity. Defined.
   
-  (* Relation [seq] is symmetric. *)
+  (* Relation [P1SigEq] is symmetric. *)
   
-  Lemma seq_sym :  forall x y : {a : A | P a}, seq x y -> seq y x. symmetry; assumption. Defined.
+  Lemma P1SigEq_sym :  forall x y : {a : A | P a}, P1SigEq x y -> P1SigEq y x. symmetry; assumption. Defined.
 
-  (* Relation [seq] is transitive. *)
+  (* Relation [P1SigEq] is transitive. *)
   
-  Lemma seq_trans :  forall x y z : {a : A | P a}, seq x y -> seq y z -> seq x z.
+  Lemma P1SigEq_trans :  forall x y z : {a : A | P a}, P1SigEq x y -> P1SigEq y z -> P1SigEq x z.
     intros; transitivity (proj1_sig y); [assumption|assumption].
   Defined.
   
-  (** Given that the equality is decidable for Set A, seq A is decidable. *)
+  (** Given that the equality is decidable for Set A, P1SigEq A is decidable. *)
   
-  Definition seqdec (u v : {a : A | P a}) : {seq u v} + {~seq u v} :=
+  Definition P1SigEqdec (u v : {a : A | P a}) : {P1SigEq u v} + {~P1SigEq u v} :=
     eqA_dec (proj1_sig u) (proj1_sig v).
 
   (** Equivalence relation between two transitions that are elements of
     a subset of T. *)
 
-  Definition InA_seq_dec :
+  Definition InA_P1SigEq_dec :
     forall a lofA,
-      {SetoidList.InA seq a lofA} + {~SetoidList.InA seq a lofA}.
+      {SetoidList.InA P1SigEq a lofA} + {~SetoidList.InA P1SigEq a lofA}.
   Proof.
     intros; induction lofA.
     
@@ -63,25 +63,25 @@ Section SigEq.
   
 End SigEq.
 
-(** Declares seq as an instance of the Equivalence class. *)
+(** Declares P1SigEq as an instance of the Equivalence class. *)
   
-  Instance Equivalence_seq {A : Type} (P : A -> Prop) : Equivalence (@seq A P) :=
-    { Equivalence_Reflexive := (@seq_refl A P);
-      Equivalence_Symmetric := (@seq_sym A P);
-      Equivalence_Transitive := (@seq_trans A P) }.
+  Instance Equivalence_P1SigEq {A : Type} (P : A -> Prop) : Equivalence (@P1SigEq A P) :=
+    { Equivalence_Reflexive := (@P1SigEq_refl A P);
+      Equivalence_Symmetric := (@P1SigEq_sym A P);
+      Equivalence_Transitive := (@P1SigEq_trans A P) }.
 
 Add Parametric Relation {A : Type} {P : A -> Prop}
     {eqA : A -> A -> Prop}
-    {eqA_dec : forall x y : A, {eqA x y} + {~eqA x y}} : ({ a : A | P a}) (@seq A P)
-    reflexivity proved by (@seq_refl A P)
-    symmetry proved by (@seq_sym A P)
-    transitivity proved by (@seq_trans A P)
-      as seq_rel.
+    {eqA_dec : forall x y : A, {eqA x y} + {~eqA x y}} : ({ a : A | P a}) (@P1SigEq A P)
+    reflexivity proved by (@P1SigEq_refl A P)
+    symmetry proved by (@P1SigEq_sym A P)
+    transitivity proved by (@P1SigEq_trans A P)
+      as P1SigEq_rel.
 
-Arguments seq {A P}.
-Arguments seqdec {A P}.
+Arguments P1SigEq {A P}.
+Arguments P1SigEqdec {A P}.
 
-Hint Unfold seq : core.
+Hint Unfold P1SigEq : core.
 
 
 

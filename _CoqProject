@@ -35,7 +35,6 @@
 ./common/StateAndErrorMonad.v
 ./common/ListPlusTactics.v
 ./common/CoqLib.v
-./common/DFMapWeakList.v
 ./common/SetoidListFacts.v
 ./common/NStarSet.v
 ./common/GlobalFacts.v

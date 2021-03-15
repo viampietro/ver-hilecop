@@ -22,7 +22,7 @@ Section GenPMap.
   Lemma map_aux_gen_pmap_entry_P :
     forall {sitpn mm} {pls : list (P sitpn)} {pmap s pmap' s'},
       map_aux (fun p => generate_place_map_entry p mm) pls pmap s = OK pmap' s' ->
-      (forall p, InA seq p (pls ++ (fs pmap))) ->
+      (forall p, InA P1SigEq p (pls ++ (fs pmap))) ->
       forall p, InA Peq p (fs pmap').
   Proof.
     induction pls. 
@@ -34,7 +34,7 @@ Section GenPMap.
     eapply IHpls; eauto.
     unfold fs; rewrite fst_split_app; cbn.
     intros p1; specialize (InA_app p1).
-    inversion_clear InA_app as [seq_ | InA_tl].
+    inversion_clear InA_app as [P1SigEq_ | InA_tl].
     do 2 (erewrite InA_app_iff; right); eauto.
     rewrite app_assoc; erewrite InA_app_iff; left; eauto.
   Qed.

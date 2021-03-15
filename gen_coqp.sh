@@ -12,4 +12,4 @@ echo "-R common/ hilecop.common
 -R soundness/ hilecop.soundness
 -R test/ hilecop.test" > _CoqProject
 
-find -name *.v ! -path "./*/\.*" >> _CoqProject
+find -name *.v ! -path "./*/\.*" ! -path "./common/DFMapWeakList.v" >> _CoqProject

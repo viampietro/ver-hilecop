@@ -2,7 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
-Require Import ListPlus.
+Require Import common.ListPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
 Require Import dp.SitpnSemanticsDefs.
@@ -33,13 +33,13 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
 
     (** Captures the new value of conditions, and determines the
         activation status for actions.  *)
-    (forall c, (cond s' c) = (E τ c)) ->
+    (forall c, cond s' c = E τ c) ->
     (forall a, (exists p, (M s p) > 0 /\ has_A p a = true) -> (ex s' (inl a)) = true) ->
     (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (ex s' (inl a)) = false) ->
 
     (* Equivalent to the two lines above. *)
-    (forall a marked sum, @Set_in_List (P sitpn) (fun p => M s p > 0) marked ->
-                          BSum (fun p => has_A p a) marked sum ->
+    (forall a marked sum, @Sig_in_List (P sitpn) (fun p => M s p > 0) marked ->
+                          BSum (fun p => has_A (proj1_sig p) a) marked sum ->
                           ex s' (inl a) = sum) ->
 
     (** Updates the dynamic time intervals according to the firing

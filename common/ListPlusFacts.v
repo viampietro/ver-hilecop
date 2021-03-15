@@ -59,9 +59,9 @@ Section SIL.
            {eqA_dec : forall x y : A, {x = y} + {x <> y}}
            {x : {a | P a} } {v : B}
            {l : list ({ a : A | P a} * B)},
-      Sig_in_List (fs l) -> Sig_in_List (fs (setv (seqdec eqA_dec) x v l)).
+      Sig_in_List (fs l) -> Sig_in_List (fs (setv (P1SigEqdec eqA_dec) x v l)).
   Proof.
-    intros until l; functional induction (setv (seqdec eqA_dec) x v l) using setv_ind.
+    intros until l; functional induction (setv (P1SigEqdec eqA_dec) x v l) using setv_ind.
     (* CASE l = [] *)
     intros SIL; destruct SIL as (InA_, NoDupA_); specialize (InA_ x).
     inversion InA_.
@@ -72,7 +72,7 @@ Section SIL.
     split.
     intros y; specialize (InA_ y).
     inversion_clear InA_;
-      [ eapply InA_cons_hd; unfold seq; rewrite _x; assumption | eauto ].
+      [ eapply InA_cons_hd; unfold P1SigEq; rewrite _x; assumption | eauto ].
     constructor; [  | eauto with setoidl ].
     inversion_clear NoDupA_; clear e1; symmetry in _x; eauto 2 with setoidl typeclass_instances.    
     (* CASE [~eqk x a] *)
@@ -82,7 +82,7 @@ Section SIL.
     split.
     intros y; specialize (InA_ y).
     inversion_clear InA_;
-      [ eapply InA_cons_hd; unfold seq; rewrite H; reflexivity | eauto with setoidl ].
+      [ eapply InA_cons_hd; unfold P1SigEq; rewrite H; reflexivity | eauto with setoidl ].
     eapply InA_cons_tl; eauto with setoidl.
     eapply InA_fs_InA_fs_setv; eauto with typeclass_instances.
     constructor; inversion NoDupA_; eauto 2 with setoidl typeclass_instances.

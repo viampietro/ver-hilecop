@@ -161,7 +161,7 @@ Section GenSitpnInfos.
       Definition mutex_by_cconds (t t' : T sitpn) : CompileTimeState bool :=
         do tinfo <- get_tinfo t;
         do tinfo' <- get_tinfo t';
-        Ret (exists_ccond t t' (inter seq (seqdec Nat.eq_dec) (conds tinfo) (conds tinfo'))).      
+        Ret (exists_ccond t t' (inter P1SigEq (P1SigEqdec Nat.eq_dec) (conds tinfo) (conds tinfo'))).      
       
       (* Returns [true] if there exists a place [p] in [places]
          s.t. there exists a [basic] or [test] arc between [p] and
@@ -188,7 +188,7 @@ Section GenSitpnInfos.
       Definition mutex_by_inhib (t t' : T sitpn) : CompileTimeState bool :=
         do tinfo <- get_tinfo t;
         do tinfo' <- get_tinfo t';
-        Ret (exists_inhib t t' (inter seq (seqdec Nat.eq_dec) (pinputs tinfo) (pinputs tinfo'))).
+        Ret (exists_inhib t t' (inter P1SigEq (P1SigEqdec Nat.eq_dec) (pinputs tinfo) (pinputs tinfo'))).
 
       (* Returns [true] is there exists no means of mutual exclusion
          between transitions [t] and [t']. Returns [false]

@@ -50,11 +50,11 @@ Lemma tmap_aux_sil :
          {InlofAs2Sigs : forall a : A, List.In a lofAs -> {x | Q x}}
          {s : state} {lofSigs2 s'},
     tmap_aux (fun p s => Ret p s) lofAs lofSigs1 InlofAs2Sigs s = OK lofSigs2 s' ->
-    (forall x, List.In (proj1_sig x) lofAs \/ InA seq x lofSigs1) ->
+    (forall x, List.In (proj1_sig x) lofAs \/ InA P1SigEq x lofSigs1) ->
     (forall a (InlofAs : List.In a lofAs), a = proj1_sig (InlofAs2Sigs a InlofAs)) ->
-    (forall a (InlofAs : List.In a lofAs), ~InA seq (InlofAs2Sigs a InlofAs) lofSigs1) ->
+    (forall a (InlofAs : List.In a lofAs), ~InA P1SigEq (InlofAs2Sigs a InlofAs) lofSigs1) ->
     List.NoDup lofAs ->
-    NoDupA seq lofSigs1 ->
+    NoDupA P1SigEq lofSigs1 ->
     Sig_in_List lofSigs2.
 Proof.
   induction lofAs; intros *; intros e; minv e.
@@ -67,27 +67,27 @@ Proof.
         inversion_clear or_InlofAs_InlofSigs as [In_lofAs | InA_lofSigs].
       (* SUBCASE [a = proj1_sig x \/ In (proj1_sig x) lofAs] *)
       -- inversion_clear In_lofAs as [eq_a_proj1 | In_proj1_lofAs].
-         ++ right; erewrite (InA_app_iff seq lofSigs1); right.
+         ++ right; erewrite (InA_app_iff P1SigEq lofSigs1); right.
             eapply InA_cons_hd; specialize (eq_proj1 a (in_eq a lofAs)).
             transitivity a; auto.
          ++ auto.
-      -- right; erewrite (InA_app_iff seq lofSigs1); left; auto.
+      -- right; erewrite (InA_app_iff P1SigEq lofSigs1); left; auto.
     (* CASE [x ∈ lofAs ⇒ x ∉ (lofSigs ++ (InlofAs2Sigs a))] *)
     + intros *; erewrite InA_app_iff.
       inversion_clear 1 as [InA_lofSigs | InA_singl].
       -- unfold in_T_in_sublist_T in InA_lofSigs.
          eapply nInA_lofSigs; eauto.
-      -- inversion_clear InA_singl as [e1 e2 seq_ | e1 e2 InAnil]; [ | inversion InAnil].
-         unfold in_T_in_sublist_T in seq_.
+      -- inversion_clear InA_singl as [e1 e2 P1SigEq_ | e1 e2 InAnil]; [ | inversion InAnil].
+         unfold in_T_in_sublist_T in P1SigEq_.
          assert (e : a = a0) by (transitivity (proj1_sig (InlofAs2Sigs a (in_eq a lofAs)));
-                                 [ eapply eq_proj1 | rewrite <- seq_; symmetry; eapply eq_proj1 ]).
-         clear seq_; rewrite <- e in InlofAs; inversion NoDup_lofAs; contradiction.
+                                 [ eapply eq_proj1 | rewrite <- P1SigEq_; symmetry; eapply eq_proj1 ]).
+         clear P1SigEq_; rewrite <- e in InlofAs; inversion NoDup_lofAs; contradiction.
     (* NoDup lofAs *)
     + inversion NoDup_lofAs; assumption.
     (* NoDupA (lofSigs1 ++ [InlofAs2Sigs a]) *)
     + eapply NoDupA_app; eauto.
       apply NoDupA_singleton.
-      intros x InA_lofSigs; inversion_clear 1 as [e1 e2 seq_ | e1 e2 InAnil]; [ | inversion InAnil].
+      intros x InA_lofSigs; inversion_clear 1 as [e1 e2 P1SigEq_ | e1 e2 InAnil]; [ | inversion InAnil].
       apply (nInA_lofSigs a (in_eq a lofAs)).
       eapply InA_eqA; eauto with typeclass_instances.
 Qed.

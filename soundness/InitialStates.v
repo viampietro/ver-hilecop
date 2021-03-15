@@ -134,43 +134,43 @@ Proof.
   
   (* CASE [upper(I__s(t)) = ∞ and s0.I(t) ≤ lower(I__s(t))] 
      and [upper(I__s(t)) ≠ ∞ and s0.I(t) ≤ upper(I__s(t))] *)
-  - intros.
+  1,4 : intros;
 
     (* Builds the premises of the [init_s_tc_eq_O] lemma. *)
     
     (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *)
     edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t)
-      as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto.
+      as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto;
 
     (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
-    destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_).
+    destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_);
     
     (* Builds [id__t' ∈ (compstore σ__e)] *)
-    edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
+    edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto;
 
     (* Builds [id__t' ∈ Comps(Δ)] *)
-    edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto.
+    edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto;
     
     (* To prove [σ__t0("s_tc") = 0] *)
-    eapply init_s_tc_eq_O; eauto.
+    eapply init_s_tc_eq_O; eauto; [
 
     (* 5 SUBGOALS left *)
 
     (* Proves [NoDup compids] *)
-    eapply elab_nodup_compids; eauto.
-
+    eapply elab_nodup_compids; eauto
+    |
     (* Proves [(events σ__e) = ∅] *)
-    eapply elab_empty_events; eauto.
-    
+    eapply elab_empty_events; eauto
+    |
     (* Proves [DeclaredOf Δ__t "s_tc"] *)
-    eapply @elab_tcomp_Δ_s_tc; eauto.
-
+    eapply @elab_tcomp_Δ_s_tc; eauto
+    |
     (* Proves ["s_tc" ∉ (events σ__pe)] *)
-    erewrite elab_empty_events_for_comps; eauto with set.
-    
+    erewrite elab_empty_events_for_comps; eauto with set
+    |
     (* Proves [id__t = id__t'] *)
     erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
-      eapply sitpn2hvhdl_nodup_t2tcomp; eauto.
+      eapply sitpn2hvhdl_nodup_t2tcomp; eauto ].
   
   (* CASE [upper(I__s(t)) = ∞ and s0.I(t) > lower(I__s(t))] *)
   - destruct 1 as (upper_, TcGtLower_).
@@ -188,10 +188,53 @@ Proof.
     destruct (Is x).
     destruct (b t0) in TcGtUpper_; cbn in TcGtUpper_; lia.
     contradiction.
+Qed.
 
-  (* LAST CASE, can be merged with the first one  *)
-  - admit.
-Admitted.
+Lemma add1_comm : forall n m, n + S m = S n + m. do 2 intro; lia. Qed.
+Lemma S_mone_inv : forall n, 0 < n -> n = S (n - 1). intro; lia. Qed.
+
+Fixpoint seq1 (start len : nat) {struct len} : 0 < start + len -> list { n : nat | n < start + len }.
+  refine (match len with
+          | 0 => fun _ => nil
+          | S len' => fun _ => _
+          end).
+  refine ((exist _ start (Nat.lt_add_pos_r (S len') start (Nat.lt_0_succ len'))) :: _).
+  rewrite (add1_comm start len').
+  rewrite (add1_comm start len') in l.
+  exact (seq1 (S start) len' l).
+Defined.
+
+Lemma length_aofv_gt_O : forall aofv : arrofvalues, 0 < length aofv.
+  destruct aofv; cbn; eapply Nat.lt_0_succ; eauto.
+Defined.
+
+Definition seq_O_n (n : nat) : 0 < n -> list {m : nat | m < n }.
+  rewrite <- (plus_O_n n); exact (seq1 0 n).
+Defined.
+
+Definition arrofv_idxs (aofv : arrofvalues) : list { i | i < length aofv }.
+  exact (seq_O_n (length aofv) (length_aofv_gt_O aofv)).
+Defined.
+
+Definition ProdOfArrOfVBool (aofvb : arrofvalues) (bprod : bool) :=
+  let f_bprod :=
+      fun bprod (i : { n | n < length aofvb}) =>
+        match get_at (proj1_sig i) aofvb (proj2_sig i) with
+        | Vbool b => bprod && b
+        | _ => bprod
+        end
+  in
+  FoldL f_bprod (arrofv_idxs aofvb) true bprod.
+
+Definition BProd_ArrOfVBool (aofvb : arrofvalues) (bprod : bool) :=
+  let f_bprod :=
+      fun i =>
+        match oget_at i aofvb with
+        | Some (Vbool b) => b
+        | _ => true
+        end
+  in
+  BProd f_bprod (seq 0 (length aofvb)) bprod.
 
 Lemma init_states_eq_reset_orders :
   forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
@@ -209,8 +252,34 @@ Lemma init_states_eq_reset_orders :
     init hdstore Δ σ__e (behavior d) σ0 ->
     
     (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
-        InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) -> MapsTo id__t σ__t0 (compstore σ0) ->
+        InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+        MapsTo id__t σ__t0 (compstore σ0) ->
         MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sigstore σ__t0)).
+Proof.
+  intros *; intros IWD e elab_ init_ t id__t σ__t0 InA_t2tcomp MapsTo_cstore0.
+  cbn; unfold nullb.
+
+
+  
+  (* GOAL [σ__t0("s_rtc") = false] *)
+
+  Lemma init_s_rtc_eq_bprod_of_rt :
+    forall Δ σ behavior σ0,
+      init hdstore Δ σ behavior σ0 ->
+      forall id__t gm ipm opm compids Δ__t σ__t σ__t0,
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        CsHasUniqueCompIds behavior compids ->
+        Equal (events σ) {[]} ->
+        MapsTo id__t (Component Δ__t) Δ ->
+        MapsTo id__t σ__t (compstore σ) ->
+        MapsTo id__t σ__t0 (compstore σ0) ->
+        DeclaredOf Δ__t s_reinit_time_counter ->
+        ~NatSet.In s_reinit_time_counter (events σ__t) ->
+        
+        MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
+  Proof.
+  
+  (* init_s_rtc_eq_sum *)
 Admitted.
 
 Lemma init_states_eq_actions :

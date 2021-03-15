@@ -41,3 +41,15 @@ Ltac solve_nodup_compids_app :=
     erewrite AreCsCompIds_determ; eauto; apply AreCsCompIds_app; auto
   end.
 
+(** ** Tactics about [DesignHasUniqueIds] Relation *)
+
+Ltac inv_dhasuniqids H :=
+  lazymatch type of H with
+  | DesignHasUniqueIds _ _ _ _ _ _ =>
+    let Hdeclids := fresh "Hdeclids" in
+    let Hbehids := fresh "Hbehids" in
+    let Hnodupids := fresh "Hnodupids" in
+    let Hnodupvars := fresh "Hnodupvars" in
+    inversion_clear H as (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))
+  | _ => fail "Type of" H "is not DesignHasUniqueIds ?d"
+  end.

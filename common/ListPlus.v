@@ -29,14 +29,13 @@ Section ListPlusMisc.
   Definition inter (eq : A -> A -> Prop) (Aeqdec : forall x y : A, {eq x y} + {~eq x y}) (l m : list A) :=
     filter (fun a => if InA_dec Aeqdec a m then true else false) l. 
 
-  (** States that a given Set S is implemented by a list l.  As a side
-    effect, states that a given set is finite and enumerable. *)
+  (** States that a finite set is implemented by a list. *)
 
   Definition Set_in_List (A : Type) (P : A -> Prop) (l : list A) : Prop :=
     (forall a : A, P a <-> In a l) /\ NoDup l.
-
+  
   Definition Sig_in_List {A : Type} {P : A -> Prop} (l : list {x : A | P x}) : Prop :=
-    (forall a : {x : A | P x}, InA GlobalFacts.seq a l) /\ NoDupA GlobalFacts.seq l.
+    (forall a : {x : A | P x}, InA GlobalFacts.P1SigEq a l) /\ NoDupA GlobalFacts.P1SigEq l.
   
 End ListPlusMisc.
 

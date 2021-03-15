@@ -138,7 +138,7 @@ Record AreWellImplementedFiniteSets (sitpn : Sitpn) : Prop :=
 
 (* Defines a predicate stating that the functions [pre, post, M0, I__s,
    has_C, has_A, has_F] and also the [pr] relation of a given [sitpn],
-   yield the same value for inputs that verify the [seq] relation.
+   yield the same value for inputs that verify the [P1SigEq] relation.
    
  *)
 

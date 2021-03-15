@@ -28,11 +28,11 @@ Module Subset (X : UsualDecidableType).
 
   Section Elt.
     Variable Q : X.t -> Prop.
-    Definition eq := @seq X.t Q.
-    Definition eq_refl := @seq_refl X.t Q.
-    Definition eq_sym := @seq_sym X.t Q.
-    Definition eq_trans := @seq_trans X.t Q.
-    Definition eq_dec := @seqdec X.t Q X.eq_dec.
+    Definition eq := @P1SigEq X.t Q.
+    Definition eq_refl := @P1SigEq_refl X.t Q.
+    Definition eq_sym := @P1SigEq_sym X.t Q.
+    Definition eq_trans := @P1SigEq_trans X.t Q.
+    Definition eq_dec := @P1SigEqdec X.t Q X.eq_dec.
 
     Hint Immediate eq_sym : core.
     Hint Resolve eq_refl eq_trans : core.

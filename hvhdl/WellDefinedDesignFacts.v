@@ -93,27 +93,6 @@ Proof.
     + eapply in_or_app; right; eapply IHbehavior2 with (compids := compids2); eauto.
 Qed.
 
-Lemma comp_in_compids :
-  forall {lofcs compids id__c id__e gm ipm opm},
-    AreCompIds lofcs compids ->
-    List.In (cs_comp id__c id__e gm ipm opm) lofcs ->
-    List.In id__c compids.
-Proof.
-  induction 1.
-  - contradiction.
-  - inversion_clear 1.
-    + lazymatch goal with
-      | [ Heq: _ = _, Hfoldl: ListPlus.FoldL _ _ _ _ |- _ ] =>
-        rewrite Heq in Hfoldl; simpl in Hfoldl; eapply FoldL_in_acc; eauto
-      end.
-      intros *; intros Hin;
-        lazymatch goal with
-        | |- List.In _ ((fun _ => _) _ ?b) =>
-          case b; intros; (assumption || apply (in_appl Hin))
-        end.
-    + apply IHFoldL; auto.
-Defined.
-
 (** ** Facts about [ArePortIds] Relation *)
 
 Lemma ports_in_portids :
@@ -152,27 +131,3 @@ Proof.
     end.
 Qed.
 
-(** ** Facts about [HasUniqueIds] Relation *)
-
-Ltac inv_hasuniqids H :=
-  lazymatch type of H with
-  | HasUniqueIds _ =>
-    let genids := fresh "genids" in
-    let portids := fresh "portids" in
-    let sigids := fresh "sigids" in
-    let lofcs := fresh "lofcs" in
-    let compids := fresh "compids" in
-    let pids := fresh "pids" in
-    let Hdeclids := fresh "Hdeclids" in
-    let Hbehids := fresh "Hbehids" in
-    let Hnodupids := fresh "Hnodupids" in
-    let Hnodupvars := fresh "Hnodupvars" in
-    inversion_clear H as (genids,
-                          (portids,
-                           (sigids,
-                            (lofcs,
-                             (compids,
-                              (pids,
-                               (Hdeclids, (Hbehids, (Hnodupids, Hnodupvars)))))))))
-  | _ => fail "Type of" H "is not HasUniqueIds ?d"
-  end.

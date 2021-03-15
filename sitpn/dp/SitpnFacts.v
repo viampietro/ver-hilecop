@@ -10,7 +10,7 @@ Set Implicit Arguments.
     between two places as the equality between the first element
     of the [sig] type [P sitpn].  *)
 
-Definition Peq sitpn (p p' : P sitpn) : Prop := seq p p'.
+Definition Peq sitpn (p p' : P sitpn) : Prop := P1SigEq p p'.
 
 (** For a given [sitpn], defines the equivalence relation [Pkeq]
     between two pairs where places are the first elements of the
@@ -25,7 +25,7 @@ Arguments Pkeq {sitpn A}.
 (** The equivalence relation [Peq] is decidable. *)
 
 Definition Peqdec sitpn (x y : P sitpn) : {Peq x y} + {~Peq x y} :=
-  seqdec Nat.eq_dec x y.
+  P1SigEqdec Nat.eq_dec x y.
 Arguments Peqdec {sitpn}.
 
 (* The [SetoidList.InA] predicate is decidable with [Peq] as the
@@ -33,11 +33,11 @@ Arguments Peqdec {sitpn}.
 
 Definition InA_Peq_dec sitpn (p : P sitpn) (lofP : list (P sitpn)) :
   {SetoidList.InA Peq p lofP} + {~SetoidList.InA Peq p lofP} :=
-  InA_seq_dec (fun n => In n sitpn.(places)) Nat.eq_dec p lofP.
+  InA_P1SigEq_dec (fun n => In n sitpn.(places)) Nat.eq_dec p lofP.
 
 (*  *)
 
-Definition Equivalence_Peq sitpn := Equivalence_seq (In_P sitpn).
+Definition Equivalence_Peq sitpn := Equivalence_P1SigEq (In_P sitpn).
 
 Hint Unfold Peq Pkeq Peqdec : core.
 
@@ -45,7 +45,7 @@ Hint Unfold Peq Pkeq Peqdec : core.
     between two transitions as the equality between the first element
     of the [sig] type [T sitpn].  *)
 
-Definition Teq sitpn (t t' : T sitpn) : Prop := seq t t'.
+Definition Teq sitpn (t t' : T sitpn) : Prop := P1SigEq t t'.
 
 (* SetoidList InA predicate is decidable if eq = Teq *)
 
@@ -65,7 +65,7 @@ Arguments Tkeq {sitpn A}.
 (** The equivalence relation [Teq] is decidable. *)
 
 Definition Teqdec sitpn (x y : T sitpn) : {Teq x y} + {~Teq x y} :=
-  seqdec Nat.eq_dec x y.
+  P1SigEqdec Nat.eq_dec x y.
 Arguments Teqdec {sitpn}.
 
 
@@ -81,7 +81,7 @@ Arguments Teq'_dec {sitpn Q}.
 
 Definition InA_Teq_dec sitpn (t : T sitpn) (lofT : list (T sitpn)) :
   {SetoidList.InA (@Teq sitpn) t lofT} + {~SetoidList.InA (@Teq sitpn) t lofT} :=
-  InA_seq_dec (fun n => In n sitpn.(transitions)) Nat.eq_dec t lofT.
+  InA_P1SigEq_dec (fun n => In n sitpn.(transitions)) Nat.eq_dec t lofT.
 
 Hint Unfold Teq Tkeq Teqdec : core.
 
@@ -89,7 +89,7 @@ Hint Unfold Teq Tkeq Teqdec : core.
     between two actions as the equality between the first element
     of the [sig] type [A sitpn].  *)
 
-Definition Aeq sitpn (a a' : A sitpn) : Prop := seq a a'.
+Definition Aeq sitpn (a a' : A sitpn) : Prop := P1SigEq a a'.
 Arguments Aeq {sitpn}.
 
 (** For a given [sitpn], defines the equivalence relation [Akeq]
@@ -103,7 +103,7 @@ Arguments Akeq {sitpn B}.
 (** The equivalence relation [Aeq] is decidable. *)
 
 Definition Aeqdec sitpn (x y : A sitpn) : {Aeq x y} + {~Aeq x y} :=
-  seqdec Nat.eq_dec x y.
+  P1SigEqdec Nat.eq_dec x y.
 Arguments Aeqdec {sitpn}.
 
 Hint Unfold Aeq Akeq Aeqdec : core.
@@ -112,7 +112,7 @@ Hint Unfold Aeq Akeq Aeqdec : core.
     between two functions as the equality between the first element of
     the [sig] type [F sitpn].  *)
 
-Definition Feq sitpn (f f' : F sitpn) : Prop := seq f f'.
+Definition Feq sitpn (f f' : F sitpn) : Prop := P1SigEq f f'.
 Arguments Feq {sitpn}.
 
 (** For a given [sitpn], defines the equivalence relation [Fkeq]
@@ -126,7 +126,7 @@ Arguments Fkeq {sitpn B}.
 (** The equivalence relation [Feq] is decidable. *)
 
 Definition Feqdec sitpn (x y : F sitpn) : {Feq x y} + {~Feq x y} :=
-  seqdec Nat.eq_dec x y.
+  P1SigEqdec Nat.eq_dec x y.
 Arguments Feqdec {sitpn}.
 
 Hint Unfold Feq Fkeq Feqdec : core.
@@ -135,7 +135,7 @@ Hint Unfold Feq Fkeq Feqdec : core.
     between two conditions as the equality between the first element
     of the [sig] type [C sitpn].  *)
 
-Definition Ceq sitpn (c c' : C sitpn) : Prop := seq c c'.
+Definition Ceq sitpn (c c' : C sitpn) : Prop := P1SigEq c c'.
 Arguments Ceq {sitpn}.
 
 (** For a given [sitpn], defines the equivalence relation [Ckeq]
@@ -149,7 +149,7 @@ Arguments Ckeq {sitpn B}.
 (** The equivalence relation [Ceq] is decidable. *)
 
 Definition Ceqdec sitpn (x y : C sitpn) : {Ceq x y} + {~Ceq x y} :=
-  seqdec Nat.eq_dec x y.
+  P1SigEqdec Nat.eq_dec x y.
 Arguments Ceqdec {sitpn}.
 
 Hint Unfold Ceq Ckeq Ceqdec : core.
