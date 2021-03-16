@@ -2,9 +2,11 @@
 
 (** Module defining the semantics domains used in H-VHDL semantics. *)
 
-Require Import CoqLib.
-Require Import AbstractSyntax.
-Require Import GlobalTypes.
+Require Import common.CoqLib.
+Require Import common.GlobalTypes.
+Require Import common.ListLib.
+
+Require Import hvhdl.AbstractSyntax.
 
 (** Defines the type of values used in the 
     semantical world.
@@ -294,3 +296,56 @@ with arrofveq (aofv aofv' : arrofvalues) {struct aofv} : option bool :=
        (* Error, l and l' are not of the same length. *)
        | _, _ => None
        end.
+
+(** ** Index Iterator for [arrofvalues] *)
+
+Section ArrOfV_Iterator.
+
+  (** An array is a least of length [1]; it has at least one
+      element. *)
+  
+  Lemma length_aofv_gt_O : forall aofv : arrofvalues, 0 < length aofv.
+    destruct aofv; cbn; eapply Nat.lt_0_succ; eauto.
+  Defined.
+
+  (** Generates a contiguous sequence of natural numbers corresponding
+      the available indexes of the [aofv] arrofvalues; i.e, the
+      sequence ranges from [0] to [length aofv - 1], and for each
+      index [i] there is a proof that [i < length aofv]. *)
+  
+  Definition arrofv_idxs (aofv : arrofvalues) : list { i | i < length aofv } :=
+    seqd 0 (length aofv) (length_aofv_gt_O aofv).
+
+  (** [BProd_ArrOfV aofv bprod ≡ ∏i=0 to (length aofv -1), aofv[i]
+      ].  If [ aofv[i] ] is not a boolean value, then [true] is passed
+      to the product. *)
+  
+  Definition BProd_ArrOfV (aofv : arrofvalues) (bprod : bool) :=
+    let f_bprod :=
+        fun i =>
+          match oget_at i aofv with
+          | Some (Vbool b) => b
+          | _ => true
+          end
+    in
+    BProd f_bprod (seq 0 (length aofv)) bprod.
+
+  (** Dependently-typed version of [BProd_ArrOfV] where there is a
+      proof that each index [i] in the generated sequence verifies [i
+      < length aofv]. Therefore, we are able to use the error-free
+      [get_at] function to access element of [aofv] through their
+      index. *)
+  
+  Definition DepBProd_ArrOfV (aofv : arrofvalues) (bprod : bool) :=
+    let f_bprod :=
+        fun (i : { n | n < 0 + length aofv}) =>
+          match get_at (proj1_sig i) aofv (proj2_sig i) with
+          | Vbool b => b
+          | _ => true
+          end
+    in
+    BProd f_bprod (arrofv_idxs aofv) bprod.
+  
+End ArrOfV_Iterator.
+
+

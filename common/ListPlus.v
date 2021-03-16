@@ -669,3 +669,25 @@ Section Map_prop.
   
 End Map_prop.
 
+(** ** Sequence of natural numbers *)
+
+Section Seq.
+
+  (** *** Dependently-typed natural number sequence *)
+  
+  Lemma S_add_comm : forall n m, n + S m = S n + m. do 2 intro; lia. Qed.
+  Lemma S_mone_inv : forall n, 0 < n -> n = S (n - 1). intro; lia. Qed.
+  
+  Fixpoint seqd (start len : nat) {struct len} : 0 < start + len -> list { n : nat | n < start + len }.
+    refine (match len with
+            | 0 => fun _ => nil
+            | S len' => fun _ => _
+            end).
+    refine ((exist _ start (Nat.lt_add_pos_r (S len') start (Nat.lt_0_succ len'))) :: _).
+    rewrite (S_add_comm start len').
+    rewrite (S_add_comm start len') in l.
+    exact (seqd (S start) len' l).
+  Defined.
+
+  
+End Seq.

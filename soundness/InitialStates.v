@@ -18,6 +18,7 @@ Require Import hvhdl.HVhdlElaborationFactsLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlHilecopFactsLib.
 Require Import hvhdl.HVhdlSimulationLib.
+Require Import hvhdl.HVhdlSimulationFactsLib.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 Require Import sitpn2hvhdl.GenerateHVhdlFacts.
@@ -146,7 +147,7 @@ Proof.
     destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_);
     
     (* Builds [id__t' ∈ (compstore σ__e)] *)
-    edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto;
+    edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto;
 
     (* Builds [id__t' ∈ Comps(Δ)] *)
     edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto;
@@ -165,7 +166,7 @@ Proof.
     (* Proves [DeclaredOf Δ__t "s_tc"] *)
     eapply @elab_tcomp_Δ_s_tc; eauto
     |
-    (* Proves ["s_tc" ∉ (events σ__pe)] *)
+    (* Proves ["s_tc" ∉ (events σ__te)] *)
     erewrite elab_empty_events_for_comps; eauto with set
     |
     (* Proves [id__t = id__t'] *)
@@ -190,51 +191,54 @@ Proof.
     contradiction.
 Qed.
 
-Lemma add1_comm : forall n m, n + S m = S n + m. do 2 intro; lia. Qed.
-Lemma S_mone_inv : forall n, 0 < n -> n = S (n - 1). intro; lia. Qed.
+Definition PInputsOf {sitpn} (t : T sitpn) (pinputs_of_t : list { p | pre p t <> None}) :=
+  @Sig_in_List (P sitpn) (fun p => pre p t <> None) pinputs_of_t.
 
-Fixpoint seq1 (start len : nat) {struct len} : 0 < start + len -> list { n : nat | n < start + len }.
-  refine (match len with
-          | 0 => fun _ => nil
-          | S len' => fun _ => _
-          end).
-  refine ((exist _ start (Nat.lt_add_pos_r (S len') start (Nat.lt_0_succ len'))) :: _).
-  rewrite (add1_comm start len').
-  rewrite (add1_comm start len') in l.
-  exact (seq1 (S start) len' l).
-Defined.
+(* Definition Sig_in_List_ex {A : Type} {Q : A -> Prop} {Q' : {a | Q a } -> Prop} : *)
+(*   (exists m : list { a | Q a}, Sig_in_List m) -> *)
+(*   exists l : list { a' | Q' a'}, Sig_in_List l. *)
+(* Proof. *)
+(*   destruct 1 as (m, SIL). *)
+  
+Lemma PInputsOf_ex : forall sitpn (t : T sitpn), exists pinputs_of_t, PInputsOf t pinputs_of_t.
+  intros sitpn t; unfold PInputsOf.
+Admitted.
 
-Lemma length_aofv_gt_O : forall aofv : arrofvalues, 0 < length aofv.
-  destruct aofv; cbn; eapply Nat.lt_0_succ; eauto.
-Defined.
+Lemma sitpn2hvhdl_emp_pinputs_in_arcs_nb :
+  forall {sitpn decpr id__ent id__arch mm d γ},
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    IsWellDefined sitpn ->
+    forall t id__t gm ipm opm,
+      InA Tkeq (t, id__t) (t2tcomp γ) ->
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+      PInputsOf t [] ->
+      List.In (assocg_ Transition.input_arcs_number 1) gm.
+Admitted.
 
-Definition seq_O_n (n : nat) : 0 < n -> list {m : nat | m < n }.
-  rewrite <- (plus_O_n n); exact (seq1 0 n).
-Defined.
+Lemma sitpn2hvhdl_emp_pinputs_rt :
+  forall {sitpn decpr id__ent id__arch mm d γ},
+    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    IsWellDefined sitpn ->
+    forall t id__t gm ipm opm,
+      InA Tkeq (t, id__t) (t2tcomp γ) ->
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+      PInputsOf t [] ->
+      List.In (associp_ (Transition.reinit_time $[[0]]) false) ipm.
+Admitted.
 
-Definition arrofv_idxs (aofv : arrofvalues) : list { i | i < length aofv }.
-  exact (seq_O_n (length aofv) (length_aofv_gt_O aofv)).
-Defined.
-
-Definition ProdOfArrOfVBool (aofvb : arrofvalues) (bprod : bool) :=
-  let f_bprod :=
-      fun bprod (i : { n | n < length aofvb}) =>
-        match get_at (proj1_sig i) aofvb (proj2_sig i) with
-        | Vbool b => bprod && b
-        | _ => bprod
-        end
-  in
-  FoldL f_bprod (arrofv_idxs aofvb) true bprod.
-
-Definition BProd_ArrOfVBool (aofvb : arrofvalues) (bprod : bool) :=
-  let f_bprod :=
-      fun i =>
-        match oget_at i aofvb with
-        | Some (Vbool b) => b
-        | _ => true
-        end
-  in
-  BProd f_bprod (seq 0 (length aofvb)) bprod.
+Lemma init_eval_idx_associp :
+  forall D__s Δ σ behavior σ0,
+    init D__s Δ σ behavior σ0 ->
+    forall id__c id__e gm ipm opm Δ__c σ__c0 id e__i e aofv v i,
+      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+      MapsTo id__c (Component Δ__c) Δ ->
+      MapsTo id__c σ__c0 (compstore σ0) ->
+      MapsTo id (Varr aofv) (sigstore σ__c0) ->
+      List.In (associp_ (id $[[e__i]]) e) ipm ->
+      vexpr Δ σ0 EmptyLEnv false e v ->
+      vexpr EmptyElDesign EmptyDState EmptyLEnv false e__i (Vnat i) ->
+      oget_at i aofv = Some v.
+Admitted.
 
 Lemma init_states_eq_reset_orders :
   forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
@@ -256,30 +260,76 @@ Lemma init_states_eq_reset_orders :
         MapsTo id__t σ__t0 (compstore σ0) ->
         MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sigstore σ__t0)).
 Proof.
-  intros *; intros IWD e elab_ init_ t id__t σ__t0 InA_t2tcomp MapsTo_cstore0.
+  intros *; intros IWD e elab_ init_ t id__t σ__t0; intros.
   cbn; unfold nullb.
 
+  (* APPLY [init_rtc_eq_bprod_of_rt] lemma. *)
 
+  (* Building premises *)
   
-  (* GOAL [σ__t0("s_rtc") = false] *)
+  (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)]
+     and [(t, id__t') ∈ t2tcomp γ], and rewrites [id__t'] as [id__t].  *)
+  edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t)
+    as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto.
+  assert (eq_id__t : id__t = id__t').
+  { erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
+      eapply sitpn2hvhdl_nodup_t2tcomp; eauto. }  
+  rewrite <- eq_id__t in *; clear eq_id__t.
+  
+  (* Builds [compids] and [CsHasUniqueCompIds (behavior d) compids] *)
+  destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_).
+  assert (CsHasUnCIds_ : CsHasUniqueCompIds (behavior d) compids)
+    by (split; [ assumption | eapply elab_nodup_compids; eauto]).
 
-  Lemma init_s_rtc_eq_bprod_of_rt :
-    forall Δ σ behavior σ0,
-      init hdstore Δ σ behavior σ0 ->
-      forall id__t gm ipm opm compids Δ__t σ__t σ__t0,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-        CsHasUniqueCompIds behavior compids ->
-        Equal (events σ) {[]} ->
-        MapsTo id__t (Component Δ__t) Δ ->
-        MapsTo id__t σ__t (compstore σ) ->
-        MapsTo id__t σ__t0 (compstore σ0) ->
-        DeclaredOf Δ__t s_reinit_time_counter ->
-        ~NatSet.In s_reinit_time_counter (events σ__t) ->
-        
-        MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
-  Proof.
+  (* Builds [(events σ__e) = ∅] *)
+  assert (Emp_ev__e : Equal (events σ__e) {[]}) by (eapply elab_empty_events; eauto).
+
+  (* Builds [id__t ∈ Comps(Δ)] *)
+  edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto.
   
-  (* init_s_rtc_eq_sum *)
+  (* Builds [id__t ∈ (compstore σ__e)] *)
+  edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto.
+
+  (* Builds [DeclaredOf Δ__t "s_rtc"] *)
+  assert (Decl_s_rtc : DeclaredOf Δ__t s_reinit_time_counter)
+    by (eapply @elab_tcomp_Δ_s_rtc; eauto).
+
+  (* Builds [s_rtc ∉ events σ__te] *)
+  assert (nIn_events : ~NatSet.In s_reinit_time_counter (events σ__te))
+    by (erewrite elab_empty_events_for_comps; eauto with set).
+
+  (* Builds [∃ aofv, σ__t0("rt") = aofv] *)
+  assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0)).
+  { edestruct @elab_tcomp_σ_s_rt with (d := d) as (aofv, MapsTo_aofv); eauto.
+    eapply init_maps_sstore_of_comp_Varr; eauto. }
+  destruct aofv_ex as (aofv, MapsTo_rt).
+  
+  eapply init_s_rtc_eq_bprod_of_rt; eauto.
+
+  (* CASE ANALYSIS: [pinputs_of_t] where [PInputsOf t pinputs_of_t]. *)
+
+  edestruct (@PInputsOf_ex sitpn (proj1_sig t)) as (pinputs_of_t, PInputsOf_t).
+  destruct pinputs_of_t.
+
+  (* CASE [pinputs_of_t = ∅] *)
+  - unfold BProd_ArrOfV.
+    cutrewrite -> (length aofv = 1).
+    cbn; constructor.
+    cutrewrite -> (oget_at 0 aofv = Some (Vbool false)).
+    constructor.
+    (* SUBGOAL [oget_at 0 aofv = Some (Vbool false)] *)
+    + eapply @init_eval_idx_associp with (e__i := 0) (e := false); eauto;
+        try (solve [constructor; lia]).
+      eapply sitpn2hvhdl_emp_pinputs_rt; eauto.
+
+    (* SUBGOAL [length aofv = 1] *)
+    + assert (is_of_type (Varr aofv) (Tarray Tbool 0 0)) by admit.
+      inversion_clear H1.
+      inversion_clear H2; [ cbn; reflexivity | inversion H3 ].
+      
+  (* CASE [pinputs_of_t ≠ ∅] *)
+  - admit.
+    
 Admitted.
 
 Lemma init_states_eq_actions :

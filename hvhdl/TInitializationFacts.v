@@ -167,5 +167,23 @@ Section TInit.
     (* [s_tc] takes [0] during [vruninit]. *)
     eapply vruninit_s_tc_eq_O; eauto.    
   Qed.
+
+  Lemma init_s_rtc_eq_bprod_of_rt :
+    forall Δ σ behavior σ0,
+      init hdstore Δ σ behavior σ0 ->
+      forall id__t gm ipm opm compids Δ__t σ__t σ__t0 b aofv,
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        CsHasUniqueCompIds behavior compids ->
+        Equal (events σ) {[]} ->
+        MapsTo id__t (Component Δ__t) Δ ->
+        MapsTo id__t σ__t (compstore σ) ->
+        MapsTo id__t σ__t0 (compstore σ0) ->
+        DeclaredOf Δ__t s_reinit_time_counter ->
+        ~NatSet.In s_reinit_time_counter (events σ__t) ->
+        MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
+        BProd_ArrOfV aofv b ->
+        MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
+  Admitted.
+
   
 End TInit.
