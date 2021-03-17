@@ -310,8 +310,30 @@ Section Init.
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
       MapsTo id__c σ__c (compstore σ) ->
       MapsTo id__c σ__c0 (compstore σ0) ->
-      MapsTo id (Varr aofv )(sigstore σ__c) ->
+      MapsTo id (Varr aofv) (sigstore σ__c) ->
       exists aofv', MapsTo id (Varr aofv') (sigstore σ__c0).
+  Admitted.
+
+  Lemma init_inv_type_sstore :
+    forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm id v v' t},
+      init D__s Δ σ behavior σ0 ->
+      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+      MapsTo id v (sigstore σ) ->
+      MapsTo id v' (sigstore σ0) ->
+      is_of_type v t ->
+      is_of_type v' t.
+  Admitted.
+  
+  Lemma init_inv_type_sstore_of_comp :
+    forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id v v' t},
+      init D__s Δ σ behavior σ0 ->
+      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+      MapsTo id__c σ__c (compstore σ) ->
+      MapsTo id v (sigstore σ__c) ->
+      MapsTo id__c σ__c0 (compstore σ0) ->
+      MapsTo id v' (sigstore σ__c0) ->
+      is_of_type v t ->
+      is_of_type v' t.
   Admitted.
   
 End Init.

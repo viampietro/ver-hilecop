@@ -77,7 +77,7 @@ Proof.
   - apply IHebeh2; auto.
 Qed.
 
-Lemma elab_pcomp_Δ_s_marking :
+Lemma elab_P_Δ_s_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -90,7 +90,7 @@ Qed.
 
 (** ** Place Port Elaboration *)
 
-Lemma elab_pcomp_Δ_init_marking :
+Lemma elab_P_Δ_init_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->

@@ -3,6 +3,7 @@
 Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
+Require Import common.ListLib.
 
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
@@ -171,7 +172,7 @@ Section TInit.
   Lemma init_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
-      forall id__t gm ipm opm compids Δ__t σ__t σ__t0 b aofv,
+      forall id__t gm ipm opm compids Δ__t σ__t σ__t0 b aofv t n,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids ->
         Equal (events σ) {[]} ->
@@ -181,7 +182,8 @@ Section TInit.
         DeclaredOf Δ__t s_reinit_time_counter ->
         ~NatSet.In s_reinit_time_counter (events σ__t) ->
         MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
-        BProd_ArrOfV aofv b ->
+        MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
+        BProd (get_bool_at aofv) (seq 0 n) b ->
         MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
   Admitted.
 

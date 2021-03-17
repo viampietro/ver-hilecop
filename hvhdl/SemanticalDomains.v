@@ -319,6 +319,12 @@ Section ArrOfV_Iterator.
   (** [BProd_ArrOfV aofv bprod ≡ ∏i=0 to (length aofv -1), aofv[i]
       ].  If [ aofv[i] ] is not a boolean value, then [true] is passed
       to the product. *)
+
+  Definition get_bool_at (aofv : arrofvalues) (i : nat) : bool :=
+    match oget_at i aofv with
+    | Some (Vbool b) => b
+    | _ => true
+    end.
   
   Definition BProd_ArrOfV (aofv : arrofvalues) (bprod : bool) :=
     let f_bprod :=

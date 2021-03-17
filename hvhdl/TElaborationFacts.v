@@ -7,7 +7,7 @@ Require Import hvhdl.HVhdlElaborationFactsLib.
 
 (** ** Transition Declared Signal Elaboration *)
 
-Lemma elab_tcomp_Δ_s_tc :
+Lemma elab_T_Δ_s_tc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -19,7 +19,7 @@ Proof.
   firstorder.
 Qed.
 
-Lemma elab_tcomp_Δ_s_rtc :
+Lemma elab_T_Δ_s_rtc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -31,7 +31,7 @@ Proof.
   firstorder.
 Qed.
 
-Lemma elab_tcomp_σ_s_rt : 
+Lemma elab_T_σ_rt : 
   forall {d Δ σ__e id__t gm ipm opm σ__te},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->

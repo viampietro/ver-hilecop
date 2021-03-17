@@ -33,6 +33,9 @@ Section ListPlusMisc.
 
   Definition Set_in_List (A : Type) (P : A -> Prop) (l : list A) : Prop :=
     (forall a : A, P a <-> In a l) /\ NoDup l.
+
+  Definition Set_in_ListA {A : Type} (eqA : A -> A -> Prop) (P : A -> Prop) (l : list A) : Prop :=
+    (forall a : A, P a <-> InA eqA a l) /\ NoDupA eqA l.
   
   Definition Sig_in_List {A : Type} {P : A -> Prop} (l : list {x : A | P x}) : Prop :=
     (forall a : {x : A | P x}, InA GlobalFacts.P1SigEq a l) /\ NoDupA GlobalFacts.P1SigEq l.
