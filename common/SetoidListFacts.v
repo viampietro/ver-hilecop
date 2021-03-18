@@ -228,6 +228,14 @@ Section InAFacts.
   Qed.
 
   Hint Resolve InA_eq_pair_In : setoidl.
+
+  Lemma length_neq_O :
+    forall {A : Type} (eqA : A -> A -> Prop) (l : list A),
+      (exists a, InA eqA a l) -> length l <> 0.
+  Proof. induction l; [
+           destruct 1 as (a, InA_); inversion InA_
+         | cbn; lia ].
+  Qed.
   
 End InAFacts.
 

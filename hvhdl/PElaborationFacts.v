@@ -102,3 +102,29 @@ Proof.
   firstorder.
 Qed.
 
+Lemma elab_P_σ_rtt : 
+  forall {d Δ σ__e id__p gm ipm opm σ__pe},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+    MapsTo id__p σ__pe (compstore σ__e) ->
+    exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sigstore σ__pe).
+Admitted.
+
+Lemma elab_P_Δ_out_arcs_nb_1 :
+  forall {d Δ σ__e id__p gm ipm opm Δ__p},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+    MapsTo id__p (Component Δ__p) Δ ->
+    exists t n, MapsTo Place.output_arcs_number (Generic t (Vnat n)) Δ__p.
+Admitted.
+
+Lemma elab_P_Δ_out_arcs_nb_2 :
+  forall {d Δ σ__e id__p gm ipm opm Δ__p e v},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+    MapsTo id__p (Component Δ__p) Δ ->
+    List.In (assocg_ Place.output_arcs_number e) gm ->
+    vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
+    exists t, MapsTo Place.output_arcs_number (Generic t v) Δ__p.
+Admitted.
+

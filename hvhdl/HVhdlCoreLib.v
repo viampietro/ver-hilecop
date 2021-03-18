@@ -12,3 +12,4 @@ Require Export hvhdl.EnvironmentFacts.
 Require Export hvhdl.EnvironmentTactics.
 Require Export hvhdl.WellDefinedDesignFacts.
 Require Export hvhdl.WellDefinedDesignTactics.
+Require Export hvhdl.SemanticalDomainsFacts.

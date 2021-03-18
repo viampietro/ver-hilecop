@@ -422,3 +422,11 @@ Proof.
   inversion 1.
   eapply ebeh_validipm; eauto.
 Qed.
+
+Lemma elab_wf_gmap_expr :
+  forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm id e},
+    edesign D__s M__g d Δ σ__e ->
+    InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+    List.In (assocg_ id e) gm ->
+    exists v, vexpr EmptyElDesign EmptyDState EmptyLEnv false e v.
+Admitted.

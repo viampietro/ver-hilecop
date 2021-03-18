@@ -6,6 +6,7 @@ Require Import common.GlobalFacts.
 Require Import common.ListPlus.
 Require Import dp.Sitpn.
 Require Import dp.SitpnTypes.
+Require Import dp.SitpnFacts.
 
 Set Implicit Arguments.
 
@@ -181,8 +182,8 @@ Definition PreSumList (sitpn : Sitpn) (p : P sitpn) (lofTs : list (T sitpn)) (su
     then ∑ pre(p, t) = n, ∀ t ∈ {t' | P t'}    
 *)
 
-Inductive PreSum (sitpn : Sitpn) (p : P sitpn) (P : T sitpn -> Prop) : nat -> Prop :=
-| PreSum_ : forall l n, Set_in_List P l -> PreSumList p l n -> PreSum p P n.
+Inductive PreSum (sitpn : Sitpn) (p : P sitpn) (Q : T sitpn -> Prop) : nat -> Prop :=
+| PreSum_ : forall l n, Set_in_List Q l -> PreSumList p l n -> PreSum p Q n.
 
 Inductive MarkingSubPreSum (sitpn : Sitpn) (Q : T sitpn -> Prop) (m m' : P sitpn -> nat) : Prop :=
 | MarkingSubPreSum_ : (forall p sum__pre, PreSum p Q sum__pre -> m' p = m p - sum__pre) -> MarkingSubPreSum Q m m'.
@@ -214,3 +215,11 @@ Inductive MarkingSubPreSumAddPostSum (sitpn : Sitpn) (Q : T sitpn -> Prop) (m m'
         PostSum p Q sum__post ->
         m' p = m p - sum__pre + sum__post) ->
     MarkingSubPreSumAddPostSum Q m m'.
+
+(** ** Input and output places (resp. transitions) for a given transition (resp. place) *)
+
+Definition PInputsOf {sitpn} (t : T sitpn) (pinputs_of_t : list (P sitpn)) :=
+  @Set_in_ListA (P sitpn) Peq (fun p => pre p t <> None) pinputs_of_t.
+
+Definition TOutputsOf {sitpn} (p : P sitpn) (toutputs_of_p : list (T sitpn)) :=
+  @Set_in_ListA (T sitpn) Teq (fun t => pre p t <> None) toutputs_of_p.

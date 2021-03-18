@@ -557,4 +557,69 @@ Section Sitpn2HVhdl.
     inversion 1.
   Qed.
   
+  Lemma sitpn2hvhdl_emp_pinputs_rt :
+    forall {sitpn decpr id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      forall t id__t gm ipm opm,
+        InA Tkeq (t, id__t) (t2tcomp γ) ->
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+        PInputsOf t [] ->
+        List.In (associp_ (Transition.reinit_time $[[0]]) false) ipm.
+  Admitted.
+
+  Lemma sitpn2hvhdl_emp_pinputs_in_arcs_nb :
+    forall {sitpn decpr id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      forall t id__t gm ipm opm,
+        InA Tkeq (t, id__t) (t2tcomp γ) ->
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+        PInputsOf t [] ->
+        List.In (assocg_ Transition.input_arcs_number 1) gm.
+  Admitted.
+
+  Lemma sitpn2hvhdl_connect_rtt_rt :
+    forall {sitpn decpr id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      forall t id__t gm__t ipm__t opm__t p id__p gm__p ipm__p opm__p pinputs_of_t toutputs_of_p,
+        @pre sitpn p t <> None ->
+        PInputsOf t pinputs_of_t ->
+        TOutputsOf p toutputs_of_p ->
+        InA Tkeq (t, id__t) (t2tcomp γ) ->
+        InCs (cs_comp id__t Petri.transition_entid gm__t ipm__t opm__t) (behavior d) ->
+        InA Pkeq (p, id__p) (p2pcomp γ) ->
+        InCs (cs_comp id__p Petri.place_entid gm__p ipm__p opm__p) (behavior d) ->
+        exists i j id__ji,
+          0 <= i < length pinputs_of_t
+          /\ 0 <= j < length toutputs_of_p
+          /\ List.In (assocop_idx Place.reinit_transitions_time (e_nat j) ($id__ji)) opm__p
+          /\ List.In (associp_ (Transition.reinit_time $[[(e_nat i)]]) (#id__ji)) ipm__t.    
+  Admitted.
+
+  Lemma sitpn2hvhdl_nemp_pinputs_in_arcs_nb :
+    forall {sitpn decpr id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      forall t id__t gm ipm opm pinputs_of_t,
+        InA Tkeq (t, id__t) (t2tcomp γ) ->
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+        PInputsOf t pinputs_of_t ->
+        length pinputs_of_t <> 0 ->
+        List.In (assocg_ Transition.input_arcs_number (length pinputs_of_t)) gm.
+  Admitted.
+
+  Lemma sitpn2hvhdl_nemp_toutputs_out_arcs_nb :
+    forall {sitpn decpr id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      IsWellDefined sitpn ->
+      forall p id__p gm ipm opm toutputs_of_p,
+        InA Pkeq (p, id__p) (p2pcomp γ) ->
+        InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+        TOutputsOf p toutputs_of_p ->
+        length toutputs_of_p <> 0 ->
+        List.In (assocg_ Place.output_arcs_number (length toutputs_of_p)) gm.
+  Admitted.
+  
 End Sitpn2HVhdl.

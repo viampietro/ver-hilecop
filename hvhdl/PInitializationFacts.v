@@ -256,6 +256,31 @@ Section PInit.
     (* [s_marking] takes [n] during [vruninit], if [<initial_marking => n>] *)
     eapply vruninit_s_marking_eq_nat; eauto.
   Qed.
+
+  Lemma init_P_eval_rtt_i :
+    forall D__s Δ σ behavior σ0,
+      init D__s Δ σ behavior σ0 ->
+      forall id__p gm ipm opm σ__p0 aofv id i b ,
+        InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+        MapsTo id__p σ__p0 (compstore σ0) ->
+        MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0) ->
+        List.In (assocop_idx reinit_transitions_time (e_nat i) ($id)) opm ->
+        get_bool_at aofv i = b ->
+        MapsTo id (Vbool b) (sigstore σ0).
+  Admitted.
+  
+  Lemma init_P_rtt_eq_false :
+    forall D__s Δ σ behavior σ0,
+      init D__s Δ σ behavior σ0 ->
+      forall id__p gm ipm opm σ__p0 Δ__p aofv i t n,
+        InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+        MapsTo id__p (Component Δ__p) Δ ->
+        MapsTo output_arcs_number (Generic t (Vnat n)) Δ__p ->
+        MapsTo id__p σ__p0 (compstore σ0) ->
+        MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0) ->
+        0 <= i < n ->
+        get_bool_at aofv i = false.
+  Admitted.
   
 End PInit.
 

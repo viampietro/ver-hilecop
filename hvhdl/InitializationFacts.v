@@ -304,6 +304,13 @@ End VRunInit.
 
 Section Init.
 
+  Lemma init_maps_compstore_id :
+    forall {D__s Δ σ behavior σ' id__c σ__c},
+      init D__s Δ σ behavior σ' ->
+      MapsTo id__c σ__c (compstore σ) ->
+      exists σ__c', MapsTo id__c σ__c' (compstore σ').
+  Admitted.
+  
   Lemma init_maps_sstore_of_comp_Varr :
     forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id aofv},
       init D__s Δ σ behavior σ0 ->

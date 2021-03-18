@@ -169,7 +169,7 @@ Section TInit.
     eapply vruninit_s_tc_eq_O; eauto.    
   Qed.
 
-  Lemma init_s_rtc_eq_bprod_of_rt :
+  Lemma init_T_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t σ__t σ__t0 b aofv t n,
@@ -187,5 +187,27 @@ Section TInit.
         MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
   Admitted.
 
+  Lemma init_T_eval_rt_0 :
+    forall D__s Δ σ behavior σ0,
+      init D__s Δ σ behavior σ0 ->
+      forall id__t gm ipm opm σ__t0 aofv,
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        MapsTo id__t σ__t0 (compstore σ0) ->
+        MapsTo reinit_time (Varr aofv) (sigstore σ__t0) ->
+        List.In (associp_ (reinit_time $[[0]]) false) ipm ->
+        get_bool_at aofv 0 = false.
+  Admitted.
+
+  Lemma init_T_eval_rt_i :
+    forall D__s Δ σ behavior σ0,
+      init D__s Δ σ behavior σ0 ->
+      forall id__t gm ipm opm σ__t0 aofv id i b ,
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        MapsTo id__t σ__t0 (compstore σ0) ->
+        MapsTo reinit_time (Varr aofv) (sigstore σ__t0) ->
+        MapsTo id (Vbool b) (sigstore σ0) ->
+        List.In (associp_ (reinit_time $[[ (e_nat i) ]]) (#id)) ipm ->
+        get_bool_at aofv i = b.
+  Admitted.
   
 End TInit.

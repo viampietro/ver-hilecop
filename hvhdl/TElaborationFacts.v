@@ -38,3 +38,23 @@ Lemma elab_T_σ_rt :
     MapsTo id__t σ__te (compstore σ__e) ->
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__te).
 Admitted.
+
+Lemma elab_T_Δ_in_arcs_nb_1 :
+  forall {d Δ σ__e id__t gm ipm opm Δ__t},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    MapsTo id__t (Component Δ__t) Δ ->
+    exists t n, MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t.
+Admitted.
+
+Lemma elab_T_Δ_in_arcs_nb_2 :
+  forall {d Δ σ__e id__t gm ipm opm Δ__t e v},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    MapsTo id__t (Component Δ__t) Δ ->
+    List.In (assocg_ input_arcs_number e) gm ->
+    vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
+    exists t, MapsTo input_arcs_number (Generic t v) Δ__t.
+Admitted.
+
+
