@@ -229,36 +229,20 @@ Proof.
       eapply sitpn2hvhdl_nodup_t2tcomp; eauto. }  
   rewrite <- eq_id__t in *; clear eq_id__t.
   
-  (* Builds [compids] and [CsHasUniqueCompIds (behavior d) compids] *)
-  destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_).
-  assert (CsHasUnCIds_ : CsHasUniqueCompIds (behavior d) compids)
-    by (split; [ assumption | eapply elab_nodup_compids; eauto]).
-
-  (* Builds [(events σ__e) = ∅] *)
-  assert (Emp_ev__e : Equal (events σ__e) {[]}) by (eapply elab_empty_events; eauto).
-
-  (* Builds [id__t ∈ Comps(Δ)] *)
+  (* Builds [Δ(id__t) = Δ__t] *)
   edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto.
   
-  (* Builds [id__t ∈ (compstore σ__e)] *)
+  (* Builds [σ__e(id__t) = σ__te] *)
   edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto.
 
-  (* Builds [DeclaredOf Δ__t "s_rtc"] *)
-  assert (Decl_s_rtc : DeclaredOf Δ__t s_reinit_time_counter)
-    by (eapply @elab_T_Δ_s_rtc; eauto).
-
-  (* Builds [s_rtc ∉ events σ__te] *)
-  assert (nIn_events : ~NatSet.In s_reinit_time_counter (events σ__te))
-    by (erewrite elab_empty_events_for_comps; eauto with set).
-
-  (* Builds [∃ aofv, σ__t0("rt") = aofv] *)
+  (* Builds [Δ__t("in_arcs_nb") = (t, n)] *)
+  edestruct @elab_T_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto.
+  
+  (* Builds [σ__t0("rt") = aofv] *)
   assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0)).
   { edestruct @elab_T_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto.
     eapply init_maps_sstore_of_comp_Varr; eauto. }
   destruct aofv_ex as (aofv, MapsTo_rt).
-
-  (* Builds [∃ t n, Δ__t("in_arcs_nb") = (t, n)] *)
-  edestruct @elab_T_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto. 
   
   eapply init_T_s_rtc_eq_bprod_of_rt; eauto.
   

@@ -35,13 +35,15 @@ Hint Constructors is_lstatic_expr : hvhdl.
     - a locally static expression.
  *)
 
-Inductive is_gstatic_expr (env : ElDesign) : expr -> Prop :=
-| IsGStaticLStatic (e : expr) : is_lstatic_expr e -> is_gstatic_expr env e
+Inductive is_gstatic_expr (Δ : ElDesign) : expr -> Prop :=
+| IsGStaticLStatic (e : expr) : is_lstatic_expr e -> is_gstatic_expr Δ e
+| IsGStaticBinOp (e e' : expr) (bop : binop) :
+    is_gstatic_expr Δ e -> is_gstatic_expr Δ e' -> is_gstatic_expr Δ (e_binop bop e e')
 | IsGStaticGeneric (id : ident) :
     forall (t : type) (v : value),
-      MapsTo id (Generic t v) env -> is_gstatic_expr env (e_name (n_id id))
+      MapsTo id (Generic t v) Δ -> is_gstatic_expr Δ (e_name (n_id id))
 | IsGStaticAggreg (ag : agofexprs) :
-    (forall (e : expr), List.In e ag -> is_gstatic_expr env e) ->
-    is_gstatic_expr env (e_aggreg ag).
+    (forall (e : expr), List.In e ag -> is_gstatic_expr Δ e) ->
+    is_gstatic_expr Δ (e_aggreg ag).
     
 Hint Constructors is_gstatic_expr : hvhdl.

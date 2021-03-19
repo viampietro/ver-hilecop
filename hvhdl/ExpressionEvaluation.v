@@ -171,7 +171,7 @@ Inductive vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
        *)
       vexpr Δ σ Λ outmode e (Vnat n) ->
       vexpr Δ σ Λ outmode e' (Vnat n') ->
-      n > n' ->
+      n' <= n ->
       
       (* Conclusion *)      
       vexpr Δ σ Λ outmode (e_binop bo_sub e e') (Vnat (n - n'))

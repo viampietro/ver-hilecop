@@ -24,10 +24,12 @@ Section GStatic.
     split.
     (* CASE A -> B *)
     - induction 1; eauto with hvhdl.
-      econstructor 2; rewrite <- H; eauto.
+      eapply IsGStaticGeneric with (t := t) (v := v);
+        rewrite <- H; assumption.
     (* CASE B -> A *)
     - induction 1; eauto with hvhdl.
-      econstructor 2; rewrite H; eauto.
+      eapply IsGStaticGeneric with (t := t) (v := v);
+        rewrite H; assumption.
   Qed.
   
 End GStatic.

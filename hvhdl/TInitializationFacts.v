@@ -172,17 +172,12 @@ Section TInit.
   Lemma init_T_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
-      forall id__t gm ipm opm compids Δ__t σ__t σ__t0 b aofv t n,
+      forall id__t gm ipm opm Δ__t σ__t0 b aofv t n,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-        CsHasUniqueCompIds behavior compids ->
-        Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
-        MapsTo id__t σ__t (compstore σ) ->
         MapsTo id__t σ__t0 (compstore σ0) ->
-        DeclaredOf Δ__t s_reinit_time_counter ->
-        ~NatSet.In s_reinit_time_counter (events σ__t) ->
-        MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
+        MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
         BProd (get_bool_at aofv) (seq 0 n) b ->
         MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
   Admitted.
