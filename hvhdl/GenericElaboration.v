@@ -18,56 +18,59 @@ Import NatMap.
 
 (** The generic constant elaboration relation.
     
-    The [dimen] parameter is the dimensioning function (M); that is, the
+    The [M__g] parameter is the dimensioning function; that is, the
     function yielding the values assigned to the generic constants
     being elaborated.  *)
 
-Inductive egens (ed : ElDesign) (dimen : IdMap value) : list gdecl -> ElDesign -> Prop :=
+Inductive egens (Δ : ElDesign) (M__g : IdMap value) : list gdecl -> ElDesign -> Prop :=
 
 (* Elaborates an empty list of generic constant declaration. *)
-| EGensNil: egens ed dimen [] ed
+| EGensNil: egens Δ M__g [] Δ
 
 (* Elaborates a non-empty list of generic constant declaration. *)
 | EGensCons:
     forall {gd lofgdecls ed' ed''},
-      egen ed dimen gd ed' ->
-      egens ed' dimen lofgdecls ed'' ->
-      egens ed dimen (gd :: lofgdecls) ed''
+      egen Δ M__g gd ed' ->
+      egens ed' M__g lofgdecls ed'' ->
+      egens Δ M__g (gd :: lofgdecls) ed''
     
 (** Defines the elaboration relation for one generic constant declaration. *)
-with egen (ed : ElDesign) (dimen : IdMap value) : gdecl -> ElDesign -> Prop :=
+with egen (Δ : ElDesign) (M__g : IdMap value) : gdecl -> ElDesign -> Prop :=
   
 (* Elaboration with given a dimensioning value. *)
-| EGenDimen :
-    forall {idg tau e t dv v},
+| EGenM__G :
+    forall {idg τ e t dv v},
       
       (* Premises *)
-      etypeg tau t ->
+      etypeg τ t ->
       is_lstatic_expr e ->
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
-
+      is_of_type dv t ->
+      is_of_type v t ->
+      
       (* Side conditions *)
-      ~NatMap.In idg ed ->           (* idg ∉ Δ *)
-      MapsTo idg v dimen ->     (* idg ∈ M and M(idg) = v *)
+      ~NatMap.In idg Δ ->           (* idg ∉ Δ *)
+      MapsTo idg v M__g ->     (* idg ∈ M and M(idg) = v *)
       
       (* Conclusion *)
-      egen ed dimen (gdecl_ idg tau e) (add idg (Generic t v) ed)
+      egen Δ M__g (gdecl_ idg τ e) (add idg (Generic t v) Δ)
 
 (* Elaboration with default value. *)
 | EGenDefault :
-    forall {idg tau e t dv},
+    forall {idg τ e t dv},
       
       (* Premises *)
-      etypeg tau t ->
+      etypeg τ t ->
       is_lstatic_expr e ->
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
+      is_of_type dv t ->
 
       (* Side conditions *)
-      ~NatMap.In idg ed ->      (* idg ∉ Δ *)
-      ~NatMap.In idg dimen ->     (* idg ∉ M *)
+      ~NatMap.In idg Δ ->      (* idg ∉ Δ *)
+      ~NatMap.In idg M__g ->     (* idg ∉ M *)
       
       (* Conclusion *)
-      egen ed dimen (gdecl_ idg tau e) (add idg (Generic t dv) ed).
+      egen Δ M__g (gdecl_ idg τ e) (add idg (Generic t dv) Δ).
 
       
 
