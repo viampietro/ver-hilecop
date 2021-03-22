@@ -3,6 +3,7 @@
 Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
+Require Import common.NatSet.
 Require Import common.ListLib.
 
 Require Import hvhdl.HVhdlCoreLib.

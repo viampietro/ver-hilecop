@@ -6,6 +6,7 @@
 
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
+Require Import common.NatMap.
 
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.

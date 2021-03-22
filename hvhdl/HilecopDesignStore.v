@@ -1,5 +1,8 @@
 (** * HILECOP Design Declaration Store  *)
 
+Require Import common.NatMap.
+Require Import common.NatSet.
+
 Require Import HVhdlTypes.
 Require Import AbstractSyntax.
 Require Import Petri.

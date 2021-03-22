@@ -2,8 +2,8 @@
     syntactical and semantical part of H-VHDL. *)
 
 Require Import CoqLib.
-Require Export NatMap.
-Require Export NatSet.
+Require Import NatMap.
+Require Import NatSet.
 
 (** Defines the maximum value taken by a natural number in H-VHDL.
 

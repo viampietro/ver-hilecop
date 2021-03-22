@@ -4,6 +4,8 @@
 
 Require Import Setoid.
 Require Import common.CoqLib.
+Require Import common.NatMap.
+Require Import common.NatSet.
 Require Import common.CoqTactics.
 Require Import common.ListPlus.
 Require Import common.GlobalTypes.

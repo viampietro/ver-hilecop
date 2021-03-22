@@ -4,12 +4,15 @@
     VHDL listing from SITPNs.
  *)
 
-Require Import CoqLib.
-Require Import GlobalTypes.
-Require Import AbstractSyntax.
-Require Import SemanticalDomains.
-Require Import Petri.
-Require Import HVhdlTypes.
+Require Import common.CoqLib.
+Require Import common.GlobalTypes.
+Require Import common.NatMap.
+Require Import common.NatSet.
+
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.Petri.
+Require Import hvhdl.HVhdlTypes.
 
 Open Scope natset_scope.
 Open Scope abss_scope.

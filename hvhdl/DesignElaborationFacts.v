@@ -423,6 +423,22 @@ Proof.
   eapply ebeh_validipm; eauto.
 Qed.
 
+Lemma elab_sstore_well_typed_values :
+  forall {D__s M__g d Δ σ__e id v},
+    edesign D__s M__g d Δ σ__e ->
+    MapsTo id v (sigstore σ__e) ->
+    exists t, is_of_type v t.
+Admitted.
+
+Lemma elab_sstore_of_comp_well_typed_values :
+  forall {D__s M__g d Δ σ__e σ__c id__c id__e gm ipm opm id v},
+    edesign D__s M__g d Δ σ__e ->
+    InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
+    MapsTo id__c σ__c (compstore σ__e) ->
+    MapsTo id v (sigstore σ__c) ->
+    exists t, is_of_type v t.
+Admitted.
+
 Lemma elab_wf_gmap_expr :
   forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm id e},
     edesign D__s M__g d Δ σ__e ->

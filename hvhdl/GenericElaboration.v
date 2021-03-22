@@ -29,10 +29,10 @@ Inductive egens (Δ : ElDesign) (M__g : IdMap value) : list gdecl -> ElDesign ->
 
 (* Elaborates a non-empty list of generic constant declaration. *)
 | EGensCons:
-    forall {gd lofgdecls ed' ed''},
-      egen Δ M__g gd ed' ->
-      egens ed' M__g lofgdecls ed'' ->
-      egens Δ M__g (gd :: lofgdecls) ed''
+    forall {gd lofgdecls Δ' Δ''},
+      egen Δ M__g gd Δ' ->
+      egens Δ' M__g lofgdecls Δ'' ->
+      egens Δ M__g (gd :: lofgdecls) Δ''
     
 (** Defines the elaboration relation for one generic constant declaration. *)
 with egen (Δ : ElDesign) (M__g : IdMap value) : gdecl -> ElDesign -> Prop :=

@@ -1,11 +1,10 @@
 (** ** Facts about Evaluation of Combinational Concurrent Statement *)
 
 Require Import common.CoqLib.
-Require Import common.NatSet.
-
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
 Require Import common.InAndNoDup.
+Require Import common.NatSet.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HVhdlTypes.

@@ -6,6 +6,8 @@ Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.ListPlus.
+Require Import common.NatMap.
+Require Import common.NatSet.
 
 (* SITPN Libraries *)
 

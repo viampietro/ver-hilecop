@@ -58,9 +58,11 @@
 ./hvhdl/HVhdlHilecopLib.v
 ./hvhdl/SynchronousEvaluation.v
 ./hvhdl/TStabilizeFacts.v
+./hvhdl/PArchitectureElaborationFacts.v
 ./hvhdl/TElaborationFacts.v
 ./hvhdl/StaticExpressions.v
 ./hvhdl/TypeElaboration.v
+./hvhdl/TGenericElaborationFacts.v
 ./hvhdl/HVhdlSimulationLib.v
 ./hvhdl/PortElaboration.v
 ./hvhdl/ValidPortMapFacts.v
@@ -71,6 +73,8 @@
 ./hvhdl/HilecopDesignStore.v
 ./hvhdl/ValidPortMap.v
 ./hvhdl/GenericElaboration.v
+./hvhdl/SemanticalDomainsFacts.v
+./hvhdl/GenericElaborationFacts.v
 ./hvhdl/Initialization.v
 ./hvhdl/ExpressionEvaluationTactics.v
 ./hvhdl/ArchitectureElaborationFacts.v
@@ -117,6 +121,7 @@
 ./hvhdl/PStabilizeFacts.v
 ./hvhdl/ExpressionEvaluation.v
 ./hvhdl/Petri.v
+./hvhdl/TPortElaborationFacts.v
 ./sitpn/dp/FiredIllFormed.v
 ./sitpn/dp/SitpnTypes.v
 ./sitpn/dp/SitpnFacts.v
@@ -125,5 +130,6 @@
 ./sitpn/dp/SitpnSemanticsDefs.v
 ./sitpn/dp/SitpnSemantics.v
 ./sitpn/dp/SitpnWellDefinedTactics.v
+./sitpn/dp/SitpnSemanticsFacts.v
 ./sitpn/dp/SitpnWellDefined.v
 ./sitpn/dp/Sitpn.v

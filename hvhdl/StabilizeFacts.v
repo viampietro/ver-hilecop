@@ -15,6 +15,8 @@ Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.WellDefinedDesign.
 
+Require Import hvhdl.CombinationalEvaluationFacts.
+
 Lemma is_last_of_trace :
   forall D__s Δ σ behavior θ σ',
     stabilize D__s Δ σ behavior θ σ' ->
@@ -49,4 +51,16 @@ Proof.
     assumption.
     assert (Hconsl : d :: θ <> nil) by inversion 1.
     apply (IHstabilize (last_cons_inv Hconsl Hlast)).
+Qed.
+
+Lemma stab_maps_compstore_id :
+  forall {D__s Δ σ behavior θ σ'},
+    stabilize D__s Δ σ behavior θ σ' ->
+    forall {id__c σ__c},
+    MapsTo id__c σ__c (compstore σ) ->
+    exists σ__c', MapsTo id__c σ__c' (compstore σ').
+Proof.
+  induction 1; intros.
+  exists σ__c; assumption.
+  edestruct @vcomb_maps_compstore_id with (D__s := D__s); eauto.
 Qed.

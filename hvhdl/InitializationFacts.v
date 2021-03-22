@@ -7,17 +7,9 @@ Require Import common.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
-Require Import hvhdl.HVhdlTypes.
-Require Import hvhdl.Environment.
-Require Import hvhdl.Initialization.
-Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.SemanticalDomains.
-Require Import hvhdl.Place.
-Require Import hvhdl.HilecopDesignStore.
-Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.ExpressionEvaluation.
-Require Import hvhdl.PortMapEvaluation.
-Require Import hvhdl.SSEvaluation.
+Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlSimulationLib.
+Require Import hvhdl.HVhdlHilecopLib.
 
 Require Import hvhdl.StabilizeFacts.
 Require Import hvhdl.SSEvaluationFacts.
@@ -60,6 +52,40 @@ Section VRunInit.
       unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
   Qed.
 
+  Lemma vruninit_maps_sstore :
+    forall {D__s Δ σ behavior σ' id v},
+      vruninit D__s Δ σ behavior σ' ->
+      MapsTo id v (sigstore σ) ->
+      exists v', MapsTo id v' (sigstore σ').
+  Admitted.
+  
+  Lemma vruninit_maps_sstore_of_comp :
+    forall {D__s Δ σ behavior σ'},
+      vruninit D__s Δ σ behavior σ' ->
+      forall { id__c id__e gm ipm opm σ__c σ'__c id v},
+        InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+        MapsTo id__c σ__c (compstore σ) ->
+        MapsTo id v (sigstore σ__c) ->
+        MapsTo id__c σ'__c (compstore σ') ->
+        exists v', MapsTo id v' (sigstore σ'__c).
+  Proof.
+    induction 1; try (solve [inversion 1]).
+    (* CASE comp evaluation with events.*)
+    - inversion_clear 1; cbn; intros.
+      erewrite @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
+      edestruct @mapip_maps_sstore with (Δ := Δ); eauto.
+      erewrite MapsTo_fun with (e := σ__c0); eauto.
+      eapply vruninit_maps_sstore; eauto.
+    (* CASE comp evaluation with no events.*)
+    - inversion_clear 1; cbn; intros.
+      exists v.
+      assert (MapsTo compid σ__c (compstore σ'))
+        by (eapply mapop_inv_compstore; eauto).      
+      erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
+    (* CASE || *)
+    -
+  Admitted.
+  
   Lemma vruninit_eq_state_if_no_events :
     forall {D__s Δ σ cstmt σ'},
       vruninit D__s Δ σ cstmt σ' ->
@@ -110,15 +136,6 @@ Section VRunInit.
     erw_IMDS_cstore_m <- IMDS; auto.
     erw_IMDS_events_m <- IMDS; auto.
   Qed.
-
-  Lemma AreCsCompIds_ex_app :
-    forall (cstmt1 cstmt2 : cs) (compids : list ident),
-      AreCsCompIds (cstmt1 // cstmt2) compids ->
-      exists compids1 compids2,
-        AreCsCompIds cstmt1 compids1 /\
-        AreCsCompIds cstmt2 compids2 /\ 
-        compids = compids1 ++ compids2.
-  Admitted.
   
   Lemma vruninit_compid_not_in_events :
     forall {D__s Δ σ cstmt σ'},
@@ -153,7 +170,7 @@ Section VRunInit.
     (* CASE || *)
     intros *; intros AreCsCompIds_par Equal_emp MapsTo_comp nIn_compids.
     rename H2 into IMDS; erw_IMDS_events_m IMDS.
-    edestruct AreCsCompIds_ex_app
+    edestruct @AreCsCompIds_ex_app with (cstmt1 := cstmt)
       as (compids1, (compids2, (AreCsCompIds1, (AreCsCompIds2, e))));
       eauto; subst.      
     apply not_in_union; [eapply IHvruninit1; eauto with datatypes
@@ -309,22 +326,41 @@ Section Init.
       init D__s Δ σ behavior σ' ->
       MapsTo id__c σ__c (compstore σ) ->
       exists σ__c', MapsTo id__c σ__c' (compstore σ').
+  Proof.
+    inversion 1; intro.
+    edestruct @vruninit_maps_compstore_id with (D__s := D__s); eauto.
+    eapply @stab_maps_compstore_id; eauto.
+  Qed.
+  
+  Lemma stab_maps_sstore_of_comp :
+    forall {D__s Δ σ behavior θ σ'},
+      stabilize D__s Δ σ behavior θ σ' ->
+      forall {id__c id__e gm ipm opm σ__c σ'__c id v},
+        InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+        MapsTo id__c σ__c (compstore σ) ->
+        MapsTo id v (sigstore σ__c) ->
+        MapsTo id__c σ'__c (compstore σ') ->
+        exists v', MapsTo id v' (sigstore σ'__c).
   Admitted.
   
-  Lemma init_maps_sstore_of_comp_Varr :
-    forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id aofv},
+  Lemma init_maps_sstore_of_comp :
+    forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id v},
       init D__s Δ σ behavior σ0 ->
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
       MapsTo id__c σ__c (compstore σ) ->
+      MapsTo id v (sigstore σ__c) ->
       MapsTo id__c σ__c0 (compstore σ0) ->
-      MapsTo id (Varr aofv) (sigstore σ__c) ->
-      exists aofv', MapsTo id (Varr aofv') (sigstore σ__c0).
-  Admitted.
+      exists v', MapsTo id v' (sigstore σ__c0).
+  Proof.
+    inversion_clear 1; intros.
+    edestruct @vruninit_maps_compstore_id with (D__s := D__s); eauto.
+    edestruct @vruninit_maps_sstore_of_comp with (D__s := D__s); eauto.
+    eapply stab_maps_sstore_of_comp; eauto.    
+  Qed.
 
   Lemma init_inv_type_sstore :
-    forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm id v v' t},
+    forall {D__s Δ σ behavior σ0 id v v' t},
       init D__s Δ σ behavior σ0 ->
-      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
       MapsTo id v (sigstore σ) ->
       MapsTo id v' (sigstore σ0) ->
       is_of_type v t ->

@@ -2,6 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
+Require Import common.NatMapTactics.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
@@ -57,13 +58,13 @@ Qed.
 
 Hint Resolve edecl_idle_gens : hvhdl.
 
-Lemma edecls_idle_gens :
+Lemma edecls_inv_gens :
   forall {Δ σ sigs Δ' σ'},
     edecls Δ σ sigs Δ' σ' ->
     EqGens Δ Δ'.
 Proof. induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl]. Qed.
 
-Hint Resolve edecls_idle_gens : hvhdl.
+Hint Resolve edecls_inv_gens : hvhdl.
 
 Lemma edecl_inv_Δ : 
   forall {Δ σ Δ' ad σ' id sobj},
@@ -87,6 +88,29 @@ Lemma edecls_inv_Δ :
 Proof.
   induction 1; intros; auto.
   apply IHedecls; eapply edecl_inv_Δ; eauto.
+Qed.
+
+Lemma edecl_inv_sigstore : 
+  forall {Δ σ Δ' ad σ' id v},
+    edecl Δ σ ad Δ' σ' ->
+    MapsTo id v (sigstore σ) ->
+    MapsTo id v (sigstore σ').
+Proof.
+  inversion_clear 1; intros; auto.
+  destruct (Nat.eq_dec id id0) as [e | ne]; try subst.
+  unfold InSStore in H3; mapsto_not_in_contrad.
+  apply add_2; auto.
+Qed.
+
+Lemma edecls_inv_sigstore :
+  forall Δ σ sigs Δ' σ',
+    edecls Δ σ sigs Δ' σ' ->
+    forall id v,
+      MapsTo id v (sigstore σ) ->
+      MapsTo id v (sigstore σ').
+Proof.
+  induction 1; intros; auto.
+  apply IHedecls; eapply edecl_inv_sigstore; eauto.
 Qed.
 
 Lemma edecl_inv_events :

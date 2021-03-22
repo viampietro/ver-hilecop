@@ -26,8 +26,6 @@ Require Import sitpn2hvhdl.GenerateInfosFacts.
 
 Require Import soundness.SoundnessDefs.
 
-Set Nested Proofs Allowed.
-
 (** ** Initial States Equal Marking Lemma *)    
 
 Lemma init_states_eq_marking :
@@ -76,7 +74,7 @@ Proof.
   edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
 
   (* Builds [Δ__p("s_marking") = Declared (Tnat 0 n)] *)
-  edestruct @elab_P_Δ_s_marking as (n, MapsTo_smarking); eauto.
+  edestruct @elab_Pcomp_Δ_s_marking as (n, MapsTo_smarking); eauto.
 
   (* Builds proof that [ipm] is well-formed *)
   edestruct @elab_validipm as (formals, (listipm_ipm, checkformals_ipm)); eauto.
@@ -96,7 +94,7 @@ Proof.
   - eapply sitpn2hvhdl_bind_init_marking; eauto.
 
   (* Proves [initial_marking ∈ Ins(Δ__p) *)
-  - eapply elab_P_Δ_init_marking; eauto.
+  - eapply elab_Pcomp_Δ_init_marking; eauto.
     
   (* Proves [id__p = id__p'] *)
   - erewrite NoDupA_fs_eqk_eq with (eqk := @Peq sitpn) (b := id__p'); eauto.
@@ -166,7 +164,7 @@ Proof.
     eapply elab_empty_events; eauto
     |
     (* Proves [DeclaredOf Δ__t "s_tc"] *)
-    eapply @elab_T_Δ_s_tc; eauto
+    eapply @elab_Tcomp_Δ_s_tc; eauto
     |
     (* Proves ["s_tc" ∉ (events σ__te)] *)
     erewrite elab_empty_events_for_comps; eauto with set
@@ -236,12 +234,21 @@ Proof.
   edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto.
 
   (* Builds [Δ__t("in_arcs_nb") = (t, n)] *)
-  edestruct @elab_T_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto.
+  edestruct @elab_Tcomp_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto.
   
   (* Builds [σ__t0("rt") = aofv] *)
   assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0)).
-  { edestruct @elab_T_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto.
-    eapply init_maps_sstore_of_comp_Varr; eauto. }
+  { edestruct @elab_Tcomp_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto.
+    edestruct @init_maps_sstore_of_comp as (v', MapsTo_v'); eauto.
+    assert (oftype: exists t, is_of_type (Varr aofv) t)
+      by (eapply elab_sstore_of_comp_well_typed_values; eauto).
+    destruct oftype as (tp, oftype).
+    assert (oftype' : is_of_type v' tp)
+      by (eapply init_inv_type_sstore_of_comp; eauto).
+    inversion_clear oftype in oftype'.
+    inversion_clear oftype' in MapsTo_v'.
+    exists aofv0; assumption.
+  }
   destruct aofv_ex as (aofv, MapsTo_rt).
   
   eapply init_T_s_rtc_eq_bprod_of_rt; eauto.
@@ -264,7 +271,7 @@ Proof.
     + assert (List.In (assocg_ input_arcs_number 1) gm)
         by (eapply sitpn2hvhdl_emp_pinputs_in_arcs_nb ; eauto).
       edestruct @elab_wf_gmap_expr with (D__s := hdstore) as (v, vexpr_); eauto.
-      edestruct @elab_T_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto.
+      edestruct @elab_Tcomp_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto.
       inversion_clear vexpr_ in Mapsto_ian0.
       assert (e1 : Generic t__ian0 (Vnat 1) = Generic t__ian (Vnat n))
         by eauto with mapsto.
@@ -298,12 +305,11 @@ Proof.
       assert (List.In (assocg_ input_arcs_number (length (p :: pinputs_of_t))) gm)
         by (eapply sitpn2hvhdl_nemp_pinputs_in_arcs_nb; eauto; cbn; lia).
       edestruct @elab_wf_gmap_expr with (D__s := hdstore) (gm := gm) as (v, vexpr_); eauto.
-      edestruct @elab_T_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto.
+      edestruct @elab_Tcomp_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto.
       inversion_clear vexpr_ in Mapsto_ian0.
       assert (e1 : Generic t__ian0 (Vnat (S (Datatypes.length pinputs_of_t))) = Generic t__ian (Vnat n))
         by eauto with mapsto.
-      inversion e1; reflexivity.
-    }.
+      inversion e1; reflexivity. }
     
     (* SUBGOAL [σ__t0("rt")(i) = false] *)
     eapply init_T_eval_rt_i; eauto.
@@ -316,10 +322,21 @@ Proof.
         as (σ__pe, MapsTo_σ__pe); eauto.
     edestruct @init_maps_compstore_id with (D__s := hdstore)
       as (σ__p0, MapsTo_σ__p0); eauto.
-    edestruct @elab_P_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e);
+    edestruct @elab_Pcomp_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e);
       eauto.
-    edestruct @init_maps_sstore_of_comp_Varr with (D__s := hdstore)
-      as (aofv__p0, MapsTo_rtt0); eauto.
+    assert (MapsTo_rtt0_ex: exists aofv, MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0)).
+    { edestruct @init_maps_sstore_of_comp with (D__s := hdstore)
+        as (v, MapsTo_rtt0); eauto.
+      assert (oftype: exists t, is_of_type (Varr aofv__pe) t)
+        by (eapply elab_sstore_of_comp_well_typed_values; eauto).
+      destruct oftype as (tp, oftype).
+      assert (oftype' : is_of_type v tp)
+        by (eapply init_inv_type_sstore_of_comp; eauto).
+      inversion_clear oftype in oftype'.
+      inversion_clear oftype' in MapsTo_rtt0.
+      exists aofv0; assumption. }
+    destruct MapsTo_rtt0_ex as (aofv__P0, MapsTo_rtt0).
+    
     eapply @init_P_eval_rtt_i; eauto 1.
     
     (* SUBGOAL [σ__p0("rtt")(j) = false] *)
@@ -330,7 +347,7 @@ Proof.
     edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1.
 
     (* Builds [Δ__p("out_arcs_nb") = (t__oan, m)] *)
-    edestruct @elab_P_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1.
+    edestruct @elab_Pcomp_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1.
     
     eapply @init_P_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto.
 
@@ -342,7 +359,7 @@ Proof.
       rewrite <- ((proj1 TOutputsOf_p) (proj1_sig t)); assumption. }
 
     edestruct @elab_wf_gmap_expr with (D__s := hdstore) (gm := gm__p) as (v, vexpr_); eauto.
-    edestruct @elab_P_Δ_out_arcs_nb_2 as (t__oan0, MapsTo_oan0); eauto 1.
+    edestruct @elab_Pcomp_Δ_out_arcs_nb_2 as (t__oan0, MapsTo_oan0); eauto 1.
     inversion_clear vexpr_ in MapsTo_oan0.
     assert (e1 : Generic t__oan (Vnat m) = Generic t__oan0 (Vnat (length toutputs_of_p)))
       by eauto with mapsto.

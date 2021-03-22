@@ -3,12 +3,14 @@
     A static expression is either locally or globally static.
  *)
 
-Require Import CoqLib.
-Require Import GlobalTypes.
-Require Import AbstractSyntax.
-Require Import Environment.
-Require Import SemanticalDomains.
-Require Import HVhdlTypes.
+Require Import common.CoqLib.
+Require Import common.GlobalTypes.
+Require Import common.NatMap.
+
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.Environment.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.HVhdlTypes.
 
 (** Defines the inductive predicate [is_lstatic_expr] stating that an
     expression is locally static, i.e it is:

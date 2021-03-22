@@ -1,6 +1,7 @@
 (** * Facts about Well-defined H-VHDL Designs *)
 
 Require Import common.CoqLib.
+Require Import common.CoqTactics.
 Require Import common.InAndNoDup.
 Require Import common.ListPlusFacts.
 Require Import common.ListPlusTactics.
@@ -8,6 +9,8 @@ Require Import common.ListPlusTactics.
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.AbstractSyntaxFacts.
+
+Import HVhdlCsNotations.
 
 (** ** Facts about [AreCsCompIds]  *)
 
@@ -55,7 +58,7 @@ Lemma AreCsCompIds_eq_app :
   forall cstmt cstmt' compids compids' compids'',
     AreCsCompIds cstmt compids ->
     AreCsCompIds cstmt' compids' ->
-    AreCsCompIds (cs_par cstmt cstmt') compids'' ->
+    AreCsCompIds (cstmt // cstmt') compids'' ->
     compids'' = compids ++ compids'.
 Proof.
   intros; eapply AreCsCompIds_determ; eauto.
@@ -91,6 +94,22 @@ Proof.
     simpl; inversion_clear 1.
     + eapply in_or_app; left; eapply IHbehavior1 with (compids := compids1); eauto.
     + eapply in_or_app; right; eapply IHbehavior2 with (compids := compids2); eauto.
+Qed.
+
+Lemma AreCsCompIds_ex_app :
+  forall {cstmt1 cstmt2 compids},
+    AreCsCompIds (cstmt1 // cstmt2) compids ->
+    exists compids1 compids2,
+      AreCsCompIds cstmt1 compids1 /\
+      AreCsCompIds cstmt2 compids2 /\ 
+      compids = compids1 ++ compids2.
+Proof.
+  do 3 intro.
+  destruct (AreCsCompIds_ex cstmt1) as (compids1, AreCsCompIds1).
+  destruct (AreCsCompIds_ex cstmt2) as (compids2, AreCsCompIds2).
+  exists compids1, compids2.
+  split_and; try (solve [assumption]).
+  eapply AreCsCompIds_eq_app; eauto.
 Qed.
 
 (** ** Facts about [ArePortIds] Relation *)

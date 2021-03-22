@@ -3,8 +3,7 @@
 Require Import common.CoqLib.
 Require Import common.NatMap.
 
-Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.Environment.
+Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlElaborationLib.
 
 Lemma eport_inv_gens :
@@ -18,9 +17,9 @@ Proof.
   all : specialize (Nat.eq_dec id id0) as Hsum; inversion_clear Hsum as [Heq_id | Hneq_id].
   2, 4:
     split; intros Hmap;
-    [ let apply_add_2 sobj := ltac: (apply (add_2 sobj Hneq_id Hmap)) in
+    [ let apply_add_2 sobj := ltac: (apply (NatMap.add_2 sobj Hneq_id Hmap)) in
       (apply_add_2 (Input t0) || apply_add_2 (Output t0))
-    | apply (add_3 Hneq_id Hmap)
+    | apply (NatMap.add_3 Hneq_id Hmap)
     ].
   1, 2 :
     split; intros Hmap; rewrite Heq_id in *;
@@ -54,7 +53,7 @@ Qed.
 
 Hint Resolve eports_inv_gens : hvhdl.
 
-Lemma eport_inv_sigma :
+Lemma eport_inv_sigstore :
   forall Δ σ pd Δ' σ' id v,
     eport Δ σ pd Δ' σ' ->
     MapsTo id v (sigstore σ) ->
@@ -68,9 +67,9 @@ Proof.
     end.
 Qed.
 
-Hint Resolve eport_inv_sigma : hvhdl.
+Hint Resolve eport_inv_sigstore : hvhdl.
 
-Lemma eports_inv_sigma :
+Lemma eports_inv_sigstore :
   forall Δ σ ports Δ' σ' id v,
     eports Δ σ ports Δ' σ' ->
     MapsTo id v (sigstore σ) ->
@@ -140,4 +139,17 @@ Proof.
   subst; edestruct @eport_input; eauto;
     exists x; eapply eports_inv_Δ; eauto.
   eapply IHeports; eauto.
+Qed.
+
+Lemma eport_Varr_in_sigstore :
+  forall {Δ σ Δ' σ' id t e e'},
+    eport Δ σ (pdecl_in id (tind_array t e e')) Δ' σ' ->
+    exists aofv, MapsTo id (Varr aofv) (sigstore σ').
+Proof.
+  inversion_clear 1.
+  inversion_clear H0 in H1.
+  inversion_clear H1; unfold sstore_add.
+  cbn [sigstore].
+  exists (create_arr (S (n' - n)) v0 plus1_gt_O).
+  eauto with mapsto.
 Qed.

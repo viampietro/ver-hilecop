@@ -15,31 +15,29 @@ Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.ArchitectureElaborationFacts.
 Require Import hvhdl.DesignElaborationFacts.
+Require Import hvhdl.PArchitectureElaborationFacts.
 
-(** ** Place Declared Signal Elaboration *)
+(** ** Facts about the [output_arcs_number] generic constant *)
 
-Lemma edecl_s_marking :
-  forall {Δ σ Δ' σ'},
-    edecl Δ σ (sdecl_ s_marking local_weight_t) Δ' σ' ->
-    exists n, MapsTo s_marking (Declared (Tnat 0 n)) Δ'.
-Proof.
-  inversion 1.
-  match goal with | [ H: etype _ _ _ |- _ ] => inversion H end.
-  match goal with | [ H: econstr _ _ _ _ _ |- _ ] => inversion H end.
-  match goal with | [ H: vexpr _ _ _ _ _ (Vnat n) |- _ ] => inversion H end.
-  exists n'; apply add_1; auto.
-Qed.
+Lemma elab_Pcomp_Δ_out_arcs_nb_1 :
+  forall {d Δ σ__e id__p gm ipm opm Δ__p},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+    MapsTo id__p (Component Δ__p) Δ ->
+    exists t n, MapsTo Place.output_arcs_number (Generic t (Vnat n)) Δ__p.
+Admitted.
 
-Lemma edecls_place_Δ_s_marking :
-  forall {Δ σ Δ' σ'},
-    edecls Δ σ place_sigs Δ' σ' ->
-    exists n, MapsTo s_marking (Declared (Tnat 0 n)) Δ'.
-Proof.
-  inversion_clear 1.
-  inversion_clear H1.
-  edestruct @edecl_s_marking with (Δ := Δ'0); eauto.
-  exists x; eapply edecls_inv_Δ; eauto.
-Qed.
+Lemma elab_Pcomp_Δ_out_arcs_nb_2 :
+  forall {d Δ σ__e id__p gm ipm opm Δ__p e v},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+    MapsTo id__p (Component Δ__p) Δ ->
+    List.In (assocg_ Place.output_arcs_number e) gm ->
+    vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
+    exists t, MapsTo Place.output_arcs_number (Generic t v) Δ__p.
+Admitted.
+
+(** ** Facts about the [s_marking] declared signal *)
 
 Lemma elab_place_Δ_s_marking :
   forall {M__g Δ σ__e},
@@ -47,7 +45,7 @@ Lemma elab_place_Δ_s_marking :
     exists n, MapsTo Place.s_marking (Declared (Tnat 0 n)) Δ.
 Proof.
   inversion 1; subst.
-  edestruct @edecls_place_Δ_s_marking with (Δ := Δ') as (n, MapsTo_Δ''); eauto.
+  edestruct @edecls_P_Δ_s_marking with (Δ := Δ') as (n, MapsTo_Δ''); eauto.
   exists n; eapply ebeh_inv_Δ; eauto.
 Qed.
 
@@ -77,7 +75,7 @@ Proof.
   - apply IHebeh2; auto.
 Qed.
 
-Lemma elab_P_Δ_s_marking :
+Lemma elab_Pcomp_Δ_s_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -88,9 +86,9 @@ Proof.
   eapply ebeh_pcomp_Δ_s_marking; eauto.
 Qed.
 
-(** ** Place Port Elaboration *)
+(** ** Facts about the [initial_marking] input port *)
 
-Lemma elab_P_Δ_init_marking :
+Lemma elab_Pcomp_Δ_init_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -102,7 +100,7 @@ Proof.
   firstorder.
 Qed.
 
-Lemma elab_P_σ_rtt : 
+Lemma elab_Pcomp_σ_rtt : 
   forall {d Δ σ__e id__p gm ipm opm σ__pe},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -110,21 +108,4 @@ Lemma elab_P_σ_rtt :
     exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sigstore σ__pe).
 Admitted.
 
-Lemma elab_P_Δ_out_arcs_nb_1 :
-  forall {d Δ σ__e id__p gm ipm opm Δ__p},
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
-    MapsTo id__p (Component Δ__p) Δ ->
-    exists t n, MapsTo Place.output_arcs_number (Generic t (Vnat n)) Δ__p.
-Admitted.
-
-Lemma elab_P_Δ_out_arcs_nb_2 :
-  forall {d Δ σ__e id__p gm ipm opm Δ__p e v},
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
-    MapsTo id__p (Component Δ__p) Δ ->
-    List.In (assocg_ Place.output_arcs_number e) gm ->
-    vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
-    exists t, MapsTo Place.output_arcs_number (Generic t v) Δ__p.
-Admitted.
 
