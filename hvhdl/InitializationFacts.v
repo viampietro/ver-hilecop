@@ -16,6 +16,7 @@ Require Import hvhdl.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluationFacts.
 Require Import hvhdl.EnvironmentFacts.
 Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.SSEvaluationFacts.
 
 Require Import hvhdl.EnvironmentTactics.
 
@@ -51,18 +52,130 @@ Section VRunInit.
     - unfold IsMergedDState in H2; apply proj2, proj1 in H2.
       unfold EqualDom in H2; rewrite <- (H2 id__c); exists σ__c; assumption.
   Qed.
-
+  
   Lemma vruninit_maps_sstore :
-    forall {D__s Δ σ behavior σ' id v},
+    forall {D__s Δ σ behavior σ'},
       vruninit D__s Δ σ behavior σ' ->
-      MapsTo id v (sigstore σ) ->
-      exists v', MapsTo id v' (sigstore σ').
-  Admitted.
+      forall {id v},
+        MapsTo id v (sigstore σ) ->
+        exists v', MapsTo id v' (sigstore σ').
+  Proof.
+    induction 1.
+    
+    (* CASE process evaluation *)
+    - eapply vseq_maps_sstore; eauto.
+      
+    (* CASE comp evaluation with events. *)
+    - cbn; eapply mapop_maps_sstore; eauto.
+
+    (* CASE comp evaluation with no events. *)
+    - cbn; eapply mapop_maps_sstore; eauto.
+
+    (* CASE null *)
+    - do 2 intro; exists v; assumption.
+
+    (* CASE par *)
+    - rename H2 into IMDS; intros.
+      apply proj1 in IMDS; unfold EqualDom in IMDS.
+      rewrite <- (IMDS id); exists v; assumption.        
+  Qed.
+
+  Lemma vruninit_compid_in_events_comp_in_cs :
+    forall {D__s Δ σ behavior σ'},
+      vruninit D__s Δ σ behavior σ' ->
+      forall {id__c},
+        CompOf Δ id__c ->
+        ~NatSet.In id__c (events σ) ->
+        NatSet.In id__c (events σ') ->
+        exists id__e gm ipm opm,
+          InCs (cs_comp id__c id__e gm ipm opm) behavior.
+  Proof.
+    induction 1.
+
+    (* CASE process *)
+    - intros id__c CompOf_; intros; exfalso.
+      eapply vseq_not_in_events_if_not_sig; eauto.
+      destruct 1; destruct CompOf_; mapsto_discriminate.
+      destruct 1; destruct CompOf_; mapsto_discriminate.
+      
+    (* CASE eventful comp *)
+    - cbn; intros id__c CompOf_.
+      rewrite add_iff; inversion 2.
+      subst compid; exists entid, gmap, ipmap, opmap; reflexivity.
+      exfalso.
+      eapply mapop_not_in_events_if_not_sig; eauto.
+      destruct 1; destruct CompOf_; mapsto_discriminate.
+      destruct 1; destruct CompOf_; mapsto_discriminate.
+
+    (* CASE eventless comp *)
+    - cbn; intros id__c CompOf_; intros.
+      exfalso.
+      eapply mapop_not_in_events_if_not_sig; eauto.
+      destruct 1; destruct CompOf_; mapsto_discriminate.
+      destruct 1; destruct CompOf_; mapsto_discriminate.
+
+    (* CASE cs_null *)
+    - contradiction.
+
+    (* CASE || *)
+    - rename H2 into IMDS; intros id__c CompOf_.
+      erw_IMDS_events_m IMDS.
+      rewrite union_spec; inversion 2.
+      edestruct IHvruninit1 as (id__e, (g, (i, (o, InCs_)))); eauto.
+      exists id__e, g, i, o; cbn; left; assumption.
+      edestruct IHvruninit2 as (id__e, (g, (i, (o, InCs_)))); eauto.
+      exists id__e, g, i, o; cbn; right; assumption.
+  Qed.
+
+  Lemma vruninit_is_compof_if_in_cs :
+    forall {D__s Δ σ behavior σ'},
+      vruninit D__s Δ σ behavior σ' ->
+      forall {id__c id__e gm ipm opm},
+        InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+        CompOf Δ id__c.
+  Proof.
+    induction 1; try (solve [inversion 1]).
+
+    (* CASE eventful comp *)
+    - inversion 1; subst; unfold CompOf; eauto.
+
+    (* CASE eventless comp *)
+    - inversion 1; subst; unfold CompOf; eauto.
+
+    (* CASE || *)
+    - inversion 1; eauto.
+  Qed.
+
+  Lemma vruninit_inv_not_in_events :
+    forall {D__s Δ σ cstmt σ' id},
+      vruninit D__s Δ σ cstmt σ' ->
+      ~NatSet.In id (events σ') ->
+      ~NatSet.In id (events σ).
+  Proof.
+    induction 1.
+
+    (* CASE process *)
+    - eapply vseq_inv_not_in_events; eauto.
+    (* CASE eventful comp *)
+    - cbn; intros nIn_ev; intro.
+      apply nIn_ev; rewrite add_iff; right.
+      eapply mapop_inv_in_events; eauto.
+    (* CASE eventless comp *)
+    - cbn; intros nIn_ev; intro; apply nIn_ev.
+      eapply mapop_inv_in_events; eauto.
+    (* CASE cs_null *)
+    - auto.
+    (* CASE || *)
+    - rename H2 into IMDS; erw_IMDS_events_m IMDS.
+      intros nIn_U In_ev.
+      edestruct not_in_union_2 as (nIn_ev', nIn_ev''); eauto.
+      eapply IHvruninit1; eauto.
+  Qed.
   
   Lemma vruninit_maps_sstore_of_comp :
     forall {D__s Δ σ behavior σ'},
       vruninit D__s Δ σ behavior σ' ->
-      forall { id__c id__e gm ipm opm σ__c σ'__c id v},
+      forall {id__c id__e gm ipm opm σ__c σ'__c id v},
         InCs (cs_comp id__c id__e gm ipm opm) behavior ->
         MapsTo id__c σ__c (compstore σ) ->
         MapsTo id v (sigstore σ__c) ->
@@ -74,7 +187,7 @@ Section VRunInit.
     - inversion_clear 1; cbn; intros.
       erewrite @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
       edestruct @mapip_maps_sstore with (Δ := Δ); eauto.
-      erewrite MapsTo_fun with (e := σ__c0); eauto.
+      erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
       eapply vruninit_maps_sstore; eauto.
     (* CASE comp evaluation with no events.*)
     - inversion_clear 1; cbn; intros.
@@ -82,9 +195,66 @@ Section VRunInit.
       assert (MapsTo compid σ__c (compstore σ'))
         by (eapply mapop_inv_compstore; eauto).      
       erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
+      erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
     (* CASE || *)
-    -
-  Admitted.
+    - rename H2 into IMDS; intros until σ__c; intros σ__mc.
+
+      (* 2 CASES: [comp ∈ cs] or [comp ∈ cs'] *)
+      inversion_clear 1; intros.
+
+      (* CASE [comp ∈ cs] *)
+      + (* 2 CASES: [id__c ∈ events σ'] or [id__c ∉ events σ'] *)
+        destruct (In_dec id__c (events σ')) as [ In_ev' | nIn_ev' ].
+        (* CASE [id__c ∈ events σ'] *)
+        -- eapply IHvruninit1; eauto.
+           erw_IMDS_cstore_1 IMDS; eauto.
+
+        (* CASE [id__c ∉ events σ'] *)
+        -- (* 2 CASES: [id__c ∈ events σ''] or [id__c ∉ events σ''] *)
+          destruct (In_dec id__c (events σ'')) as [ In_ev'' | nIn_ev'' ].
+
+          (* CASE [id__c ∈ events σ''] *)
+          ++ edestruct @vruninit_compid_in_events_comp_in_cs with (D__s := D__s) (id__c := id__c)
+              as (id__e', (g, (i, (o, InCs_)))); eauto.
+             eapply @vruninit_is_compof_if_in_cs with (behavior := cstmt); eauto.
+             eapply @vruninit_inv_not_in_events  with (cstmt := cstmt); eauto.
+             eapply IHvruninit2; eauto.
+             erw_IMDS_cstore_2 IMDS; eauto.
+
+          (* CASE [id__c ∉ events σ''] *)
+          ++ assert (eq_cstate: σ__c = σ__mc).
+             { eapply MapsTo_fun; eauto.
+               erw_IMDS_cstore_m IMDS; eauto.
+               eapply not_in_union; eauto. }
+             rewrite <- eq_cstate; exists v; assumption.
+
+      (* CASE [comp ∈ cs'] *)
+      + (* 2 CASES: [id__c ∈ events σ''] or [id__c ∉ events σ''] *)
+        destruct (In_dec id__c (events σ'')) as [ In_ev'' | nIn_ev'' ].
+        (* CASE [id__c ∈ events σ''] *)
+        -- eapply IHvruninit2; eauto.
+           erw_IMDS_cstore_2 IMDS; eauto.
+
+        (* CASE [id__c ∉ events σ''] *)
+        -- (* 2 CASES: [id__c ∈ events σ'] or [id__c ∉ events σ'] *)
+          destruct (In_dec id__c (events σ')) as [ In_ev' | nIn_ev' ].
+
+          (* CASE [id__c ∈ events σ'] *)
+          ++ edestruct @vruninit_compid_in_events_comp_in_cs
+            with (D__s := D__s) (id__c := id__c) (behavior := cstmt)
+              as (id__e', (g, (i, (o, InCs_)))); eauto.
+             eapply @vruninit_is_compof_if_in_cs with (behavior := cstmt'); eauto.
+             eapply @vruninit_inv_not_in_events  with (cstmt := cstmt'); eauto.
+             eapply IHvruninit1; eauto.
+             erw_IMDS_cstore_1 IMDS; eauto.
+
+          (* CASE [id__c ∉ events σ'] *)
+          ++ assert (eq_cstate: σ__c = σ__mc).
+             { eapply MapsTo_fun; eauto.
+               erw_IMDS_cstore_m IMDS; eauto.
+               eapply not_in_union; eauto. }
+             rewrite <- eq_cstate; exists v; assumption.
+  Qed.
   
   Lemma vruninit_eq_state_if_no_events :
     forall {D__s Δ σ cstmt σ'},
@@ -331,17 +501,6 @@ Section Init.
     edestruct @vruninit_maps_compstore_id with (D__s := D__s); eauto.
     eapply @stab_maps_compstore_id; eauto.
   Qed.
-  
-  Lemma stab_maps_sstore_of_comp :
-    forall {D__s Δ σ behavior θ σ'},
-      stabilize D__s Δ σ behavior θ σ' ->
-      forall {id__c id__e gm ipm opm σ__c σ'__c id v},
-        InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-        MapsTo id__c σ__c (compstore σ) ->
-        MapsTo id v (sigstore σ__c) ->
-        MapsTo id__c σ'__c (compstore σ') ->
-        exists v', MapsTo id v' (sigstore σ'__c).
-  Admitted.
   
   Lemma init_maps_sstore_of_comp :
     forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id v},

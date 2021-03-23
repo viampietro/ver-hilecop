@@ -64,3 +64,25 @@ Proof.
   exists σ__c; assumption.
   edestruct @vcomb_maps_compstore_id with (D__s := D__s); eauto.
 Qed.
+
+Lemma stab_maps_sstore_of_comp :
+  forall {D__s Δ σ behavior θ σ'},
+    stabilize D__s Δ σ behavior θ σ' ->
+    forall {id__c id__e gm ipm opm σ__c σ'__c id v},
+      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
+      MapsTo id__c σ__c (compstore σ) ->
+      MapsTo id v (sigstore σ__c) ->
+      MapsTo id__c σ'__c (compstore σ') ->
+      exists v', MapsTo id v' (sigstore σ'__c).
+Proof.
+  induction 1.
+
+  (* CASE stable *)
+  - intros; exists v.
+    erewrite @MapsTo_fun with (e := σ'__c) (e' := σ__c); eauto.
+
+  (* CASE loop *)
+  - intros.
+    edestruct @vcomb_maps_compstore_id; eauto.
+    edestruct @vcomb_maps_sstore_of_comp with (D__s := D__s); eauto.
+Qed.

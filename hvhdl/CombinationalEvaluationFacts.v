@@ -264,4 +264,186 @@ Proof.
     eapply IHvcomb2; eauto; eapply proj2; eapply not_app_in; eauto.
 Qed.
 
+Lemma vcomb_maps_sstore :
+  forall {D__s Δ σ cstmt σ'},
+    vcomb D__s Δ σ cstmt σ' ->
+    forall {id v},
+      MapsTo id v (sigstore σ) ->
+      exists v', MapsTo id v' (sigstore σ').
+Proof.
+  induction 1.
+  
+  (* CASE idle process *)
+  - intros; exists v; assumption.
+    
+  (* CASE active process *)
+  - eapply @vseq_maps_sstore with (σ := NoEvDState σ); eauto.
+    
+  (* CASE comp evaluation with events. *)
+  - cbn; eapply @mapop_maps_sstore with (σ := NoEvDState σ); eauto.
+
+  (* CASE comp evaluation with no events. *)
+  - cbn; eapply @mapop_maps_sstore with (σ := NoEvDState σ); eauto.
+
+  (* CASE null *)
+  - intros; exists v; assumption.
+
+  (* CASE par *)
+  - rename H2 into IMDS; intros.
+    apply proj1 in IMDS; unfold EqualDom in IMDS.
+    rewrite <- (IMDS id); exists v; assumption.        
+Qed.
+
+Lemma vcomb_compid_in_events_comp_in_cs :
+  forall {D__s Δ σ cstmt σ'},
+    vcomb D__s Δ σ cstmt σ' ->
+    forall {id__c},
+      CompOf Δ id__c ->
+      NatSet.In id__c (events σ') ->
+      exists id__e gm ipm opm,
+        InCs (cs_comp id__c id__e gm ipm opm) cstmt.
+Proof.
+  induction 1.
+
+  (* CASE idle process *)
+  - cbn; inversion 2.
+
+  (* CASE active process *)
+  - intros id__c CompOf_; intros; exfalso.
+    eapply vseq_not_in_events_if_not_sig; eauto.
+    cbn; eauto with set.
+    destruct 1; destruct CompOf_; mapsto_discriminate.
+    destruct 1; destruct CompOf_; mapsto_discriminate.
+    
+  (* CASE eventful comp *)
+  - cbn; intros id__c CompOf_.
+    rewrite add_iff; inversion 1.
+    subst compid; exists entid, gmap, ipmap, opmap; reflexivity.
+    exfalso.
+    eapply mapop_not_in_events_if_not_sig; eauto.
+    cbn; eauto with set.
+    destruct 1; destruct CompOf_; mapsto_discriminate.
+    destruct 1; destruct CompOf_; mapsto_discriminate.
+
+  (* CASE eventless comp *)
+  - cbn; intros id__c CompOf_; intros.
+    exfalso.
+    eapply mapop_not_in_events_if_not_sig; eauto.
+    cbn; eauto with set.
+    destruct 1; destruct CompOf_; mapsto_discriminate.
+    destruct 1; destruct CompOf_; mapsto_discriminate.
+
+  (* CASE cs_null *)
+  - cbn; inversion 2.
+
+  (* CASE || *)
+  - rename H2 into IMDS; intros id__c CompOf_.
+    erw_IMDS_events_m IMDS.
+    rewrite union_spec; inversion 1.
+    edestruct IHvcomb1 as (id__e, (g, (i, (o, InCs_)))); eauto.
+    exists id__e, g, i, o; cbn; left; assumption.
+    edestruct IHvcomb2 as (id__e, (g, (i, (o, InCs_)))); eauto.
+    exists id__e, g, i, o; cbn; right; assumption.
+Qed.
+
+Lemma vcomb_is_compof_if_in_cs :
+  forall {D__s Δ σ cstmt σ'},
+    vcomb D__s Δ σ cstmt σ' ->
+    forall {id__c id__e gm ipm opm},
+      InCs (cs_comp id__c id__e gm ipm opm) cstmt ->
+      CompOf Δ id__c.
+Proof.
+  induction 1; try (solve [inversion 1]).
+
+  (* CASE eventful comp *)
+  - inversion 1; subst; unfold CompOf; eauto.
+
+  (* CASE eventless comp *)
+  - inversion 1; subst; unfold CompOf; eauto.
+
+  (* CASE || *)
+  - inversion 1; eauto.
+Qed.
+
+Lemma vcomb_maps_sstore_of_comp :
+  forall {D__s Δ σ cstmt σ'},
+    vcomb D__s Δ σ cstmt σ' ->
+    forall {id__c id__e gm ipm opm σ__c σ'__c id v},
+      InCs (cs_comp id__c id__e gm ipm opm) cstmt ->
+      MapsTo id__c σ__c (compstore σ) ->
+      MapsTo id v (sigstore σ__c) ->
+      MapsTo id__c σ'__c (compstore σ') ->
+      exists v', MapsTo id v' (sigstore σ'__c).
+Proof.
+  induction 1; try (solve [inversion 1]).
+  (* CASE comp evaluation with events.*)
+  - inversion_clear 1; cbn; intros.
+    erewrite @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
+    edestruct @mapip_maps_sstore with (Δ := Δ); eauto.
+    erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
+    eapply vcomb_maps_sstore; eauto.
+  (* CASE comp evaluation with no events.*)
+  - inversion_clear 1; cbn; intros.
+    exists v.
+    assert (MapsTo compid σ__c (compstore σ'))
+      by (eapply mapop_inv_compstore; eauto).      
+    erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
+    erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
+  (* CASE || *)
+  - rename H2 into IMDS; intros until σ__c; intros σ__mc.
+
+    (* 2 CASES: [comp ∈ cs] or [comp ∈ cs'] *)
+    inversion_clear 1; intros.
+
+    (* CASE [comp ∈ cs] *)
+    + (* 2 CASES: [id__c ∈ events σ'] or [id__c ∉ events σ'] *)
+      destruct (In_dec id__c (events σ')) as [ In_ev' | nIn_ev' ].
+      (* CASE [id__c ∈ events σ'] *)
+      -- eapply IHvcomb1; eauto.
+         erw_IMDS_cstore_1 IMDS; eauto.
+
+      (* CASE [id__c ∉ events σ'] *)
+      -- (* 2 CASES: [id__c ∈ events σ''] or [id__c ∉ events σ''] *)
+        destruct (In_dec id__c (events σ'')) as [ In_ev'' | nIn_ev'' ].
+
+        (* CASE [id__c ∈ events σ''] *)
+        ++ edestruct @vcomb_compid_in_events_comp_in_cs with (D__s := D__s) (id__c := id__c)
+            as (id__e', (g, (i, (o, InCs_)))); eauto.
+           eapply @vcomb_is_compof_if_in_cs with (cstmt := cstmt); eauto.
+           eapply IHvcomb2; eauto.
+           erw_IMDS_cstore_2 IMDS; eauto.
+
+        (* CASE [id__c ∉ events σ''] *)
+        ++ assert (eq_cstate: σ__c = σ__mc).
+           { eapply MapsTo_fun; eauto.
+             erw_IMDS_cstore_m IMDS; eauto.
+             eapply not_in_union; eauto. }
+           rewrite <- eq_cstate; exists v; assumption.
+
+    (* CASE [comp ∈ cs'] *)
+    + (* 2 CASES: [id__c ∈ events σ''] or [id__c ∉ events σ''] *)
+      destruct (In_dec id__c (events σ'')) as [ In_ev'' | nIn_ev'' ].
+      (* CASE [id__c ∈ events σ''] *)
+      -- eapply IHvcomb2; eauto.
+         erw_IMDS_cstore_2 IMDS; eauto.
+
+      (* CASE [id__c ∉ events σ''] *)
+      -- (* 2 CASES: [id__c ∈ events σ'] or [id__c ∉ events σ'] *)
+        destruct (In_dec id__c (events σ')) as [ In_ev' | nIn_ev' ].
+
+        (* CASE [id__c ∈ events σ'] *)
+        ++ edestruct @vcomb_compid_in_events_comp_in_cs
+          with (D__s := D__s) (id__c := id__c) (cstmt := cstmt)
+            as (id__e', (g, (i, (o, InCs_)))); eauto.
+           eapply @vcomb_is_compof_if_in_cs with (cstmt := cstmt'); eauto.
+           eapply IHvcomb1; eauto.
+           erw_IMDS_cstore_1 IMDS; eauto.
+
+        (* CASE [id__c ∉ events σ'] *)
+        ++ assert (eq_cstate: σ__c = σ__mc).
+           { eapply MapsTo_fun; eauto.
+             erw_IMDS_cstore_m IMDS; eauto.
+             eapply not_in_union; eauto. }
+           rewrite <- eq_cstate; exists v; assumption.
+Qed.
 

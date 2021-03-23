@@ -240,6 +240,76 @@ End IPMap.
 
 Section OPMap.
 
+  Lemma vassocop_maps_sstore :
+    forall {Δ Δ__c σ σ__c asop σ'},
+      vassocop Δ Δ__c σ σ__c asop σ' ->
+      forall {id v},
+        MapsTo id v (sigstore σ) ->
+        exists v', MapsTo id v' (sigstore σ').
+  Proof.
+    induction 1; try (solve [intros; exists v; auto]).
+    all : subst σ'; subst sigstore'; cbn;
+      intros id v MapsTo_; destruct (Nat.eq_dec id id__a); 
+        [ subst id; eauto with mapsto
+        | exists v; eauto with mapsto ].
+  Qed.
+  
+  Lemma vassocop_eq_state_if_no_events :
+    forall {Δ Δ__c σ σ__c asop σ'},
+      vassocop Δ Δ__c σ σ__c asop σ' ->
+      Equal (events σ') {[]} ->
+      σ = σ'.
+  Proof.
+    induction 1; try reflexivity; subst; simpl;
+      intros; contrad_add_empty.
+  Qed.
+  
+  Lemma vassocop_not_in_events_if_not_sig :
+    forall {Δ Δ__c σ σ__c asop σ' id},
+      vassocop Δ Δ__c σ σ__c asop σ' ->
+      ~OutputOf Δ id ->
+      ~DeclaredOf Δ id ->
+      ~NatSet.In id (events σ) ->
+      ~NatSet.In id (events σ').
+  Proof.
+    inversion_clear 1; subst; simpl; auto; intros;
+      rewrite add_spec; inversion 1;
+        (solve [contradiction] ||
+         match goal with
+         | [ Hor: MapsTo _ _ _ \/ _ |- _ ] =>
+           inversion Hor;
+           [ match goal with
+             | [ H: MapsTo _ (Declared ?t) _, Hdecl: ~DeclaredOf _ _  |- _ ] =>
+               subst; apply Hdecl; exists t; auto
+             end
+           | match goal with
+             | [ H: MapsTo _ (Output ?t) _, Hout: ~OutputOf _ _  |- _ ] =>
+               subst; apply Hout; exists t; auto
+             end
+           ]
+         end).
+  Qed.
+
+  Lemma vassocop_inv_in_events :
+    forall {Δ Δ__c σ σ__c asop σ' id},
+      vassocop Δ Δ__c σ σ__c asop σ' ->
+      NatSet.In id (events σ) ->
+      NatSet.In id (events σ').
+  Proof.
+    induction 1; auto;
+      subst σ'; subst events'; cbn; eauto with set.
+  Qed.
+  
+  Lemma mapop_inv_in_events :
+    forall {Δ Δ__c σ σ__c opmap σ' id},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      NatSet.In id (events σ) ->
+      NatSet.In id (events σ').
+  Proof.
+    induction 1; auto; intros.
+    eapply IHmapop; eapply vassocop_inv_in_events; eauto.
+  Qed.
+  
   Lemma mapop_inv_compstore :
     forall {Δ Δ__c σ σ__c1 opmap σ' id__c σ__c2},
       mapop Δ Δ__c σ σ__c1 opmap σ' ->
@@ -249,7 +319,19 @@ Section OPMap.
     induction 1; try subst; auto.
     induction H; try subst; auto.
   Qed.
-
+  
+  Lemma mapop_maps_sstore :
+    forall {Δ Δ__c σ σ__c opmap σ'},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      forall {id v},
+        MapsTo id v (sigstore σ) ->
+        exists v', MapsTo id v' (sigstore σ').
+  Proof.
+    induction 1.
+    intros; exists v; assumption.
+    intros; edestruct @vassocop_maps_sstore with (Δ := Δ); eauto.
+  Qed.
+  
   Lemma mapop_not_in_events_if_not_assigned :
     forall {Δ Δ__c σ σ__c opmap σ' id},
       mapop Δ Δ__c σ σ__c opmap σ' ->
@@ -261,32 +343,6 @@ Section OPMap.
     inversion H; subst; simpl; auto.
     all : simpl in IHmapop; intros; apply IHmapop;
       auto; rewrite add_spec; firstorder.
-  Qed.
-
-  Lemma vassocop_not_in_events_if_not_sig :
-    forall {Δ Δ__c σ σ__c asop σ' id},
-      vassocop Δ Δ__c σ σ__c asop σ' ->
-      ~OutputOf Δ id ->
-      ~DeclaredOf Δ id ->
-      ~NatSet.In id (events σ) ->
-      ~NatSet.In id (events σ').
-  Proof.
-    inversion_clear 1; subst; simpl; auto; intros;
-    rewrite add_spec; inversion 1;
-      (solve [contradiction] ||
-       match goal with
-       | [ Hor: MapsTo _ _ _ \/ _ |- _ ] =>
-         inversion Hor;
-         [ match goal with
-           | [ H: MapsTo _ (Declared ?t) _, Hdecl: ~DeclaredOf _ _  |- _ ] =>
-             subst; apply Hdecl; exists t; auto
-           end
-         | match goal with
-           | [ H: MapsTo _ (Output ?t) _, Hout: ~OutputOf _ _  |- _ ] =>
-             subst; apply Hout; exists t; auto
-           end
-         ]
-       end).
   Qed.
   
   Lemma mapop_not_in_events_if_not_sig :
@@ -300,16 +356,6 @@ Section OPMap.
     induction 1; auto.
     intros; apply IHmapop; auto.
     eapply vassocop_not_in_events_if_not_sig; eauto.
-  Qed.
-
-  Lemma vassocop_eq_state_if_no_events :
-    forall {Δ Δ__c σ σ__c asop σ'},
-      vassocop Δ Δ__c σ σ__c asop σ' ->
-      Equal (events σ') {[]} ->
-      σ = σ'.
-  Proof.
-    induction 1; try reflexivity; subst; simpl;
-      intros; contrad_add_empty.
   Qed.
     
   Lemma mapop_eq_state_if_no_events :
