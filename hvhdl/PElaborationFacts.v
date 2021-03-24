@@ -100,6 +100,8 @@ Proof.
   firstorder.
 Qed.
 
+(** ** Facts about the [reinit_transitions_time] output port *)
+
 Lemma elab_Pcomp_σ_rtt : 
   forall {d Δ σ__e id__p gm ipm opm σ__pe},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -107,5 +109,16 @@ Lemma elab_Pcomp_σ_rtt :
     MapsTo id__p σ__pe (compstore σ__e) ->
     exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sigstore σ__pe).
 Admitted.
+
+Lemma elab_Pcomp_Δ_rtt : 
+  forall {d Δ σ__e},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    forall {id__p gm ipm opm Δ__p t n},
+      InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+      MapsTo id__p (Component Δ__p) Δ ->
+      MapsTo output_arcs_number (Generic t (Vnat n)) Δ__p ->
+      MapsTo Place.reinit_transitions_time (Output (Tarray Tbool 0 (n - 1))) Δ__p.
+Admitted.
+
 
 

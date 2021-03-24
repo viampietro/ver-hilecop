@@ -423,57 +423,6 @@ Proof.
   eapply ebeh_validipm; eauto.
 Qed.
 
-Lemma eports_inv_sstore_well_typed_values :
-  forall {Δ σ ports Δ' σ'},
-    eports Δ σ ports Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
-      MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
-Admitted.
-
-Lemma defaultv_is_well_typed :
-  forall t v,
-    defaultv t v -> is_of_type v t.
-Proof.
-  induction 1.
-  constructor.
-  constructor; lia.
-  constructor.
-Admitted.
-
-Lemma edecl_inv_sstore_well_typed_values :
-  forall {Δ σ ad Δ' σ'},
-    edecl Δ σ ad Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
-      MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
-Proof.
-  induction 1.
-  intros oftype; cbn; intros id0 v0 MapsTo_.
-  rewrite add_mapsto_iff in MapsTo_.
-  destruct MapsTo_ as [ (eq_id, eq_val) | (neq_id, MapsTo_)].
-  rewrite <- eq_val; exists t0; eapply defaultv_is_well_typed; eauto.
-  eapply oftype; eauto.
-Qed.
-
-Lemma edecls_inv_sstore_well_typed_values :
-  forall {Δ σ sigs Δ' σ'},
-    edecls Δ σ sigs Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
-      MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
-Proof.
-  induction 1; auto.
-  intro; eapply IHedecls.
-  eapply edecl_inv_sstore_well_typed_values; eauto.
-Qed.
-
 Lemma elab_sstore_well_typed_values :
   forall {D__s M__g d Δ σ__e id v},
     edesign D__s M__g d Δ σ__e ->
@@ -534,3 +483,16 @@ Lemma elab_wf_gmap_expr :
     List.In (assocg_ id e) gm ->
     exists v, vexpr EmptyElDesign EmptyDState EmptyLEnv false e v.
 Admitted.
+
+Lemma elab_well_typed_values_in_sstore_of_comp :
+  forall {D__s M__g d Δ σ__e},
+    edesign D__s M__g d Δ σ__e ->
+    forall {id__c Δ__c σ__ce},
+      MapsTo id__c (Component Δ__c) Δ ->
+      MapsTo id__c σ__ce (compstore σ__e) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        MapsTo id v (sigstore σ__ce) ->
+        is_of_type v t.
+Admitted.
+

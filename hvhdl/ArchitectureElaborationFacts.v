@@ -4,9 +4,9 @@ Require Import common.CoqLib.
 Require Import common.NatMap.
 Require Import common.NatMapTactics.
 
-Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.Environment.
+Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlElaborationLib.
+Require Import hvhdl.DefaultValueFacts.
 
 Lemma edecls_elab_idle_sigma :
   forall Δ σ sigs Δ' σ',
@@ -147,3 +147,35 @@ Proof.
     exists x; eapply edecls_inv_Δ; eauto.
   eapply IHedecls; eauto.
 Qed.
+
+Lemma edecl_inv_sstore_well_typed_values :
+  forall {Δ σ ad Δ' σ'},
+    edecl Δ σ ad Δ' σ' ->
+    (forall id v, MapsTo id v (sigstore σ) ->
+                  exists t, is_of_type v t) ->
+    forall {id v},
+      MapsTo id v (sigstore σ') ->
+      exists t, is_of_type v t.
+Proof.
+  induction 1.
+  intros oftype; cbn; intros id0 v0 MapsTo_.
+  rewrite add_mapsto_iff in MapsTo_.
+  destruct MapsTo_ as [ (eq_id, eq_val) | (neq_id, MapsTo_)].
+  rewrite <- eq_val; exists t0; eapply defaultv_is_well_typed; eauto.
+  eapply oftype; eauto.
+Qed.
+
+Lemma edecls_inv_sstore_well_typed_values :
+  forall {Δ σ sigs Δ' σ'},
+    edecls Δ σ sigs Δ' σ' ->
+    (forall id v, MapsTo id v (sigstore σ) ->
+                  exists t, is_of_type v t) ->
+    forall {id v},
+      MapsTo id v (sigstore σ') ->
+      exists t, is_of_type v t.
+Proof.
+  induction 1; auto.
+  intro; eapply IHedecls.
+  eapply edecl_inv_sstore_well_typed_values; eauto.
+Qed.
+

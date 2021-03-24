@@ -1,5 +1,7 @@
 (** * Tactics for H-VHDL Environment *)
 
+Require Import common.NatMap.
+Require Import common.NatSet.
 Require Import hvhdl.Environment.
 
 (** ** [IsMergedDState] Relation Tactics  *)
@@ -162,3 +164,77 @@ Ltac erw_right_IMDS_cstore_2 H :=
 
 Tactic Notation "erw_IMDS_cstore_2" constr(H) := erw_left_IMDS_cstore_2 H.
 Tactic Notation "erw_IMDS_cstore_2" "<-" constr(H) := erw_right_IMDS_cstore_2 H.
+
+Ltac gen_eq_cstate_from_IMDS Heq :=
+  match goal with
+  | [
+    IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
+    MapsTo_σ: MapsTo ?id__c ?σ__c (compstore ?σ),
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (compstore ?σ__m),
+    nIn_ev': ~NatSet.In ?id__c (events ?σ'),
+    nIn_ev'' : ~NatSet.In ?id__c (events ?σ'')        
+    |- _
+  ] =>
+    assert (Heq : σ__c = σ__mc) by (eapply MapsTo_fun; eauto;
+                                erw_IMDS_cstore_m IMDS;
+                                eauto; eapply not_in_union; eauto)
+  | [
+    IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
+    MapsTo_σ': MapsTo ?id__c ?σ__c (compstore ?σ'),
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (compstore ?σ__m),
+    In_ev': NatSet.In ?id__c (events ?σ')
+    |- _
+  ] =>
+    assert (Heq : σ__c = σ__mc)
+      by (eapply MapsTo_fun; eauto;
+          erw_IMDS_cstore_m IMDS;
+          eauto)
+  | [
+    IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
+    MapsTo_σ'': MapsTo ?id__c ?σ__c (compstore ?σ''),
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (compstore ?σ__m),
+    In_ev'': NatSet.In ?id__c (events ?σ'')
+    |- _
+  ] =>
+    assert (Heq : σ__c = σ__mc)
+      by (eapply MapsTo_fun; eauto;
+          erw_IMDS_cstore_m IMDS;
+          eauto)
+  end.
+
+Ltac gen_eq_val_from_IMDS Heq :=
+  match goal with
+  | [
+    IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
+    MapsTo_σ: MapsTo ?id ?v (sigstore ?σ),
+    MapsTo_σ__m: MapsTo ?id ?v__m (sigstore ?σ__m),
+    nIn_ev': ~NatSet.In ?id (events ?σ'),
+    nIn_ev'' : ~NatSet.In ?id (events ?σ'')        
+    |- _
+  ] =>
+    assert (Heq : v = v__m) by (eapply MapsTo_fun; eauto;
+                              erw_IMDS_sstore_m IMDS;
+                              eauto; eapply not_in_union; eauto)
+  | [
+    IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
+    MapsTo_σ': MapsTo ?id ?v' (sigstore ?σ'),
+    MapsTo_σ__m: MapsTo ?id ?v__m (sigstore ?σ__m),
+    In_ev': NatSet.In ?id (events ?σ')
+    |- _
+  ] =>
+    assert (Heq : v' = v__m)
+      by (eapply MapsTo_fun; eauto;
+          erw_IMDS_sstore_m IMDS;
+          eauto)
+  | [
+    IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
+    MapsTo_σ'': MapsTo ?id ?v'' (sigstore ?σ''),
+    MapsTo_σ__m: MapsTo ?id ?v__m (sigstore ?σ__m),
+    In_ev'': NatSet.In ?id (events ?σ'')
+    |- _
+  ] =>
+    assert (Heq : v'' = v__m)
+      by (eapply MapsTo_fun; eauto;
+          erw_IMDS_sstore_m IMDS;
+          eauto)
+  end.

@@ -257,7 +257,7 @@ Section PInit.
     eapply vruninit_s_marking_eq_nat; eauto.
   Qed.
 
-  Lemma init_P_eval_rtt_i :
+  Lemma init_Pcomp_eval_rtt_i :
     forall D__s Δ σ behavior σ0,
       init D__s Δ σ behavior σ0 ->
       forall id__p gm ipm opm σ__p0 aofv id i b ,
@@ -269,7 +269,7 @@ Section PInit.
         MapsTo id (Vbool b) (sigstore σ0).
   Admitted.
   
-  Lemma init_P_rtt_eq_false :
+  Lemma init_Pcomp_rtt_eq_false :
     forall D__s Δ σ behavior σ0,
       init D__s Δ σ behavior σ0 ->
       forall id__p gm ipm opm σ__p0 Δ__p aofv i t n,

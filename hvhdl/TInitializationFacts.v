@@ -29,8 +29,10 @@ Section TVRunInit.
     vseqinv_cl; [contradiction | ].
     vseqinv_cl; subst; cbn.
     vexprinv_cl; eauto with mapsto.
-    inversion H0 in H5.
-    erewrite <- OVEq_eq_1 with (val2 := currv) in H4; eauto.
+    match goal with
+    | [ H: vexpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
+      inversion H in H'; erewrite <- OVEq_eq_1 with (val2 := currv) in H''; eauto
+    end.
   Qed.
 
   Lemma vruninit_tc_ps_no_events_s_tc :
@@ -43,8 +45,10 @@ Section TVRunInit.
     vseqinv_cl; [contradiction | ].
     vseqinv_cl; subst; cbn.
     cbn in H; contrad_not_in_add.
-    inversion H0 in H6.
-    erewrite <- OVEq_eq_1 with (val2 := currv) in H5; eauto.
+    match goal with
+    | [ H: vexpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
+      inversion H in H'; erewrite <- OVEq_eq_1 with (val2 := currv) in H''; eauto
+    end.
   Qed.
   
   Lemma vruninit_transition_s_tc_eq_O :    
@@ -170,7 +174,7 @@ Section TInit.
     eapply vruninit_s_tc_eq_O; eauto.    
   Qed.
 
-  Lemma init_T_s_rtc_eq_bprod_of_rt :
+  Lemma init_Tcomp_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm Δ__t σ__t0 b aofv t n,
@@ -183,7 +187,7 @@ Section TInit.
         MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
   Admitted.
 
-  Lemma init_T_eval_rt_0 :
+  Lemma init_Tcomp_eval_rt_0 :
     forall D__s Δ σ behavior σ0,
       init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv,
@@ -194,7 +198,7 @@ Section TInit.
         get_bool_at aofv 0 = false.
   Admitted.
 
-  Lemma init_T_eval_rt_i :
+  Lemma init_Tcomp_eval_rt_i :
     forall D__s Δ σ behavior σ0,
       init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv id i b ,

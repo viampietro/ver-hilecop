@@ -239,19 +239,19 @@ Proof.
   (* Builds [σ__t0("rt") = aofv] *)
   assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0)).
   { edestruct @elab_Tcomp_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto.
+    assert (MapsTo reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t) by
+        (eapply elab_Tcomp_Δ_rt; eauto).
+    assert (is_of_type (Varr aofv) (Tarray Tbool 0 (n - 1))) by
+        (eapply elab_well_typed_values_in_sstore_of_comp; eauto).
     edestruct @init_maps_sstore_of_comp as (v', MapsTo_v'); eauto.
-    assert (oftype: exists t, is_of_type (Varr aofv) t)
-      by (eapply elab_sstore_of_comp_well_typed_values; eauto).
-    destruct oftype as (tp, oftype).
-    assert (oftype' : is_of_type v' tp)
-      by (eapply init_inv_type_sstore_of_comp; eauto).
-    inversion_clear oftype in oftype'.
-    inversion_clear oftype' in MapsTo_v'.
+    assert (is_of_type_v' : is_of_type v' (Tarray Tbool 0 (n - 1))) by
+        (eapply init_inv_well_typed_values_in_sstore_of_comp; eauto).
+    inversion_clear is_of_type_v' in MapsTo_v'.
     exists aofv0; assumption.
   }
   destruct aofv_ex as (aofv, MapsTo_rt).
   
-  eapply init_T_s_rtc_eq_bprod_of_rt; eauto.
+  eapply init_Tcomp_s_rtc_eq_bprod_of_rt; eauto.
   
   (* CASE ANALYSIS: [pinputs_of_t] where [PInputsOf t pinputs_of_t]. *)
 
@@ -264,7 +264,7 @@ Proof.
     replace (get_bool_at aofv 0) with false.
     constructor.
     (* SUBGOAL [get_bool_at aofv 0 = false] *)
-    + symmetry; eapply init_T_eval_rt_0; eauto.
+    + symmetry; eapply init_Tcomp_eval_rt_0; eauto.
       eapply sitpn2hvhdl_emp_pinputs_rt; eauto.
 
     (* SUBGOAL [Δ__t("in_arcs_nb") = 1] *)
@@ -312,7 +312,7 @@ Proof.
       inversion e1; reflexivity. }
     
     (* SUBGOAL [σ__t0("rt")(i) = false] *)
-    eapply init_T_eval_rt_i; eauto.
+    eapply init_Tcomp_eval_rt_i; eauto.
 
     (* Then, show [σ0("id__ji") = false] *)
 
@@ -325,19 +325,22 @@ Proof.
     edestruct @elab_Pcomp_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e);
       eauto.
     assert (MapsTo_rtt0_ex: exists aofv, MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0)).
-    { edestruct @init_maps_sstore_of_comp with (D__s := hdstore)
+    { edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1.
+      edestruct @elab_Pcomp_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1.
+      assert (MapsTo reinit_transitions_time (Output (Tarray Tbool 0 (m - 1))) Δ__p) by
+          (eapply elab_Pcomp_Δ_rtt; eauto).
+      assert (is_of_type (Varr aofv__pe) (Tarray Tbool 0 (m - 1))) by
+          (eapply elab_well_typed_values_in_sstore_of_comp; eauto).
+      edestruct @init_maps_sstore_of_comp with (D__s := hdstore)
         as (v, MapsTo_rtt0); eauto.
-      assert (oftype: exists t, is_of_type (Varr aofv__pe) t)
-        by (eapply elab_sstore_of_comp_well_typed_values; eauto).
-      destruct oftype as (tp, oftype).
-      assert (oftype' : is_of_type v tp)
-        by (eapply init_inv_type_sstore_of_comp; eauto).
-      inversion_clear oftype in oftype'.
-      inversion_clear oftype' in MapsTo_rtt0.
-      exists aofv0; assumption. }
+      assert (is_of_type_v : is_of_type v (Tarray Tbool 0 (m - 1))) by
+          (eapply init_inv_well_typed_values_in_sstore_of_comp; eauto).
+      inversion_clear is_of_type_v in MapsTo_rtt0.
+      exists aofv0; assumption.
+    }
     destruct MapsTo_rtt0_ex as (aofv__P0, MapsTo_rtt0).
     
-    eapply @init_P_eval_rtt_i; eauto 1.
+    eapply @init_Pcomp_eval_rtt_i; eauto 1.
     
     (* SUBGOAL [σ__p0("rtt")(j) = false] *)
 
@@ -349,7 +352,7 @@ Proof.
     (* Builds [Δ__p("out_arcs_nb") = (t__oan, m)] *)
     edestruct @elab_Pcomp_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1.
     
-    eapply @init_P_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto.
+    eapply @init_Pcomp_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto.
 
     (* SUBGOAL [Δ__p("out_arcs_nb") = |output(p)|] *)
     assert (List.In (assocg_ output_arcs_number (length toutputs_of_p)) gm__p).

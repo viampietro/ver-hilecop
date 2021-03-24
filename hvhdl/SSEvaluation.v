@@ -28,8 +28,9 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv -> (* e ⇝ newv *)
-      is_of_type newv t ->             (* newv ∈c t *)
-
+      is_of_type newv t ->             (* [newv ∈c t] *)
+      is_of_type currv t ->            (* [currv ∈c t] *)
+      
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
@@ -57,12 +58,13 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
-
+      is_of_type currv t ->
+      
       (* * Side conditions * *)
 
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
       (NatMap.MapsTo id (Declared t) Δ \/ NatMap.MapsTo id (Output t) Δ) ->
-      NatMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = v' *)
+      NatMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = currv *)
       OVEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
@@ -85,7 +87,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (*  * Premises * *)
       vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
-
+      is_of_type (Varr curraofv) (Tarray t l u) ->
+      
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
@@ -95,7 +98,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t,l,u) *)
       (NatMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) ->
       
-      (* id ∈ σ and σ(id) = currlofv *)
+      (* id ∈ σ and σ(id) = curraofv *)
       NatMap.MapsTo id (Varr curraofv) (sigstore σ) ->
 
       (* new value <> current value *)
@@ -123,7 +126,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
-
+      is_of_type (Varr curraofv) (Tarray t l u) ->
+      
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
@@ -149,7 +153,8 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
-
+      is_of_type currv t ->
+      
       (* * Side conditions * *)
       NatMap.MapsTo id (t, currv) Λ -> (* id ∈ Λ and Λ(id) = (t, currv) *)
       
@@ -168,6 +173,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
       is_of_type newv t ->
+      is_of_type (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->

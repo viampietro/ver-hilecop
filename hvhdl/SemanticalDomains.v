@@ -147,7 +147,7 @@ Inductive is_of_type : value -> type -> Prop :=
  *)
 | IsArrOfT (l u : nat) :
     forall (aofv : arrofvalues) (t : type),
-      arris_of_type aofv ((u - l) + 1) t ->
+      arris_of_type aofv (S (u - l)) t ->
       is_of_type (Varr aofv) (Tarray t l u)
                  
 (** Defines the typing relation over array of values. 

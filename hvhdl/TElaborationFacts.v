@@ -75,6 +75,72 @@ Admitted.
 
 (** ** Facts about the [reinit_time] input port *)
 
+Lemma eports_T_Δ_rt :
+  forall {Δ σ Δ' σ'},
+    eports Δ σ transition_ports Δ' σ' ->
+    forall {t n},
+      MapsTo input_arcs_number (Generic t (Vnat n)) Δ' ->
+      MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ'.
+Admitted.
+
+Lemma elab_T_Δ_rt :
+  forall {M__g Δ σ__e},
+    edesign hdstore M__g transition_design Δ σ__e ->
+    forall {t n},
+      MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
+      MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ.
+Proof.
+  inversion 1; subst.
+  intros t n MapsTo_ian.
+  assert (MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ').
+  { eapply @eports_T_Δ_rt with (Δ := Δ0); eauto.
+    erewrite @edecls_inv_gens with (Δ' := Δ''); eauto.
+    erewrite @ebeh_eq_gens with (Δ' := Δ); eauto. }
+  
+Qed.
+
+Lemma ebeh_Tcomp_Δ_rt : 
+  forall {Δ σ behavior Δ' σ'},
+    ebeh hdstore Δ σ behavior Δ' σ' ->
+    forall {id__t gm ipm opm Δ__t t n},
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+      MapsTo id__t (Component Δ__t) Δ' ->
+      MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
+      MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t.
+Proof.
+  induction 1; inversion 1.
+
+  (* CASE comp *)
+  - subst; subst_transition_design.
+    assert (e : Component Δ__t = Component Δ__c) by
+        (eapply @MapsTo_add_eqv with (x := id__c) (m := Δ); eauto).
+    inject_left e.
+    eapply @elab_T_Δ_rt; eauto.
+    
+  (* CASE left of || *)
+  - intros.
+    edestruct @ebeh_compid_in_compstore with (D__s := hdstore) (behavior := cstmt) as (σ'__t0, MapsTo_σ'__t0); eauto.
+    assert (MapsTo id__t σ'__t0 (compstore σ'')) by (eapply ebeh_inv_compstore; eauto).
+    assert (e : σ'__t0 = σ'__t) by (eapply MapsTo_fun; eauto).
+    inject_left e; apply IHebeh1; auto.
+    
+  (* CASE right of || *)
+  - apply IHebeh2; auto.
+Admitted.
+
+Lemma elab_Tcomp_Δ_rt : 
+  forall {d Δ σ__e},
+    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    forall {id__t gm ipm opm Δ__t t n},
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+      MapsTo id__t (Component Δ__t) Δ ->
+      MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
+      MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t.
+Proof.
+  inversion 1.
+  eapply ebeh_Tcomp_Δ_rt; eauto.
+Qed.
+
 Lemma elab_T_σ_rt :
   forall {M__g Δ σ__e},
     edesign hdstore M__g transition_design Δ σ__e ->
@@ -163,5 +229,6 @@ Proof.
   firstorder.
 Qed.
   
+
 
 

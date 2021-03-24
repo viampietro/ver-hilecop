@@ -516,26 +516,20 @@ Section Init.
     edestruct @vruninit_maps_sstore_of_comp with (D__s := D__s); eauto.
     eapply stab_maps_sstore_of_comp; eauto.    
   Qed.
+      
+  Lemma init_inv_well_typed_values_in_sstore_of_comp :
+    forall {D__s Δ σ behavior σ0},
+      init D__s Δ σ behavior σ0 ->
+      forall {id__c Δ__c σ__c σ__c0},
+        MapsTo id__c (Component Δ__c) Δ ->
+        MapsTo id__c σ__c (compstore σ) ->
+        MapsTo id__c σ__c0 (compstore σ0) ->
+        forall {id t v v0},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ__c) ->
+          is_of_type v t ->
+          MapsTo id v0 (sigstore σ__c0) ->
+          is_of_type v0 t.
+  Admitted.
 
-  Lemma init_inv_type_sstore :
-    forall {D__s Δ σ behavior σ0 id v v' t},
-      init D__s Δ σ behavior σ0 ->
-      MapsTo id v (sigstore σ) ->
-      MapsTo id v' (sigstore σ0) ->
-      is_of_type v t ->
-      is_of_type v' t.
-  Admitted.
-  
-  Lemma init_inv_type_sstore_of_comp :
-    forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id v v' t},
-      init D__s Δ σ behavior σ0 ->
-      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-      MapsTo id__c σ__c (compstore σ) ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id__c σ__c0 (compstore σ0) ->
-      MapsTo id v' (sigstore σ__c0) ->
-      is_of_type v t ->
-      is_of_type v' t.
-  Admitted.
-  
 End Init.
