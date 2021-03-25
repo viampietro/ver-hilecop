@@ -20,6 +20,13 @@ Proof.
   inversion 1 as [(a, b) | (c ,d) ]; [auto | contradiction].
 Qed.
 
+Lemma MapsTo_add_eqv_2 :
+  forall {A : Type} {x : key} {e e' : A} {m},
+    e = e' -> NatMap.MapsTo x e (NatMap.add x e' m).
+Proof.
+  intros *; intros eq_; rewrite eq_; apply add_1; reflexivity.
+Qed.
+
 (** ** Hints to solve goals with MapsTo *)
 
 Hint Resolve MapsTo_fun add_1 add_2 add_3 : mapsto.

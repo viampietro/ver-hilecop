@@ -7,9 +7,12 @@ Require Import common.NatMapTactics.
 Require Import common.NatSet.
 
 Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlCoreTacticsLib.
+Require Import hvhdl.HVhdlCoreFactsLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlSimulationFactsLib.
+
 
 Ltac solve_vcomb_par_l :=
   match goal with

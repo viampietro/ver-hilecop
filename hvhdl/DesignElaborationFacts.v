@@ -7,12 +7,9 @@ Require Import common.NatMap.
 Require Import common.InAndNoDup.
 Require Import common.NatMapTactics.
 
-Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.AbstractSyntaxFacts.
-Require Import hvhdl.Environment.
-Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.HVhdlElaborationLib.
-Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.ValidPortMap.
@@ -20,6 +17,8 @@ Require Import hvhdl.WellDefinedDesignFacts.
 Require Import hvhdl.ArchitectureElaborationFacts.
 Require Import hvhdl.PortElaborationFacts.
 Require Import hvhdl.ValidPortMapFacts.
+Require Import hvhdl.DefaultValueFacts.
+Require Import hvhdl.GenericElaborationFacts.
 
 (** ** Facts about Behavior Elaboration *)
 
@@ -423,59 +422,6 @@ Proof.
   eapply ebeh_validipm; eauto.
 Qed.
 
-Lemma elab_sstore_well_typed_values :
-  forall {D__s M__g d Δ σ__e id v},
-    edesign D__s M__g d Δ σ__e ->
-    MapsTo id v (sigstore σ__e) ->
-    exists t, is_of_type v t.
-Proof.
-  inversion 1.
-  intros MapsTo_; pattern σ__e in MapsTo_;
-    erewrite <- ebeh_eq_sstore in MapsTo_; eauto.
-  eapply edecls_inv_sstore_well_typed_values; eauto.
-  eapply eports_inv_sstore_well_typed_values; eauto.
-  inversion 1.
-Qed.
-
-Lemma ebeh_sstore_of_comp_well_typed_values :
-  forall {D__s Δ σ behavior Δ' σ'},
-    ebeh D__s Δ σ behavior Δ' σ' ->
-    forall {id__c id__e gm ipm opm σ__c id v},
-      InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-      MapsTo id__c σ__c (compstore σ') ->
-      MapsTo id v (sigstore σ__c) ->
-      exists t, is_of_type v t.
-Proof.
-  induction 1; try (solve [inversion 1]).
-
-  (* CASE comp *)
-  - inversion 1; subst; cbn; intros.
-    eapply elab_sstore_well_typed_values; eauto.
-    erewrite <- @MapsTo_add_eqv with (e := σ__c0) (e' := σ__c); eauto.
-
-  (* CASE || *)
-  - inversion 1; [intros | eapply IHebeh2; eauto].
-    edestruct @ebeh_compid_in_compstore
-      with (D__s := D__s) (behavior := cstmt); eauto.
-    assert (eq_ : x = σ__c).
-    { eapply MapsTo_fun with (m := compstore σ''); eauto.
-      eapply ebeh_inv_compstore; eauto. }
-    eapply IHebeh1; eauto.
-    erewrite eq_; eauto.
-Qed.
-
-Lemma elab_sstore_of_comp_well_typed_values :
-  forall {D__s M__g d Δ σ__e σ__c id__c id__e gm ipm opm id v},
-    edesign D__s M__g d Δ σ__e ->
-    InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
-    MapsTo id__c σ__c (compstore σ__e) ->
-    MapsTo id v (sigstore σ__c) ->
-    exists t, is_of_type v t.
-Proof.
-  inversion 1.
-  eapply ebeh_sstore_of_comp_well_typed_values; eauto.
-Qed.
-
 Lemma elab_wf_gmap_expr :
   forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm id e},
     edesign D__s M__g d Δ σ__e ->
@@ -483,6 +429,93 @@ Lemma elab_wf_gmap_expr :
     List.In (assocg_ id e) gm ->
     exists v, vexpr EmptyElDesign EmptyDState EmptyLEnv false e v.
 Admitted.
+
+Lemma ebeh_inv_well_typed_values_in_sstore :
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    (forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ) ->
+        is_of_type v t) ->
+    forall {id t v},
+      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
+      MapsTo id v (sigstore σ') ->
+      is_of_type v t.
+Proof.
+  intros *; intros ebeh_ WT; intros *; intros MapsTo_or MapsTo_sstore.
+  eapply WT with (id := id); eauto.
+  2: { pattern σ; rewrite (ebeh_eq_sstore ebeh_); eauto. }
+  inversion_clear MapsTo_or as [ | MapsTo_or1];
+    [ left; rewrite (ebeh_eq_sigs ebeh_); assumption
+    |  inversion_clear MapsTo_or1 as [ | MapsTo_or2];
+        [ right; left; rewrite (ebeh_eq_sigs ebeh_); assumption
+         | right; right; rewrite (ebeh_eq_sigs ebeh_); assumption ] ].
+Qed.
+
+Lemma elab_well_typed_values_in_sstore :
+  forall {D__s M__g d Δ σ__e},
+    edesign D__s M__g d Δ σ__e ->
+    forall {id t v},
+      (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+      MapsTo id v (sigstore σ__e) ->
+      is_of_type v t.
+Proof.
+  inversion 1.
+  eapply ebeh_inv_well_typed_values_in_sstore; eauto.
+  eapply edecls_inv_well_typed_values_in_sstore; eauto.
+  eapply eports_inv_well_typed_values_in_sstore; eauto.
+  cbn; inversion 2.
+Qed.
+
+Lemma ebeh_inv_well_typed_values_in_sstore_of_comp :
+  forall {D__s Δ σ behavior Δ' σ'},
+    ebeh D__s Δ σ behavior Δ' σ' ->
+    (forall {id__c Δ__c σ__c},
+        MapsTo id__c (Component Δ__c) Δ ->
+        MapsTo id__c σ__c (compstore σ) ->
+        forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ__c) ->
+          is_of_type v t) ->
+    forall {id__c Δ'__c σ'__c},
+      MapsTo id__c (Component Δ'__c) Δ' ->
+      MapsTo id__c σ'__c (compstore σ') ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ'__c \/ MapsTo id (Input t) Δ'__c \/ MapsTo id (Output t) Δ'__c) ->
+        MapsTo id v (sigstore σ'__c) ->
+        is_of_type v t.
+Proof.
+  induction 1.
+
+  (* CASE Process *)
+  - intros WT; intros; eapply WT; eauto.
+    eapply add_3 with (x := id__p) (e' := Process Λ); eauto.
+    intros eq_id.
+    inject_right eq_id; mapsto_discriminate.
+
+  (* CASE Component *)
+  - cbn; intros WT; intros.
+    (* 2 CASES: [id__c0 = id__c] or [id__c0 ≠ id__c] *)
+    destruct (Nat.eq_dec id__c0 id__c) as [ eq_ | neq_ ].
+
+    (* CASE [id__c0 = id__c] *)
+    + inject_left eq_.
+      assert (eq_σ : σ'__c = σ__c) by (eapply MapsTo_add_eqv; eauto).
+      assert (eq_comp_Δ : Component Δ'__c = Component Δ__c) by
+          (eapply MapsTo_add_eqv; eauto).
+      inject_left eq_σ; inject_left eq_comp_Δ.
+      eapply elab_well_typed_values_in_sstore; eauto.
+
+    (* CASE [id__c0 ≠ id__c] *)
+    + eapply WT; eauto;
+        eapply add_3 with (x := id__c) (y := id__c0); eauto.
+
+  (* CASE Null *)
+  - eauto.
+
+  (* CASE || *)
+  - intros WT; eapply IHebeh2; eauto.
+Qed.
 
 Lemma elab_well_typed_values_in_sstore_of_comp :
   forall {D__s M__g d Δ σ__e},
@@ -494,5 +527,18 @@ Lemma elab_well_typed_values_in_sstore_of_comp :
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sigstore σ__ce) ->
         is_of_type v t.
-Admitted.
+Proof.
+  inversion 1.
+  eapply ebeh_inv_well_typed_values_in_sstore_of_comp; eauto.
+  do 3 intro; intros MapsTo_Δ__c.
+  exfalso.
+  assert (MapsTo_ : MapsTo id__c (Component Δ__c) EmptyElDesign).
+  { erewrite <- @egens_inv_Δ_if_not_gen with (Δ' := Δ0); eauto.
+    erewrite <- @eports_inv_Δ_if_not_port with (Δ := Δ0) (Δ' := Δ'); eauto.
+    erewrite <- @edecls_inv_Δ_if_not_decl with (Δ := Δ') (Δ' := Δ''); eauto.
+    destruct 1 as (t, eq_); inversion eq_.
+    destruct 1 as (t, [eq_ | eq_]); inversion eq_.
+    destruct 1 as (t, (v, eq_)); inversion eq_. }    
+  inversion MapsTo_.
+Qed.
 

@@ -7,6 +7,8 @@ Require Import common.NatSet.
 Require Import common.ListLib.
 
 Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlCoreFactsLib.
+Require Import hvhdl.HVhdlCoreTacticsLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlSimulationFactsLib.

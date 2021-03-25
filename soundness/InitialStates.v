@@ -13,6 +13,8 @@ Require Import common.StateAndErrorMonadTactics.
 Require Import sitpn.dp.SitpnLib.
 
 Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlCoreFactsLib.
+Require Import hvhdl.HVhdlCoreTacticsLib.
 Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.HVhdlElaborationFactsLib.
 Require Import hvhdl.HVhdlHilecopLib.
@@ -244,8 +246,9 @@ Proof.
     assert (is_of_type (Varr aofv) (Tarray Tbool 0 (n - 1))) by
         (eapply elab_well_typed_values_in_sstore_of_comp; eauto).
     edestruct @init_maps_sstore_of_comp as (v', MapsTo_v'); eauto.
-    assert (is_of_type_v' : is_of_type v' (Tarray Tbool 0 (n - 1))) by
-        (eapply init_inv_well_typed_values_in_sstore_of_comp; eauto).
+    assert (is_of_type_v' : is_of_type v' (Tarray Tbool 0 (n - 1))).
+    { eapply init_inv_well_typed_values_in_sstore_of_comp; eauto.
+      eapply elab_well_typed_values_in_sstore_of_comp; eauto. }
     inversion_clear is_of_type_v' in MapsTo_v'.
     exists aofv0; assumption.
   }
@@ -333,8 +336,9 @@ Proof.
           (eapply elab_well_typed_values_in_sstore_of_comp; eauto).
       edestruct @init_maps_sstore_of_comp with (D__s := hdstore)
         as (v, MapsTo_rtt0); eauto.
-      assert (is_of_type_v : is_of_type v (Tarray Tbool 0 (m - 1))) by
-          (eapply init_inv_well_typed_values_in_sstore_of_comp; eauto).
+      assert (is_of_type_v : is_of_type v (Tarray Tbool 0 (m - 1))).
+      { eapply init_inv_well_typed_values_in_sstore_of_comp; eauto.
+        eapply elab_well_typed_values_in_sstore_of_comp; eauto. }
       inversion_clear is_of_type_v in MapsTo_rtt0.
       exists aofv0; assumption.
     }

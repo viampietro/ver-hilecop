@@ -148,34 +148,88 @@ Proof.
   eapply IHedecls; eauto.
 Qed.
 
-Lemma edecl_inv_sstore_well_typed_values :
+Lemma edecl_inv_well_typed_values_in_sstore : 
   forall {Δ σ ad Δ' σ'},
     edecl Δ σ ad Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
+    (forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ) ->
+        is_of_type v t) ->
+    forall {id t v},
+      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
+      is_of_type v t.
 Proof.
-  induction 1.
-  intros oftype; cbn; intros id0 v0 MapsTo_.
-  rewrite add_mapsto_iff in MapsTo_.
-  destruct MapsTo_ as [ (eq_id, eq_val) | (neq_id, MapsTo_)].
-  rewrite <- eq_val; exists t0; eapply defaultv_is_well_typed; eauto.
-  eapply oftype; eauto.
+  inversion_clear 1.
+  intros WT; intros *.
+  (* 2 CASES: [id0 = id] or [id0 ≠ id] *)
+  destruct (Nat.eq_dec id0 id) as [ eq_ | neq_ ]. 
+
+  (* CASE [id0 = id] *)
+  - cbn; inversion_clear 1 as [MapsTo_decl | MapsTo_or];
+    intros MapsTo_sstore.
+    (* CASE Declared *)
+    + assert (eq_type : Declared t1 = Declared t0) by
+          (eauto with mapsto).
+      inject_left eq_type.
+      assert (eq_val : v0 = v) by (eauto with mapsto).
+      inject_left eq_val.
+      eapply defaultv_is_well_typed; eauto.
+    (* CASE Input or Output *)
+    + inject_left eq_; mapsto_discriminate.
+
+  (* CASE [id0 ≠ id] *)
+  - cbn; intros MapsTo_or MapsTo_sstore.
+    eapply WT with (id := id0); eauto with mapsto.
+    inversion_clear MapsTo_or as [MapsTo_decl | MapsTo_or1];
+      [ left; eauto with mapsto
+      | inversion_clear MapsTo_or1;
+        [ right; left; eauto with mapsto
+        | right; right; eauto with mapsto ] ].
 Qed.
 
-Lemma edecls_inv_sstore_well_typed_values :
+Lemma edecls_inv_well_typed_values_in_sstore : 
   forall {Δ σ sigs Δ' σ'},
     edecls Δ σ sigs Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
+    (forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ) ->
+        is_of_type v t) ->
+    forall {id t v},
+      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
+      is_of_type v t.
 Proof.
-  induction 1; auto.
-  intro; eapply IHedecls.
-  eapply edecl_inv_sstore_well_typed_values; eauto.
+  induction 1; try (solve [auto]).
+  intros WT; intros; eapply IHedecls; eauto.
+  eapply edecl_inv_well_typed_values_in_sstore; eauto.
 Qed.
 
+Lemma edecl_inv_Δ_if_not_decl : 
+  forall {Δ σ ad Δ' σ'},
+    edecl Δ σ ad Δ' σ' ->
+    forall {id sobj},
+      (~exists t, sobj = Declared t) ->
+      MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
+Proof.
+  split; [ | eapply edecl_inv_Δ; eauto].
+  induction H.
+  destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
+    [ rewrite eq_; intros; exfalso;
+      match goal with
+      | [ H1: ~(_), H2: MapsTo ?k _ (add ?k (Declared ?t) _)  |- _ ] =>
+        apply H1; exists t; eauto with mapsto
+      end
+    | eauto with mapsto ].
+Qed.
+
+Lemma edecls_inv_Δ_if_not_decl : 
+  forall {Δ σ sigs Δ' σ'},
+    edecls Δ σ sigs Δ' σ' ->
+    forall {id sobj},
+      (~exists t, sobj = Declared t) ->
+      MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
+Proof.
+  induction 1; try (solve [reflexivity]).
+  intros; erewrite <- @edecl_inv_Δ_if_not_decl with (Δ := Δ); eauto.
+Qed.

@@ -2,6 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
+Require Import common.NatMapTactics.
 
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlElaborationLib.
@@ -155,36 +156,96 @@ Proof.
   eauto with mapsto.
 Qed.
 
-Lemma eport_inv_sstore_well_typed_values :
+Lemma eport_inv_well_typed_values_in_sstore : 
   forall {Δ σ pd Δ' σ'},
     eport Δ σ pd Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
+    (forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ) ->
+        is_of_type v t) ->
+    forall {id t v},
+      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
+      is_of_type v t.
 Proof.
-  induction 1;
-    intros oftype; cbn; intros id0 v0 MapsTo_;
-      rewrite add_mapsto_iff in MapsTo_;
-      destruct MapsTo_ as [ (eq_id, eq_val) | (neq_id, MapsTo_)];
-      [ rewrite <- eq_val; exists t0; eapply defaultv_is_well_typed; eauto
-      | eapply oftype; eauto
-      | rewrite <- eq_val; exists t0; eapply defaultv_is_well_typed; eauto
-      | eapply oftype; eauto ].
+  inversion_clear 1; intros WT; intros *;
+    
+    (* 2 CASES: [id0 = id] or [id0 ≠ id] *)
+    destruct (Nat.eq_dec id0 id) as [ eq_ | neq_ ]. 
+
+  (* CASE [id0 ≠ id] *)
+  2, 4:
+    cbn; intros MapsTo_or MapsTo_sstore;
+    eapply WT with (id := id0); eauto with mapsto;
+      inversion_clear MapsTo_or as [MapsTo_decl | MapsTo_or1];
+      [ left; eauto with mapsto
+      | inversion_clear MapsTo_or1;
+        [ right; left; eauto with mapsto
+        | right; right; eauto with mapsto ] ].
+  
+  (* CASE [id0 = id] *)
+  1,2 : cbn; inversion_clear 1 as [MapsTo_decl | MapsTo_or]; intros MapsTo_sstore;
+    rewrite eq_ in *; 
+    (* CASE Declared *)
+    [ mapsto_discriminate
+    | 
+    (* CASE Input or Output *)
+    inversion_clear MapsTo_or;
+    ((match goal with
+      | [ H: MapsTo ?k1 (?SObj _) (add _ (?SObj _) _) |- _ ] =>
+        assert (eq_type : SObj t1 = SObj t0) by (eauto with mapsto);
+        inject_left eq_type;
+        erewrite @MapsTo_add_eqv with (e := v0); eauto;
+        eapply defaultv_is_well_typed; eauto
+      end)
+     || mapsto_discriminate) ].
 Qed.
 
-Lemma eports_inv_sstore_well_typed_values :
+Lemma eports_inv_well_typed_values_in_sstore :
   forall {Δ σ ports Δ' σ'},
     eports Δ σ ports Δ' σ' ->
-    (forall id v, MapsTo id v (sigstore σ) ->
-                  exists t, is_of_type v t) ->
-    forall {id v},
+    (forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ) ->
+        is_of_type v t) ->
+    forall {id t v},
+      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      exists t, is_of_type v t.
+      is_of_type v t.
 Proof.
-  induction 1; auto.
-  intro; eapply IHeports.
-  eapply eport_inv_sstore_well_typed_values; eauto.
+  induction 1; try (solve [auto]).
+  intros WT; intros; eapply IHeports; eauto.
+  eapply eport_inv_well_typed_values_in_sstore; eauto.
 Qed.
 
+Lemma eport_inv_Δ_if_not_port :
+  forall {Δ σ pd Δ' σ'},
+    eport Δ σ pd Δ' σ' ->
+    forall {id sobj},
+      (~exists t, sobj = Input t \/ sobj = Output t) ->
+      MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
+Proof.
+  split; [ | eapply eport_inv_Δ; eauto].
+  induction H.
+  all :
+    destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
+    [ rewrite eq_; intros; exfalso;
+      match goal with
+      | [ H1: ~(_), H2: MapsTo ?k _ (add ?k (Input ?t) _)  |- _ ] =>
+        apply H1; exists t; left; eauto with mapsto
+      | [ H1: ~(_), H2: MapsTo ?k _ (add ?k (Output ?t) _)  |- _ ] =>
+        apply H1; exists t; right; eauto with mapsto
+      end
+    | eauto with mapsto ].
+Qed.
+
+Lemma eports_inv_Δ_if_not_port :
+  forall {Δ σ ports Δ' σ'},
+    eports Δ σ ports Δ' σ' ->
+    forall {id sobj},
+      (~exists t, sobj = Input t \/ sobj = Output t) ->
+      MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
+Proof.
+  induction 1; try (solve [reflexivity]).
+  intros; erewrite <- @eport_inv_Δ_if_not_port with (Δ := Δ); eauto.
+Qed.

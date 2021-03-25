@@ -20,6 +20,13 @@ Lemma vseq_inv_compstore :
     MapsTo id__c σ__c (compstore σ').
 Proof. induction 1; try subst; auto. Qed.
 
+Lemma vseq_inv_compstore_2 :
+  forall {Δ σ Λ flag stmt σ' Λ' id__c σ__c},
+    vseq Δ σ Λ flag stmt σ' Λ' ->
+    MapsTo id__c σ__c (compstore σ') ->
+    MapsTo id__c σ__c (compstore σ).
+Proof. induction 1; try subst; auto. Qed.
+
 Lemma vseq_maps_sstore :
   forall {Δ σ Λ flag stmt σ' Λ'},
     vseq Δ σ Λ flag stmt σ' Λ' ->

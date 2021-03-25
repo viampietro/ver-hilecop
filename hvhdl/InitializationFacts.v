@@ -378,6 +378,69 @@ Section VRunInit.
       decompose_IMDS; match goal with | [ H: Equal _ _ |- _ ] => rewrite H end.
       apply not_in_union; [ apply IHvruninit1; auto | apply IHvruninit2; auto ].
   Qed.
+
+  Lemma vruninit_inv_well_typed_values_in_sstore :
+    forall {D__s Δ σ behavior σ'},
+      vruninit D__s Δ σ behavior σ' ->
+      (forall {id t v},
+          (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+          MapsTo id v (sigstore σ) ->
+          is_of_type v t) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ') ->
+        is_of_type v t.
+  Admitted.
+
+  Lemma mapip_inv_well_typed_values_in_sstore :
+    forall {Δ Δ__c σ σ__c ipm σ__c'},
+      mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      (forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ__c) ->
+          is_of_type v t) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        MapsTo id v (sigstore σ__c') ->
+        is_of_type v t.
+  Admitted.
+  
+  Lemma vruninit_inv_well_typed_values_in_sstore_of_comp :
+    forall {D__s Δ σ behavior σ'},
+      vruninit D__s Δ σ behavior σ' ->
+      (forall {id__c Δ__c σ__c},
+          MapsTo id__c (Component Δ__c) Δ ->
+          MapsTo id__c σ__c (compstore σ) ->
+          forall {id t v},
+            (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+            MapsTo id v (sigstore σ__c) ->
+            is_of_type v t) ->
+      forall {id__c Δ__c σ'__c},
+        MapsTo id__c (Component Δ__c) Δ ->
+        MapsTo id__c σ'__c (compstore σ') ->
+        forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ'__c) ->
+          is_of_type v t.
+  Proof.
+    induction 1; intros WT; trivial.
+    (* CASE process *)
+    - intros; eapply WT; eauto.
+      eapply vseq_inv_compstore_2; eauto.
+    (* CASE eventful component *)
+    - cbn; intros.
+      (* 2 CASES: [id__c = compid] or [id__c ≠ compid] *)
+      destruct (Nat.eq_dec id__c compid) as [ eq_ | neq_ ].
+      (* CASE [id__c = compid] *)
+      + rewrite eq_ in *.
+        eapply vruninit_inv_well_typed_values_in_sstore; eauto.
+        eapply mapip_inv_well_typed_values_in_sstore; eauto.
+        assert (eq_Δ : Component Δ__c0 = Component Δ__c) by (eauto with mapsto).
+        inject_left eq_Δ; eauto.
+        erewrite <- @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
+      (* CASE [id__c ≠ compid] *)
+      + eapply mapip_inv_well_typed_values_in_sstore; eauto.
+  Admitted.  
   
   Lemma vruninit_par_comm :
     forall {D__s Δ σ cstmt cstmt' σ'},
@@ -516,20 +579,47 @@ Section Init.
     edestruct @vruninit_maps_sstore_of_comp with (D__s := D__s); eauto.
     eapply stab_maps_sstore_of_comp; eauto.    
   Qed.
-      
+
+  Lemma stab_inv_well_typed_values_in_sstore_of_comp :
+    forall {D__s Δ σ behavior θ σ'},
+      stabilize D__s Δ σ behavior θ σ' ->
+      (forall {id__c Δ__c σ__c},
+          MapsTo id__c (Component Δ__c) Δ ->
+          MapsTo id__c σ__c (compstore σ) ->
+          forall {id t v},
+            (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+            MapsTo id v (sigstore σ__c) ->
+            is_of_type v t) ->
+      forall {id__c Δ__c σ'__c},
+        MapsTo id__c (Component Δ__c) Δ ->
+        MapsTo id__c σ'__c (compstore σ') ->
+        forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ'__c) ->
+          is_of_type v t.
+  Admitted.
+  
   Lemma init_inv_well_typed_values_in_sstore_of_comp :
     forall {D__s Δ σ behavior σ0},
       init D__s Δ σ behavior σ0 ->
-      forall {id__c Δ__c σ__c σ__c0},
+      (forall {id__c Δ__c σ__c},
+          MapsTo id__c (Component Δ__c) Δ ->
+          MapsTo id__c σ__c (compstore σ) ->
+          forall {id t v},
+            (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+            MapsTo id v (sigstore σ__c) ->
+            is_of_type v t) ->
+      forall {id__c Δ__c σ__c0},
         MapsTo id__c (Component Δ__c) Δ ->
-        MapsTo id__c σ__c (compstore σ) ->
         MapsTo id__c σ__c0 (compstore σ0) ->
-        forall {id t v v0},
+        forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
-          is_of_type v t ->
-          MapsTo id v0 (sigstore σ__c0) ->
-          is_of_type v0 t.
-  Admitted.
+          MapsTo id v (sigstore σ__c0) ->
+          is_of_type v t.
+  Proof.
+    inversion 1; intros WT.
+    eapply stab_inv_well_typed_values_in_sstore_of_comp; eauto.
+    eapply vruninit_inv_well_typed_values_in_sstore_of_comp; eauto.
+  Qed.
 
 End Init.

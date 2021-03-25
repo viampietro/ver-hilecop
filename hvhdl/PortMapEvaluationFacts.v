@@ -140,6 +140,16 @@ Section IPMap.
     induction 1; try subst; auto.
     induction H; try subst; auto.
   Qed.
+
+  Lemma mapip_inv_compstore_2 :
+    forall {Δ Δ__c σ σ__c ipm σ__c' id σ__c0},
+      mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      MapsTo id σ__c0 (compstore σ__c') ->
+      MapsTo id σ__c0 (compstore σ__c).
+  Proof.
+    induction 1; try subst; auto.
+    induction H; try subst; auto.
+  Qed.
   
   Lemma mapip_not_in_events_if_not_input :
     forall {Δ Δ__c : ElDesign} {σ σ__c : DState} {ipm : list associp} {σ__c' : DState} {id : key},
@@ -315,6 +325,16 @@ Section OPMap.
       mapop Δ Δ__c σ σ__c1 opmap σ' ->
       MapsTo id__c σ__c2 (compstore σ) ->
       MapsTo id__c σ__c2 (compstore σ').
+  Proof.
+    induction 1; try subst; auto.
+    induction H; try subst; auto.
+  Qed.
+
+  Lemma mapop_inv_compstore_2 :
+    forall {Δ Δ__c σ σ__c1 opmap σ' id__c σ__c2},
+      mapop Δ Δ__c σ σ__c1 opmap σ' ->
+      MapsTo id__c σ__c2 (compstore σ') ->
+      MapsTo id__c σ__c2 (compstore σ).
   Proof.
     induction 1; try subst; auto.
     induction H; try subst; auto.
