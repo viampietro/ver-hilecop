@@ -100,11 +100,13 @@ Fixpoint set_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : i < leng
           | S j, Arr_one _ => fun _ => _
           | 0, Arr_one _ => fun _ => Arr_one v
           | 0, Arr_cons _ tl => fun _ => Arr_cons v tl
-          | (S j), Arr_cons v' tl => fun _ => set_at v j tl _
+          | (S j), Arr_cons v' tl => fun _ => Arr_cons v' (set_at v j tl _)
           end).
   apply lt_pred in l; simpl in l; apply Nat.nlt_0_r in l; contradiction.
   apply (lt_S_n j (length tl) l).
 Defined.
+
+Functional Scheme set_at_ind := Induction for set_at Sort Prop.
 
 (** Given a proof that [n > 0], returns an arrofvalues of length [n]
     filled with value [v]. *)
@@ -162,6 +164,9 @@ with arris_of_type : arrofvalues -> nat -> type -> Prop :=
       is_of_type v t ->
       arris_of_type aofv size t ->
       arris_of_type (Arr_cons v aofv) (S size) t.
+
+Scheme is_of_type_ind_mut := Induction for is_of_type Sort Prop
+  with arris_of_type_ind_mut := Induction for arris_of_type Sort Prop.
 
 (** Specifies the equality relation between two values,
     and the result of the equality evaluation;

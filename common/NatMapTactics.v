@@ -10,11 +10,13 @@ Require Import NatMap.
 Ltac mapsto_discriminate_simpl :=
   match goal with
   | [ H1: MapsTo ?k ?v1 ?m, H2: MapsTo ?k ?v2 ?m |- _ ] =>
+    let e := fresh "e" in
     generalize (MapsTo_fun H1 H2); intros e;
     tryif (assert_fails (discriminate e))
     then fail "Term" v1 "=" v2 "is not discriminable"
     else discriminate e
   | [ H: MapsTo ?k ?v1 (add ?k ?v2 ?m) |- _] =>
+    let e := fresh "e" in
     generalize (MapsTo_add_eqv H); intros e;
     tryif (assert_fails (discriminate e))
     then fail "Term" v1 "=" v2 "is not discriminable"
@@ -70,6 +72,14 @@ Ltac mapsto_not_in_contrad :=
   match goal with
   | [ H1: ~NatMap.In ?k ?m, H2: NatMap.MapsTo ?k ?v ?m |- _ ] =>
     elimtype False; apply H1; exists v; auto
+  end.
+
+Ltac mapsto_fun_inj_val :=
+  match goal with
+  | [ H1: MapsTo ?k (?C ?e) ?m, H2: MapsTo ?k (?C ?e') ?m |- ?e = ?e' ] =>
+    let eq_C := fresh "eq_C" in
+    generalize (MapsTo_fun H1 H2); intros eq_C; injection eq_C;
+    try (trivial)
   end.
 
 Ltac solve_mapsto_iff :=

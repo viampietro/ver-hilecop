@@ -378,7 +378,7 @@ Section VRunInit.
       decompose_IMDS; match goal with | [ H: Equal _ _ |- _ ] => rewrite H end.
       apply not_in_union; [ apply IHvruninit1; auto | apply IHvruninit2; auto ].
   Qed.
-
+  
   Lemma vruninit_inv_well_typed_values_in_sstore :
     forall {D__s Δ σ behavior σ'},
       vruninit D__s Δ σ behavior σ' ->
@@ -390,20 +390,34 @@ Section VRunInit.
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ') ->
         is_of_type v t.
-  Admitted.
-
-  Lemma mapip_inv_well_typed_values_in_sstore :
-    forall {Δ Δ__c σ σ__c ipm σ__c'},
-      mapip Δ Δ__c σ σ__c ipm σ__c' ->
-      (forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
-          is_of_type v t) ->
-      forall {id t v},
-        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-        MapsTo id v (sigstore σ__c') ->
-        is_of_type v t.
-  Admitted.
+  Proof.
+    induction 1; intros WT; try (solve [trivial]).
+    (* CASE process *)
+    - eapply vseq_inv_well_typed_values_in_sstore; eauto.
+    (* CASE eventful component *)
+    - cbn; eapply mapop_inv_well_typed_values_in_sstore; eauto.
+    (* CASE eventless component *)
+    - cbn; eapply mapop_inv_well_typed_values_in_sstore; eauto.
+    (* CASE || *)
+    - specialize (IHvruninit1 WT); specialize (IHvruninit2 WT).
+      intros *; intros MapsTo_Δ MapsTo_sstore_m.
+      rename H2 into IMDS.
+      (* 2 CASES: [id ∈ events σ'] or [id ∉ events σ'] *)
+      destruct (In_dec id (events σ')) as [ In_ev' | nIn_ev' ].
+      (* CASE [id ∈ events σ'] *)
+      + eapply IHvruninit1; eauto.
+         erw_IMDS_sstore_1 IMDS; eauto.
+      (* CASE [id ∉ events σ'] *)
+      + (* 2 CASES: [id ∈ events σ''] or [id ∉ events σ''] *)
+        destruct (In_dec id (events σ'')) as [ In_ev'' | nIn_ev'' ].
+        (* CASE [id ∈ events σ''] *)
+        -- eapply IHvruninit2; eauto.
+           erw_IMDS_sstore_2 IMDS; eauto.
+        (* CASE [id ∉ events σ''] *)
+        -- eapply WT; eauto.
+           erw_IMDS_sstore_m IMDS; eauto.
+           eapply not_in_union; eauto.
+  Qed.
   
   Lemma vruninit_inv_well_typed_values_in_sstore_of_comp :
     forall {D__s Δ σ behavior σ'},
@@ -428,19 +442,48 @@ Section VRunInit.
     - intros; eapply WT; eauto.
       eapply vseq_inv_compstore_2; eauto.
     (* CASE eventful component *)
-    - cbn; intros.
+    - cbn; do 5 intro.
       (* 2 CASES: [id__c = compid] or [id__c ≠ compid] *)
       destruct (Nat.eq_dec id__c compid) as [ eq_ | neq_ ].
       (* CASE [id__c = compid] *)
-      + rewrite eq_ in *.
-        eapply vruninit_inv_well_typed_values_in_sstore; eauto.
-        eapply mapip_inv_well_typed_values_in_sstore; eauto.
+      + rewrite eq_ in *; intros.
         assert (eq_Δ : Component Δ__c0 = Component Δ__c) by (eauto with mapsto).
         inject_left eq_Δ; eauto.
+        eapply vruninit_inv_well_typed_values_in_sstore; eauto.
+        eapply mapip_inv_well_typed_values_in_sstore; eauto.
         erewrite <- @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
       (* CASE [id__c ≠ compid] *)
-      + eapply mapip_inv_well_typed_values_in_sstore; eauto.
-  Admitted.  
+      + assert (MapsTo id__c σ'__c (compstore σ)) by
+         (eapply mapop_inv_compstore_2; eauto with mapsto).
+        eapply WT; eauto.
+    (* CASE eventless component *)
+    - cbn; do 5 intro.
+      assert (MapsTo id__c σ'__c (compstore σ)) by
+          (eapply mapop_inv_compstore_2; eauto with mapsto).
+      eapply WT; eauto.
+    (* CASE || *)
+    - specialize (IHvruninit1 WT); specialize (IHvruninit2 WT).
+      intros *; intros MapsTo_Δ__c MapsTo_cstore_m.
+      rename H2 into IMDS.
+      (* 2 CASES: [id__c ∈ events σ'] or [id__c ∉ events σ'] *)
+      destruct (In_dec id__c (events σ')) as [ In_ev' | nIn_ev' ].
+      (* CASE [id__c ∈ events σ'] *)
+      + eapply IHvruninit1; eauto.
+         erw_IMDS_cstore_1 IMDS; eauto.
+
+      (* CASE [id__c ∉ events σ'] *)
+      + (* 2 CASES: [id__c ∈ events σ''] or [id__c ∉ events σ''] *)
+        destruct (In_dec id__c (events σ'')) as [ In_ev'' | nIn_ev'' ].
+
+        (* CASE [id__c ∈ events σ''] *)
+        -- eapply IHvruninit2; eauto.
+           erw_IMDS_cstore_2 IMDS; eauto.
+
+        (* CASE [id__c ∉ events σ''] *)
+        -- eapply WT; eauto.
+           erw_IMDS_cstore_m IMDS; eauto.
+           eapply not_in_union; eauto.
+  Qed.  
   
   Lemma vruninit_par_comm :
     forall {D__s Δ σ cstmt cstmt' σ'},

@@ -243,6 +243,19 @@ Section IPMap.
     exists v; assumption.
     edestruct @vassocip_maps_sstore with (Δ := Δ); eauto.
   Qed.
+
+  Lemma mapip_inv_well_typed_values_in_sstore :
+    forall {Δ Δ__c σ σ__c ipm σ__c'},
+      mapip Δ Δ__c σ σ__c ipm σ__c' ->
+      (forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ__c) ->
+          is_of_type v t) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        MapsTo id v (sigstore σ__c') ->
+        is_of_type v t.
+  Admitted.
   
 End IPMap.
 
@@ -389,5 +402,18 @@ Section OPMap.
     eapply vassocop_eq_state_if_no_events; eauto.
     rewrite IHmapop; auto.
   Qed.
+
+  Lemma mapop_inv_well_typed_values_in_sstore :
+    forall {Δ Δ__c σ σ__c opmap σ'},
+      mapop Δ Δ__c σ σ__c opmap σ' ->
+      (forall {id t v},
+          (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+          MapsTo id v (sigstore σ) ->
+          is_of_type v t) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ') ->
+        is_of_type v t.
+  Admitted.
   
 End OPMap.
