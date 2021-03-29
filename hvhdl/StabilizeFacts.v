@@ -86,3 +86,27 @@ Proof.
     edestruct @vcomb_maps_compstore_id; eauto.
     edestruct @vcomb_maps_sstore_of_comp with (D__s := D__s); eauto.
 Qed.
+
+Lemma stab_inv_well_typed_values_in_sstore_of_comp :
+  forall {D__s Δ σ behavior θ σ'},
+    stabilize D__s Δ σ behavior θ σ' ->
+    (forall {id__c Δ__c σ__c},
+        MapsTo id__c (Component Δ__c) Δ ->
+        MapsTo id__c σ__c (compstore σ) ->
+        forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ__c) ->
+          is_of_type v t) ->
+    forall {id__c Δ__c σ'__c},
+      MapsTo id__c (Component Δ__c) Δ ->
+      MapsTo id__c σ'__c (compstore σ') ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        MapsTo id v (sigstore σ'__c) ->
+        is_of_type v t.
+Proof.
+  induction 1; try (solve [trivial]).
+  intros WT; eapply IHstabilize; eauto.
+  eapply vcomb_inv_well_typed_values_in_sstore_of_comp; eauto.
+Admitted.
+

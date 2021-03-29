@@ -97,3 +97,17 @@ Ltac solve_mapsto_iff :=
     | subst; mapsto_not_in_contrad
     | eauto with mapsto ]
   end.
+
+Ltac solve_mapsto_fun :=
+  match goal with
+  | H1: MapsTo ?k ?v1 ?m, H2: MapsTo ?k ?v2 ?m |- ?v1 = ?v2 => eapply MapsTo_fun; eauto
+  | H1: MapsTo ?k (?C1 ?v1) ?m, H2: MapsTo ?k (?C1 ?v2) ?m |- ?v1 = ?v2 => mapsto_fun_inj_val
+  | H1: MapsTo ?k (?C1 ?v1) ?m, H2: MapsTo ?k (?C2 ?v2) ?m |- ?v1 = ?v2 => mapsto_discriminate
+  | H1: MapsTo ?k (?C1 ?v1) ?m, H2: MapsTo ?k (_ ?v2) ?m \/ MapsTo ?k (_ ?v2) ?m
+    |- ?v1 = ?v2 => inversion_clear H2; solve_mapsto_fun
+  | [ H1: MapsTo ?k (?C1 ?v1) ?m,
+          H2: MapsTo ?k (_ ?v2) ?m \/ MapsTo ?k (_ ?v2) ?m \/ MapsTo ?k (_ ?v2) ?m
+      |- ?v1 = ?v2 ] => inversion_clear H2; solve_mapsto_fun
+  | [ H1: MapsTo ?k (?C1 ?v1) ?m \/ MapsTo ?k (?C2 ?v1) ?m |- ?v1 = ?v2 ] =>
+    inversion_clear H1; solve_mapsto_fun
+  end.

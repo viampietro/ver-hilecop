@@ -2,6 +2,7 @@
 
 Require Import common.NatSet.
 Require Import common.NatMap.
+Require Import common.NatMapTactics.
 Require Import common.CoqLib.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
@@ -13,6 +14,7 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.ValidPortMap.
 Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.SemanticalDomainsFacts.
 
 Require Import hvhdl.EnvironmentFacts.
 Require Import hvhdl.ValidPortMapFacts.
@@ -117,6 +119,40 @@ Section IPMap.
     exists v; eauto with mapsto.
     subst; exists (Varr (set_at newv idx aofv idx_in_bounds)); eauto with mapsto.
     exists v; eauto with mapsto.
+  Qed.
+
+  Lemma vassocip_inv_well_typed_values_in_sstore :
+    forall {Δ Δ__c σ σ__c asip σ'__c},
+      vassocip Δ Δ__c σ σ__c asip σ'__c ->
+      (forall {id t v},
+          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          MapsTo id v (sigstore σ__c) ->
+          is_of_type v t) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        MapsTo id v (sigstore σ'__c) ->
+        is_of_type v t.
+  Proof.
+    induction 1; try (solve [eauto]).
+    (* CASE [id ⇒ e] and [id(i) ⇒ e]*)
+    all:
+      intros WT; intros *; intros MapsTo_Δ;
+      subst sigstore'; cbn;
+        destruct (Nat.eq_dec id0 id) as [eq_ | neq_ ];
+        [ (* CASE [id0 = id] *)
+          rewrite eq_ in *; intros MapsTo_sstore;
+          match goal with
+          | _: MapsTo ?k (_ ?t1) ?m,
+               _: MapsTo ?k (_ ?t2) ?m \/ MapsTo ?k (_ ?t2) ?m \/ MapsTo ?k (_ ?t2) ?m,
+                  _: MapsTo ?k ?v3 (NatMap.add _ ?v4 _)
+            |- _ =>
+            assert (eq_t : t1 = t2) by (solve_mapsto_fun);
+            erewrite @MapsTo_add_eqv with (e := v3) (e' := v4); eauto; rewrite <- eq_t;
+            (assumption || (eapply is_of_type_inv_set_at; eauto; rewrite eq_t; eapply WT; eauto))
+          end
+
+        | (* CASE [id0 ≠ id] *)
+        intro; eapply WT; eauto with mapsto ].
   Qed.
   
   Lemma mapip_inv_sigstore :
@@ -255,7 +291,11 @@ Section IPMap.
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sigstore σ__c') ->
         is_of_type v t.
-  Admitted.
+  Proof.
+    induction 1; try (solve [trivial]).
+    intros WT; eapply IHmapip.
+    eapply vassocip_inv_well_typed_values_in_sstore; eauto.
+  Qed.
   
 End IPMap.
 
@@ -321,6 +361,50 @@ Section OPMap.
   Proof.
     induction 1; auto;
       subst σ'; subst events'; cbn; eauto with set.
+  Qed.
+
+  Lemma vassocop_inv_well_typed_values_in_sstore :
+    forall {Δ Δ__c σ σ__c asop σ'},
+      vassocop Δ Δ__c σ σ__c asop σ' ->
+      (forall {id t v},
+          (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+          MapsTo id v (sigstore σ) ->
+          is_of_type v t) ->
+      forall {id t v},
+        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        MapsTo id v (sigstore σ') ->
+        is_of_type v t.
+  Proof.
+    induction 1; try (solve [eauto]).
+    (* CASE [id__f ⇒ id__a] and [id__f(j) ⇒ id__a] *)
+    1,4 :
+      intros WT; intros *; intros MapsTo_Δ;
+      subst σ'; subst sigstore'; cbn;
+        destruct (Nat.eq_dec id__a id) as [eq_ | neq_ ];
+        [(* CASE [id__a = id] *)
+          rewrite eq_ in *;
+          assert (eq_t : t0 = t1) by (solve_mapsto_fun); intros MapsTo_sstore;
+          erewrite @MapsTo_add_eqv with (e := v) (e' := newv); eauto;
+          rewrite <- eq_t; assumption
+        | (* CASE [id__a ≠ id] *)
+        intro; eapply WT; eauto with mapsto ].
+    
+    (* CASE [id__f ⇒ id__a(i)] and [id__f(j) ⇒ id__a(i)] *)
+    all:
+      intros WT; intros *; intros MapsTo_Δ;
+      subst σ'; subst sigstore'; subst aofv'; cbn;
+        destruct (Nat.eq_dec id__a id) as [eq_ | neq_ ];
+        [(* CASE [id__a = id] *)
+          rewrite eq_ in *;
+          assert (eq_t : (Tarray t0 l u) = t1) by (solve_mapsto_fun);
+          intros MapsTo_sstore;
+          erewrite @MapsTo_add_eqv
+            with (e := v) (e' := (Varr (set_at newv idx aofv idx_in_bounds))); eauto;
+          rewrite <- eq_t;
+          eapply is_of_type_inv_set_at; eauto;
+          rewrite eq_t; eapply WT; eauto
+        | (* CASE [id__a ≠ id] *)
+        intro; eapply WT; eauto with mapsto ].
   Qed.
   
   Lemma mapop_inv_in_events :
@@ -402,7 +486,7 @@ Section OPMap.
     eapply vassocop_eq_state_if_no_events; eauto.
     rewrite IHmapop; auto.
   Qed.
-
+  
   Lemma mapop_inv_well_typed_values_in_sstore :
     forall {Δ Δ__c σ σ__c opmap σ'},
       mapop Δ Δ__c σ σ__c opmap σ' ->
@@ -414,6 +498,10 @@ Section OPMap.
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ') ->
         is_of_type v t.
-  Admitted.
+  Proof.
+    induction 1; try (solve [trivial]).
+    intros WT; eapply IHmapop.
+    eapply vassocop_inv_well_typed_values_in_sstore; eauto.
+  Qed.
   
 End OPMap.
