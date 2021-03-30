@@ -2,6 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
+Require Import common.ListLib.
 
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
@@ -36,3 +37,27 @@ Proof.
     eapply IHstabilize; eauto.
     eapply vcomb_inv_s_tc; eauto.
 Qed.
+
+Lemma stab_Tcomp_s_rtc_eq_bprod_of_rt :
+  forall Δ σ behavior θ σ',
+    stabilize hdstore Δ σ behavior θ σ' ->
+    forall id__t gm ipm opm Δ__t t n,
+      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+      MapsTo id__t (Component Δ__t) Δ ->
+      MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
+      (forall σ__t aofv b,
+          MapsTo id__t σ__t (compstore σ) ->
+          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t) ->
+          BProd (get_bool_at aofv) (seq 0 n) b ->
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t)) ->
+      forall σ__t' aofv' b,
+        MapsTo id__t σ__t' (compstore σ') ->
+        MapsTo Transition.reinit_time (Varr aofv') (sigstore σ__t') ->
+        BProd (get_bool_at aofv') (seq 0 n) b ->
+        MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t').
+Proof.
+  induction 1.
+
+  (* BASE CASE *)
+  - intros *; do 3 intro; intros s_rtc; eapply s_rtc; eauto.
+Admitted.

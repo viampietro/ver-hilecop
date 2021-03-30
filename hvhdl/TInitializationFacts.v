@@ -140,6 +140,74 @@ Section TVRunInit.
       (* SUBCASE [comp ∈ cstmt'] *)
       + intros; eapply IHvruninit2; eauto; [ solve_nodup_compids_r | solve_vruninit_par_r ].
   Qed.
+
+  Lemma vruninit_T_s_rtc_eq_bprod_of_rt :
+    forall Δ σ σ',
+      vruninit hdstore Δ σ transition_behavior σ' ->
+      forall t n,
+        MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
+        forall aofv b,
+          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ') ->
+          BProd (get_bool_at aofv) (seq 0 n) b ->
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ').
+  Admitted.
+                 
+  Lemma vruninit_Tcomp_s_rtc_eq_bprod_of_rt :
+    forall Δ σ behavior σ',
+      vruninit hdstore Δ σ behavior σ' ->
+      forall id__t gm ipm opm Δ__t t n,
+        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        MapsTo id__t (Component Δ__t) Δ ->
+        MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
+        forall σ__t' aofv b,
+          MapsTo id__t σ__t' (compstore σ') ->
+          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t') ->
+          BProd (get_bool_at aofv) (seq 0 n) b ->
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t').
+  Proof.
+    induction 1; try (solve [inversion 1]).
+
+    (* CASE eventful component *)
+    - inversion 1; subst; subst_transition_design.
+      clear IHvruninit; simpl in *.
+      erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__t') in *; eauto.
+      assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
+      inject_left e.
+      eapply vruninit_T_s_rtc_eq_bprod_of_rt; eauto.
+
+    (* CASE eventless component *)
+    - inversion 1; subst; subst_transition_design.
+      clear IHvruninit; simpl in *.
+
+      (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
+      assert (eq_σ : EqDState σ__c σ__c'').
+      { erewrite @mapip_eq_state_if_no_events with (σ__c := σ__c) (σ__c' := σ__c'); eauto.
+        erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto.
+        reflexivity.
+        erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto. }
+      (* [σ__c = σ__t'] *)
+      erewrite @MapsTo_fun with (e := σ__t') (e' := σ__c) in *; eauto;
+        try (solve [eapply mapop_inv_compstore; eauto | assumption]).
+      pattern σ__c; rewrite eq_σ.
+      
+      (* With no events, [s_rtc ⇐ ∏ rt(i)] happened,
+         but both already had the same value. *)
+      assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
+      inject_left e.
+      eapply vruninit_T_s_rtc_eq_bprod_of_rt; eauto.
+      pattern σ__c''; rewrite <- eq_σ; assumption.
+      
+    (* CASE || *)
+    - inversion_clear 1;
+        destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1);
+        destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
+      
+      (* SUBCASE [comp ∈ cstmt] *)
+      + intros; eapply IHvruninit1; eauto; [ solve_nodup_compids_l | solve_vruninit_par_l ].        
+      (* SUBCASE [comp ∈ cstmt'] *)
+      + intros; eapply IHvruninit2; eauto; [ solve_nodup_compids_r | solve_vruninit_par_r ].
+    
+  Admitted.
   
 End TVRunInit.
 
@@ -179,15 +247,22 @@ Section TInit.
   Lemma init_Tcomp_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
-      forall id__t gm ipm opm Δ__t σ__t0 b aofv t n,
+      forall id__t gm ipm opm Δ__t t n,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
         MapsTo id__t (Component Δ__t) Δ ->
-        MapsTo id__t σ__t0 (compstore σ0) ->
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
-        MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
-        BProd (get_bool_at aofv) (seq 0 n) b ->
-        MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
-  Admitted.
+        forall σ__t0 aofv b,
+          MapsTo id__t σ__t0 (compstore σ0) ->
+          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
+          BProd (get_bool_at aofv) (seq 0 n) b ->
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
+  Proof.
+    inversion_clear 1.
+    intros *; do 3 intro.
+    
+    eapply stab_Tcomp_s_rtc_eq_bprod_of_rt; eauto.    
+    eapply vruninit_Tcomp_s_rtc_eq_bprod_of_rt; eauto.
+  Qed.
 
   Lemma init_Tcomp_eval_rt_0 :
     forall D__s Δ σ behavior σ0,
