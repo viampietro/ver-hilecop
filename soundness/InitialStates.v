@@ -137,43 +137,43 @@ Proof.
   
   (* CASE [upper(I__s(t)) = ∞ and s0.I(t) ≤ lower(I__s(t))] 
      and [upper(I__s(t)) ≠ ∞ and s0.I(t) ≤ upper(I__s(t))] *)
-  1,4 : intros;
+  1,4 :
+    intros;
 
     (* Builds the premises of the [init_s_tc_eq_O] lemma. *)
     
     (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *)
     edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t)
-      as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto;
+    as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto;
 
-    (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
-    destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_);
-    
-    (* Builds [id__t' ∈ (compstore σ__e)] *)
-    edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto;
+      (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
+      destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_);
+      
+      (* Builds [id__t' ∈ (compstore σ__e)] *)
+      edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto;
 
-    (* Builds [id__t' ∈ Comps(Δ)] *)
-    edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto;
-    
-    (* To prove [σ__t0("s_tc") = 0] *)
-    eapply init_s_tc_eq_O; eauto; [
+        (* Builds [id__t' ∈ Comps(Δ)] *)
+        edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto;
+          
+          (* To prove [σ__t0("s_tc") = 0] *)
+          eapply init_s_tc_eq_O; eauto;
+            [(* 5 SUBGOALS left *)
 
-    (* 5 SUBGOALS left *)
-
-    (* Proves [NoDup compids] *)
-    eapply elab_nodup_compids; eauto
-    |
-    (* Proves [(events σ__e) = ∅] *)
-    eapply elab_empty_events; eauto
-    |
-    (* Proves [DeclaredOf Δ__t "s_tc"] *)
-    eapply @elab_Tcomp_Δ_s_tc; eauto
-    |
-    (* Proves ["s_tc" ∉ (events σ__te)] *)
-    erewrite elab_empty_events_for_comps; eauto with set
-    |
-    (* Proves [id__t = id__t'] *)
-    erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
-      eapply sitpn2hvhdl_nodup_t2tcomp; eauto ].
+              (* Proves [CsHasUniqueCompIds (behavior d) compids] *)
+              split; eauto; eapply elab_nodup_compids; eauto
+            |
+            (* Proves [(events σ__e) = ∅] *)
+            eapply elab_empty_events; eauto
+            |
+            (* Proves [DeclaredOf Δ__t "s_tc"] *)
+            eapply @elab_Tcomp_Δ_s_tc; eauto
+            |
+            (* Proves ["s_tc" ∉ (events σ__te)] *)
+            erewrite elab_empty_events_for_comps; eauto with set
+            |
+            (* Proves [id__t = id__t'] *)
+            erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
+            eapply sitpn2hvhdl_nodup_t2tcomp; eauto ].
   
   (* CASE [upper(I__s(t)) = ∞ and s0.I(t) > lower(I__s(t))] *)
   - destruct 1 as (upper_, TcGtLower_).
@@ -224,10 +224,13 @@ Proof.
      and [(t, id__t') ∈ t2tcomp γ], and rewrites [id__t'] as [id__t].  *)
   edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t)
     as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto.
-  assert (eq_id__t : id__t = id__t').
-  { erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
-      eapply sitpn2hvhdl_nodup_t2tcomp; eauto. }  
+  assert (eq_id__t : id__t = id__t') by
+      (erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto;
+       eapply sitpn2hvhdl_nodup_t2tcomp; eauto).
   rewrite <- eq_id__t in *; clear eq_id__t.
+
+  (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
+  destruct (AreCsCompIds_ex (behavior d)) as (compids, ACCI).
   
   (* Builds [Δ(id__t) = Δ__t] *)
   edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto.
@@ -254,7 +257,16 @@ Proof.
   }
   destruct aofv_ex as (aofv, MapsTo_rt).
   
-  eapply init_Tcomp_s_rtc_eq_bprod_of_rt; eauto.
+  eapply init_Tcomp_s_rtc_eq_bprod_of_rt; eauto;
+    (* 3 SUBGOALS *)
+    (* Proves [CsHasUniqueCompIds (behavior d) compids] *)
+    [split; eauto; eapply elab_nodup_compids; eauto
+    |
+    (* Proves [(events σ__e) = ∅] *)
+    eapply elab_empty_events; eauto
+    | ].
+
+  (* LAST SUBGOAL: [∏i=0 to n-1, rt(i) = false] *)
   
   (* CASE ANALYSIS: [pinputs_of_t] where [PInputsOf t pinputs_of_t]. *)
 

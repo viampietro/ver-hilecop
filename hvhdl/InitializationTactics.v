@@ -64,7 +64,7 @@ Ltac solve_vruninit_par_r :=
     (* 2 SUBCASES: [k ∈ (events σ2)] or [k ∉ (events σ2)] *)
     destruct (In_dec k (events σ2));
     [
-      (* SUBCASE [k ∈ (events σ1)] *)
+      (* SUBCASE [k ∈ (events σ2)] *)
       erw_IMDS_cstore_2 IMDS; assumption
     |
     (* SUBCASE [k ∉ (events σ2)], 

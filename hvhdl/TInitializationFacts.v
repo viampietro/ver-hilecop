@@ -53,7 +53,7 @@ Section TVRunInit.
     end.
   Qed.
   
-  Lemma vruninit_transition_s_tc_eq_O :    
+  Lemma vruninit_T_s_tc_eq_O :    
     forall Δ σ σ',
       vruninit hdstore Δ σ transition_behavior σ' ->
       ~NatSet.In s_time_counter (events σ) ->
@@ -74,8 +74,7 @@ Section TVRunInit.
     - erw_IMDS_sstore_1 <- IMDS; eauto.
       eapply vruninit_tc_ps_assign_s_tc; eauto with set.
 
-    (* CASE [s_marking ∉ (events σ'0)], 
-       then [σ("s_tc") = σ'0("s_tc")] *)
+    (* CASE [s_tc ∉ (events σ'0)], then [σ("s_tc") = σ'0("s_tc")] *)
     - erw_IMDS_sstore_m <- IMDS.
       eapply vruninit_tc_ps_no_events_s_tc; eauto.
       eapply not_in_union; eauto.
@@ -89,8 +88,7 @@ Section TVRunInit.
       vruninit hdstore Δ σ behavior σ' ->
       forall id__t gm ipm opm σ__t' compids Δ__t σ__t,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-        AreCsCompIds behavior compids -> 
-        List.NoDup compids ->
+        CsHasUniqueCompIds behavior compids ->
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
         DeclaredOf Δ__t s_time_counter ->
@@ -108,7 +106,7 @@ Section TVRunInit.
       erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__t'); eauto.
       assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
       inject_left e.
-      eapply vruninit_transition_s_tc_eq_O; eauto.
+      eapply vruninit_T_s_tc_eq_O; eauto.
       eapply mapip_not_in_events_if_not_input; eauto.
       destruct 1; unfold DeclaredOf in *; mapsto_discriminate.
 
@@ -125,22 +123,43 @@ Section TVRunInit.
          but both already had the same value. *)
       assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
       inject_left e.
-      eapply vruninit_transition_s_tc_eq_O; eauto.
+      eapply vruninit_T_s_tc_eq_O; eauto.
       eapply mapip_not_in_events_if_not_input; eauto.
       destruct 1; unfold DeclaredOf in *; mapsto_discriminate.
       erewrite <- @MapsTo_fun with (e := σ__t) (e' := σ__c); eauto.
 
     (* CASE || *)
     - inversion_clear 1;
-        destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1);
-        destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
+        destruct 1 as (ACCI, NoDup_cids);
+        destruct (AreCsCompIds_ex cstmt) as (compids1, ACCI1);
+        destruct (AreCsCompIds_ex cstmt') as (compids2, ACCI2).
       
       (* SUBCASE [comp ∈ cstmt] *)
-      + intros; eapply IHvruninit1; eauto; [ solve_nodup_compids_l | solve_vruninit_par_l ].        
+      + intros; eapply IHvruninit1; eauto;
+          [ split; eauto; solve_nodup_compids_l | solve_vruninit_par_l ].        
       (* SUBCASE [comp ∈ cstmt'] *)
-      + intros; eapply IHvruninit2; eauto; [ solve_nodup_compids_r | solve_vruninit_par_r ].
+      + intros; eapply IHvruninit2; eauto;
+          [ split; eauto; solve_nodup_compids_r | solve_vruninit_par_r ].
   Qed.
 
+  Lemma vruninit_rtc_ps_assign_s_rtc :
+    forall {Δ σ σ'},
+      vruninit hdstore Δ σ reinit_time_counter_evaluation_ps σ' ->
+      forall t n,
+        MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
+        forall aofv b,
+          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ) ->
+          BProd (get_bool_at aofv) (seq 0 n) b ->
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ').
+  Admitted.
+
+  Lemma vruninit_inv_if_input :
+    forall D__s Δ σ cstmt σ',
+      vruninit D__s Δ σ cstmt σ' ->
+      forall id, InputOf Δ id ->
+                 forall v, MapsTo id v (sigstore σ) <-> MapsTo id v (sigstore σ').
+  Admitted.
+  
   Lemma vruninit_T_s_rtc_eq_bprod_of_rt :
     forall Δ σ σ',
       vruninit hdstore Δ σ transition_behavior σ' ->
@@ -150,13 +169,37 @@ Section TVRunInit.
           MapsTo Transition.reinit_time (Varr aofv) (sigstore σ') ->
           BProd (get_bool_at aofv) (seq 0 n) b ->
           MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ').
+  Proof.
+    intros *; unfold transition_behavior.
+    rewrite vruninit_par_comm, <- vruninit_par_assoc,
+    vruninit_par_comm, <- vruninit_par_assoc, <- vruninit_par_assoc.
+    inversion_clear 1; intros; rename H3 into IMDS.
+
+    (* 2 CASES: [s_rtc ∈ events σ'0] or [s_rtc ∉ events σ'0] *)
+    destruct (In_dec s_reinit_time_counter (events σ'0)).
+    
+    (* CASE [s_rtc ∈ (events σ'0)] *)
+    - erw_IMDS_sstore_1 <- IMDS; eauto.
+      eapply vruninit_rtc_ps_assign_s_rtc; eauto with set.
+      erewrite vruninit_inv_if_input; eauto; admit.
+      
+    (* CASE [s_rtc ∉ (events σ'0)], then [σ("s_rtc") = σ'0("s_rtc")] *)
+    - (* erw_IMDS_sstore_m <- IMDS. *)
+      (* eapply vruninit_rtc_ps_no_events_s_rtc; eauto. *)
+      (* eapply not_in_union; eauto. *)
+      (* eapply vruninit_not_in_events_if_not_assigned; eauto. *)
+      (* destruct 1; unfold DeclaredOf in *; mapsto_discriminate. *)
+      (* simpl; cbv; lia. *)
+      admit.
   Admitted.
                  
   Lemma vruninit_Tcomp_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ',
       vruninit hdstore Δ σ behavior σ' ->
-      forall id__t gm ipm opm Δ__t t n,
+      forall id__t gm ipm opm compids Δ__t t n,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        CsHasUniqueCompIds behavior compids ->
+        Equal (events σ) {[]} -> 
         MapsTo id__t (Component Δ__t) Δ ->
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
         forall σ__t' aofv b,
@@ -199,15 +242,17 @@ Section TVRunInit.
       
     (* CASE || *)
     - inversion_clear 1;
-        destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1);
-        destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
+        destruct 1 as (ACCI, NoDup_);
+        destruct (AreCsCompIds_ex cstmt) as (compids1, ACCI1);
+        destruct (AreCsCompIds_ex cstmt') as (compids2, ACCI2).
       
       (* SUBCASE [comp ∈ cstmt] *)
-      + intros; eapply IHvruninit1; eauto; [ solve_nodup_compids_l | solve_vruninit_par_l ].        
+      + intros; eapply IHvruninit1; eauto;
+          [ split; eauto; solve_nodup_compids_l | solve_vruninit_par_l ].        
       (* SUBCASE [comp ∈ cstmt'] *)
-      + intros; eapply IHvruninit2; eauto; [ solve_nodup_compids_r | solve_vruninit_par_r ].
-    
-  Admitted.
+      + intros; eapply IHvruninit2; eauto;
+          [ split; eauto; solve_nodup_compids_r | solve_vruninit_par_r ].    
+  Qed.
   
 End TVRunInit.
 
@@ -220,8 +265,7 @@ Section TInit.
       init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t σ__t σ__t0,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-        AreCsCompIds behavior compids -> 
-        List.NoDup compids ->
+        CsHasUniqueCompIds behavior compids -> 
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
         DeclaredOf Δ__t s_time_counter ->
@@ -241,14 +285,17 @@ Section TInit.
     eapply stab_inv_s_tc; eauto.    
 
     (* [s_tc] takes [0] during [vruninit]. *)
-    eapply vruninit_s_tc_eq_O; eauto.    
+    eapply vruninit_s_tc_eq_O; eauto.
+    
   Qed.
 
   Lemma init_Tcomp_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       init hdstore Δ σ behavior σ0 ->
-      forall id__t gm ipm opm Δ__t t n,
+      forall id__t gm ipm opm compids Δ__t t n,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        CsHasUniqueCompIds behavior compids ->
+        Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
         forall σ__t0 aofv b,
@@ -258,7 +305,7 @@ Section TInit.
           MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
   Proof.
     inversion_clear 1.
-    intros *; do 3 intro.
+    intros *; do 5 intro.
     
     eapply stab_Tcomp_s_rtc_eq_bprod_of_rt; eauto.    
     eapply vruninit_Tcomp_s_rtc_eq_bprod_of_rt; eauto.

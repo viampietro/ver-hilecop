@@ -13,3 +13,15 @@ Ltac vseqinv_cl :=
   | [ H: vseq _ _ _ _ _ _ _ |- _] =>
     vseqinv_cl1 H
   end.
+
+Ltac vseqinv1 H :=
+  match type of H with
+  | vseq _ _ _ _ _ _ _ =>
+    inversion H
+  end.
+
+Ltac vseqinv :=
+  match goal with
+  | [ H: vseq _ _ _ _ _ _ _ |- _] =>
+    vseqinv1 H
+  end.

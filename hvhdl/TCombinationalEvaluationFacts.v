@@ -74,8 +74,7 @@ Lemma vcomb_inv_s_tc :
     vcomb hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t σ__t σ__t' v compids,
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-      AreCsCompIds behavior compids -> 
-      List.NoDup compids ->
+      CsHasUniqueCompIds behavior compids -> 
       MapsTo id__t (Component Δ__t) Δ ->
       DeclaredOf Δ__t s_time_counter ->
       MapsTo id__t σ__t (compstore σ) ->
@@ -83,13 +82,11 @@ Lemma vcomb_inv_s_tc :
       MapsTo id__t σ__t' (compstore σ') ->
       MapsTo s_time_counter v (sigstore σ__t').
 Proof.
-  induction 1; inversion 1; intros.
+  induction 1; try (solve [inversion 1]).
 
   (* CASE component with events. *)
-  - subst; subst_transition_design.
-    match goal with
-    | [ H: MapsTo _ _ (compstore (cstore_add _ _ _)) |- _ ] => simpl in H
-    end.
+  - inversion 1.
+    cbn; subst; subst_transition_design.
     erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__t'); eauto.
     erewrite @MapsTo_fun with (x := compid) (e := σ__t) (e' := σ__c) in *; eauto.
     assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
@@ -100,16 +97,16 @@ Proof.
     mapsto_discriminate.
     
   (* CASE component with no events. *)
-  - erewrite @MapsTo_fun with (e := σ__t') (e' := σ__t); eauto.
+  - inversion 1.
+    intros; erewrite @MapsTo_fun with (e := σ__t') (e' := σ__t); eauto.
     eapply mapop_inv_compstore; eauto.
 
-  (* CASE in left of || *)
-  - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
-    destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
-    eapply IHvcomb1; eauto; [ solve_nodup_compids_l | solve_vcomb_par_l ].
-      
-  (* CASE in right of || *)
-  - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).
-    destruct (AreCsCompIds_ex cstmt') as (compids2, HAreCsCompIds2).
-    eapply IHvcomb2; eauto; [ solve_nodup_compids_r | solve_vcomb_par_r ].
+  (* CASE || *)
+  - inversion_clear 1;
+      destruct 1 as (ACCI, NoDup_);
+      destruct (AreCsCompIds_ex cstmt) as (compids1, ACCI1);
+      destruct (AreCsCompIds_ex cstmt') as (compids2, ACCI2);
+      intros.
+    eapply IHvcomb1; eauto; [ split; eauto; solve_nodup_compids_l | solve_vcomb_par_l ].
+    eapply IHvcomb2; eauto; [ split; eauto; solve_nodup_compids_r | solve_vcomb_par_r ].
 Qed.

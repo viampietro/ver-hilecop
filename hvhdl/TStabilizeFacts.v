@@ -18,8 +18,7 @@ Lemma stab_inv_s_tc :
     stabilize hdstore Δ σ behavior θ σ' ->
     forall id__t gm ipm opm Δ__t σ__t σ__t' v compids,
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-      AreCsCompIds behavior compids -> 
-      List.NoDup compids ->
+      CsHasUniqueCompIds behavior compids -> 
       MapsTo id__t (Component Δ__t) Δ ->
       DeclaredOf Δ__t s_time_counter ->
       MapsTo id__t σ__t (compstore σ) ->

@@ -19,6 +19,8 @@ Require Import hvhdl.PortMapEvaluationFacts.
 Require Import hvhdl.InitializationFacts.
 Require Import hvhdl.PStabilizeFacts.
 Require Import hvhdl.InitializationTactics.
+Require Import hvhdl.SSEvaluationTactics.
+Require Import hvhdl.ExpressionEvaluationTactics.
 
 (** ** Facts about [vruninit] and Place Design *)
 
@@ -32,19 +34,10 @@ Section PVRunInit.
       MapsTo s_marking (Vnat n) (sigstore σ').
   Proof.
     inversion_clear 1; intros.
-    match goal with
-    | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
-      inversion_clear H; [contradiction | ]
-    end.
-    match goal with
-    | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
-      inversion H; subst; simpl
-    end.
+    vseqinv_cl; [contradiction | ].
+    vseqinv; subst; simpl.
     (* CASE event on s_marking *)
-    match goal with
-    | [ H: vexpr _ _ _ _ _ _ |- _ ] =>
-      inversion_clear H
-    end.
+    vexprinv_cl.
     match goal with
     | [ H: OVEq _ _ _ |- _ ] =>
       erewrite MapsTo_fun with (e := newv) (e' := Vnat n); eauto;
@@ -60,10 +53,7 @@ Section PVRunInit.
     | [ H: InputOf _ _ |- _ ] => destruct H; mapsto_discriminate
     end.
     (* CASE no event on [s_marking] *)
-    match goal with
-    | [ H: vexpr _ _ _ _ _ _ |- _ ] =>
-      inversion_clear H
-    end.
+    vexprinv_cl.
     match goal with
     | [ H: OVEq _ _ _ |- _ ] =>
       erewrite MapsTo_fun with (e := newv) (e' := Vnat n) in H; eauto;
@@ -89,14 +79,8 @@ Section PVRunInit.
       MapsTo s_marking (Vnat n) (sigstore σ).
   Proof.
     inversion_clear 1; intros.
-    match goal with
-    | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
-      inversion_clear H; [contradiction |]
-    end.
-    match goal with
-    | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
-      inversion H; subst; simpl
-    end; [
+    vseqinv_cl; [contradiction |].
+    vseqinv; subst; simpl; [
       match goal with
       | [ H: ~NatSet.In _ _ |- _ ] =>
         elimtype False; apply H; simpl; auto with set
@@ -123,7 +107,7 @@ Section PVRunInit.
     end.
   Qed.
   
-  Lemma vruninit_place_s_marking_eq_nat :    
+  Lemma vruninit_P_s_marking_eq_nat :    
     forall Δ σ σ' n m,
       vruninit hdstore Δ σ place_behavior σ' ->
       ~NatSet.In s_marking (events σ) ->
@@ -181,7 +165,7 @@ Section PVRunInit.
       erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__p'); eauto.
       assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
       inject_left e.
-      eapply vruninit_place_s_marking_eq_nat; eauto.
+      eapply vruninit_P_s_marking_eq_nat; eauto.
       eapply mapip_not_in_events_if_not_input; eauto.
       destruct 1; mapsto_discriminate.
       edestruct @mapip_eval_simpl_associp with (Δ := Δ) as (v, (vexpr_v, MapsTo_σ__c'));
@@ -200,7 +184,7 @@ Section PVRunInit.
          but both already had the same value. *)
       assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
       inject_left e.
-      eapply vruninit_place_s_marking_eq_nat; eauto.
+      eapply vruninit_P_s_marking_eq_nat; eauto.
       eapply mapip_not_in_events_if_not_input; eauto.
       destruct 1; mapsto_discriminate.
       erewrite <- @MapsTo_fun with (e := σ__p) (e' := σ__c); eauto.
