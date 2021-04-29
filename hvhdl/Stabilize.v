@@ -26,6 +26,7 @@ Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavio
 | StabilizeEnd :
     (* * Side conditions * *)
     events σ = NatSet.empty ->
+    vcomb D__s Δ σ behavior σ ->
     
     (* * Conclusion * *)
     stabilize D__s Δ σ behavior [] σ 

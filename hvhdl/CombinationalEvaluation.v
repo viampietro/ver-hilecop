@@ -14,34 +14,19 @@ Require Import hvhdl.PortMapEvaluation.
 Require Import hvhdl.HVhdlTypes.
 
 (** Defines the relation that evaluates combinational
-    concurrent statements.
- *)
+    concurrent statements. *)
 
 Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DState -> Prop :=
 
-(** Evaluates a stable process (no event are related to signals of the
-    process sensitivity list). *)
+(** Evaluates a process. *)
 
-| VCombStablePs :
-    forall pid sl vars stmt,
-      
-      (* * Side conditions * *)
-      NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E = ∅ *)
-      
-      (* * Conclusion * *)
-      vcomb D__s Δ σ (cs_ps pid sl vars stmt) (NoEvDState σ)
-            
-(** Evaluates an unstable process (signals of the process sensitivity
-    list generated events). Then, the process body is evaluated. *)
-
-| VCombUnstablePs :
+| VCombPs :
     forall pid sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
       vseq Δ (NoEvDState σ) Λ stab stmt σ' Λ' ->
       
       (* * Side conditions * *)
-      ~NatSet.Equal (NatSet.inter sl (events σ)) NatSet.empty -> (* sl ∩ E ≠ ∅ *)
       NatMap.MapsTo pid (Process Λ) Δ ->         (* pid ∈ Δ and Δ(pid) = Λ *)
       
       (* * Conclusion * *)

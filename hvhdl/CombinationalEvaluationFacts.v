@@ -272,10 +272,7 @@ Lemma vcomb_maps_sstore :
       exists v', MapsTo id v' (sigstore σ').
 Proof.
   induction 1.
-  
-  (* CASE idle process *)
-  - intros; exists v; assumption.
-    
+      
   (* CASE active process *)
   - eapply @vseq_maps_sstore with (σ := NoEvDState σ); eauto.
     
@@ -304,9 +301,6 @@ Lemma vcomb_compid_in_events_comp_in_cs :
         InCs (cs_comp id__c id__e gm ipm opm) cstmt.
 Proof.
   induction 1.
-
-  (* CASE idle process *)
-  - cbn; inversion 2.
 
   (* CASE active process *)
   - intros id__c CompOf_; intros; exfalso.
