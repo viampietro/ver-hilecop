@@ -22,6 +22,7 @@
 ./sitpn2hvhdl/Sitpn2HVhdlTypes.v
 ./soundness/FallingEdge.v
 ./soundness/RisingEdge.v
+./soundness/Fired.v
 ./soundness/SoundnessDefs.v
 ./soundness/Soundness.v
 ./soundness/InitialStates.v

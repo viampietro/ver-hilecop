@@ -17,45 +17,18 @@ Require Import hvhdl.WellDefinedDesign.
 
 Require Import hvhdl.CombinationalEvaluationFacts.
 
-Lemma is_last_of_trace :
-  forall D__s Δ σ behavior θ σ',
-    stabilize D__s Δ σ behavior θ σ' ->
-    (Last θ σ' \/ σ = σ').
-Proof.
-  induction 1.
-
-  (* BASE CASE. *)
-  - right; reflexivity. 
-
-  (* IND. CASE. *)
-  - destruct θ.
-    + lazymatch goal with
-      | [ H: stabilize _ _ _ _ [] _ |- _ ] =>
-        inversion H; left; apply Last_singleton
-      end.
-    + inversion_clear IHstabilize as [Hlast | Heq].
-      -- left; apply Last_cons; assumption.
-      -- rewrite Heq in H0; inversion H0; contradiction.
-Qed.
 
 Lemma last_no_event :
-  forall D__s Δ σ behavior θ σ',
-    stabilize D__s Δ σ behavior θ σ' ->
-    Last θ σ' ->
+  forall D__s Δ σ behavior σ',
+    stabilize D__s Δ σ behavior σ' ->
     events σ' = {[]}.
 Proof.
-  induction 1.
-  - inversion 1.
-  - intros Hlast.
-    destruct θ.
-    assumption.
-    assert (Hconsl : d :: θ <> nil) by inversion 1.
-    apply (IHstabilize (last_cons_inv Hconsl Hlast)).
+  induction 1; assumption.
 Qed.
 
 Lemma stab_maps_compstore_id :
-  forall {D__s Δ σ behavior θ σ'},
-    stabilize D__s Δ σ behavior θ σ' ->
+  forall {D__s Δ σ behavior σ'},
+    stabilize D__s Δ σ behavior σ' ->
     forall {id__c σ__c},
     MapsTo id__c σ__c (compstore σ) ->
     exists σ__c', MapsTo id__c σ__c' (compstore σ').
@@ -66,8 +39,8 @@ Proof.
 Qed.
 
 Lemma stab_maps_sstore_of_comp :
-  forall {D__s Δ σ behavior θ σ'},
-    stabilize D__s Δ σ behavior θ σ' ->
+  forall {D__s Δ σ behavior σ'},
+    stabilize D__s Δ σ behavior σ' ->
     forall {id__c id__e gm ipm opm σ__c σ'__c id v},
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
       MapsTo id__c σ__c (compstore σ) ->
@@ -88,8 +61,8 @@ Proof.
 Qed.
 
 Lemma stab_inv_well_typed_values_in_sstore_of_comp :
-  forall {D__s Δ σ behavior θ σ'},
-    stabilize D__s Δ σ behavior θ σ' ->
+  forall {D__s Δ σ behavior σ'},
+    stabilize D__s Δ σ behavior σ' ->
     (forall {id__c Δ__c σ__c},
         MapsTo id__c (Component Δ__c) Δ ->
         MapsTo id__c σ__c (compstore σ) ->

@@ -51,14 +51,14 @@ Inductive simcycle
 (** Defines one simulation cycle *)
   
 | SimCycle :
-    forall σ__injr σ__r σ' σ__injf σ__f θ θ',
+    forall σ__injr σ__r σ' σ__injf σ__f,
       
       (* * Premises * *)
       
       vrising D__s Δ σ__injr behavior σ__r ->
-      stabilize D__s Δ σ__r behavior θ σ' ->
+      stabilize D__s Δ σ__r behavior σ' ->
       vfalling D__s Δ σ__injf behavior σ__f ->
-      stabilize D__s Δ σ__f behavior θ' σ'' ->
+      stabilize D__s Δ σ__f behavior σ'' ->
 
       (* * Side conditions * *)
 

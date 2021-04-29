@@ -154,7 +154,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
 Inductive init (D__s : IdMap design) (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
-    forall σ behavior σ' σ'' θ,
+    forall σ behavior σ' σ'',
 
       (* * Premises * *)
 
@@ -162,7 +162,7 @@ Inductive init (D__s : IdMap design) (Δ : ElDesign) : DState -> cs -> DState ->
       vruninit D__s Δ σ behavior σ' ->
 
       (* Stabilization phase.  *)
-      stabilize D__s Δ σ' behavior θ σ'' ->
+      stabilize D__s Δ σ' behavior σ'' ->
       
       (* * Conclusion * *)
       init D__s Δ σ behavior σ''.

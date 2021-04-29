@@ -20,7 +20,7 @@ Require Import soundness.SoundnessDefs.
 (** ** Rising Edge Lemma *)
 
 Lemma rising_edge :
-  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__injr σ__r σ' θ,
+  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__injr σ__r σ',
 
     (* sitpn translates into (d, γ). *)
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
@@ -40,7 +40,7 @@ Lemma rising_edge :
     (* From σ to σ' after ↑. *)
     IsInjectedDState σ (E__p τ re) σ__injr ->
     vrising hdstore Δ σ__injr (behavior d) σ__r ->
-    stabilize hdstore Δ σ__r (behavior d) θ σ' ->
+    stabilize hdstore Δ σ__r (behavior d) σ' ->
 
     (* States s' and σ' are similar (post rising edge). *)
     SimStateAfterRE sitpn γ s' σ'.

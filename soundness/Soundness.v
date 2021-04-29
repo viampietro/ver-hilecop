@@ -110,7 +110,7 @@ Proof.
   
   inversion_clear Hsitpncyc as (s' & (Hrising, Hfalling)).
   inversion_clear Hhcyc as
-      (σ__injr, σ__r, σ', σ__injf, σ__f, θ, θ',
+      (σ__injr, σ__r, σ', σ__injf, σ__f,
        Hh_rising, Hstab_rising, Hh_falling, Hstab_falling, Hinj_rising, Hinj_falling).
   (* Applies [rising_edge], then [falling_edge] lemmas. *)
   eauto.

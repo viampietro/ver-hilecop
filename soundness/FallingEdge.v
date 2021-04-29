@@ -20,7 +20,7 @@ Require Import soundness.SoundnessDefs.
 (** ** Falling Edge Lemma *)
 
 Lemma falling_edge :
-  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__injf σ__f σ' θ,
+  forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__injf σ__f σ',
 
     (* sitpn translates into (d, γ). *)
     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
@@ -40,7 +40,7 @@ Lemma falling_edge :
     (* From σ to σ' after ↓. *)
     IsInjectedDState σ (E__p τ fe) σ__injf ->
     vfalling hdstore Δ σ__injf (behavior d) σ__f ->
-    stabilize hdstore Δ σ__f (behavior d) θ σ' ->
+    stabilize hdstore Δ σ__f (behavior d) σ' ->
 
     (* States s' and σ' are similar (post falling edge). *)
     SimStateAfterFE sitpn γ s' σ'.

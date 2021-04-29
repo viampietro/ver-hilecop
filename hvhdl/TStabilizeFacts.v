@@ -14,8 +14,8 @@ Require Import hvhdl.TCombinationalEvaluationFacts.
       invariant during stabilization. *)
 
 Lemma stab_inv_s_tc :
-  forall Δ σ behavior θ σ',
-    stabilize hdstore Δ σ behavior θ σ' ->
+  forall Δ σ behavior σ',
+    stabilize hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t σ__t σ__t' v compids,
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
       CsHasUniqueCompIds behavior compids -> 
@@ -38,8 +38,8 @@ Proof.
 Qed.
 
 Lemma stab_Tcomp_s_rtc_eq_bprod_of_rt :
-  forall Δ σ behavior θ σ',
-    stabilize hdstore Δ σ behavior θ σ' ->
+  forall Δ σ behavior σ',
+    stabilize hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t t n,
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
       MapsTo id__t (Component Δ__t) Δ ->

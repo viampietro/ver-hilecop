@@ -18,7 +18,7 @@ Require Import hvhdl.HVhdlTypes.
 
 (** Defines the stabilization relation. *)
 
-Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavior : cs) : list DState -> DState -> Prop :=
+Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavior : cs) : DState -> Prop :=
 
 (** Case when the design state [σ] registered no event; it has
     stabilized.  The stabilization trace is empty (4th argument). *)
@@ -29,7 +29,7 @@ Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavio
     vcomb D__s Δ σ behavior σ ->
     
     (* * Conclusion * *)
-    stabilize D__s Δ σ behavior [] σ 
+    stabilize D__s Δ σ behavior σ 
   
 (** Case when the design state [σ] registered some events;
     therefore it has not stabilized.
@@ -38,11 +38,11 @@ Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavio
     newly generated state has stabilized. *)
 
 | StabilizeLoop :
-    forall σ' σ'' θ,
+    forall σ' σ'',
       
       (* * Premises * *)
       vcomb D__s Δ σ behavior σ' ->
-      stabilize D__s Δ σ' behavior θ σ'' ->
+      stabilize D__s Δ σ' behavior σ'' ->
 
       (* * Side conditions * *)
       
@@ -53,5 +53,5 @@ Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavio
       events σ'' = NatSet.empty ->
       
       (* * Conclusion * *)
-      stabilize D__s Δ σ behavior (σ' :: θ) σ''.
+      stabilize D__s Δ σ behavior σ''.
 
