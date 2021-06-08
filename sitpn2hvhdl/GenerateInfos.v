@@ -209,13 +209,19 @@ Section GenSitpnInfos.
         if res then Ret false else Ret true.
 
       (* Returns [true] if all conflicts in the conflict group [cg]
-         are solved by means of mutual exclusion. Returns [false]
+         are solved by means of mutual exclusion, or if the conflict
+         group is empty and has only one element. Returns [false]
          otherwise.  *)
       
       Fixpoint all_conflicts_solved_by_mutex (cg : list (T sitpn)) {struct cg} : CompileTimeState bool :=
         match cg with
         | nil => Ret true
+        | [t] => Ret true
         | t :: tl =>
+          (* If all conflicts of [t] are solved, then we can safely
+             withdraw it from the conflict group. Indeed, it means
+             that all the transitions of the tail are not in conflict
+             with [t]. Therefore, [t] is not needed anymore. *)
           do b <- all_conflicts_of_t_solved t tl;
           if b then all_conflicts_solved_by_mutex tl else Ret false
         end.
@@ -313,7 +319,7 @@ Section GenSitpnInfos.
       
       do b <- all_conflicts_solved_by_mutex tc;
       if b then
-        set_pinfo (p, MkPlaceInfo _ tin tc tout)
+        set_pinfo (p, MkPlaceInfo _ tin [] (tc ++ tout))
       else
         do stc <- sort_by_priority tc;
         set_pinfo (p, MkPlaceInfo _ tin stc tout).

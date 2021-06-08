@@ -51,13 +51,13 @@ Inductive ElectFired sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) :
 | ElectFired_cons :
     forall tp t msub fired',
       Firable s t ->
-      MarkingSubPreSum (fun t' => InA Teq t' fired) (M s) msub ->
+      MarkingSubPreSum (fun t' => t' >~ t /\ InA Teq t' fired) (M s) msub ->
       Sens msub t ->
       ElectFired s (fired ++ [t]) tp fired' ->
       ElectFired s fired (t :: tp) fired'
 | ElectFired_not_fired :
     forall tp t msub fired',
-      MarkingSubPreSum (fun t' => InA Teq t' fired) (M s) msub ->
+      MarkingSubPreSum (fun t' => t' >~ t /\ InA Teq t' fired) (M s) msub ->
       ~(Firable s t /\ Sens msub t) ->
       ElectFired s fired tp fired' ->
       ElectFired s fired (t :: tp) fired'.

@@ -288,15 +288,15 @@ Section GenArch.
       Ret (gmap, ipmap, setv Nat.eq_dec opid actual opmap).
     
     (** (1) Connects the "fired" output port of the component
-      representing transition [t] to another composite port via the
-      list of expressions [lofexprs].
+        representing transition [t] to another composite port via the
+        list of expressions [lofexprs].
       
-      (2) Adds the newly generated interconnection signal to the list
-      of architecture's declarations, if such a signal has been
-      created.
+        (2) Adds the newly generated interconnection signal to the list
+        of architecture's declarations, if such a signal has been
+        created.
 
-      (3) Returns the new architecture, the next available identifier,
-      and the new list of expressions. *)
+        (3) Returns the new architecture, the next available identifier,
+        and the new list of expressions. *)
     
     Definition connect_fired_port (lofexprs : list expr) (t : T sitpn) :
       CompileTimeState (list expr) :=
@@ -461,8 +461,9 @@ Section GenArch.
       Ret (compx', compy').
       
     (** Connects the output port map of component [pcomp] to the input
-      port map of the component associated to transition [t] in the
-      architecture [arch] (more precisely, in the [arch]'s TransMap). *)
+        port map of the component associated to transition [t] in the
+        architecture [arch] (more precisely, in the [arch]'s
+        TransMap). *)
 
     Definition connect_popmap_to_tipmap
                (pcomp : HComponent)
@@ -494,7 +495,7 @@ Section GenArch.
              connect_popmap_to_tipmap pcomp t)
       in
       (* Calls connect_popmap_to_tipmap on every output transitions of
-       p.  *)
+         p. *)
       ListMonad.fold_left wconn_pop_to_tip (toutputs pinfo) pcomp.
 
     (** Retrieves the component [pcomp] associated to place [p] in the

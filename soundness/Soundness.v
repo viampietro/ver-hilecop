@@ -198,7 +198,7 @@ Theorem sitpn2vhdl_sound1 :
     
     (* ** Conclusion: traces are positionally similar. ** *)
     SimTrace γ θ__s θ__σ.
-Proof.
+Proof.  
   (* Case analysis on τ *)
   destruct τ;
     intros *;
