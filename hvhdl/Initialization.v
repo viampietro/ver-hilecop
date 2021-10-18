@@ -37,18 +37,18 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     sensitivity list. *)
 
 | VRunInitPs :
-    forall pid sl vars stmt Λ σ' Λ',
+    forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ Λ initl stmt σ' Λ' ->
+      vseq Δ σ σ Λ initl stmt σ' Λ' ->
       
       (* * Side conditions * *)
       
       (* Process id maps to the local environment Λ in elaborated design Δ *)
-      NatMap.MapsTo pid (Process Λ) Δ ->
+      NatMap.MapsTo id__p (Process Λ) Δ ->
       
       (* * Conclusion * *)
-      vruninit D__s Δ σ (cs_ps pid sl vars stmt) σ'
+      vruninit D__s Δ σ (cs_ps id__p sl vars stmt) σ'
 
 (** Evaluates a component instance; the new state of the component
     instance, resulting of the interpretation of its behavior,
@@ -154,7 +154,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
 Inductive init (D__s : IdMap design) (Δ : ElDesign) : DState -> cs -> DState -> Prop :=
 
 | Init :
-    forall σ behavior σ' σ'',
+    forall σ behavior σ' σ0,
 
       (* * Premises * *)
 
@@ -162,9 +162,9 @@ Inductive init (D__s : IdMap design) (Δ : ElDesign) : DState -> cs -> DState ->
       vruninit D__s Δ σ behavior σ' ->
 
       (* Stabilization phase.  *)
-      stabilize D__s Δ σ' behavior σ'' ->
+      stabilize D__s Δ σ' behavior σ0 ->
       
       (* * Conclusion * *)
-      init D__s Δ σ behavior σ''.
+      init D__s Δ σ behavior σ0.
 
 Hint Constructors vruninit : hvhdl.

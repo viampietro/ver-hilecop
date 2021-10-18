@@ -1,5 +1,35 @@
 #!/bin/bash
 
+usage()
+{
+cat << EOF
+usage: ./gen_coqp [-h|--help] [-wp|--without-proof]
+-wp | --without-proof  Do not include files related to the proof
+-h | --help            Display this message
+EOF
+}
+
+PROOF_FILES_PATTERN=""
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -wp | --without-proof )
+            shift
+	    PROOF_FILES_PATTERN=".+\(Invs.v\|Facts.v\)$"
+            ;;
+        -h | --help )
+	    usage
+	    exit
+	    ;;
+	
+        * )
+	    usage
+	    exit
+	    ;;
+    esac
+    shift
+done
+
 if [ -e _CoqProject ]; then
     echo "Saving old _CoqProject file to _CoqProject.copy"
     mv _CoqProject _CoqProject.copy
@@ -12,4 +42,8 @@ echo "-R common/ hilecop.common
 -R soundness/ hilecop.soundness
 -R test/ hilecop.test" > _CoqProject
 
-find -name *.v ! -path "./*/\.*" ! -path "./common/DFMapWeakList.v" >> _CoqProject
+find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" ! -regex ".*/\..+" ! -regex "./common/DFMapWeakList.v" >> _CoqProject
+
+# find -name *.v ! -path "./*/\.*" ! -path "./common/DFMapWeakList.v" ! -path "$PROOF_FILES_PATTERN" >> _CoqProject
+
+

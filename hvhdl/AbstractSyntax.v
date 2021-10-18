@@ -210,9 +210,9 @@ Inductive cs : Type :=
 (** Component instantiation statement. *)
 | cs_comp (compid : ident) (** Component id *)
           (entid : ident)  (** Entity label *)
-          (gmap : genmap)  (** Generic map *)
-          (ipmap : inputmap)  (** In port map *)
-          (opmap : outputmap) (** Out port map *)
+          (g : genmap)  (** Generic map *)
+          (i : inputmap)  (** In port map *)
+          (o : outputmap) (** Out port map *)
 
 (** Composition of concurrent statements. *)
 | cs_par (cstmt : cs) (cstmt' : cs)

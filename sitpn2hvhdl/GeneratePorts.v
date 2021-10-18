@@ -154,12 +154,12 @@ Section GeneratePortsAndPs.
       add_to_stmts id lofexprs rst_and_falling_ss.
     
     (** (1) Generates the list of port declarations corresponding to the
-      creation of output ports for each action of [sitpn].
+            creation of output ports for each action of [sitpn].
       
-      (2) Builds the action activation process.
+        (2) Builds the "action" process.
 
-      (3) Returns the architecture, the action ports and ps, and the
-      next available id.  *)
+        (3) Returns the architecture, the action ports and ps, and the
+           next available id.  *)
 
     Definition generate_action_ports_and_ps : CompileTimeState unit :=
       (* If there are no action in sitpn, then no need for the action

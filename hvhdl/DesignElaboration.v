@@ -135,24 +135,24 @@ with ebeh (D__s : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState
 
 (** Elaborates and type-checks a component instantiation statement. *)
 | EBehComp :
-    forall Δ σ id__c id__e gmap ipmap opmap
-           M__g Δ__c σ__c formals actuals cdesign,
+    forall Δ σ id__c id__e g i o M__g Δ__c σ__c cdesign,
 
       (* Premises *)
-      emapg (NatMap.empty value) gmap M__g ->
+      emapg (NatMap.empty value) g M__g ->
       edesign D__s M__g cdesign Δ__c σ__c ->
-      validipm Δ Δ__c σ ipmap formals ->
-      validopm Δ Δ__c opmap formals actuals ->
+      validipm Δ Δ__c σ i ->
+      validopm Δ Δ__c o ->
       
       (* Side conditions *)
       ~NatMap.In id__c Δ ->
       ~NatMap.In id__c (compstore σ) ->
+      ~NatMap.In id__c (sigstore σ) ->
       MapsTo id__e cdesign D__s ->
-      (forall g, NatMap.In g M__g -> exists t v, MapsTo g (Generic t v) Δ__c) ->
+      (forall id__g, NatMap.In id__g M__g -> exists t v, MapsTo id__g (Generic t v) Δ__c) ->
       
       (* Conclusion *)
       ebeh D__s Δ σ
-           (cs_comp id__c id__e gmap ipmap opmap)
+           (cs_comp id__c id__e g i o)
            (NatMap.add id__c (Component Δ__c) Δ)
            (cstore_add id__c σ__c σ)
            

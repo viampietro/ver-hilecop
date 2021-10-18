@@ -89,7 +89,7 @@ Definition LEnv := IdMap (type * value).
 
 Definition EmptyLEnv := NatMap.empty (type * value).
 
-(* Needed because [SemanticalObject] as a recurvise definition that
+(* Needed because [SemanticObject] as a recurvise definition that
    does not respect the strict positivity requirement.
    
    However, I am almost sure that it is not dangerous to do so. *)
@@ -101,22 +101,22 @@ Local Unset Positivity Checking.
 (** Type of semantical objects that populate the design
     environment. *)
 
-Inductive SemanticalObject : Type :=
+Inductive SemanticObject : Type :=
 | Generic (t : type) (v : value)
 | Input (t : type)
 | Output (t : type)
 | Declared (t : type)
 | Process (lenv : LEnv)
-| Component (Δ__c : IdMap SemanticalObject).
+| Component (Δ__c : IdMap SemanticObject).
 
 (** Macro definition for the design environment type. 
-    Mapping from identifiers to [SemanticalObject]. *)
+    Mapping from identifiers to [SemanticObject]. *)
 
-Definition ElDesign := IdMap SemanticalObject.
+Definition ElDesign := IdMap SemanticObject.
 
 (** Defines an empty design environment. *)
 
-Definition EmptyElDesign := NatMap.empty SemanticalObject.
+Definition EmptyElDesign := NatMap.empty SemanticObject.
 
 (** *** Identifiers Qualification *)
 
@@ -257,14 +257,12 @@ Definition IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
   
   NatSet.Equal (events σ__m) ((events σ') U (events σ'')).
 
-(** Defines the relation stating that a design state [σ__inj] is the
+(** Defines the relation stating that a design state [σ__i] is the
     result of the "injection" of the values of map [m] in the
-    [sigstore] and the [events] fields of design state [σ__o]. *)
+    [sigstore] of design state [σ__o]. *)
 
-Definition IsInjectedDState (σ__o : DState) (m : IdMap value) (σ__inj : DState) : Prop :=
-  IsOverrUnion (sigstore σ__o) m (sigstore σ__inj) /\
-  forall idset, IsDiffInter (sigstore σ__o) m idset ->
-                NatSet.Equal (events σ__inj) ((events σ__o) U idset).
+Definition IsInjectedDState (σ__o : DState) (m : IdMap value) (σ__i : DState) : Prop :=
+  IsOverrUnion (sigstore σ__o) m (sigstore σ__i).
 
 (** ** Equivalence Relations between Elaborated Designs *)
 
