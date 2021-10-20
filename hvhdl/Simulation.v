@@ -28,7 +28,10 @@ Require Import hvhdl.HilecopDesignStore.
     context of an elaborated design [Δ], starting from a design state
     [σ] at the beginning of the cycle.  A simulation cycle executes
     the [behavior] of a design, with respect to the different phases
-    that happen during a cycle, and generates a new design state [σ'].
+    that happen during a cycle, and generates an intermediate design
+    state [σ'] (i.e. the stable state after the rising edge of the
+    clock), and a final state [σ''] (i.e. the stable state after the
+    falling edge of the clock).
 
     - [D__s] is the global design store.
 
@@ -45,12 +48,12 @@ Inductive simcycle
           (τ : nat)
           (σ : DState)
           (behavior : cs)
-          (σ'' : DState) : Prop :=
+          (σ' σ'' : DState) : Prop :=
 
 (** Defines one simulation cycle *)
   
 | SimCycle :
-    forall σ__i σ__r σ' σ__f,
+    forall σ__i σ__r σ__f,
       
       (* * Premises * *)
       
@@ -69,7 +72,7 @@ Inductive simcycle
       IsInjectedDState σ (E__p τ) σ__i ->
       
       (* * Conclusion * *)
-      simcycle D__s E__p Δ τ σ behavior σ''.
+      simcycle D__s E__p Δ τ σ behavior σ' σ''.
 
 (** Defines the simulation loop relation, that relates the design
     state through simulation cycles, until the time counter reaches
@@ -90,15 +93,15 @@ Inductive simloop
     the end cycle to the simulation trace. *)
   
 | SimLoop :
-    forall τ σ' θ,
+    forall τ σ' σ'' θ,
 
       (* * Premises * *)
-      simcycle D__s E__p Δ (S τ) σ behavior σ' ->
+      simcycle D__s E__p Δ (S τ) σ behavior σ' σ'' ->
       
-      simloop D__s E__p Δ σ' behavior τ θ ->
+      simloop D__s E__p Δ σ'' behavior τ θ ->
             
       (* * Conclusion * *)
-      simloop D__s E__p Δ σ behavior (S τ) (σ' :: θ)
+      simloop D__s E__p Δ σ behavior (S τ) (σ' :: σ'' :: θ)
 
 (** Stops if time counter is zero and produce an empty loop trace. *)
               
@@ -111,24 +114,23 @@ Hint Constructors simloop : hvhdl.
     state) relation that establish a link between a H-VHDL design and
     its simulation trace .
 
-    - [D__s], the design store that maps design identifiers (i.e,
-      the identifier of the entity part of the design) to their
+    - [D__s], the design store that maps design identifiers (i.e, the
+      identifier of the entity part of the design) to their
       description in abstract syntax.
 
     - [Mg], the dimensioning (partial) function that yields the values
       attached to the generic constant of the design.
 
     - [E__p], the input port environment function that yields the values
-      for the input ports of the design at a certain time and clock
-      event during the simulation.
+      for the input ports of the design at a certain time (i.e. clock
+      count) during the simulation.
 
     - [τ], the number of simulation cycles to be performed after the
       initialization.
 
-    - [d], the design that will elaborated and simulated.  
+    - [d], the design that will elaborated and simulated.
 
-    - [Δ], a given elaborated version of design [d].
- *)
+    - [Δ], a given elaborated version of design [d].  *)
 
 Inductive fullsim
           (D__s : IdMap design)

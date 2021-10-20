@@ -102,21 +102,15 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
 
 (** ** SITPN Execution Relations *)
 
-(** Defines the SITPN Cycle Relation. 
-    Relates two SitpnState over one cycle of execution.
- *)
-
-Definition SitpnCycle sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s'' : SitpnState sitpn) :=
-  exists s', SitpnStateTransition E τ s s' re /\ SitpnStateTransition E τ s' s'' fe.
-
 (** Defines the SITPN Execution Relation. *)
 
 Inductive SitpnExecute sitpn (E : nat -> C sitpn -> bool) (s : SitpnState sitpn) : nat -> list (SitpnState sitpn) -> Prop :=
 | SitpnExecute_end : SitpnExecute E s 0 []
-| SitpnExecute_loop: forall τ θ s',
-    SitpnCycle E (S τ) s s' ->
-    SitpnExecute E s' τ θ ->
-    SitpnExecute E s (S τ) (s' :: θ).
+| SitpnExecute_loop: forall τ θ s' s'',
+    SitpnStateTransition E (S τ) s s' re ->
+    SitpnStateTransition E (S τ) s' s'' fe ->
+    SitpnExecute E s'' τ θ ->
+    SitpnExecute E s (S τ) (s' :: s'' :: θ).
 
 (** Defines the initial state of an SITPN. *)
 
@@ -144,6 +138,6 @@ Inductive SitpnFullExec
       SitpnExecute E s τ θ ->
 
       (* Conclusion *)
-      @SitpnFullExec sitpn E (S τ) ((s0 sitpn) :: s :: θ).
+      @SitpnFullExec sitpn E (S τ) ((s0 sitpn) :: (s0 sitpn) :: s :: θ).
 
 
