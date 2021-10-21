@@ -150,9 +150,9 @@ Section GenArch.
     (** Builds a PlaceMap out the list of places of [sitpn], and
         sets it in the architecture of the compile-time state. *)
 
-    Definition generate_place_map (max_marking : nat) : CompileTimeState unit :=
+    Definition generate_place_map (b : P sitpn -> nat) : CompileTimeState unit :=
       do Plist <- get_lofPs;
-      do plmap <- ListMonad.map (fun p => generate_place_map_entry p max_marking) Plist;
+      do plmap <- ListMonad.map (fun p => generate_place_map_entry p (b p)) Plist;
       do a <- get_arch;
       (* Sets the architecture with a new [PlaceMap] *)
       set_arch (MkArch sitpn (sigs a) plmap (trmap a) (fmap a) (amap a)).
@@ -535,11 +535,11 @@ Section GenArch.
     (** Generates an Architecture structure based on the information
         and the structure of [sitpn]. *)
 
-    Definition generate_architecture (max_marking : nat) :
+    Definition generate_architecture (b : P sitpn -> nat) :
       CompileTimeState unit :=
       (* Generates the PlaceMap that maps places to intermediary Place
          components. *)
-      do _ <- generate_place_map max_marking;
+      do _ <- generate_place_map b;
       (* Generates the TransMap that maps transitions to intermediary
          Transition components. *)
       do _ <- generate_trans_map;

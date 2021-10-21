@@ -140,4 +140,9 @@ Inductive SitpnFullExec
       (* Conclusion *)
       @SitpnFullExec sitpn E (S τ) ((s0 sitpn) :: (s0 sitpn) :: s :: θ).
 
+(** Bounded SITPN through a maximal marking function. *)
 
+Definition BoundedSitpn (sitpn : Sitpn) (b : P sitpn -> nat) :=
+  forall E τ θ,
+    @SitpnFullExec sitpn E τ θ ->
+    forall p s, In s θ -> (M s p) <= (b p).

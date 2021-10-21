@@ -245,11 +245,11 @@ Section Sitpn2HVhdl.
     do s <- Get;
     Ret ((design_ entid archid [] ((iports s) ++ (oports s)) (sigs (arch s)) (beh s)), (γ s)).
     
-  Definition sitpn_to_hvhdl (id__e id__a : ident) (max_marking : nat) :
+  Definition sitpn_to_hvhdl (id__e id__a : ident) (b : P sitpn -> nat) :
     (design * Sitpn2HVhdlMap sitpn) + string :=
     RedV 
       ((do _ <- generate_sitpn_infos sitpn decpr;
-        do _ <- generate_architecture max_marking;
+        do _ <- generate_architecture b;
         do _ <- generate_ports;
         do _ <- generate_comp_insts;
         generate_design_and_binder id__e id__a)
