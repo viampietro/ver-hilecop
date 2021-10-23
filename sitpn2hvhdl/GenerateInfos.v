@@ -1,4 +1,4 @@
-(** * Types and functions used by the generateInfo function. *)
+(** * Generation of informations regarding the elements of an SITPN model *)
 
 Require Import common.CoqLib.
 Require Import common.GlobalFacts.
@@ -131,19 +131,9 @@ Section GenSitpnInfos.
     
     Section ConflictResolution.
 
-      (** Returns [true] if transition [t] and [t'] are time transitions
-          (i.e, they own a time interval) and if their time intervals
-          are disjoint (no overlapping). Returns [false], otherwise. *)
-
-      Definition mutex_by_disjoint_itval (t t' : T sitpn) : CompileTimeState bool :=
-        match Is t, Is t' with
-        | Some i, Some i' => if dec_nooverlap i i' then Ret true else Ret false
-        | _, _ => Ret false
-        end.
-
-      (* Returns [true] if there exists a condition [c] in [conds]
-         s.t. [c] is associated [t] and [not c] to [t'], or the other
-         way around. Returns [false] otherwise.  *)
+      (** Returns [true] if there exists a condition [c] in [conds]
+          s.t. [c] is associated [t] and [not c] to [t'], or the other
+          way around. Returns [false] otherwise.  *)
       
       Definition exists_ccond (t t' : T sitpn) (conds : list (C sitpn)) : bool :=
         let check_ccond_of_tt' := (fun c => match has_C t c, has_C t' c with
@@ -163,12 +153,12 @@ Section GenSitpnInfos.
         do tinfo' <- get_tinfo t';
         Ret (exists_ccond t t' (inter P1SigEq (P1SigEqdec Nat.eq_dec) (conds tinfo) (conds tinfo'))).      
       
-      (* Returns [true] if there exists a place [p] in [places]
-         s.t. there exists a [basic] or [test] arc between [p] and
-         [t], and an [inhib] arc between [p] and [t'], or the other
-         way around. If such arcs exist, the weight of the inhib arc
-         must be lower or equal to the weight of the basic or test
-         arc. Returns [false] otherwise. *)
+      (** Returns [true] if there exists a place [p] in [places]
+          s.t. there exists a [basic] or [test] arc between [p] and
+          [t], and an [inhib] arc between [p] and [t'], or the other
+          way around. If such arcs exist, the weight of the inhib arc
+          must be lower or equal to the weight of the basic or test
+          arc. Returns [false] otherwise. *)
 
       Definition exists_inhib (t t' : T sitpn) (pls : list (P sitpn)) : bool :=
         let check_inhib_mutex :=
@@ -180,7 +170,7 @@ Section GenSitpnInfos.
                       end)
         in if (List.find check_inhib_mutex pls) then true else false.
 
-      (* Returns [true] if there exists a place [p] in the
+      (** Returns [true] if there exists a place [p] in the
          intersection of the list of input places of [t] and [t']
          that mutually exclude [t] and [t'] by mean of an inhibitor
          arc. *)
@@ -190,17 +180,16 @@ Section GenSitpnInfos.
         do tinfo' <- get_tinfo t';
         Ret (exists_inhib t t' (inter P1SigEq (P1SigEqdec Nat.eq_dec) (pinputs tinfo) (pinputs tinfo'))).
 
-      (* Returns [true] is there exists no means of mutual exclusion
+      (** Returns [true] is there exists no means of mutual exclusion
          between transitions [t] and [t']. Returns [false]
          otherwise.  *)
       
       Definition not_exists_mutex (t t' : T sitpn) : CompileTimeState bool :=
         do mbyinhib <- mutex_by_inhib t t';
         do mbycconds <- mutex_by_cconds t t';
-        do mbyditvals <- mutex_by_disjoint_itval t t';
-        Ret (negb (mbyinhib || mbycconds || mbyditvals)).
+        Ret (negb (mbyinhib || mbycconds)).
 
-      (* Returns [true] if there exists at least one mean of mutual
+      (** Returns [true] if there exists at least one mean of mutual
          exclusion between [t] and all transitions in [cgoft]
          (conflict group of [t]). Returns [false] otherwise.  *)
       
@@ -208,10 +197,10 @@ Section GenSitpnInfos.
         do res <- find (not_exists_mutex t) cgoft;
         if res then Ret false else Ret true.
 
-      (* Returns [true] if all conflicts in the conflict group [cg]
-         are solved by means of mutual exclusion, or if the conflict
-         group is empty and has only one element. Returns [false]
-         otherwise.  *)
+      (** Returns [true] if all conflicts in the conflict group [cg]
+          are solved by means of mutual exclusion, or if the conflict
+          group is empty and has only one element. Returns [false]
+          otherwise.  *)
       
       Fixpoint all_conflicts_solved_by_mutex (cg : list (T sitpn)) {struct cg} : CompileTimeState bool :=
         match cg with
@@ -284,6 +273,7 @@ Section GenSitpnInfos.
 
       Definition sort_by_priority (cgroup : list (T sitpn)) :
         CompileTimeState (list (T sitpn)) :=
+        (* [scgroup] stands for sorted conflict group *)
         fold_left (fun scgroup t => inject_t t scgroup) cgroup [].
 
     End ConflictResolution.
@@ -454,7 +444,14 @@ Section GenSitpnInfos.
     
     (** Returns an error if the list of places or transitions of
         [sitpn] are empty, or if the priority relation is not a strict
-        order. *)
+        order.
+        
+        This is a partial checking of the well-definition of an SITPN
+        model. The other properties of the well-definition will
+        checked all along the transformation (e.g. the SITPN model is
+        conflict-free during the generation of place infos, etc.).
+
+     *)
     
     Definition check_wd_sitpn : CompileTimeState unit :=
       (* Raises an error if sitpn has an empty set of places or transitions. *)

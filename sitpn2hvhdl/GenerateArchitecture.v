@@ -562,7 +562,7 @@ Arguments generate_architecture {sitpn}.
 
 (* Local Notation "[ e ]" := (exist _ e _). *)
 
-(* Eval vm_compute in (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
-(*                            do _ <- generate_architecture 255; *)
-(*                            get_arch) *)
-(*                             (InitS2HState sitpn_simpl 10))). *)
+Eval vm_compute in (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
+                           do _ <- generate_architecture 255;
+                           get_arch)
+                            (InitS2HState sitpn_simpl 10))).

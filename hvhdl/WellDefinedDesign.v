@@ -57,7 +57,7 @@ Definition AreVarIds (vars : list vdecl) (varids : list ident) : Prop :=
   Map var2id vars varids.
 
 Definition DesignHasUniqueIds (d : design) (genids portids sigids compids pids : list ident) : Prop :=
-  let ids := (entid d) :: (archid d) :: genids ++ portids ++ sigids ++ compids ++ pids in
+  let ids := (id__e d) :: (id__a d) :: genids ++ portids ++ sigids ++ compids ++ pids in
   AreDeclPartIds d genids portids sigids /\
   AreBehPartIds d compids pids /\
   List.NoDup ids /\
