@@ -109,6 +109,23 @@ Section Sitpn2HVhdlUtils.
     | (assocop_simpl id' a) :: m' => if id =? id' then Ret a else actual id m'
     | _ :: m' => actual id m'
     end.
+
+  (** Generates a new internal signal identifier [id__s], declares [id__s]
+      as a Boolean signal in the compile-time state; then, adds the
+      association [(id__o(idx), id__s)] in output port map [o], and [(id__i(j),
+      id__s)] in input port map [i] (where index [j] is computed by
+      the cassoc function). Finally, returns the modified output port
+      map [o] and input port map [i]. *)
+
+  Definition connect (o : outputmap) (i : inputmap)
+             (id__o : ident)
+             (idx : { e : expr | exists n, e = e_nat n })
+             (id__i : ident) :
+    CompileTimeState (outputmap * inputmap) :=
+    do id__s <- get_nextid;
+    do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
+    do i' <- cassoc_imap i id__i (#id__s);
+    Ret ((o ++ [assocop_idx id__o (proj1_sig idx) ($id__s)]), i').
   
   (** The [get_comp_aux] function looks up [cstmt] for a component
       instantiation statement labelled with [id__c] as a component
