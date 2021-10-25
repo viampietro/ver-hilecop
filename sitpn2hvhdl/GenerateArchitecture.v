@@ -33,37 +33,28 @@ Section GenArch.
 
   Definition CompileTimeState := @Mon (Sitpn2HVhdlState sitpn).
   
-  (** ** Mapping between places and place components. *)
+  (** ** Generation of place component instances *)
 
-  Section GeneratePlaceMap.
+  Section GeneratePCIs.
     
     (** Returns the generic map (abstract syntax) of the place component
-      describing place [p]. 
+        describing place [p]. 
  
       Parameter [max_marking] is the maximal marking of the overall
       Sitpn; this value is computed by the analysis of the net.
      *)
 
     Definition generate_place_gen_map (p : P sitpn) (pinfo : PlaceInfo sitpn) (max_marking : nat) :
-      CompileTimeState genmap :=
-      
-      (* Error case: p has no input or output transitions. *)
-      if ListPlus.is_empty (tinputs pinfo)
-         && ListPlus.is_empty (tconflict pinfo)
-         && ListPlus.is_empty (toutputs pinfo) then
-        Err ("generate_place_gen_map: "
-               ++ "Place " ++ $$p
-               ++ " is an isolated place.")%string
-      else
-        (* If p has no input, creates one input that will have a weight of zero. *)
-        let p_in_arcs_nb := ( if tinputs pinfo then 1 else List.length (tinputs pinfo) ) in
-        (* If p has no output, creates one output that will have a weight of zero. *)
-        let p_out_arcs_nb := ( if toutputs pinfo then 1 else List.length (toutputs pinfo) ) in
+      CompileTimeState genmap :=      
+      (* If p has no input, creates one input that will have a weight of zero. *)
+      let p_in_arcs_nb := ( if tinputs pinfo then 1 else List.length (tinputs pinfo) ) in
+      (* If p has no output, creates one output that will have a weight of zero. *)
+      let p_out_arcs_nb := ( if toutputs pinfo then 1 else List.length (toutputs pinfo) ) in
 
-        (* Builds the generic map of p. *)
-        Ret [assocg_ Place.input_arcs_number p_in_arcs_nb;
-            assocg_ Place.output_arcs_number p_out_arcs_nb;
-            assocg_ Place.maximal_marking max_marking].
+      (* Builds the generic map of p. *)
+      Ret [assocg_ Place.input_arcs_number p_in_arcs_nb;
+           assocg_ Place.output_arcs_number p_out_arcs_nb;
+           assocg_ Place.maximal_marking max_marking].
 
     (** Returns the list of input arcs weights of place [p]. *)
 
@@ -132,32 +123,42 @@ Section GenArch.
       Ret [(Place.initial_marking, inl (e_nat (M0 p)));
           (Place.input_arcs_weights, inr in_arcs_weights);
           (Place.output_arcs_weights, inr out_arcs_weights);
-          (Place.output_arcs_types, inr out_arcs_types)] .
-    
-    (** Builds a PlaceMap entry for place p. *)
+          (Place.output_arcs_types, inr out_arcs_types)].
 
-    Definition generate_place_map_entry (p : P sitpn) (max_marking : nat) :
+    
+    
+    (** Generates a PCI from place [p]. *)
+
+    Definition generate_pci (p : P sitpn) (max_marking : nat) :
       CompileTimeState (P sitpn * HComponent) :=
       (* Retrieves information about p. *)
       do pinfo <- get_pinfo p;
-      (* Retrieves p's generic map. *)
-      do gmap <- generate_place_gen_map p pinfo max_marking;
-      (* Retrieves p's static input map part. *)
-      do pipmap <- generate_place_input_map p pinfo;
+
+      (* Retrieves a fresh identifier [id__p] to name the newly
+         generated PCI. *)
+      do id__p <- get_nextid;
+      
+      (* Builds the generic map, input and output port maps for PCI
+         [id__p]. *)
+      do '((g, i), o) <- build_pci p pinfo [(assocg_ Place.maximal_marking max_marking)] [] [];
+
+      (* Adds the new PCI in the compile-time state's behavior. *)
+      do _ <- add_cs (cs_comp id__p place_entid g i o);
+
+      (* Adds a binding between place [p] and PCI [id__p] in γ. *)
+      do _ <- bind_place p id__p;
+      
       (* Returns a place map entry *)
       Ret (p, (gmap, pipmap, [])).
     
     (** Builds a PlaceMap out the list of places of [sitpn], and
         sets it in the architecture of the compile-time state. *)
 
-    Definition generate_place_map (b : P sitpn -> nat) : CompileTimeState unit :=
+    Definition generate_pcis (b : P sitpn -> nat) : CompileTimeState unit :=
       do Plist <- get_lofPs;
-      do plmap <- ListMonad.map (fun p => generate_place_map_entry p (b p)) Plist;
-      do a <- get_arch;
-      (* Sets the architecture with a new [PlaceMap] *)
-      set_arch (MkArch sitpn (sigs a) plmap (trmap a) (fmap a) (amap a)).
+      do _ <- ListMonad.iter (fun p => generate_pci p (b p)) Plist.
     
-  End GeneratePlaceMap.
+  End GeneratePCIs.
 
   (** ** Mapping between transitions and transition components. *)
 

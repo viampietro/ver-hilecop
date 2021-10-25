@@ -51,58 +51,6 @@ Section CompileTimeTypes.
   (** Empty [SitpnInfo] structure *)
 
   Definition EmptySitpnInfos := MkSitpnInfos [] [] [] [] [].
-
-  (** *** Intermediary representation of an H-VHDL architecture *)
-  
-  (** Intermediary representation of a H-VHDL component input port
-      map. *)
-
-  Definition InputMap := list (ident * (expr + list expr)).
-
-  (** Intermediary representation of a H-VHDL component output port
-    map. *)
-
-  Definition OutputMap := list (ident * ((option name) + list name)).
-
-  (** Intermediary representation of a H-VHDL component. *)
-
-  Definition HComponent := (genmap * InputMap * OutputMap)%type.
-
-  (** Mapping structure between elements of P and their (intermediary)
-    representation as H-VHDL components. *)
-
-  Definition PlaceMap := list (P sitpn * HComponent).
-
-  (** Mapping structure between elements of T and their (intermediary)
-    representation as H-VHDL components. *)
-
-  Definition TransMap := list (T sitpn * HComponent).
-
-  (** Mapping structure between elements of A and the list of expressions
-    that will composed their activation expression.
-   *)
-
-  Definition ActionMap := list (A sitpn * list expr).
-
-  (** Mapping structure between elements of F and the list of
-    expressions that will composed their execution expression.  *)
-
-  Definition FunMap := list (F sitpn * list expr).
-
-  (** Intermediary representation of an H-VHDL architecture as a triplet
-    of list of declarations (list adecl), a mapping from P to
-    HComponent and a mapping from T to HComponent.  *)
-
-  Inductive Architecture :=
-    MkArch { sigs : list sdecl;
-             plmap : PlaceMap;
-             trmap : TransMap;
-             fmap : FunMap;
-             amap : ActionMap }.
-
-  (** Empty architecture structure *)
-
-  Definition EmptyArch : Architecture := MkArch [] [] [] [] [].
   
   (** *** Source to target binder *)
 
@@ -141,15 +89,12 @@ Section CompileTimeTypes.
         (* Sitpn information structure *)
         sitpninfos : SitpnInfos;
 
-        (* Input port list *)
-        iports : list pdecl;
+        (* Port declaration list *)
+        ports : list pdecl;
 
-        (* Output port list *)
-        oports : list pdecl;
+        (* Internal signal declaration list *)
+        sigs : list sdecl;
         
-        (* Architecture in intermediary format *)
-        arch : Architecture;
-
         (* Architecture body in VHDL abstract syntax *)
         beh : cs;
 
@@ -164,7 +109,7 @@ Section CompileTimeTypes.
       state. *)
   
   Definition InitS2HState (ffid : ident) :=
-    MkS2HState [] [] [] [] [] ffid EmptySitpnInfos [] [] EmptyArch cs_null EmptyS2HMap.
+    MkS2HState [] [] [] [] [] ffid EmptySitpnInfos [] [] cs_null EmptyS2HMap.
   
 End CompileTimeTypes.
 
@@ -175,14 +120,6 @@ Arguments pinfos {sitpn}.
 Arguments cinfos {sitpn}.
 Arguments ainfos {sitpn}.
 Arguments finfos {sitpn}.
-
-(* Set implicit arguments for Architecture *)
-
-Arguments sigs {sitpn}.
-Arguments plmap {sitpn}.
-Arguments trmap {sitpn}.
-Arguments fmap {sitpn}.
-Arguments amap {sitpn}.
 
 (* Set implicit arguments for Sitpn2HVhdlMap *)
 
@@ -201,11 +138,10 @@ Arguments lofAs {sitpn}.
 Arguments lofFs {sitpn}.
 Arguments nextid {sitpn}.
 Arguments sitpninfos {sitpn}.
-Arguments iports {sitpn}.
-Arguments oports {sitpn}.
-Arguments γ {sitpn}.
-Arguments arch {sitpn}.
+Arguments ports {sitpn}.
+Arguments sigs {sitpn}.
 Arguments beh {sitpn}.
+Arguments γ {sitpn}.
 
 (** ** Operations on Compile-time State *)
 
@@ -221,7 +157,7 @@ Section CompileTimeStateOpers.
   Definition set_lofPs (Plist : list (P sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn Plist (lofTs s) (lofCs s) (lofAs s) (lofFs s) (nextid s)
-                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+                    (sitpninfos s) (ports s) (sigs s) (beh s) (γ s)).
 
   Definition get_lofTs : @Mon (Sitpn2HVhdlState sitpn) (list (T sitpn)) :=
     do s <- Get; Ret (lofTs s).
@@ -229,7 +165,7 @@ Section CompileTimeStateOpers.
   Definition set_lofTs (Tlist : list (T sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) Tlist (lofCs s) (lofAs s) (lofFs s) (nextid s)
-                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+                    (sitpninfos s) (ports s) (sigs s) (beh s) (γ s)).
 
   Definition get_lofCs : @Mon (Sitpn2HVhdlState sitpn) (list (C sitpn)) :=
     do s <- Get; Ret (lofCs s).
@@ -237,7 +173,7 @@ Section CompileTimeStateOpers.
   Definition set_lofCs (Clist : list (C sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) Clist (lofAs s) (lofFs s) (nextid s)
-                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+                    (sitpninfos s) (ports s) (sigs s) (beh s) (γ s)).
 
   Definition get_lofAs : @Mon (Sitpn2HVhdlState sitpn) (list (A sitpn)) :=
     do s <- Get; Ret (lofAs s).
@@ -245,7 +181,7 @@ Section CompileTimeStateOpers.
   Definition set_lofAs (Alist : list (A sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) Alist (lofFs s) (nextid s)
-                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+                    (sitpninfos s) (ports s) (sigs s) (beh s) (γ s)).
 
   Definition get_lofFs : @Mon (Sitpn2HVhdlState sitpn) (list (F sitpn)) :=
     do s <- Get; Ret (lofFs s).
@@ -253,7 +189,7 @@ Section CompileTimeStateOpers.
   Definition set_lofFs (Flist : list (F sitpn)) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) Flist (nextid s)
-                    (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s)).
+                    (sitpninfos s) (ports s) (sigs s) (beh s) (γ s)).
   
   Definition get_infos : @Mon (Sitpn2HVhdlState sitpn) (SitpnInfos sitpn) :=
     do s <- Get; Ret (sitpninfos s).
@@ -261,15 +197,7 @@ Section CompileTimeStateOpers.
   Definition set_infos (infos : SitpnInfos sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) infos (iports s) (oports s) (arch s) (beh s) (γ s)).
-
-  Definition get_arch : @Mon (Sitpn2HVhdlState sitpn) (Architecture sitpn) :=
-    do s <- Get; Ret (arch s).
-
-  Definition set_arch (arch : Architecture sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do s <- Get;
-    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) (sitpninfos s) (iports s) (oports s) arch (beh s) (γ s)).
+                    (nextid s) infos (ports s) (sigs s) (beh s) (γ s)).
 
   Definition get_beh : @Mon (Sitpn2HVhdlState sitpn) cs :=
     do s <- Get; Ret (beh s).
@@ -277,7 +205,7 @@ Section CompileTimeStateOpers.
   Definition set_beh (beh : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) beh (γ s)).
+                    (nextid s) (sitpninfos s) (ports s) (sigs s) beh (γ s)).
   
   Definition get_binder : @Mon (Sitpn2HVhdlState sitpn) (Sitpn2HVhdlMap sitpn) :=
     do s <- Get; Ret (γ s).
@@ -285,7 +213,7 @@ Section CompileTimeStateOpers.
   Definition set_binder (γ : Sitpn2HVhdlMap sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) γ).
+                    (nextid s) (sitpninfos s) (ports s) (sigs s) (beh s) γ).
   
   (* Returns the next available identifier, and increments the
      [nextid] value in the compile-time state. *)
@@ -293,25 +221,24 @@ Section CompileTimeStateOpers.
   Definition get_nextid : @Mon (Sitpn2HVhdlState sitpn) ident :=
     do s <- Get;
     do _  <- Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                             (S (nextid s)) (sitpninfos s) (iports s) (oports s) (arch s) (beh s) (γ s));
+                             (S (nextid s)) (sitpninfos s) (ports s) (sigs s) (beh s) (γ s));
     Ret (nextid s).
 
-  (** *** Operations for the list of input ports *)
+  (** *** Operations for the list of port declarations and internal signal declarations *)
 
-  Definition add_in_port (iport_decl : pdecl) :=
+  Definition add_port_decl (pd : pdecl) :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) (sitpninfos s) ((iports s) ++ [iport_decl])
-                    (oports s) (arch s) (beh s) (γ s)).
+                    (nextid s) (sitpninfos s) ((ports s) ++ [pd])
+                    (sigs s) (beh s) (γ s)).
+
+  Definition add_sig_decl (sd : sdecl) :
+    @Mon (Sitpn2HVhdlState sitpn) unit :=
+    do s <- Get;
+    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
+                    (nextid s) (sitpninfos s) (ports s)
+                    ((sigs s) ++ [sd]) (beh s) (γ s)).
   
-  (** *** Operations for the list of output ports *)
-
-  Definition add_out_port (oport_decl : pdecl) :=
-    do s <- Get;
-    Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) (sitpninfos s) 
-                    (iports s) ((oports s) ++ [oport_decl]) (arch s) (beh s) (γ s)).
-
   (** *** Operations for SITPN-to-H-VHDL map *)
 
   Definition bind_action (a : A sitpn) (id : ident) :=
@@ -354,65 +281,8 @@ Section CompileTimeStateOpers.
   Definition add_cs (cstmt : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s)
-                    (nextid s) (sitpninfos s) (iports s) (oports s)
-                    (arch s) (cs_par cstmt (beh s)) (γ s)).
-  
-  (** *** Operations for Architecture structure *)
-
-  Definition get_tcomp (t : T sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
-    (* Retrieves the architecture from the compile-time state. *)
-    do a <- get_arch; getv Teqdec t (trmap a).
-  
-  Definition set_tcomp (t : T sitpn) (tcomp : HComponent) :
-    @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do a <- get_arch;
-    (* Sets the couple [(t, tcomp)] in [trmap]. *)
-    let trmap' := setv Teqdec t tcomp (trmap a) in
-    (* Updates the new archictecture. *)
-    set_arch (MkArch sitpn (sigs a) (plmap a) trmap' (fmap a) (amap a)).
-
-  Definition get_pcomp (p : P sitpn) : @Mon (Sitpn2HVhdlState sitpn) HComponent := 
-
-    (* Retrieves the architecture from the compile-time state. *)
-    do a <- get_arch; getv Peqdec p (plmap a).
-
-  Definition set_pcomp (p : P sitpn) (pcomp : HComponent) :
-    @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do a <- get_arch;
-    (* Sets the couple [(p, pcomp)] in [plmap]. *)
-    let plmap' := setv Peqdec p pcomp (plmap a) in
-    (* Updates the new archictecture. *)
-    set_arch (MkArch sitpn (sigs a) plmap' (trmap a) (fmap a) (amap a)).
-
-  Definition get_aport (a : A sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list expr) := 
-    (* Retrieves the architecture from the compile-time state. *)
-    do arch <- get_arch; getv Aeqdec a (amap arch).
-    
-  Definition set_aport (a : A sitpn) (lofexprs : list expr) :
-    @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do arch <- get_arch;
-    (* Sets the couple [(a, lofexprs)] in [amap]. *)
-    let amap' := setv Aeqdec a lofexprs (amap arch) in
-    (* Updates the new archictecture. *)
-    set_arch (MkArch sitpn (sigs arch) (plmap arch) (trmap arch) (fmap arch) amap').
-
-  Definition get_fport (f : F sitpn) : @Mon (Sitpn2HVhdlState sitpn) (list expr) := 
-
-    (* Retrieves the architecture from the compile-time state. *)
-    do a <- get_arch; getv Feqdec f (fmap a).
-
-  Definition set_fport (f : F sitpn) (lofexprs : list expr) :
-    @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do a <- get_arch;
-    (* Sets the couple [(a, lofexprs)] in [amap]. *)
-    let fmap' := setv Feqdec f lofexprs (fmap a) in
-    (* Updates the new archictecture. *)
-    set_arch (MkArch sitpn (sigs a) (plmap a) (trmap a) fmap' (amap a)).
-  
-  Definition add_sig_decl (sd : sdecl) :
-    @Mon (Sitpn2HVhdlState sitpn) unit :=
-    do a <- get_arch;
-    set_arch (MkArch sitpn (sigs a ++ [sd]) (plmap a) (trmap a) (fmap a) (amap a)).
+                    (nextid s) (sitpninfos s) (ports s)
+                    (sigs s) (cs_par cstmt (beh s)) (γ s)).
   
   (** *** Getters for SitpnInfos structure *)
 
@@ -520,8 +390,6 @@ Arguments get_lofCs {sitpn}.
 Arguments set_lofCs {sitpn}.
 Arguments get_lofFs {sitpn}.
 Arguments set_lofFs {sitpn}.
-Arguments get_arch {sitpn}.
-Arguments set_arch {sitpn}.
 Arguments get_infos {sitpn}.
 Arguments set_infos {sitpn}.
 Arguments get_beh {sitpn}.
@@ -541,18 +409,6 @@ Arguments set_ainfo {sitpn}.
 Arguments set_cinfo {sitpn}.
 Arguments set_finfo {sitpn}.
 
-(* Set implicit arguments for Architecture monadic functions. *)
-
-Arguments get_pcomp {sitpn}.
-Arguments set_pcomp {sitpn}.
-Arguments get_tcomp {sitpn}.
-Arguments set_tcomp {sitpn}.
-Arguments get_aport {sitpn}.
-Arguments set_aport {sitpn}.
-Arguments get_fport {sitpn}.
-Arguments set_fport {sitpn}.
-Arguments add_sig_decl {sitpn}.
-
 (* Set implicit arguments for SITPN-to-H-VHDL map monadic functions. *)
 
 Arguments bind_action {sitpn}.
@@ -561,10 +417,10 @@ Arguments bind_condition {sitpn}.
 Arguments bind_place {sitpn}.
 Arguments bind_transition {sitpn}.
 
-(* Set implicit arguments for list of output port monadic functions. *)
+(* Set implicit arguments for list of ports/sigs monadic functions. *)
 
-Arguments add_in_port {sitpn}.
-Arguments add_out_port {sitpn}.
+Arguments add_port_decl {sitpn}.
+Arguments add_sig_decl {sitpn}.
 
 (* Set implicit arguments for behavior monadic functions. *)
 

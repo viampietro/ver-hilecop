@@ -36,12 +36,8 @@ Section GenSitpnInfos.
 
     (** Returns the list of input places of transition [t].
 
-        Correctness: Correct iff all input places of [p] are in the
-        returned list, and the returned has no duplicates.
-
-        Does not raise an error if the returned list is nil because it
-        doesn't mean that [t] is an isolated transition; however [t] is a
-        "source" transition (without input).
+        Correctness: Correct iff all input places of [t] are in the
+        returned list, and the returned list has no duplicates.
     
      *)
 
@@ -49,6 +45,22 @@ Section GenSitpnInfos.
       (* Tests if a place is an input of t. *)
       let is_input_of_t := (fun p => if (pre p t) then true else false) in
       do Plist <- get_lofPs; Ret (filter is_input_of_t Plist).
+
+    (** Returns the list of output places of transition [t].
+
+        Correctness: Correct iff all output places of [p] are in the
+        returned list, and the returned list has no duplicates.
+
+        Does not raise an error if the returned list is nil because it
+        doesn't mean that [t] is an isolated transition; however [t] is a
+        "source" transition (without input).
+    
+     *)
+
+    Definition get_outputs_of_t (t : T sitpn) : CompileTimeState (list (P sitpn)) :=    
+      (* Tests if a place is an input of t. *)
+      let is_output_of_t := (fun p => if (post t p) then true else false) in
+      do Plist <- get_lofPs; Ret (filter is_output_of_t Plist).
 
     (** Returns the list of conditions associated to transition [t].
     
@@ -65,8 +77,12 @@ Section GenSitpnInfos.
 
     Definition add_tinfo (t : T sitpn) : CompileTimeState unit :=
       do inputs_of_t <- get_inputs_of_t t;
-      do conds_of_t <- get_conds_of_t t;
-      set_tinfo (t, MkTransInfo _ inputs_of_t conds_of_t).
+      do outputs_of_t <- get_outputs_of_t t;
+      if (is_empty inputs_of_t) && (is_empty outputs_of_t) then
+        Err ("add_tinfo: Transition " ++ $$t ++ " is an isolated transition.")
+      else
+        do conds_of_t <- get_conds_of_t t;
+        set_tinfo (t, MkTransInfo _ inputs_of_t conds_of_t).
 
     (** Calls the function [add_tinfo] for each transition of [sitpn], thus
         modifying the current state. *)
@@ -122,7 +138,7 @@ Section GenSitpnInfos.
          function [is_neighbor_of_p].  *)
       do Tlist <- get_lofTs;
       match List.fold_left get_neighbor_of_p Tlist (nil, nil, nil) with
-      | (nil, nil, nil) => Err ("Place " ++ $$p ++ " is an isolated place.")
+      | (nil, nil, nil) => Err ("get_neighbors_of_p: Place " ++ $$p ++ " is an isolated place.")
       | tin_tc_tout => Ret tin_tc_tout 
       end.
 
