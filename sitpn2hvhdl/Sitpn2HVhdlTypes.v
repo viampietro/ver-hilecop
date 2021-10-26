@@ -29,7 +29,8 @@ Section CompileTimeTypes.
   Inductive PlaceInfo : Type :=
     MkPlaceInfo { tinputs : list (T sitpn);
                   tconflict : list (T sitpn);
-                  toutputs : list (T sitpn) }.
+                  toutputs : list (T sitpn);
+                  acts : list (A sitpn) }.
   
   (** Defines the type of TransInfo, gathering informations about a
     given transition of an SITPN. *)
@@ -368,6 +369,7 @@ End CompileTimeStateOpers.
 Arguments tinputs {sitpn}.
 Arguments tconflict {sitpn}.
 Arguments toutputs {sitpn}.
+Arguments acts {sitpn}.
 
 (** Set implicit arguments for TransInfo fields. *)
 

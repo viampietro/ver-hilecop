@@ -78,7 +78,7 @@ Section GenSitpnInfos.
     Definition add_tinfo (t : T sitpn) : CompileTimeState unit :=
       do inputs_of_t <- get_inputs_of_t t;
       do outputs_of_t <- get_outputs_of_t t;
-      if (is_empty inputs_of_t) && (is_empty outputs_of_t) then
+      if (inputs_of_t ++ outputs_of_t)%list then
         Err ("add_tinfo: Transition " ++ $$t ++ " is an isolated transition.")
       else
         do conds_of_t <- get_conds_of_t t;
@@ -142,6 +142,14 @@ Section GenSitpnInfos.
       | tin_tc_tout => Ret tin_tc_tout 
       end.
 
+    (** Returns the set of actions associated with place [p]. *)
+
+    Definition get_acts_of_p (p : P sitpn) : CompileTimeState (list (A sitpn)) :=
+      
+      (* Filters the list of actions of [sitpn]. Keeps only the
+         actions associated with place [p].  *)
+      do Alist <- get_lofAs; Ret (filter (fun a => has_A p a) Alist).
+    
     (** Functions to solve conflicts in a given conflict group, i.e, a
         set of transitions. *)
     
@@ -313,7 +321,8 @@ Section GenSitpnInfos.
        *)
       do tin_tc_tout <- get_neighbors_of_p p;
       
-      let '(tin, tc, tout) := tin_tc_tout in
+      (* Gets the set of actions associated with [p]. *)
+      do acts_of_p <- get_acts_of_p p;
 
       (* If all conflicts in [tc] are not solved by means of mutual
          exclusion, then transitions in [tc] must be sorted out by
@@ -322,13 +331,13 @@ Section GenSitpnInfos.
          
          Error: the priority relation is not a strict total order over
          the output transitions of p.  *)
-      
+      let '(tin, tc, tout) := tin_tc_tout in
       do b <- all_conflicts_solved_by_mutex tc;
       if b then
-        set_pinfo (p, MkPlaceInfo _ tin [] (tc ++ tout))
+        set_pinfo (p, MkPlaceInfo _ tin [] (tc ++ tout) acts_of_p)
       else
         do stc <- sort_by_priority tc;
-        set_pinfo (p, MkPlaceInfo _ tin stc tout).
+        set_pinfo (p, MkPlaceInfo _ tin stc tout acts_of_p).
     
     (** Computes information for all p ∈ P, and adds the infos to the
         current state. *)
