@@ -15,6 +15,7 @@ Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 Require Import hvhdl.Transition.
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import sitpn2hvhdl.Sitpn2HVhdlUtils.
 
 Import ErrMonadNotations.
 
@@ -35,262 +36,195 @@ Section GenInter.
   
   Local Open Scope abss_scope.
 
-  Definition get_actual_of_out_port (opid : ident) (comp : HComponent) :
-    CompileTimeState (option (option name + list name)) :=
-    let '(gmap, ipmap, opmap) := comp in
-    Ret (getv Nat.eq_dec opid opmap).
-
-  Definition get_actual_of_in_port (ipid : ident) (comp : HComponent) :
-    CompileTimeState (option (expr + list expr)) :=
-    let '(gmap, ipmap, opmap) := comp in
-    Ret (getv Nat.eq_dec ipid ipmap).
-
-  Definition connect_out_port
-             (opid : ident)
-             (actual : option name + list name)
-             (comp : HComponent) :
-    CompileTimeState (HComponent) :=
-    let '(gmap, ipmap, opmap) := comp in
-    Ret (gmap, ipmap, setv Nat.eq_dec opid actual opmap).
-  
-  (** (1) Connects the "fired" output port of the component
-        representing transition [t] to another composite port via the
-        list of expressions [lofexprs].
+  (** Retrieves the TCI [id__t] associated with transition [t], and
+      connects the [idx-th] element of the [itf] input port with the
+      actual part of the [fired] output port.
       
-        (2) Adds the newly generated interconnection signal to the list
-        of architecture's declarations, if such a signal has been
-        created.
+      Returns the modified [i__p] input port map, and an incremented
+      index.  *)
 
-        (3) Returns the new architecture, the next available identifier,
-        and the new list of expressions. *)
-  
-  Definition connect_fired_port (lofexprs : list expr) (t : T sitpn) :
-    CompileTimeState (list expr) :=
-    
-    (* Retrieves the component associated to transtion [t] in
-         [TransMap trmap].  *)
-    do tcomp <- get_tcomp t;
-    do opt_fired_actual <- get_actual_of_out_port Transition.fired tcomp;
-    
-    (* Checks if the "fired" port already belongs to the output port map
-         of [tcomp]. *)
-    match opt_fired_actual with
-    (* Case where fired is connected to an [option name].         
-         Error, if fired port is open (i.e, connected to None).
-         Otherwise, adds a new expression to [lofexprs]. *)
-    | Some (inl optn) =>
-        match optn with
-        | Some n => Ret (lofexprs ++ [e_name n])
-        | _ => Err ("connect_fired_port: the fired port of T component "
-                      ++ $$t ++ " is open.")
-        end
-    (* Error case, in the output port map [topmap], fired is
-         connected to a list of expressions, albeit it must be of
-         scalar type (boolean).  *)
-    | Some (inr _) =>
-        Err ("connect_fired_port: the fired port of transition "
-               ++ $$t ++ " must be of scalar type.")%string
-    (* Case where [fired] is not connected yet. Then, adds a new
-         interconnection signal to the [arch]'s internal signal
-         declaration list and at the end of the [lofexprs], modifies
-         the output port map of component [tcomp], and returns . *)
-    | None =>
-
-        do id <- get_nextid;
-        do tcomp' <- connect_out_port Transition.fired (inl (Some ($id))) tcomp;
-        do _ <- set_tcomp t tcomp';
-        do _ <- add_sig_decl (sdecl_ id tind_boolean);
-        
-        (* Increments nextid to return the next available identifier. *)
-        Ret (lofexprs ++ [#id])
-    end.
-
-  (** Returns a new architecture where the fired ports of all the
-      transitions of the [transs] list have been connected to an
-      internal signal; the list of all such signals is returned
-      alongside the next available identifier.  *)
-  
-  Definition connect_fired_ports (transs : list (T sitpn)) :
-    CompileTimeState (list expr) :=
-    
-    (* Local variable storing the list of expressions, that is the
-         list of internal signal identifiers connected to the fired port
-         of transitions of the transs list.
-       
-        If the transs list is nil, then the list of expressions
-        contains the singleton expression [false].  *)
-    let lofexprs := (if transs then [e_bool false] else []) in
-    
-    (* Calls the connect_fired function over all transitions
-         of the transs list. *)
-    ListMonad.fold_left connect_fired_port transs lofexprs.
-
-  Definition connect_in_port
-             (ipid : ident)
-             (actual : expr + list expr)
-             (comp : HComponent) :
-    CompileTimeState (HComponent) :=
-    let '(gmap, ipmap, opmap) := comp in
-    Ret (gmap, setv Nat.eq_dec ipid actual ipmap, opmap).
-  
-  (** Connects the input port map of a component [phcomp],
-        representing some place p, to the output port map of the
-        components representing the input transitions (resp. output
-        transitions) of p. *)
-
-  Definition connect_place_inputs
+  Definition connect_to_input_tci
              (pinfo : PlaceInfo sitpn)
-             (pcomp : HComponent) :
-    CompileTimeState (HComponent) :=
-
-    (* Lists the signals connected to the [fired] port of the input
-         transitions of [p]. *)
-    do in_trans_fired <- connect_fired_ports (tinputs pinfo);
-    (* Lists the signals connected to the [fired] port of the output
-         transitions of [p]. *)
-    do out_trans_fired <- connect_fired_ports (toutputs pinfo);
-    (* Connects composite port [input_transitions_fired] of [pcomp]
-         to the [fired] ports of its input transitions.  *)
-    do pcomp' <- connect_in_port Place.input_transitions_fired (inr in_trans_fired) pcomp;
-    (* Connects the composite port [output_transitions_fired] of [pcomp]
-         to the [fired] ports of its output transitions, and returns [pcomp].  *)      
-    connect_in_port Place.output_transitions_fired (inr out_trans_fired) pcomp'.
-  
-  (** Adds the expression [e] at the end of the list of expressions
-        associated with the composite input port [ipid] in the input
-        map of component [comp]. Returns the new version of [comp]. *)
-
-  Definition add_cassoc_to_ipmap (ipid : ident) (e : expr) (comp : HComponent) :
-    CompileTimeState HComponent :=
-    
-    let '(gmap, ipmap, opmap) := comp in
-
-    (* Checks if ipid is known in ipmap. *)
-    match getv Nat.eq_dec ipid ipmap with
-    (* If [ipid] is associated to an expression in [ipmap], then
-         [ipid] is not a composite port, then error.  *)
-    | Some (inl _) => Err ("add_cassoc_to_pmap : port "
-                             ++ $$ipid ++ " is not a composite port.")%string
-
-    (* If [ipid] is a known composite port in [ipmap], then adds [e]
-         at the end of the associated list of expressions. *)
-    | Some (inr lofexprs) =>
-        Ret (gmap, (setv Nat.eq_dec ipid (inr (lofexprs ++ [e])) ipmap), opmap)
-
-    (* If ipid is not known in ipmap, then adds the association
-         between ipid and the singleton list [e] in ipmap. *)
-    | None =>
-        Ret (gmap, (setv Nat.eq_dec ipid (inr [e]) ipmap), opmap)
-    end.
-
-  (** Adds the name [n] at the end of the list of names associated
-        with the composite output port [opid] in the output map of
-        component [comp]. *)
-  
-  Definition add_cassoc_to_opmap (opid : ident) (n : name) (comp : HComponent) :
-    CompileTimeState HComponent :=
-
-    let '(gmap, ipmap, opmap) := comp in
-    
-    (* Checks if opid is known in opmap. *)
-    match getv Nat.eq_dec opid opmap with
-    (* If opid is associated to a name in opmap, then
-         opid is not a composite port, then error.  *)
-    | Some (inl _) => Err ("add_cassoc_to_pmap : "
-                             ++ $$opid ++ " is not a composite port.")%string
-
-    (* If [opid] is a known composite port in [opmap], then adds
-         [n] at the end of the associated list of names. *)
-    | Some (inr lofnames) =>
-        Ret (gmap, ipmap, (setv Nat.eq_dec opid (inr (lofnames ++ [n])) opmap))
-
-    (* If [opid] is not known in [opmap], then adds the association
-         between [opid] and the singleton list [n] in [opmap]. *)
-    | None =>
-        Ret (gmap, ipmap, (setv Nat.eq_dec opid (inr [n]) opmap))
-    end.
-  
-  (** Creates an interconnection signal (adds it to [sigs]) and
-        connects [xoport] (in the output port map of [compx]) to
-        [yiport] (in the input port map of [compy]) through this
-        newly created signal.  *)
-  
-  Definition connect
-             (compx compy : HComponent)
-             (xopid yipid : ident) :
-    CompileTimeState (HComponent * HComponent) :=
-
-    do id <- get_nextid;
-    do _ <- add_sig_decl (sdecl_ id tind_boolean);
-    do compx' <- add_cassoc_to_opmap xopid ($id) compx;
-    do compy' <- add_cassoc_to_ipmap yipid (#id) compy;
-    Ret (compx', compy').
-  
-  (** Connects the output port map of component [pcomp] to the input
-        port map of the component associated to transition [t] in the
-        architecture [arch] (more precisely, in the [arch]'s
-        TransMap). *)
-
-  Definition connect_popmap_to_tipmap
-             (pcomp : HComponent)
+             (i__p : inputmap)
+             (idx : nat)
              (t : T sitpn) :
-    CompileTimeState HComponent :=
-    do tcomp <- get_tcomp t;
-    do ptcomp1 <- connect pcomp tcomp Place.output_arcs_valid Transition.input_arcs_valid;
-    let (pcomp1, tcomp1) := ptcomp1 in
-    do ptcomp2 <- connect pcomp1 tcomp1 Place.priority_authorizations Transition.priority_authorizations;
-    let (pcomp2, tcomp2) := ptcomp2 in
-    do ptcomp3 <- connect pcomp2 tcomp2 Place.reinit_transitions_time Transition.reinit_time;
-    let (pcomp3, tcomp3) := ptcomp3 in
-    do _ <- set_tcomp t tcomp3;
-    Ret pcomp3.      
+    CompileTimeState (inputmap * nat) :=
+    do id__t <- get_tci_id_from_binder t;
+    do tci <- get_comp id__t;
+    let '(id__e, g__t, i__t, o__t) := tci in
+    do a <- actual Transition.fired o__t;
+    match a with
+    | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
+    | Some n =>
+        Ret (i__p ++ [associp_ (Place.input_transitions_fired $[[idx]]) (e_name n)], idx + 1)
+    end.
 
-  (** Connects the output port map of component [pcomp] representing
-        some place p, to the input port map of the components
-        representing the output transitions of p in the architecture
-        [arch]. *)
+  (** Iterates and calls the [connect_to_input_tci] function over the
+      set of input transitions of a place [p]. *)
   
-  Definition connect_place_outputs
+  Definition connect_to_input_tcis
              (pinfo : PlaceInfo sitpn)
-             (pcomp : HComponent) :
-    CompileTimeState HComponent :=
+             (i__p : inputmap) :
+    CompileTimeState inputmap :=
+    do iidx <- ListMonad.fold_left (fun '(i, idx) => connect_to_input_tci pinfo i idx) (tinputs pinfo) (i__p, 0);
+    Ret (fst iidx).
 
-    (* Wrapper around the connect_popmap_to_tipmap function. *)
-    let wconn_pop_to_tip :=
-      (fun pcomp t =>
-         connect_popmap_to_tipmap pcomp t)
-    in
-    (* Calls connect_popmap_to_tipmap on every output transitions of
-         p. *)
-    ListMonad.fold_left wconn_pop_to_tip (toutputs pinfo) pcomp.
+  (** Parameters:
 
-  (** Retrieves the component [pcomp] associated to place [p] in the
-        architecture of the compile-time state, and connects its input
-        and ouput ports to the components representing its input
-        (resp. output) transitions.  *)
+      Assume there is a place [p] such that:
+
+      - [pinfo] represents the information associated with [p].
+
+      - [i__p] and [o__p] represents the input and output port maps of a
+        PCI [id__p], associated with [p] through the [γ] binder.
+
+      - [t] is a conflicting output transition of [p].
+
+      Retrieves the TCI [id__t] associated with transition [t], and
+      connects elements of the input port map [i__p] and the output port
+      map [o__p] to elements of the input and output port maps of the
+      TCI [id__t].
+
+      Replaces the TCI [id__t] by its modified version in the
+      compile-time state behavior.
+      
+      Returns the modified [i__p] input port map, the modified [o__p]
+      output port map, and an incremented index. *)
   
-  Definition interconnect_p (p : P sitpn) :
+  Definition connect_to_confl_tci
+             (pinfo : PlaceInfo sitpn)
+             (i__p : inputmap)
+             (o__p : outputmap)
+             (idx : nat)
+             (t : T sitpn) :
+    CompileTimeState (inputmap * outputmap * nat) :=
+    do id__t <- get_tci_id_from_binder t;
+    do tci <- get_comp id__t;
+    let '(id__e, g__t, i__t, o__t) := tci in
+    (* Interconnects [o__p] to to [i__t], and [i__p] to [o__t]. *)
+    do oi1 <- connect o__p i__t Place.output_arcs_valid idx Transition.input_arcs_valid;
+    do oi2 <- connect (fst oi1) (snd oi1) Place.reinit_transitions_time idx Transition.reinit_time;
+    do oi3 <- connect (fst oi2) (snd oi2) Place.priority_authorizations idx Transition.priority_authorizations;
+    let '(o__p3, i__t3) := oi3 in
+    (* Replaces TCI [id__t] by a new TCI in the compile-time state's behavior. *)
+    do _ <- put_comp id__t (to_ci id__t transition_entid g__t i__t3 o__t);
+    (* Last interconnection between [i__p] and [o__t]. *)
+    do a <- actual Transition.fired o__t;
+    match a with
+    | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
+    | Some n =>
+        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, idx + 1)
+    end.
+
+  (** Parameters:
+
+      Assume there is a place [p] such that:
+
+      - [pinfo] represents the information associated with [p].
+
+      - [i__p] and [o__p] represents the input and output port maps of a
+        PCI [id__p], associated with [p] through the [γ] binder.
+
+      - [t] is a non-conflicting output transition of [p].
+
+      Retrieves the TCI [id__t] associated with transition [t], and
+      connects elements of the input port map [i__p] and the output port
+      map [o__p] to elements of the input and output port maps of the
+      TCI [id__t].
+
+      Replaces the TCI [id__t] by its modified version in the
+      compile-time state behavior.
+      
+      Returns the modified [i__p] input port map, the modified [o__p]
+      output port map, and an incremented index. *)
+  
+  Definition connect_to_nconfl_tci
+             (pinfo : PlaceInfo sitpn)
+             (i__p : inputmap)
+             (o__p : outputmap)
+             (idx : nat)
+             (t : T sitpn) :
+    CompileTimeState (inputmap * outputmap * nat) :=
+    do id__t <- get_tci_id_from_binder t;
+    do tci <- get_comp id__t;
+    let '(id__e, g__t, i__t, o__t) := tci in
+    (* Interconnects [o__p] to to [i__t], and [i__p] to [o__t]. *)
+    do oi1 <- connect o__p i__t Place.output_arcs_valid idx Transition.input_arcs_valid;
+    do oi2 <- connect (fst oi1) (snd oi1) Place.reinit_transitions_time idx Transition.reinit_time;
+
+    (* Connects [pauths(idx)] to [true] in input port map [i__t2]. *)
+    let '(o__p2, i__t2) := oi2 in
+    do i__t3 <- cassoc_imap i__t2 Transition.priority_authorizations true;
+         
+    (* Interconnects [pauths(idx)] to a newly generated but
+       unconnected internal signal [id__s] in output port map [o__p2]. *)
+    do id__s <- get_nextid;
+    do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
+    do o__p3 <- Ret (o__p2 ++ [assocop_idx Place.priority_authorizations idx ($id__s)]);
+
+    (* Replaces TCI [id__t] by a new TCI in the compile-time state's behavior. *)
+    do _ <- put_comp id__t (to_ci id__t transition_entid g__t i__t3 o__t);
+    
+    (* Last interconnection between [i__p] and [o__t]. *)
+    do a <- actual Transition.fired o__t;
+    match a with
+    | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
+    | Some n =>
+        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, idx + 1)
+    end.
+  
+  (** Iterates and calls the [connect_to_input_tci] function over the
+      set of input transitions of a place [p]. *)
+  
+  Definition connect_to_output_tcis
+             (pinfo : PlaceInfo sitpn)
+             (i__p : inputmap) (o__p : outputmap) :
+    CompileTimeState (inputmap * outputmap) :=
+    do ioidx <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_confl_tci pinfo i o idx) (tconflict pinfo) (i__p, o__p, 0);
+    let '(i__p1, o__p1, idx) := ioidx in
+    do ioidx1 <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_nconfl_tci pinfo i o idx) (toutputs pinfo) (i__p1, o__p1, idx);
+    Ret (fst ioidx1).
+  
+  (** Retrieves the behavior [beh] (i.e. the currently generated
+      behavior) the PCI [id__p] associated with place [p] (i.e. γ(p) =
+      [id__p]), and connects the interface of the PCI [id__p] to the
+      interface of its input and output TCIs. Then, replaces the old
+      PCI [id__p] by the new in the compile-time state's behavior. *)
+  
+  Definition connect_place (p : P sitpn) :
     CompileTimeState unit :=
 
-    do pinfo <- get_pinfo p;
-    do pcomp <- get_pcomp p;
-    (* Connects the input port map of [pcomp]. *)
-    do pcomp1 <- connect_place_inputs pinfo pcomp;
-    (* Connects the output port map of [pcomp]. *)
-    do pcomp2 <- connect_place_outputs pinfo pcomp1;
-    set_pcomp p pcomp2.
+    (* Retrieves some elements from the compile-time state, namely:
 
-  (** Generates the interconnections between place and transition
-        components in the architecture of the compile-time state.
-      
-        For each place in [sitpn], its mirror place component is
-        retrieved from [arch]'s PlaceMap, and interconnected to its
-        input and output transitions. *)
+       - The informations associated with place [p] in the
+         [SitpnInfos] structure.
+       - The identifier [id__p] associated with place [p] in the [γ] binder.
+       - The PCI [id__p] from the behavior [beh]. *)
+    do pinfo <- get_pinfo p;
+    do id__p <- get_pci_id_from_binder p;
+    do pci <- get_comp id__p;
+    let '(id__e, g, i, o) := pci in
+    
+    (* Connects the PCI [pci] to the TCIs implementing the input
+       transitions of place [p].  *)
+    do i1 <- connect_to_input_tcis pinfo i;
+    
+    (* Connects the PCI [pci] to the TCIs implementing the output
+       transitions of place [p]. *)
+    do io2 <- connect_to_output_tcis pinfo i1 o;
+
+    (* Replaces the PCI [pci] by a new PCI in the compile-time state's
+       behavior. *)
+    let '(i2, o2) := io2 in
+    put_comp id__p (to_ci id__p place_entid g i2 o2).
+
+  (** Generates the interconnections between PCIs and TCIS by
+      modifying the compile-time state's behavior. *)
 
   Definition generate_interconnections :
     CompileTimeState unit :=
-    (* Calls interconnect_p on each place of sitpn. *)
-    do Plist <- get_lofPs; ListMonad.iter interconnect_p Plist.
+    (* Calls connect_place on each place of sitpn. *)
+    do Plist <- get_lofPs; ListMonad.iter connect_place Plist.
     
 End GenInter.
 

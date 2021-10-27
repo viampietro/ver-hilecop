@@ -277,6 +277,12 @@ Section CompileTimeStateOpers.
     (* Updates the new architecture. *)
     set_binder (MkS2HMap sitpn (p2pcomp γ) t2tcomp' (a2out γ) (f2out γ) (c2in γ)).
 
+  Definition get_pci_id_from_binder (p : P sitpn) :=
+    do γ <- get_binder; getv Peqdec p (p2pcomp γ).
+
+  Definition get_tci_id_from_binder (t : T sitpn) :=
+    do γ <- get_binder; getv Teqdec t (t2tcomp γ).
+  
   (** *** Operations for beh *)
 
   Definition add_cs (cstmt : cs) : @Mon (Sitpn2HVhdlState sitpn) unit :=
@@ -418,6 +424,8 @@ Arguments bind_function {sitpn}.
 Arguments bind_condition {sitpn}.
 Arguments bind_place {sitpn}.
 Arguments bind_transition {sitpn}.
+Arguments get_pci_id_from_binder {sitpn}.
+Arguments get_tci_id_from_binder {sitpn}.
 
 (* Set implicit arguments for list of ports/sigs monadic functions. *)
 

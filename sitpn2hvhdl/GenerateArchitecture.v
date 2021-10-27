@@ -311,12 +311,14 @@ Arguments generate_pcis {sitpn}.
 Arguments generate_tcis {sitpn}.
 Arguments generate_architecture {sitpn}.
 
-Require Import test.sitpn.dp.WellDefinedSitpns.
-Require Import GenerateInfos.
+(* Unit tests *)
 
-Local Notation "[ e ]" := (exist _ e _).
+(* Require Import test.sitpn.dp.WellDefinedSitpns. *)
+(* Require Import GenerateInfos. *)
 
-Eval cbv in (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec;
-                           do _ <- generate_architecture (fun p => 1);
-                           get_beh)
-                            (InitS2HState sitpn_simpl 10))).
+(* Local Notation "[ e ]" := (exist _ e _). *)
+
+(* Eval cbv in (RedV ((do _ <- generate_sitpn_infos sitpn_simpl prio_simpl_dec; *)
+(*                            do _ <- generate_architecture (fun p => 1); *)
+(*                            get_beh) *)
+(*                             (InitS2HState sitpn_simpl 10))). *)
