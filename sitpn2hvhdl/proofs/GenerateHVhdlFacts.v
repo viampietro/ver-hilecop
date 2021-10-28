@@ -4,7 +4,7 @@ Require Import String.
 Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
-Require Import common.StateAndErrorMonadTactics.
+Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import common.ListLib.
 
 Require Import sitpn.SitpnLib.
@@ -14,68 +14,9 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Place.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.Sitpn2HVhdlInvs.
-Require Import sitpn2hvhdl.GenerateInfosFacts.
-Require Import sitpn2hvhdl.GenerateArchitectureFacts.
-
-(** ** Facts about [InputMap_to_AST] Function *)
-
-Section InputMap2AST.
-
-  Lemma foldl_imap_entry_to_associp_In_inl :
-    forall {sitpn imap s ipm1 ipm2 s' id e},
-      fold_left (imap_entry_to_associp sitpn) imap ipm1 s = OK ipm2 s' ->
-      List.In (id, inl e) imap ->
-      List.In (associp_ id e) ipm2.
-  Proof.
-    induction imap.
-    (* CASE imap = [] *)
-    inversion 2.
-    (* CASE imap = a :: tl *)
-    cbn; intros *; intros EQ; inversion_clear 1 as [eq_a | In_imap]; minv EQ.
-    (* SUBCASE [a = (id, inl e)] *)
-    inject_left eq_a.
-    eapply foldl_build_list_by_app; eauto.
-    intros *; intros EQ; minv EQ; eexists; eauto.
-    inversion eq_a.
-    (* SUBCASE [(id, inl e) ∈ imap] *)
-    all : eapply IHimap; eauto.
-  Qed.
-  
-  Lemma InputMap_to_AST_In_inl :
-    forall imap sitpn s ipm s' id e,
-      InputMap_to_AST sitpn imap s = OK ipm s' ->
-      List.In (id, inl e) imap ->
-      List.In (associp_ id e) ipm.
-  Proof.
-    unfold InputMap_to_AST; intros.
-    eapply foldl_imap_entry_to_associp_In_inl; eauto.
-  Qed.
-  
-End InputMap2AST.
-
-(** ** Facts about [OutputMap_to_AST] Function *)
-
-Section OutputMap2AST.
-  
-End OutputMap2AST.
-
-(** ** Facts about [HComponent_to_comp_inst] Function *)
-
-Section HComp2CompInst.
-
-  Lemma HComp_to_comp_inst_p_comp :
-    forall {sitpn id__c id__e hcomp s v s'},
-      HComponent_to_comp_inst sitpn id__c id__e hcomp s = OK v s' ->
-      exists gm ipm opm,
-        v = cs_comp id__c id__e gm ipm opm.
-  Proof.
-    intros until s'; intros e; destruct hcomp as ((gm, ipm), opm).
-    monadFullInv e.
-    exists gm, x, x0; reflexivity.
-  Qed.
-  
-End HComp2CompInst.
+Require Import sitpn2hvhdl.proofs.Sitpn2HVhdlInvs.
+Require Import sitpn2hvhdl.proofs.GenerateInfosFacts.
+Require Import sitpn2hvhdl.proofs.GenerateArchitectureFacts.
 
 (** ** Facts about Generation of P Component Instances *)
 
@@ -426,10 +367,10 @@ Section Sitpn2HVhdl.
       (* [sitpn] translates into [(d, γ)]. *)
       sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
-      forall p, exists id__p gm ipm opm,
+      forall p, exists id__p g__p i__p o__p,
           (* [γ(p) = id__p] *)
           InA Pkeq (p, id__p) (p2pcomp γ)
-          /\ InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d).
+          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (behavior d).
   Proof.
     intros. 
     functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) using sitpn_to_hvhdl_ind.

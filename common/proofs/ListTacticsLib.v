@@ -1,2 +1,2 @@
-Require Export common.ListMonadTactics.
-Require Export common.ListPlusTactics.
+Require Export common.proofs.ListMonadTactics.
+Require Export common.proofs.ListPlusTactics.

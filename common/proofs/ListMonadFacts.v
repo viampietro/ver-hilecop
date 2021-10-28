@@ -4,9 +4,9 @@ Require Import String.
 Require Import common.CoqLib.
 Require Import common.ListPlus.
 Require Import common.StateAndErrorMonad.
-Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListMonad.
-Require Import common.SetoidListFacts.
+Require Import common.proofs.StateAndErrorMonadTactics.
+Require Import common.proofs.SetoidListFacts.
 
 (** ** Facts about [getv] *)
 

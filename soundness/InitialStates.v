@@ -23,7 +23,7 @@ Require Import hvhdl.HVhdlSimulationLib.
 (* Require Import hvhdl.HVhdlSimulationFactsLib. *)
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
-(* Require Import sitpn2hvhdl.GenerateHVhdlFacts. *)
+Require Import sitpn2hvhdl.proofs.GenerateHVhdlFacts.
 (* Require Import sitpn2hvhdl.GenerateInfosFacts. *)
 
 Require Import soundness.SemanticPreservationDefs.
@@ -58,19 +58,19 @@ Lemma init_states_eq_marking :
          [s_marking] at state [σ__p]. *)
       MapsTo Place.s_marking (Vnat (M (s0 sitpn) p)) (sigstore σ__p0).
 Proof.
-  (* intros. *)
+  intros.
 
-  (* (* Builds the premises of the [init_s_marking_eq_nat] lemma. *) *)
+  (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
-  (* (* Builds [comp(id__p', "place", gm, ipm, opm) ∈ (behavior d)] *) *)
-  (* edestruct @sitpn2hvhdl_p_comp with (sitpn := sitpn) (p := p) *)
-  (*   as (id__p', (gm, (ipm, (opm, (Hγ, Hincs_comp))))); eauto. *)
+  (* Builds [comp(id__p', "place", gm, ipm, opm) ∈ (behavior d)] *)
+  edestruct @sitpn2hvhdl_p_comp with (sitpn := sitpn) (p := p)
+    as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
   (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
   (* destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds). *)
 
   (* (* Builds [id__p' ∈ Comps(Δ)] *) *)
-  (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto.  *)
+  (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto. *)
 
   (* (* Builds [id__p' ∈ (compstore σ__e)] *) *)
   (* edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto. *)

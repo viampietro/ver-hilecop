@@ -3,12 +3,14 @@
 Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
-Require Import common.StateAndErrorMonadTactics.
+
 Require Import common.ListDep.
 Require Import common.ListMonad.
-Require Import common.ListMonadFacts.
-Require Import common.ListMonadTactics.
 Require Import common.ListPlus.
+Require Import common.proofs.ListMonadFacts.
+Require Import common.proofs.ListMonadTactics.
+Require Import common.proofs.StateAndErrorMonadTactics.
+Require Import String.
 
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
@@ -50,12 +52,6 @@ Section TInfosInvs.
       lofTs s = lofTs s'.
   Proof. solveInfosSInv. Qed.
 
-  Lemma gen_tinfos_inv_arch :
-    forall {sitpn s v s'},
-      generate_trans_infos sitpn s = OK v s' ->
-      arch s = arch s'.
-  Proof. solveInfosSInv. Qed.
-
   Lemma gen_tinfos_inv_beh :
     forall {sitpn s v s'},
       generate_trans_infos sitpn s = OK v s' ->
@@ -73,19 +69,17 @@ Section PInfosInvs.
       all_conflicts_solved_by_mutex sitpn lofTs s = OK v s' ->
       s = s'.
   Proof.
-    induction lofTs; simpl; intros until s'; intros e; minv e; auto; transitivity s0.
-    - solve_listm EQ1;
+    induction lofTs; simpl; intros until s'; intros e; try (monadInv e; reflexivity).
+    destruct lofTs; try (monadInv e; reflexivity).
+    monadInv e; transitivity s0.
+    - monadInv EQ; transitivity s1.
+      + solve_listm EQ1;
         intros *; intros e; unfold not_exists_mutex in e; minv e;
           repeat (match goal with
                   | [e: _ ?st = OK _ _ |- ?st = _ ] => solve_listm e
                   end).
-    - minv EQ0; auto.
-    - solve_listm EQ1;
-        intros *; intros e; unfold not_exists_mutex in e; minv e;
-          repeat (match goal with
-                  | [e: _ ?st = OK _ _ |- ?st = _ ] => solve_listm e
-                  end).
-    - eapply IHlofTs; eauto.
+      + destruct x0; monadInv EQ2; reflexivity.      
+    - destruct x; [eauto | monadInv EQ0; reflexivity ].
   Qed.
 
   Lemma sort_by_priority_inv_state :
@@ -114,18 +108,12 @@ Section PInfosInvs.
   Ltac solvePInfosSInv :=
     intros *; intros e;
     match goal with
-    | _ : _ ?s1 = OK _ ?s2 |- _ =>
+    | _ : generate_place_infos _ _ ?s1 = OK _ ?s2 |- ?f ?s1 = ?f ?s2 =>
       pattern s1, s2; solveSInv e; intros *; intros e1; monadInv e1;
       match goal with
-      | [ E1 : get_neighbors_of_p _ _ ?s1 = OK _ ?s2, E2 : _ ?s2 = OK _ ?s3
-          |- ?f ?s1 = ?f ?s3 ] =>
-        transitivity (f s2); [ minv E1; auto | minv E2; rwPInfosSInv ]
-      | [ E1 : get_neighbors_of_p _ _ ?s1 = OK _ ?s2, E2 : _ ?s2 = OK _ ?s3
-          |- ?f (?g ?s1) = ?f (?g ?s3) ] =>
-        transitivity (f (g s2)); [ minv E1; auto | minv E2; rwPInfosSInv ]
-      | [ E1 : get_neighbors_of_p _ _ ?s1 = OK _ ?s2, E2 : _ ?s2 = OK _ ?s3
-          |- ?f (?g (?h ?s1)) = ?f (?g (?h ?s3)) ] =>
-        transitivity (f (g (h s2))); [ minv E1; auto | minv E2; rwPInfosSInv ]
+      | [ E1 : get_neighbors_of_p _ _ ?s1 = OK _ ?s2, E2 : _ ?s2 = OK _ ?s3, E3 : _ ?s3 = OK _ ?s4
+          |- ?f ?s1 = ?f ?s4 ] =>
+        transitivity (f s2); [ minv E1; auto | minv E2; minv E3; rwPInfosSInv ]
       end
     end.
     
@@ -145,12 +133,6 @@ Section PInfosInvs.
     forall {sitpn decpr s v s'},
       generate_place_infos sitpn decpr s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solvePInfosSInv. Qed.
-
-  Lemma gen_pinfos_inv_arch :
-    forall {sitpn decpr s v s'},
-      generate_place_infos sitpn decpr s = OK v s' ->
-      arch s = arch s'.
   Proof. solvePInfosSInv. Qed.
 
   Lemma gen_pinfos_inv_beh :
@@ -183,12 +165,6 @@ Section InterprInfosInvs.
       lofTs s = lofTs s'.
   Proof. solveInfosSInv. Qed.
 
-  Lemma gen_cinfos_inv_arch :
-    forall {sitpn s v s'},
-      generate_cond_infos sitpn s = OK v s' ->
-      arch s = arch s'.
-  Proof. solveInfosSInv. Qed.
-
   Lemma gen_cinfos_inv_beh :
     forall {sitpn s v s'},
       generate_cond_infos sitpn s = OK v s' ->
@@ -213,12 +189,6 @@ Section InterprInfosInvs.
       lofTs s = lofTs s'.
   Proof. solveInfosSInv. Qed.
 
-  Lemma gen_ainfos_inv_arch :
-    forall {sitpn s v s'},
-      generate_action_infos sitpn s = OK v s' ->
-      arch s = arch s'.
-  Proof. solveInfosSInv. Qed.
-
   Lemma gen_ainfos_inv_beh :
     forall {sitpn s v s'},
       generate_action_infos sitpn s = OK v s' ->
@@ -241,12 +211,6 @@ Section InterprInfosInvs.
     forall {sitpn s v s'},
       generate_fun_infos sitpn s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solveInfosSInv. Qed.
-
-  Lemma gen_finfos_inv_arch :
-    forall {sitpn s v s'},
-      generate_fun_infos sitpn s = OK v s' ->
-      arch s = arch s'.
   Proof. solveInfosSInv. Qed.
 
   Lemma gen_finfos_inv_beh :
@@ -293,25 +257,6 @@ Proof.
   rewrite (check_wd_sitpn_inv_eq_state EQ9), (gen_tinfos_inv_γ EQ10), (gen_pinfos_inv_γ EQ11),
   (gen_cinfos_inv_γ EQ12), (gen_ainfos_inv_γ EQ13).
   apply (gen_finfos_inv_γ EQ15).
-Qed.
-
-Lemma gen_sitpn_infos_inv_arch :
-  forall {sitpn decpr s v s'},
-    generate_sitpn_infos sitpn decpr s = OK v s' ->
-    arch s = arch s'.
-Proof.
-  intros *; intros e; monadInv e.
-  do 10 (match goal with
-         | [ H: ?F _ ?st0 = OK _ ?st1 |- arch ?st0 = arch ?st2 ] =>
-           transitivity (arch st1); [
-             (let e := fresh "e" in solveSInv H; intros *; intros e; minv e; auto)
-             || (minv H; simpl; auto) |];
-           clear H
-        end).
-  rewrite (check_wd_sitpn_inv_eq_state EQ9),
-  (gen_tinfos_inv_arch EQ10), (gen_pinfos_inv_arch EQ11),
-  (gen_cinfos_inv_arch EQ12), (gen_ainfos_inv_arch EQ13).
-  apply (gen_finfos_inv_arch EQ15).
 Qed.
 
 Lemma gen_sitpn_infos_inv_beh :
