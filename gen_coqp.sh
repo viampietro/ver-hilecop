@@ -15,7 +15,7 @@ while [ "$1" != "" ]; do
     case $1 in
         -wp | --without-proof )
             shift
-	    PROOF_FILES_PATTERN=".+\(Invs.v\|Facts.v\)$"
+	    PROOF_FILES_PATTERN=".*/proofs/.*"
             ;;
         -h | --help )
 	    usage
@@ -44,6 +44,5 @@ echo "-R common/ hilecop.common
 
 find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" ! -regex ".*/\..+" ! -regex "./common/DFMapWeakList.v" >> _CoqProject
 
-# find -name *.v ! -path "./*/\.*" ! -path "./common/DFMapWeakList.v" ! -path "$PROOF_FILES_PATTERN" >> _CoqProject
 
 

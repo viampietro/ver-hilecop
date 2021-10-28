@@ -9,12 +9,12 @@ Require Import common.ListPlus.
 
 (* SITPN Libraries *)
 
-Require Import dp.SitpnSemanticsDefs.
-Require Import dp.SitpnTypes.
-Require Import dp.Sitpn.
-Require Import dp.SitpnSemantics.
-Require Import dp.Fired.
-Require Import dp.SitpnWellDefined.
+Require Import sitpn.SitpnSemanticsDefs.
+Require Import sitpn.SitpnTypes.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnSemantics.
+Require Import sitpn.Fired.
+Require Import sitpn.SitpnWellDefined.
 
 (* H-VHDL Libraries *)
 
@@ -125,7 +125,7 @@ Proof.
   - lazymatch goal with
     | [ Hsimloop: simloop _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear Hsimloop;
-        constructor; info_eauto with hilecop
+        constructor; eauto with hilecop
     end.
 
   (* CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].   
@@ -137,8 +137,8 @@ Proof.
     end.
     match goal with
     | [ H: simcycle _ _ _ _ _ _ _ _ |- _ ] =>
-        inversion_clear H; constructor; info_eauto with hilecop
+        inversion_clear H; constructor; eauto with hilecop
     end.
-    constructor; info_eauto with hilecop.
-    constructor; info_eauto with hilecop.
+    constructor; eauto with hilecop.
+    constructor; eauto with hilecop.
 Qed.

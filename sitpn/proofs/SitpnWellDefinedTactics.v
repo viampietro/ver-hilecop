@@ -1,6 +1,6 @@
 (** * Tactics for the IsWellDefined Predicate *)
 
-Require Import sitpn.dp.SitpnWellDefined.
+Require Import sitpn.SitpnWellDefined.
 
 Ltac build_nodup_places H :=
   lazymatch type of H with

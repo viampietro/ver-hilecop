@@ -8,8 +8,8 @@ Require Import common.StateAndErrorMonad.
 Require Import common.ListPlus.
 Require Import common.ListMonad.
 Require Import String.
-Require Import dp.Sitpn.
-Require Import dp.SitpnFacts.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnFacts.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 

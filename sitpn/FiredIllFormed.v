@@ -3,7 +3,7 @@
 (** Ill-formed definitions; i.e, not accepted but the Coq core. *)
 
 Require Import CoqLib.
-Require Import dp.Sitpn.
+Require Import sitpn.Sitpn.
 Require Import SitpnTypes.
 Require Import GlobalTypes.
 Require Import SitpnSemanticsDefs.

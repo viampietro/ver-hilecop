@@ -1,6 +1,6 @@
 (** * Similar states after first rising edge  *)
 
-Require Import sitpn.dp.SitpnLib.
+Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlElaborationLib.

@@ -10,9 +10,8 @@ Require Import String.
 Require Import common.NatMap.
 Require Import common.NatSet.
 
-Require Import dp.Sitpn.
-Require Import dp.SitpnFacts.
-Require Import dp.SitpnTypes.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnTypes.
 
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
@@ -265,7 +264,7 @@ End GeneratePortsAndPs.
 
 Arguments generate_ports {sitpn}.
 
-(* Require Import test.sitpn.dp.WellDefinedSitpns. *)
+(* Require Import test.sitpn.WellDefinedSitpns. *)
 (* Require Import GenerateInfos. *)
 
 (* Local Notation "[ e ]" := (exist _ e _). *)

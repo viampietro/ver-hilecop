@@ -7,7 +7,7 @@ Require Import common.StateAndErrorMonad.
 Require Import common.StateAndErrorMonadTactics.
 Require Import common.ListLib.
 
-Require Import sitpn.dp.SitpnLib.
+Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.AbstractSyntax.
 

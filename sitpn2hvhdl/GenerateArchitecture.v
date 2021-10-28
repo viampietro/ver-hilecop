@@ -6,14 +6,16 @@ Require Import common.ListPlus.
 Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
 Require Import String.
-Require Import dp.Sitpn.
-Require Import dp.SitpnFacts.
-Require Import dp.SitpnTypes.
+
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnTypes.
+
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 Require Import hvhdl.Transition.
+
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 
 Import ErrMonadNotations.
@@ -313,7 +315,7 @@ Arguments generate_architecture {sitpn}.
 
 (* Unit tests *)
 
-(* Require Import test.sitpn.dp.WellDefinedSitpns. *)
+(* Require Import test.sitpn.WellDefinedSitpns. *)
 (* Require Import GenerateInfos. *)
 
 (* Local Notation "[ e ]" := (exist _ e _). *)

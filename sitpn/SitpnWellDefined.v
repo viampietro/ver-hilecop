@@ -2,9 +2,9 @@
 
 Require Import CoqLib.
 Require Import GlobalTypes.
-Require Import dp.Sitpn.
-Require Import dp.SitpnFacts.
-Require Import dp.SitpnTypes.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnFacts.
+Require Import sitpn.SitpnTypes.
 
 Set Implicit Arguments.
 

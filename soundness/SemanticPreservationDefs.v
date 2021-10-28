@@ -11,11 +11,11 @@ Require Import common.NatSet.
 
 (* SITPN Libraries *)
 
-Require Import dp.SitpnTypes.
-Require Import dp.Sitpn.
-Require Import dp.SitpnFacts.
-Require Import dp.SitpnSemanticsDefs.
-Require Import dp.Fired.
+Require Import sitpn.SitpnTypes.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnFacts.
+Require Import sitpn.SitpnSemanticsDefs.
+Require Import sitpn.Fired.
 
 (* H-VHDL Libraries *)
 

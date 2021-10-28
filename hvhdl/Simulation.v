@@ -12,7 +12,7 @@
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 
-Require Import dp.SitpnTypes.
+Require Import sitpn.SitpnTypes.
 
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Environment.

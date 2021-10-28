@@ -2,8 +2,8 @@
 
 Require Import common.NatMap.
 
-Require Import sitpn.dp.SitpnTypes.
-Require Import sitpn.dp.SitpnSemantics.
+Require Import sitpn.SitpnTypes.
+Require Import sitpn.SitpnSemantics.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.

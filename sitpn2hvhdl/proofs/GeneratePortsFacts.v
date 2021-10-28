@@ -9,7 +9,7 @@ Require Import common.ListMonadTactics.
 Require Import common.ListPlus.
 Require Import common.SetoidListFacts.
 
-Require Import sitpn.dp.SitpnLib.
+Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.AbstractSyntax.
 

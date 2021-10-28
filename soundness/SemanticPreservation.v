@@ -9,12 +9,12 @@ Require Import common.ListPlus.
 
 (* SITPN Libraries *)
 
-Require Import dp.SitpnSemanticsDefs.
-Require Import dp.SitpnTypes.
-Require Import dp.Sitpn.
-Require Import dp.SitpnSemantics.
-Require Import dp.Fired.
-Require Import dp.SitpnWellDefined.
+Require Import sitpn.SitpnSemanticsDefs.
+Require Import sitpn.SitpnTypes.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnSemantics.
+Require Import sitpn.Fired.
+Require Import sitpn.SitpnWellDefined.
 
 (* H-VHDL Libraries *)
 

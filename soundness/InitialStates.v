@@ -2,15 +2,15 @@
 
 Require Import String.
 Require Import common.CoqLib.
-Require Import common.CoqTactics.
+(* Require Import common.CoqTactics. *)
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.NatMap.
 Require Import common.ListLib.
 Require Import common.StateAndErrorMonad.
-Require Import common.StateAndErrorMonadTactics.
+(* Require Import common.StateAndErrorMonadTactics. *)
 
-Require Import sitpn.dp.SitpnLib.
+Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.HVhdlCoreLib.
 (* Require Import hvhdl.HVhdlCoreFactsLib. *)

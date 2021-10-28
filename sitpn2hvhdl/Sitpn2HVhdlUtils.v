@@ -8,7 +8,7 @@ Require Import common.StateAndErrorMonad.
 
 Require Import String.
 
-Require Import sitpn.dp.Sitpn.
+Require Import sitpn.Sitpn.
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.

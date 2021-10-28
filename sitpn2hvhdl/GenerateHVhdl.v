@@ -12,7 +12,7 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Petri.
 Require Import hvhdl.HVhdlTypes.
 
-Require Import dp.Sitpn.
+Require Import sitpn.Sitpn.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 Require Import sitpn2hvhdl.GenerateInfos.
@@ -60,4 +60,7 @@ End Sitpn2HVhdl.
 Require Import FunInd.
 
 Functional Scheme sitpn_to_hvhdl_ind := Induction for sitpn_to_hvhdl Sort Prop.
+
+
+
 

@@ -3,10 +3,10 @@
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.ListPlus.
-Require Import dp.Sitpn.
-Require Import dp.SitpnTypes.
-Require Import dp.SitpnSemanticsDefs.
-Require Import dp.Fired.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnTypes.
+Require Import sitpn.SitpnSemanticsDefs.
+Require Import sitpn.Fired.
 
 Local Set Implicit Arguments.
 

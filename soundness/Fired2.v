@@ -4,7 +4,7 @@ Require Import common.NatMap.
 Require Import common.CoqLib.
 Require Import common.ListLib.
 
-Require Import sitpn.dp.SitpnLib.
+Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
@@ -16,7 +16,7 @@ Require Import hvhdl.HilecopDesignStore.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
 
-Require Import soundness.SoundnessDefs.
+Require Import soundness.SemanticPreservationDefs.
 
 (** ** Operational Implementation of the Fired set. *)
 
@@ -78,7 +78,7 @@ Lemma fe_equal_fired_aux :
     SitpnStateTransition E__c τ s s' fe ->
 
     (* From σ to σ' after ↓. *)
-    IsInjectedDState σ (E__p τ fe) σ__i ->
+    IsInjectedDState σ (E__p τ) σ__i ->
     vfalling hdstore Δ σ__i (behavior d) σ__f ->
     stabilize hdstore Δ σ__f (behavior d) σ' ->
 
@@ -148,7 +148,7 @@ Lemma fe_equal_fired :
     SitpnStateTransition E__c τ s s' fe ->
 
     (* From σ to σ' after ↓. *)
-    IsInjectedDState σ (E__p τ fe) σ__i ->
+    IsInjectedDState σ (E__p τ) σ__i ->
     vfalling hdstore Δ σ__i (behavior d) σ__f ->
     stabilize hdstore Δ σ__f (behavior d) σ' ->
 

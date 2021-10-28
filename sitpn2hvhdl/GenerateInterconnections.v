@@ -6,14 +6,16 @@ Require Import common.ListPlus.
 Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
 Require Import String.
-Require Import dp.Sitpn.
-Require Import dp.SitpnFacts.
-Require Import dp.SitpnTypes.
+
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnTypes.
+
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 Require Import hvhdl.Transition.
+
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
 Require Import sitpn2hvhdl.Sitpn2HVhdlUtils.
 

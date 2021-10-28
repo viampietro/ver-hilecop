@@ -3,9 +3,9 @@
 Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.ListPlus.
-Require Import dp.Sitpn.
-Require Import dp.SitpnTypes.
-Require Import dp.SitpnFacts.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnTypes.
+
 Require Import common.ListDep.
 Require Import common.GlobalTypes.
 Require Import String.
