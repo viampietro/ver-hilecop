@@ -20,6 +20,7 @@ Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import sitpn2hvhdl.Sitpn2HVhdlUtils.
 Require Import sitpn2hvhdl.GenerateArchitecture.
 
 (** ** Common to action/function ports and process generation. *)
@@ -55,191 +56,8 @@ Section GeneratePortsAndPs.
              (rst_and_assign_ss : ss * ss) : CompileTimeState (ss * ss) :=
     let (rstss, assignss) := rst_and_assign_ss in
     Ret (rstss;; (id @<== false), assignss;; (build_assign_or id lofexprs)).
-  
-  (** ** Generation of the action ports and action activation process. *)
 
-  Section GenerateActionPortsAndPs.
-    
-    (** (1) Adds the signal connected to the "marked" output port of the
-      component representing place [p] to the list of expressions
-      [lofexprs].
-      
-      (2) If no "marked" output port exist in the output port map of
-      the component representing [p], then an internal signal is
-      created, and added to both the output port map and [lofexprs].
-
-      (3) Returns the new architecture, the next available identifier,
-      and the new list of expressions. *)
-    
-    Definition connect_marked_port
-               (lofexprs : list expr)
-               (p : P sitpn) :
-      CompileTimeState (list expr) :=
-
-      do pcomp <- get_pcomp p;
-      do opt_marked_actual <- get_actual_of_out_port Place.marked pcomp;
-
-      match opt_marked_actual with
-      (* Case where marked is connected to a name.  Then, adds the
-         equivalent expression at the end of lofexprs, and returns the
-         triplet (architecture, nextid, lofexprs). *)
-      | Some (inl optn) =>
-        match optn with
-        | Some n => Ret (lofexprs ++ [e_name n])
-        | _ => Err ("connect_marked_port: the marked port of P component "
-                      ++ $$p ++ " is open.")
-        end
-      (* Error case, the [marked] port is connected to a list of names
-         in the output port map of [pcomp], albeit it must be of scalar
-         type (boolean).  *)
-      | Some (inr _) => Err ("connect_marked_port: the marked port of place "
-                               ++ $$p ++ " must be of scalar type.")%string
-      (* Case where marked is not connected yet. Then, adds a new
-         interconnection signal to the arch's declaration list and at
-         the end of the lofexprs, modifies the output port map of
-         place p, and returns the resulting triplet. *)
-      | None =>
-        do id <- get_nextid;
-        do pcomp' <- connect_out_port Place.marked (inl (Some ($id))) pcomp;
-        do _ <- set_pcomp p pcomp';
-        do _ <- add_sig_decl (sdecl_ id tind_boolean);
-        
-        (* Increments nextid to return the next available identifier. *)
-        Ret (lofexprs ++ [#id])      
-      end.
-    
-    (** Connects the "marked" output ports of all P components
-      associated to the places of the [places] list to an internal
-      signal; the list of all such signals is returned (as a list of
-      expressions).  *)
-    
-    Definition connect_marked_ports (places : list (P sitpn)) :
-      CompileTimeState (list expr) :=
-      
-      (* Calls the connect_marked_port function over all places of the
-       places list. *)
-      fold_left connect_marked_port places [].
-
-    (** Builds a ActionMap entry for action [a]. *)
-
-    Definition add_action_map_entry (a : A sitpn) :
-      CompileTimeState unit :=
-      do pls_of_a <- get_ainfo a;
-      do sigs_of_a <- connect_marked_ports pls_of_a;
-      set_aport a sigs_of_a.
-    
-    (** Returns the ActionMap built out the list of actions of [sitpn]. *)
-
-    Definition generate_action_map : CompileTimeState unit :=
-      (* Calls add_action_map_entry on each action of sitpn. *)
-      do Alist <- get_lofAs; iter add_action_map_entry Alist.
-
-    (** (1) Adds a new output port representing the activation state of
-      action [a] in the list of port declarations [aports].
-      
-      (2) Adds the signal assignment statements that sets the value of
-      the created output port in the reset and falling edge part of the
-      action activation process.  
-      
-      (3) Returns the new list of port declarations, the
-      new statements, and a fresh identifier. *)
-    
-    Definition generate_action_port_and_ss
-               (rst_and_falling_ss : ss * ss) 
-               (a : A sitpn) : CompileTimeState (ss * ss) :=      
-      do id <- get_nextid;
-      do _ <- add_out_port (pdecl_out id tind_boolean);
-      do _ <- bind_action a id;
-      do lofexprs <- get_aport a;
-      add_to_stmts id lofexprs rst_and_falling_ss.
-    
-    (** (1) Generates the list of port declarations corresponding to the
-            creation of output ports for each action of [sitpn].
-      
-        (2) Builds the "action" process.
-
-        (3) Returns the architecture, the action ports and ps, and the
-           next available id.  *)
-
-    Definition generate_action_ports_and_ps : CompileTimeState unit :=
-      (* If there are no action in sitpn, then no need for the action
-         activation process. *)
-      if (actions sitpn) then Ret tt
-      else
-        do _ <- generate_action_map;
-        do Alist <- get_lofAs;
-        do rst_and_falling_ss <- fold_left
-                                   generate_action_port_and_ss
-                                   Alist (ss_null, ss_null);
-        let (rstss, fallingss) := rst_and_falling_ss in
-        (* Builds the action activation process, and appends it to the
-           behavior of the compile-time state. *)
-        let body := (Rst rstss Else (Falling fallingss)) in
-        let aps := cs_ps action_ps_id {[clk]} [] body in
-        add_cs aps.
-    
-  End GenerateActionPortsAndPs.
-
-  (** ** Generation of the function execution ports and process. *)
-
-  Section GenerateFunPortsAndPs.
-
-    (** Builds a FunMap entry for function [f]. *)
-
-    Definition add_fun_map_entry (f : F sitpn) : CompileTimeState unit :=
-      do transs_of_f <- get_finfo f;
-      do sigs_of_f <- connect_fired_ports transs_of_f;
-      set_fport f sigs_of_f.
-          
-    (** Returns the ActionMap built out the list of actions of [sitpn]. *)
-
-    Definition generate_fun_map : CompileTimeState unit :=
-      (* Calls add_fun_map_entry on each function of sitpn. *)
-      do Flist <- get_lofFs; iter add_fun_map_entry Flist.
-    
-    (** (1) Adds a new output port representing the execution state of
-      function [f] in the output port declaration list.
-      
-      (2) Adds the signal assignment statements that sets the value of
-      the created output port in the reset and rising edge part of the
-      ["function"] execution process.  
-      
-      (3) Binds function [f] to the generated output port identifier. *)
-    
-    Definition generate_fun_port_and_ss (rst_and_rising_ss : ss * ss) (f : F sitpn) :
-      CompileTimeState (ss * ss) :=
-      do id <- get_nextid;
-      do _ <- add_out_port (pdecl_out id tind_boolean);
-      do _ <- bind_function f id;
-      do lofexprs <- get_fport f;
-      add_to_stmts id lofexprs rst_and_rising_ss.
-
-    (** (1) Generates the list of port declarations corresponding to the
-        creation of output ports for each function of [sitpn].
-      
-      (2) Builds the function execution process.
-      
-      (3) Returns the new architecture, the function ports and ps, and
-      the next available identifier.  *)
-
-    Definition generate_fun_ports_and_ps : CompileTimeState unit :=
-      (* If there are no function in sitpn, then no need for the
-       function execution process. *)
-      if (functions sitpn) then Ret tt
-      else
-        do _ <- generate_fun_map;
-        do Flist <- get_lofFs;
-        do rst_and_rising_ss <- fold_left generate_fun_port_and_ss Flist (ss_null, ss_null);
-        let (rstss, risingss) := rst_and_rising_ss in
-        (* Builds the action activation process, and appends it to the
-           behavior of the compile-time state. *)
-        let body := (Rst rstss Else (Rising risingss)) in
-        let fps := cs_ps function_ps_id {[clk]} [] body in
-        add_cs fps.
-    
-  End GenerateFunPortsAndPs.
-  
-  (** ** Generate and connect condition ports. *)
+  (** ** Generate and connect condition ports *)
 
   Section GenerateAndConnectCondPorts.
     
@@ -266,25 +84,12 @@ Section GeneratePortsAndPs.
 
     Definition connect_in_cond_port (id__c : ident) (c : C sitpn) (t : T sitpn) :
       CompileTimeState unit :=
-
-      do tcomp <- get_tcomp t;
-      do condexpr <- build_cond_expr id__c c t;
-      do tcomp' <- add_cassoc_to_ipmap Transition.input_conditions condexpr tcomp;
-      set_tcomp t tcomp'.
-
-    (** Connects the input port [id__c] to every input port map of T
-        components representing the transitions of the [transs]
-        list.  *)
-    
-    Definition connect_in_cond_ports
-               (id__c : ident)
-               (c : C sitpn)
-               (transs : list (T sitpn)) :
-      CompileTimeState unit :=
-      (* Calls [connect_in_cond_port id__c c] on each transition of the
-         transs list, thus modifying the architecture in the
-         compile-time state.  *)
-      iter (connect_in_cond_port id__c c) transs. 
+      do id__t <- get_tci_id_from_binder t;
+      do tci <- get_comp id__t;
+      let '(id__e, g__t, i__t, o__t) := tci in
+      do e   <- build_cond_expr id__c c t;
+      do i__t' <- cassoc_imap i__t Transition.input_conditions e;
+      put_comp id__t id__e g__t i__t' o__t.
 
     (** Creates an input port representing condition [c] and adds it to
         the [condports] list. Connects the created input port to the
@@ -294,43 +99,167 @@ Section GeneratePortsAndPs.
     Definition generate_and_connect_cond_port (c : C sitpn) :
       CompileTimeState unit :=
 
-      do id       <- get_nextid;
-      do _        <- add_in_port (pdecl_in id tind_boolean);
-      do _        <- bind_condition c id;
+      do id__c      <- get_nextid;
+      do _        <- add_port_decl (pdecl_in id__c tind_boolean);
+      do _        <- bind_condition c id__c;
       do trs_of_c <- get_cinfo c;
-      connect_in_cond_ports id c trs_of_c.
+      iter (connect_in_cond_port id__c c) trs_of_c.
 
-    (** Generates an input port for each condition of [sitpn], and
-      connects this input port to the proper Transition components.
-      
-      Returns the new architecture, the next available identifier,
-      and the list of created input ports representing conditions. *)
+    (** Generates an input port for each condition [c] of [sitpn], and
+        connects this input port to the TCIs representing the
+        transitions associated with the condition [c]. *)
 
     Definition generate_and_connect_cond_ports : CompileTimeState unit :=
-
-      (* Calls [generate_and_connect_cond_port] for each condition of [sitpn]. *)
       do Clist <- get_lofCs; iter generate_and_connect_cond_port Clist.
     
   End GenerateAndConnectCondPorts.
+  
+  (** ** Generation of the action ports and action activation process *)
+
+  Section GenerateActionPortsAndPs.
+        
+    (** Builds the "activation" expression that will determine the
+        value of the output port [id__a] that reflects the activation
+        status of action [a].
+        
+        This activation expression is assigned to port [id__a] in the
+        generated action process. *)
+
+    Definition build_activation_expr (a : A sitpn) :
+      CompileTimeState expr :=
+      do pls_of_a <- get_ainfo a;
+      let add_or :=
+        fun e p =>
+          do id__p <- get_pci_id_from_binder p;
+          do pci <- get_comp id__p;
+          let '(id__e, g__p, i__p, o__p) := pci in
+          do a <- actual Place.marked o__p;
+          match a with
+          | None => Err ("build_activation_expr: The marked port of PCI " ++ $$id__p ++ " is open.")
+          | Some n => Ret (e_name n @|| e)
+          end
+      in
+      ListMonad.fold_left add_or pls_of_a false.
+    
+    (** (1) Declares a new output port [id__a] representing the
+        activation state of action [a] in the list of port
+        declarations.
+      
+        (2) Adds the signal assignment statements that sets the value
+            of the output port [id__a] in the reset and falling edge part
+            of the generated "action" process.
+      
+        (3) Returns the new reset statement and falling statement. *)
+    
+    Definition generate_action_port_and_ss
+               (rss_fss : ss * ss) 
+               (a : A sitpn) : CompileTimeState (ss * ss) :=      
+      do id__a <- get_nextid;
+      do _   <- add_port_decl (pdecl_out id__a tind_boolean);
+      do _   <- bind_action a id__a;
+      do e   <- build_activation_expr a;
+      let '(rss, fss) := rss_fss in
+      Ret (rss;; id__a @<== false, fss;; id__a @<== e).
+    
+    (** (1) Generates the list of port declarations corresponding to
+            the creation of output ports for each action of [sitpn].
+      
+        (2) Builds the "action" process and appends the generated
+            H-VHDL design behavior.  *)
+
+    Definition generate_action_ports_and_ps : CompileTimeState unit :=
+      (* If there are no action in [sitpn], then no need to generate
+         the action activation process. *)
+      if (actions sitpn) then Ret tt
+      else
+        do Alist <- get_lofAs;
+        do rss_fss <- fold_left generate_action_port_and_ss Alist (ss_null, ss_null);
+        let '(rss, fss) := rss_fss in
+        (* Builds the action activation process, and appends it to the
+           behavior of the compile-time state. *)
+        add_cs (cs_ps action_ps_id {[clk]} [] (Rst rss Else (Falling fss))).
+    
+  End GenerateActionPortsAndPs.
+
+  (** ** Generation of the function execution ports and process *)
+
+  Section GenerateFunPortsAndPs.
+
+    (** Builds the "execution" expression that will determine the
+        value of the output port [id__f] that reflects the execution
+        status of function [f].
+        
+        This execution expression is assigned to port [id__f] in the
+        generated "function" process. *)
+
+    Definition build_execution_expr (f : F sitpn) : CompileTimeState expr :=
+      do trs_of_f <- get_finfo f;
+      let add_or :=
+        fun e t =>
+          do id__t <- get_tci_id_from_binder t;
+          do tci <- get_comp id__t;
+          let '(id__e, g__t, i__t, o__t) := tci in
+          do a <- actual Transition.fired o__t;
+          match a with
+          | None => Err ("build_execution_expr: The fired port of TCI " ++ $$id__t ++ " is open.")
+          | Some n => Ret (e_name n @|| e)
+          end
+      in
+      ListMonad.fold_left add_or trs_of_f false.
+    
+    (** (1) Adds a new output port [id__f] representing the execution
+            state of function [f] in the output port declaration list.
+      
+        (2) Adds the signal assignment statements that sets the value
+            of the output port [id__f] in the reset and rising edge part of
+            the ["function"] process.
+      
+        (3) Binds function [f] to the generated output port identifier
+            [id__f] in [γ]. *)
+    
+    Definition generate_fun_port_and_ss (rstss_rss : ss * ss) (f : F sitpn) :
+      CompileTimeState (ss * ss) :=
+      do id__f <- get_nextid;
+      do _   <- add_port_decl (pdecl_out id__f tind_boolean);
+      do _   <- bind_function f id__f;
+      do e   <- build_execution_expr f;
+      let '(rstss, rss) := rstss_rss in
+      Ret (rstss;; id__f @<== false, rss;; id__f @<== e).
+    
+    (** (1) Generates the list of port declarations corresponding to
+        the creation of output ports for each function of [sitpn].
+      
+        (2) Builds the "function" process and appends it to the behavior
+        of the generated H-VHDL design. *)
+
+    Definition generate_fun_ports_and_ps : CompileTimeState unit :=
+      (* If there are no function in sitpn, then no need to generate
+         the function process. *)
+      if (functions sitpn) then Ret tt
+      else
+        do Flist <- get_lofFs;
+        do rstss_rss <- fold_left generate_fun_port_and_ss Flist (ss_null, ss_null);
+        let (rstss, rss) := rstss_rss in
+        (* Builds the function process and appends it to the behavior
+           of the compile-time state. *)
+        add_cs (cs_ps function_ps_id {[clk]} [] (Rst rstss Else (Rising rss))).
+    
+  End GenerateFunPortsAndPs.
 
   (** ** Generate ports and related processes. *)
 
-  Section GeneratePorts.
-    
-    (** Generates the ports of an H-VHDL design implementing [sitpn],
-        that is, the input ports implementing the conditions of [sitpn],
-        the output ports implementing the actions and functions of
-        [sitpn].
+  (** Generates the ports of an H-VHDL design implementing [sitpn],
+      that is, the input ports implementing the conditions of [sitpn],
+      the output ports implementing the actions and functions of
+      [sitpn].
       
-        Alongside the action and function ports, the action activation
-        and function execution processes are generated. *)
+      Alongside the action and function ports, the action and function
+      processes are generated. *)
 
-    Definition generate_ports : CompileTimeState unit :=
-      do _ <- generate_action_ports_and_ps;
-      do _ <- generate_fun_ports_and_ps;
-      generate_and_connect_cond_ports.
-    
-  End GeneratePorts.
+  Definition generate_ports : CompileTimeState unit :=
+    do _ <- generate_action_ports_and_ps;
+    do _ <- generate_fun_ports_and_ps;
+    generate_and_connect_cond_ports.
 
 End GeneratePortsAndPs.
 

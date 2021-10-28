@@ -129,17 +129,17 @@ Section Sitpn2HVhdlUtils.
   
   (** The [get_comp_aux] function looks up [cstmt] for a component
       instantiation statement labelled with [id__c] as a component
-      instance identifier, and returns a tuple composed of component
-      instantiation statement's entity identifier, generic map, input
-      port and output port map when found.
+      instance identifier, and returns a tuple composed of the
+      component instantiation statement's entity identifier, generic
+      map, input port and output port map when found.
 
       The [get_comp_aux] function throws an error there exist multiple
       component instantiation statements with identifier [id__c] in
       [cstmt].
 
       The [get_comp_aux] function returns [None] (does not throw an
-      error) if no component instantitation statement with [id__c] is
-      found in [cstmt]. *)
+      error) if no component instantitation statement with identifier
+      [id__c] is found in [cstmt]. *)
 
   Fixpoint get_comp_aux (id__c : ident) (cstmt : cs) {struct cstmt} :
     CompileTimeState (option (ident * genmap * inputmap * outputmap)) :=
@@ -183,25 +183,27 @@ Section Sitpn2HVhdlUtils.
       error if multiple CIS with identifier [id__c] exist in [cstmt]. *)
 
   Fixpoint put_comp_aux
-           (id__c : ident)
-           (cistmt : { ci : cs | exists id__e g i o, ci = cs_comp id__c id__e g i o})
+           (id__c id__e : ident)
+           (g : genmap) (i : inputmap) (o : outputmap)
            (cstmt : cs) {struct cstmt} : CompileTimeState cs :=
   match cstmt with
   | cs_comp id__c' _ _ _ _ =>
-      if id__c =? id__c' then Ret (proj1_sig cistmt)
-      else Ret (cstmt // proj1_sig cistmt)
+      if id__c =? id__c' then Ret (cs_comp id__c id__e g i o)
+      else Ret (cstmt // (cs_comp id__c id__e g i o))
   | cstmt1 // cstmt2 =>
       do optcomp <- get_comp_aux id__c cstmt1;
       if optcomp then
         (* If there exists a component instance with identifier [id__c]
-           in [cstmt1], then put [cistmt] in [cstmt1]. *)
-        do cstmt3 <- put_comp_aux id__c cistmt cstmt1;
+           in [cstmt1], then put comp in [cstmt1], and returns the
+           parallel composition of modified [cstmt1] and [cstmt2]. *)
+        do cstmt3 <- put_comp_aux id__c id__e g i o cstmt1;
         Ret (cstmt3 // cstmt2)
       else
-        (* Else put [cistmt] in [cstmt2]. *)
-        do cstmt3 <- put_comp_aux id__c cistmt cstmt2;
+        (* Else put comp in [cstmt2]. *)
+        do cstmt3 <- put_comp_aux id__c id__e g i o cstmt2;
         Ret (cstmt1 // cstmt3)
-  | _ => Ret (cstmt // proj1_sig cistmt)
+  (* In all other cases, appends the ci at the end of [cstmt]. *)
+  | _ => Ret (cstmt // (cs_comp id__c id__e g i o))
   end.
 
   (** Retrieves the behavior [b] from the compile-time state, and puts
@@ -209,12 +211,10 @@ Section Sitpn2HVhdlUtils.
       function. Finally, sets the modified behavior as the new
       behavior in the compile-time state. *)
   
-  Definition put_comp
-             (id__c : ident)
-             (cistmt : { ci : cs | exists id__e g i o, ci = cs_comp id__c id__e g i o}) :
+  Definition put_comp (id__c id__e : ident) (g : genmap) (i : inputmap) (o : outputmap) :
     CompileTimeState unit :=
     do b <- get_beh;
-    do newb <- put_comp_aux id__c cistmt b;
+    do newb <- put_comp_aux id__c id__e g i o b;
     set_beh newb.
 
   (** Returns sig type composed of a [cs] statement and a proof that

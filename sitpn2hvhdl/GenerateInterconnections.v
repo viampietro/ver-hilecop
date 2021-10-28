@@ -107,7 +107,7 @@ Section GenInter.
     do oi3 <- connect (fst oi2) (snd oi2) Place.priority_authorizations idx Transition.priority_authorizations;
     let '(o__p3, i__t3) := oi3 in
     (* Replaces TCI [id__t] by a new TCI in the compile-time state's behavior. *)
-    do _ <- put_comp id__t (to_ci id__t transition_entid g__t i__t3 o__t);
+    do _ <- put_comp id__t id__e g__t i__t3 o__t;
     (* Last interconnection between [i__p] and [o__t]. *)
     do a <- actual Transition.fired o__t;
     match a with
@@ -163,7 +163,7 @@ Section GenInter.
     do o__p3 <- Ret (o__p2 ++ [assocop_idx Place.priority_authorizations idx ($id__s)]);
 
     (* Replaces TCI [id__t] by a new TCI in the compile-time state's behavior. *)
-    do _ <- put_comp id__t (to_ci id__t transition_entid g__t i__t3 o__t);
+    do _ <- put_comp id__t id__e g__t i__t3 o__t;
     
     (* Last interconnection between [i__p] and [o__t]. *)
     do a <- actual Transition.fired o__t;
@@ -216,7 +216,7 @@ Section GenInter.
     (* Replaces the PCI [pci] by a new PCI in the compile-time state's
        behavior. *)
     let '(i2, o2) := io2 in
-    put_comp id__p (to_ci id__p place_entid g i2 o2).
+    put_comp id__p id__e g i2 o2.
 
   (** Generates the interconnections between PCIs and TCIS by
       modifying the compile-time state's behavior. *)
