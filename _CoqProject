@@ -12,14 +12,6 @@
 ./sitpn2hvhdl/GenerateHVhdl.v
 ./sitpn2hvhdl/Sitpn2HVhdlTypes.v
 ./sitpn2hvhdl/GenerateInterconnections.v
-./soundness/FirstRisingEdge.v
-./soundness/Fired2.v
-./soundness/SemanticPreservation.v
-./soundness/FallingEdge.v
-./soundness/SemanticPreservationDefs.v
-./soundness/RisingEdge.v
-./soundness/FullBisimulation.v
-./soundness/InitialStates.v
 ./common/NMap.v
 ./common/NSet.v
 ./common/ListLib.v

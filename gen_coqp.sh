@@ -4,18 +4,18 @@ usage()
 {
 cat << EOF
 usage: ./gen_coqp [-h|--help] [-wp|--without-proof]
--wp | --without-proof  Do not include files related to the proof
--h | --help            Display this message
+-p | --proof  Include files related to the proof in the _CoqProject file
+-h | --help   Display this message
 EOF
 }
 
-PROOF_FILES_PATTERN=""
+PROOF_FILES_PATTERN="\(.*/proofs/.*\|.*/soundness/.*\)"
 
 while [ "$1" != "" ]; do
     case $1 in
-        -wp | --without-proof )
+        -p | --proof )
             shift
-	    PROOF_FILES_PATTERN=".*/proofs/.*"
+	    PROOF_FILES_PATTERN=""
             ;;
         -h | --help )
 	    usage

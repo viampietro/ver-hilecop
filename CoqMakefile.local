@@ -1,5 +1,5 @@
 pre-all::
-	echo "Building Ver-HILECOP Project"
+	@echo "Building Ver-HILECOP Project"
 
 cleanall::
-	$(HIDE)rm -f $(VFILES:.v=.v~)
+	@rm -f $(VFILES:.v=.v~)
