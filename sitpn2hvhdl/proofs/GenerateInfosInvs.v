@@ -16,19 +16,9 @@ Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
+Require Import sitpn2hvhdl.proofs.SInvTactics.
 
 (** Tactic to solve state invariant lemmas. *)
-
-Ltac solveInfosSInv :=
-  intros *; intros e;
-  match goal with
-  | _ : _ ?s1 = OK _ ?s2 |- _ =>
-    pattern s1, s2; solveSInv e; intros *; intros e1;
-    match goal with
-    | _ : _ ?s3 = OK _ ?s4 |- _ =>
-      pattern s3, s4; minv e1; simpl; reflexivity
-    end
-  end.
 
 (** ** Transition Information Generation and State Invariants *)
 
@@ -38,108 +28,55 @@ Section TInfosInvs.
     forall {sitpn s v s'},
       generate_trans_infos sitpn s = OK v s' ->
       γ s = γ s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_tinfos_inv_lofPs :
     forall {sitpn s v s'},
       generate_trans_infos sitpn s = OK v s' ->
       lofPs s = lofPs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_tinfos_inv_lofTs :
     forall {sitpn s v s'},
       generate_trans_infos sitpn s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_tinfos_inv_beh :
     forall {sitpn s v s'},
       generate_trans_infos sitpn s = OK v s' ->
       beh s = beh s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
   
 End TInfosInvs.
 
 (** ** Place Information Generation and State Invariants *)
 
 Section PInfosInvs.
-
-  Lemma all_conflicts_solved_by_mutex_inv_state :
-    forall {sitpn lofTs s v s'},
-      all_conflicts_solved_by_mutex sitpn lofTs s = OK v s' ->
-      s = s'.
-  Proof.
-    induction lofTs; simpl; intros until s'; intros e; try (monadInv e; reflexivity).
-    destruct lofTs; try (monadInv e; reflexivity).
-    monadInv e; transitivity s0.
-    - monadInv EQ; transitivity s1.
-      + solve_listm EQ1;
-        intros *; intros e; unfold not_exists_mutex in e; minv e;
-          repeat (match goal with
-                  | [e: _ ?st = OK _ _ |- ?st = _ ] => solve_listm e
-                  end).
-      + destruct x0; monadInv EQ2; reflexivity.      
-    - destruct x; [eauto | monadInv EQ0; reflexivity ].
-  Qed.
-
-  Lemma sort_by_priority_inv_state :
-    forall {sitpn decpr lofTs s v s'},
-      sort_by_priority sitpn decpr lofTs s = OK v s' ->
-      s = s'.
-  Proof.
-    intros until s'; intros e; unfold sort_by_priority in e.
-    eapply foldl_inv_state; eauto with typeclass_instances.
-    intros until s0; cbv beta.
-    functional induction (inject_t sitpn decpr a b) using inject_t_ind;
-      intros until s0'; intros f; minv f; auto.
-    eapply IHc; eauto. 
-  Qed.
-
-  Ltac rwPInfosSInv :=
-    match goal with
-    | [ H: all_conflicts_solved_by_mutex _ _ ?s1 = OK _ ?s2 |- _ ?s1 = _ ?s2 ] =>
-      rewrite (all_conflicts_solved_by_mutex_inv_state H); simpl; try reflexivity
-    | [ H1: all_conflicts_solved_by_mutex _ _ _ = OK _ _,
-            H2: sort_by_priority _ _ _ _ = OK _ _ |- _ ] =>
-      rewrite (all_conflicts_solved_by_mutex_inv_state H1),
-      (sort_by_priority_inv_state H2); simpl; try reflexivity
-    end.
-  
-  Ltac solvePInfosSInv :=
-    intros *; intros e;
-    match goal with
-    | _ : generate_place_infos _ _ ?s1 = OK _ ?s2 |- ?f ?s1 = ?f ?s2 =>
-      pattern s1, s2; solveSInv e; intros *; intros e1; monadInv e1;
-      match goal with
-      | [ E1 : get_neighbors_of_p _ _ ?s1 = OK _ ?s2, E2 : _ ?s2 = OK _ ?s3, E3 : _ ?s3 = OK _ ?s4
-          |- ?f ?s1 = ?f ?s4 ] =>
-        transitivity (f s2); [ minv E1; auto | minv E2; minv E3; rwPInfosSInv ]
-      end
-    end.
-    
+      
   Lemma gen_pinfos_inv_γ :
     forall {sitpn decpr s v s'},
       generate_place_infos sitpn decpr s = OK v s' ->
       γ s = γ s'.
-  Proof. solvePInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_pinfos_inv_lofPs :
     forall {sitpn decpr s v s'},
       generate_place_infos sitpn decpr s = OK v s' ->
       lofPs s = lofPs s'.
-  Proof. solvePInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_pinfos_inv_lofTs :
     forall {sitpn decpr s v s'},
       generate_place_infos sitpn decpr s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solvePInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_pinfos_inv_beh :
     forall {sitpn decpr s v s'},
       generate_place_infos sitpn decpr s = OK v s' ->
       beh s = beh s'.
-  Proof. solvePInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
   
 End PInfosInvs.
 
@@ -151,73 +88,73 @@ Section InterprInfosInvs.
     forall {sitpn s v s'},
       generate_cond_infos sitpn s = OK v s' ->
       γ s = γ s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_cinfos_inv_lofPs :
     forall {sitpn s v s'},
       generate_cond_infos sitpn s = OK v s' ->
       lofPs s = lofPs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_cinfos_inv_lofTs :
     forall {sitpn s v s'},
       generate_cond_infos sitpn s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_cinfos_inv_beh :
     forall {sitpn s v s'},
       generate_cond_infos sitpn s = OK v s' ->
       beh s = beh s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
   
   Lemma gen_ainfos_inv_γ :
     forall {sitpn s v s'},
       generate_action_infos sitpn s = OK v s' ->
       γ s = γ s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_ainfos_inv_lofPs :
     forall {sitpn s v s'},
       generate_action_infos sitpn s = OK v s' ->
       lofPs s = lofPs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_ainfos_inv_lofTs :
     forall {sitpn s v s'},
       generate_action_infos sitpn s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_ainfos_inv_beh :
     forall {sitpn s v s'},
       generate_action_infos sitpn s = OK v s' ->
       beh s = beh s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
   
   Lemma gen_finfos_inv_γ :
     forall {sitpn s v s'},
       generate_fun_infos sitpn s = OK v s' ->
       γ s = γ s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_finfos_inv_lofPs :
     forall {sitpn s v s'},
       generate_fun_infos sitpn s = OK v s' ->
       lofPs s = lofPs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_finfos_inv_lofTs :
     forall {sitpn s v s'},
       generate_fun_infos sitpn s = OK v s' ->
       lofTs s = lofTs s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
   Lemma gen_finfos_inv_beh :
     forall {sitpn s v s'},
       generate_fun_infos sitpn s = OK v s' ->
       beh s = beh s'.
-  Proof. solveInfosSInv. Qed.
+  Proof. intros; solve_sinv. Qed.
 
 End InterprInfosInvs.
 

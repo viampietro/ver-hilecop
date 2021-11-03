@@ -216,7 +216,7 @@ Section GenSitpnInfos.
       (** Returns [true] if there exists at least one mean of mutual
          exclusion between [t] and all transitions in [cgoft]
          (conflict group of [t]). Returns [false] otherwise.  *)
-      
+
       Definition all_conflicts_of_t_solved (t : T sitpn) (cgoft : list (T sitpn)) : CompileTimeState bool :=
         do res <- find (not_exists_mutex t) cgoft;
         if res then Ret false else Ret true.
@@ -226,18 +226,23 @@ Section GenSitpnInfos.
           group is empty and has only one element. Returns [false]
           otherwise.  *)
       
-      Fixpoint all_conflicts_solved_by_mutex (cg : list (T sitpn)) {struct cg} : CompileTimeState bool :=
+      Definition all_conflicts_solved_by_mutex (cg : list (T sitpn)) : CompileTimeState bool :=
+        do bl <- ListMonad.fold_left
+                   (fun '(bprod, l) t => do b <- all_conflicts_of_t_solved t (tl l); Ret (bprod && b, (tl l)))
+                   cg (true, cg);
+        Ret (fst bl).
+
+      Fixpoint all_conflicts_solved_by_mutex_without_foldl (cg : list (T sitpn)) {struct cg} : CompileTimeState bool :=
         match cg with
         | nil => Ret true
-        | [t] => Ret true
         | t :: tl =>
-          (* If all conflicts of [t] are solved, then we can safely
-             withdraw it from the conflict group. Indeed, it means
-             that all the transitions of the tail are not in conflict
-             with [t]. Therefore, [t] is not needed anymore. *)
-          do b <- all_conflicts_of_t_solved t tl;
-          if b then all_conflicts_solved_by_mutex tl else Ret false
-        end.
+            (* If all conflicts of [t] are solved, then we can safely
+           withdraw it from the conflict group. Indeed, it means
+           that all the transitions of the tail are not in conflict
+           with [t]. Therefore, [t] is not needed anymore. *)
+            do b <- all_conflicts_of_t_solved t tl;
+            if b then all_conflicts_solved_by_mutex tl else Ret false
+        end.      
       
       (** Injects transition [t] in the list [stranss] depending on
           the level of priority of [t] compared to the elements of the
@@ -264,28 +269,43 @@ Section GenSitpnInfos.
         (* If there is a head element, compares the head element with t
            priority-wise. *)
         | x :: tl =>
-
-          (* If t is the element with the highest priority, then puts it
-               as the head element of stranss, and returns the list.
-         
-               Otherwise, checks if x has a higher priority than t.  *)
-          match decpr t x, decpr x t with
-          | left _, left _ =>
-            Err ("inject_t: found a reflexive priority relation.")
-          | right _, right _ =>
-            Err ("inject_t: transitions "
-                   ++ $$t ++ " and "
-                   ++ $$x ++ " are not comparable with the priority relation.")
-          (* [t] has a higher priority than [x], then puts [t] as the
-             head element of [stranss], and returns the list. *)
-          | left _, right _ => Ret (t :: stranss)
-          (* [x] has a higher priority than [t], then tries to inject
-             [t] in the list's tail.  *)
-          | right _, left _ =>
-            do stranss' <- inject_t t tl; Ret (x :: stranss')
-          end
+            (* If [t] has a higher priority than [x], then puts [t] as the
+               head element of [stranss], and returns the list. *)
+            if decpr t x then Ret (t :: stranss)
+            (* If [x] has a higher priority than [t], then tries to
+               inject [t] in the list's tail.  *)
+            else
+                if decpr x t then
+                  do stranss' <- inject_t t tl; Ret (x :: stranss')
+                else
+                  (* If [x ⊁ t] and [t ⊁ x] then error because the two
+                     elements not comparable, and the priority
+                     relation is not a total order over [t ∪ stranss]. *)
+                  Err ("inject_t: transitions "
+                         ++ $$t ++ " and "
+                         ++ $$x ++ " are not comparable with the priority relation.")
         end.
 
+      (* let inj_t '(sl, l) x := *)
+      (*   (* If [t] has a higher priority than [x], then puts [t] as the *)
+      (*          head element of [stranss], and returns the list. *) *)
+      (*   if decpr t x then Ret (t :: stranss) *)
+      (*   (* If [x] has a higher priority than [t], then tries to *)
+      (*          inject [t] in the list's tail.  *) *)
+      (*   else *)
+      (*     if decpr x t then *)
+      (*       do stranss' <- inject_t t tl; Ret (x :: stranss') *)
+      (*     else *)
+      (*       (* If [x ⊁ t] and [t ⊁ x] then error because the two *)
+      (*                elements not comparable, and the priority *)
+      (*                relation is not a total order over [t ∪ stranss]. *) *)
+      (*       Err ("inject_t: transitions " *)
+      (*              ++ $$t ++ " and " *)
+      (*              ++ $$x ++ " are not comparable with the priority relation.") *)
+      (* in  *)
+      (* ListMonad.fold_left inj_t stranss [t] *)
+
+      
       Functional Scheme inject_t_ind := Induction for inject_t Sort Prop.
       
       (** Takes a list of transitions [cgroup] (conflict group), and
