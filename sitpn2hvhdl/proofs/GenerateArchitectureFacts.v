@@ -4,7 +4,7 @@ Require Import String.
 Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
-Require Import common.StateAndErrorMonadTactics.
+Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import common.ListLib.
 
 Require Import sitpn.SitpnLib.
@@ -13,7 +13,7 @@ Require Import hvhdl.Place.
 Require Import hvhdl.AbstractSyntax.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.GenerateArchitectureInvs.
+Require Import sitpn2hvhdl.proofs.GenerateArchitectureInvs.
 
 (** ** Facts about Place Map Generation *)
 

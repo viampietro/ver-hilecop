@@ -166,13 +166,7 @@ Section CheckWDSitpnInvs.
     forall {sitpn decpr s v s'},
       check_wd_sitpn sitpn decpr s = OK v s' ->
       s = s'.
-  Proof.  
-    intros until s'; intros e; solveSInv e; auto.
-    intros until s3; intros e1; minv e1; auto.
-    intros until s3; intros e1; solveSInv e1; auto.
-    intros until s5; intros e2; solveSInv e2; auto.
-    intros until s7; intros e3; solveSInv e3; auto.
-  Qed.
+  Proof. intros; solve_sinv. Defined.
   
 End CheckWDSitpnInvs.
 
@@ -182,36 +176,11 @@ Lemma gen_sitpn_infos_inv_γ :
   forall {sitpn decpr s v s'},
     generate_sitpn_infos sitpn decpr s = OK v s' ->
     γ s = γ s'.
-Proof.
-  intros until s'; intros e; monadInv e.
-  do 10 (match goal with
-        | [ H: ?F _ ?st0 = OK _ ?st1 |- γ ?st0 = γ ?st2 ] =>
-          transitivity (γ st1); [
-            (let e := fresh "e" in solveSInv H; intros *; intros e; minv e; auto)
-            || (minv H; simpl; auto) |];
-          clear H
-        end).
-  rewrite (check_wd_sitpn_inv_eq_state EQ9), (gen_tinfos_inv_γ EQ10), (gen_pinfos_inv_γ EQ11),
-  (gen_cinfos_inv_γ EQ12), (gen_ainfos_inv_γ EQ13).
-  apply (gen_finfos_inv_γ EQ15).
-Qed.
+Proof. intros; solve_sinv. Qed.
 
 Lemma gen_sitpn_infos_inv_beh :
   forall {sitpn decpr s v s'},
     generate_sitpn_infos sitpn decpr s = OK v s' ->
     beh s = beh s'.
-Proof.
-  intros *; intros e; monadInv e.
-  do 10 (match goal with
-         | [ H: ?F _ ?st0 = OK _ ?st1 |- beh ?st0 = beh ?st2 ] =>
-           transitivity (beh st1); [
-             (let e := fresh "e" in solveSInv H; intros *; intros e; minv e; auto)
-             || (minv H; simpl; auto) |];
-           clear H
-         end).
-  rewrite (check_wd_sitpn_inv_eq_state EQ9),
-  (gen_tinfos_inv_beh EQ10), (gen_pinfos_inv_beh EQ11),
-  (gen_cinfos_inv_beh EQ12), (gen_ainfos_inv_beh EQ13).
-  apply (gen_finfos_inv_beh EQ15).
-Qed.
+Proof. intros; solve_sinv. Qed.
 

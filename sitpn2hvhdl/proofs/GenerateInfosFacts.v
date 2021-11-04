@@ -3,18 +3,18 @@
 Require Import common.CoqLib.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
-Require Import common.StateAndErrorMonadTactics.
+Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import common.ListDep.
 Require Import common.ListMonad.
-Require Import common.ListMonadFacts.
-Require Import common.ListMonadTactics.
+Require Import common.proofs.ListMonadFacts.
+Require Import common.proofs.ListMonadTactics.
 Require Import common.ListPlus.
 
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 
 Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.GenerateInfosInvs.
+Require Import sitpn2hvhdl.proofs.GenerateInfosInvs.
 
 (** ** Facts about Transition Information Generation *)
 

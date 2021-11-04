@@ -18,75 +18,6 @@ Require Import sitpn2hvhdl.GenerateInfosFacts.
 Require Import sitpn2hvhdl.GenerateArchitectureFacts.
 Require Import sitpn2hvhdl.GeneratePortsFacts.
 
-(** ** [InputMap_to_AST] Function and State Invariants *)
-
-Section InputMap2ASTInvs.
-
-  Lemma imap_entry_to_associp_inv_state :
-    forall {sitpn im ime s v s'},
-      imap_entry_to_associp sitpn im ime s = OK v s' ->
-      s = s'.
-  Proof.
-    unfold imap_entry_to_associp.
-    destruct ime; destruct s; intros s v s' e1; monadFullInv e1;
-      [ auto | destruct l; monadFullInv EQ; auto ].
-  Qed.
-
-  Lemma InputMap_to_AST_inv_state :
-    forall {sitpn imap s ipm s'},
-      InputMap_to_AST sitpn imap s = OK ipm s' ->
-      s = s'.
-  Proof.
-    unfold InputMap_to_AST; intros.
-    eapply foldl_inv_state; eauto with typeclass_instances;
-      intros; eapply imap_entry_to_associp_inv_state; eauto.
-  Qed.
-  
-End InputMap2ASTInvs.
-
-(** ** [OutputMap_to_AST] Function and State Invariants *)
-
-Section OutputMap2ASTInvs.
-
-  Lemma omap_entry_to_assocop_inv_state :
-    forall {sitpn om ome s v s'},
-      omap_entry_to_assocop sitpn om ome s = OK v s' ->
-      s = s'.
-  Proof.
-    unfold omap_entry_to_assocop.
-    destruct ome; destruct s; intros s v s' e1; monadFullInv e1;
-      [ auto | destruct l; monadFullInv EQ; auto ].
-  Qed.
-
-  Lemma OutputMap_to_AST_inv_state :
-    forall {sitpn omap s opm s'},
-      OutputMap_to_AST sitpn omap s = OK opm s' ->
-      s = s'.
-  Proof.
-    unfold OutputMap_to_AST; intros.
-    eapply foldl_inv_state; eauto with typeclass_instances;
-      intros; eapply omap_entry_to_assocop_inv_state; eauto.
-  Qed.
-  
-End OutputMap2ASTInvs.
-
-(** ** [HComponent_to_comp_inst] Function and State Invariants *)
-
-Section HComp2CompInstInvs.
-
-  Lemma HComp_to_comp_inst_inv_state :
-    forall {sitpn id__c id__e hcomp s v s'},
-      HComponent_to_comp_inst sitpn id__c id__e hcomp s = OK v s' ->
-      s = s'.
-  Proof.
-    intros until s'; intros e; destruct hcomp as ((gm, ipm), opm).
-    monadFullInv e; transitivity s0.
-    eapply InputMap_to_AST_inv_state; eauto.
-    eapply OutputMap_to_AST_inv_state; eauto.
-  Qed.
-  
-End HComp2CompInstInvs.
-
 (** ** Generation of P Component Instances and State Invariants *)
 
 Section GeneratePlaceCompInst.
@@ -514,8 +445,6 @@ Section GenCompInstsInvs.
       generate_place_comp_insts sitpn s = OK v s' ->
       t2tcomp (γ s) = t2tcomp (γ s').
   Admitted.
-
-
   
   Lemma gen_comp_insts_nodup_t2tcomp :
     forall {sitpn : Sitpn} {s : Sitpn2HVhdlState sitpn} {v s'},
@@ -530,6 +459,5 @@ Section GenCompInstsInvs.
     erewrite @gen_pcomp_insts_inv_lofTs with (s' := s0); eauto.
     eapply gen_tcomp_insts_nodup_t2tcomp; eauto.
   Qed.
-
   
 End GenCompInstsInvs.
