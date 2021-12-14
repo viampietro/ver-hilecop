@@ -46,7 +46,6 @@ Section GenInter.
       index.  *)
 
   Definition connect_to_input_tci
-             (pinfo : PlaceInfo sitpn)
              (i__p : inputmap)
              (idx : nat)
              (t : T sitpn) :
@@ -68,7 +67,7 @@ Section GenInter.
              (pinfo : PlaceInfo sitpn)
              (i__p : inputmap) :
     CompileTimeState inputmap :=
-    do iidx <- ListMonad.fold_left (fun '(i, idx) => connect_to_input_tci pinfo i idx) (tinputs pinfo) (i__p, 0);
+    do iidx <- ListMonad.fold_left (fun '(i, idx) => connect_to_input_tci i idx) (tinputs pinfo) (i__p, 0);
     Ret (fst iidx).
 
   (** Parameters:
@@ -94,7 +93,6 @@ Section GenInter.
       output port map, and an incremented index. *)
   
   Definition connect_to_confl_tci
-             (pinfo : PlaceInfo sitpn)
              (i__p : inputmap)
              (o__p : outputmap)
              (idx : nat)
@@ -141,7 +139,6 @@ Section GenInter.
       output port map, and an incremented index. *)
   
   Definition connect_to_nconfl_tci
-             (pinfo : PlaceInfo sitpn)
              (i__p : inputmap)
              (o__p : outputmap)
              (idx : nat)
@@ -182,9 +179,9 @@ Section GenInter.
              (pinfo : PlaceInfo sitpn)
              (i__p : inputmap) (o__p : outputmap) :
     CompileTimeState (inputmap * outputmap) :=
-    do ioidx <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_confl_tci pinfo i o idx) (tconflict pinfo) (i__p, o__p, 0);
+    do ioidx <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_confl_tci i o idx) (tconflict pinfo) (i__p, o__p, 0);
     let '(i__p1, o__p1, idx) := ioidx in
-    do ioidx1 <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_nconfl_tci pinfo i o idx) (toutputs pinfo) (i__p1, o__p1, idx);
+    do ioidx1 <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_nconfl_tci i o idx) (toutputs pinfo) (i__p1, o__p1, idx);
     Ret (fst ioidx1).
   
   (** Retrieves the behavior [beh] (i.e. the currently generated

@@ -210,11 +210,11 @@ Inductive PostSum (sitpn : Sitpn) (p : P sitpn) (Q : T sitpn -> Prop) : nat -> P
 
 Inductive MarkingSubPreSumAddPostSum (sitpn : Sitpn) (Q : T sitpn -> Prop) (m m' : P sitpn -> nat) : Prop :=
 | MarkingSubPreSumAddPostSum_ :
-    (forall p sum__pre sum__post,
-        PreSum p Q sum__pre ->
-        PostSum p Q sum__post ->
-        m' p = m p - sum__pre + sum__post) ->
-    MarkingSubPreSumAddPostSum Q m m'.
+  (forall p sum__pre sum__post,
+      PreSum p Q sum__pre ->
+      PostSum p Q sum__post ->
+      m' p = m p - sum__pre + sum__post) ->
+  MarkingSubPreSumAddPostSum Q m m'.
 
 (** ** Input and output places (resp. transitions) for a given transition (resp. place) *)
 

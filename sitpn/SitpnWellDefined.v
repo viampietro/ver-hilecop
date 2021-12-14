@@ -83,17 +83,8 @@ Definition MutualExclByConds {sitpn} (t t' : T sitpn) :=
   exists c, has_C t c = one /\ has_C t' c = mone
             \/ has_C t c = mone /\ has_C t' c = one.
 
-(* Two transitions are in mutual exclusion thanks to time intervals if
-   the two transitions are associated to time intervals that are not
-   overlapping; i.e, [a,b] and [c,d] are not overlapping if b < c or 
-   d < a (and the two intervals must be well-formed).
- *)
-
-Definition MutualExclByTimeItvals {sitpn} (t t' : T sitpn) :=
-  exists i i', Is t = Some i /\ Is t' = Some i' /\ NoOverlap i i'.
-
 Definition MutualExcl {sitpn} (t t' : T sitpn) :=
-  MutualExclByInhib t t' \/ MutualExclByConds t t' \/ MutualExclByTimeItvals t t'.
+  MutualExclByInhib t t' \/ MutualExclByConds t t'.
 
 (* States that in a given conflict group, conflicts are solved by
    mutual exclusion for all pair of transitions. *)

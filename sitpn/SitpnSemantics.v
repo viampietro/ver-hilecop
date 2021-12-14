@@ -53,7 +53,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (forall (t : Ti sitpn),
         Sens (M s) t ->
         reset s t = false ->
-        (upper t <> i+ /\ TcGtUpper s t) -> I s' t = S (I s t)) ->
+        (upper t <> i+ /\ TcGtUpper s t) -> I s' t = I s t) ->
 
     (** Marking stays the same between s and s'. *)
     (forall p, M s p = M s' p) -> 
@@ -72,8 +72,13 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (** Marking at state s' is the new marking resulting of the firing
         of all transitions belonging to the Fired subset at state
         s. *)  
-    (forall fired, IsNewMarking s fired (M s')) ->
-
+    (* (forall fired, IsNewMarking s fired (M s')) -> *)
+    (forall fired p sum__pre sum__post,
+        IsFiredList s fired ->
+        PreSum p (fun t => In t fired) sum__pre ->
+        PostSum p (fun t => In t fired) sum__post ->
+        M s' p = M s p - sum__pre + sum__post) ->
+    
     (** Computes the reset orders for time counters and fired transitions. *)
     (forall (t : Ti sitpn) fired m,
         IsTransientMarking s fired m ->

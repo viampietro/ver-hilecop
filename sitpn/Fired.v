@@ -88,6 +88,7 @@ Inductive IsFiredListAux sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) :
       ElectFired s fired tp fired' ->
 
       (* lofT' = lofT \ tp *)
+
       IsDiff lofT tp lofT' ->
       
       IsFiredListAux s fired' lofT' fired'' ->
@@ -99,12 +100,10 @@ Inductive IsFiredListAux sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) :
     Adds that [Tlist] must implement the set (T sitpn).
  *)
 
-Inductive IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Prop :=
-  IsFiredList_ :
+Definition IsFiredList sitpn (s : SitpnState sitpn) (fired : list (T sitpn)) : Prop :=
     forall Tlist,
       Set_in_ListA Teq (fun t => True) Tlist ->
-      IsFiredListAux s [] Tlist fired ->
-      IsFiredList s fired.
+      IsFiredListAux s [] Tlist fired.
 
 (** Final definition of the set of [fired] transitions at state [s]
     and the fact that a transition [t] belongs to the set. *)

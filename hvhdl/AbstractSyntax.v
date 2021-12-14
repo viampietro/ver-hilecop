@@ -208,9 +208,9 @@ Inductive cs : Type :=
         (stmt : ss)         (** Sequential statement block *)
       
 (** Component instantiation statement. *)
-| cs_comp (id__c : ident) (** Component id *)
-          (id__e : ident)  (** Entity label *)
-          (g : genmap)  (** Generic map *)
+| cs_comp (id__c : ident)   (** Component id *)
+          (id__e : ident)   (** Instantiated design label *)
+          (g : genmap)    (** Generic map *)
           (i : inputmap)  (** In port map *)
           (o : outputmap) (** Out port map *)
 
