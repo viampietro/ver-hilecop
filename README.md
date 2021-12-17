@@ -56,7 +56,7 @@ this README file.
 
 - Type `make without-proof` if you want to compile only the files
   related to the specification of the SITPN and the H-VHDL semantics,
-  and the files related to the SITPN-to-H-VHDL transformation.
+  and the files related to the transformation.
 
 - Type `make with-proof` if you want to compile all files, including
   the files related to the proof of the behavior preservation theorem
