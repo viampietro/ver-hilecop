@@ -202,17 +202,17 @@ Definition outputmap := list assocop.
 Inductive cs : Type :=
 
 (** Process statement. *)
-| cs_ps (pid : ident)       (** Process id *)
+| cs_ps (id__p : ident)       (** Process id *)
         (sl : IdSet)        (** Sensitivity list *)
         (vars : list vdecl) (** Variable declaration list *)
         (stmt : ss)         (** Sequential statement block *)
       
 (** Component instantiation statement. *)
-| cs_comp (compid : ident) (** Component id *)
-          (entid : ident)  (** Entity label *)
-          (gmap : genmap)  (** Generic map *)
-          (ipmap : inputmap)  (** In port map *)
-          (opmap : outputmap) (** Out port map *)
+| cs_comp (id__c : ident)   (** Component id *)
+          (id__e : ident)   (** Instantiated design label *)
+          (g : genmap)    (** Generic map *)
+          (i : inputmap)  (** In port map *)
+          (o : outputmap) (** Out port map *)
 
 (** Composition of concurrent statements. *)
 | cs_par (cstmt : cs) (cstmt' : cs)
@@ -224,15 +224,15 @@ Module HVhdlCsNotations.
 
   Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z)
                                       (right associativity, at level 100) : abss_scope.
-  Notation "pid ':' 'Process' sl vars 'Begin' stmt" :=
-    (cs_ps pid sl vars stmt)
+  Notation "id__p ':' 'Process' sl vars 'Begin' stmt" :=
+    (cs_ps id__p sl vars stmt)
       (at level 200(* , *)
-       (* format "'[v' pid  ':'  'Process'  sl '/' '['   vars ']' '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
+       (* format "'[v' id__p  ':'  'Process'  sl '/' '['   vars ']' '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
 
-  Notation "pid ':' 'Process' sl 'Begin' stmt" :=
-    (cs_ps pid sl [] stmt)
+  Notation "id__p ':' 'Process' sl 'Begin' stmt" :=
+    (cs_ps id__p sl [] stmt)
       (at level 200(* , *)
-       (* format "'[v' pid  ':'  'Process'  sl '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
+       (* format "'[v' id__p  ':'  'Process'  sl '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
   
 End HVhdlCsNotations.
 
@@ -260,25 +260,25 @@ Inductive sdecl : Type :=
     
     - Concrete syntax =
 
-    "entity [entid] is [gens]; [ports]; end [entid];
+    "entity [id__e] is [gens]; [ports]; end [id__e];
     
-     architecture [archid] of [entid] is 
+     architecture [id__a] of [id__e] is 
        [sigs]; 
      begin 
        [behavior] 
-     end [archid];" 
+     end [id__a];" 
 
-   - Abstract syntax = "[design_ entid archid gens ports sigs behavior]"
+   - Abstract syntax = "[design_ id__e id__a gens ports sigs behavior]"
 
 *)
 
 Record design : Type :=
   design_ {
-      entid    : ident;      (** Entity id *)
-      archid   : ident;      (** Architecture id *)
+      id__e      : ident;      (** Entity id *)
+      id__a      : ident;      (** Architecture id *)
       gens     : list gdecl; (** Generic constant clause *)
       ports    : list pdecl; (** Port clause *)
-      sigs   : list sdecl; (** Architecture declarative part *)
+      sigs     : list sdecl; (** Architecture declarative part *)
       behavior : cs
     }.
 
@@ -309,7 +309,7 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
     forall id__c id__e gm ipm opm cstmt l,
       FlattenCs cstmt l ->
       FlattenCs ((cs_comp id__c id__e gm ipm opm) // cstmt) ((cs_comp id__c id__e gm ipm opm) :: l)
-|FlattenCs_cons :
+| FlattenCs_cons :
    forall cstmt cstmt' l l',
      FlattenCs cstmt l -> FlattenCs cstmt' l' -> FlattenCs (cstmt // cstmt') (l ++ l').
 

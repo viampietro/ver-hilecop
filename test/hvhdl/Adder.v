@@ -4,19 +4,14 @@ Require Import common.CoqLib.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.ListPlus.
-Require Import common.ListPlusTactics.
-Require Import common.ListPlusFacts.
 
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxFacts.
-Require Import hvhdl.AbstractSyntaxTactics.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Petri.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.WellDefinedDesignFacts.
 
 Local Open Scope abss_scope.
 Local Open Scope natset_scope.

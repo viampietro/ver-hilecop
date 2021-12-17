@@ -14,7 +14,7 @@ Open Scope abss_scope.
 
 Inductive seqflag : Set := fe | re | stab | initl.
 
-Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DState -> LEnv -> Prop :=
+Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -> DState -> LEnv -> Prop :=
 
 (** Evaluates a signal assignment statement.
 
@@ -24,7 +24,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     value). *)
   
 | VSeqSigAssignEvent :
-    forall flag id e newv t currv σ',
+    forall flag id e newv t currv σ__w',
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv -> (* e ⇝ newv *)
@@ -40,11 +40,11 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* new value <> current value, then an event must be registered on signal [id] *)
       OVEq newv currv (Some false) -> 
       
-      (* σ=<S,C,E>, S' = S(id) ← v, E' = E ∪ {id}, σ'=<S',C,E'>  *)
-      σ' = (events_add id (sstore_add id newv σ)) -> 
+      (* [σ__w=<S,C,E>, S' = S(id) ← v, E' = E ∪ {id}, σ__w'=<S',C,E'>]  *)
+      σ__w' = (events_add id (sstore_add id newv σ__w)) -> 
       
-      (* * Conclusion: Δ,σ,Λ ⊢ id ⇐ e ⇝ σ',Λ * *)
-      vseq Δ σ Λ flag ($id @<== e) σ' Λ
+      (* * Conclusion: [Δ,σ,σ__w,Λ ⊢ id ⇐ e ⇝ σ__w',Λ] * *)
+      vseq Δ σ σ__w Λ flag ($id @<== e) σ__w' Λ
 
 (** Evaluates a signal assignment statement.
 
@@ -68,7 +68,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       OVEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag ($id @<== e) σ Λ
+      vseq Δ σ σ__w Λ flag ($id @<== e) σ__w Λ
 
 (** Evaluates a signal assignment statement.
 
@@ -78,7 +78,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     value). *)
            
 | VSeqIdxSigAssignEvent :
-    forall flag id e ei newv i t l u σ'
+    forall flag id e ei newv i t l u σ__w'
            (curraofv newaofv : arrofvalues)
            idx_in_bounds,
       
@@ -89,7 +89,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       is_of_type newv t ->
       is_of_type (Varr curraofv) (Tarray t l u) ->
       
-      (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
+      (* These two lines are equivalent to: ei → vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
         
@@ -104,13 +104,13 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       (* new value <> current value *)
       OVEq newv (get_at idx curraofv idx_in_bounds) (Some false) -> 
 
-      (* - σ = <S,C,E>, σ' = <S',C,E'>
+      (* - [σ__w = <S,C,E>, σ__w' = <S',C,E'>]
          - S' = S(id) ← set_at(newv, i, currlofv), E' = E ∪ {id} 
        *)
-      σ' = (events_add id (sstore_add id (Varr (set_at newv idx curraofv idx_in_bounds)) σ)) ->
+      σ__w' = (events_add id (sstore_add id (Varr (set_at newv idx curraofv idx_in_bounds)) σ__w)) ->
       
       (* Conclusion *)
-      vseq Δ σ Λ flag (id $[[ei]] @<== e) σ' Λ
+      vseq Δ σ σ__w Λ flag (id $[[ei]] @<== e) σ__w' Λ
 
 (** Evaluates a signal assignment statement.
 
@@ -128,7 +128,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       is_of_type newv t ->
       is_of_type (Varr curraofv) (Tarray t l u) ->
       
-      (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
+      (* These two lines are equivalent to: ei → vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
       
@@ -141,7 +141,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       OVEq newv (get_at idx curraofv idx_in_bounds) (Some true) -> (* new value = current value *)
             
       (* Conclusion *)
-      vseq Δ σ Λ flag (id $[[ei]] @<== e) σ Λ
+      vseq Δ σ σ__w Λ flag (id $[[ei]] @<== e) σ__w Λ
            
 (** Evaluates a variable assignment statement.
 
@@ -159,7 +159,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       NatMap.MapsTo id (t, currv) Λ -> (* id ∈ Λ and Λ(id) = (t, currv) *)
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag ($id @:= e) σ (NatMap.add id (t, newv) Λ)
+      vseq Δ σ σ__w Λ flag ($id @:= e) σ__w (NatMap.add id (t, newv) Λ)
 
 (** Evaluates a variable assignment statement.
 
@@ -186,19 +186,19 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       set_at newv i curraofv idx_in_bounds = newaofv ->
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (id $[[ei]] @:= e) σ (NatMap.add id (Tarray t l u, (Varr newaofv)) Λ)
+      vseq Δ σ σ__w Λ flag (id $[[ei]] @:= e) σ__w (NatMap.add id (Tarray t l u, (Varr newaofv)) Λ)
 
 (** Evaluates a simple if statement with a true condition. *)
 
 | VSeqIfTrue :
-    forall flag e stmt σ' Λ',
+    forall flag e stmt σ__w' Λ',
       
       (* * Premises * *)
       vexpr Δ σ Λ false e (Vbool true) ->
-      vseq Δ σ Λ flag stmt σ' Λ' ->
+      vseq Δ σ σ__w Λ flag stmt σ__w' Λ' ->
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (If e Then stmt) σ' Λ'
+      vseq Δ σ σ__w Λ flag (If e Then stmt) σ__w' Λ'
 
 (** Evaluates a simple if statement with a false condition. *)
 
@@ -209,31 +209,31 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
       vexpr Δ σ Λ false e (Vbool false) ->
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (If e Then stmt) σ Λ
+      vseq Δ σ σ__w Λ flag (If e Then stmt) σ__w Λ
 
 (** Evaluates a if-else statement with a true condition. *)
 
 | VSeqIfElseTrue :
-    forall flag e stmt stmt' σ' Λ',
+    forall flag e stmt stmt' σ__w' Λ',
       
       (* * Premises * *)
       vexpr Δ σ Λ false e (Vbool true) ->
-      vseq Δ σ Λ flag stmt σ' Λ' ->
+      vseq Δ σ σ__w Λ flag stmt σ__w' Λ' ->
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (If e Then stmt Else stmt') σ' Λ'
+      vseq Δ σ σ__w Λ flag (If e Then stmt Else stmt') σ__w' Λ'
 
 (** Evaluates a if-else statement with a false condition. *)
 
 | VSeqIfElseFalse :
-    forall flag e stmt stmt' σ' Λ',
+    forall flag e stmt stmt' σ__w' Λ',
       
       (* * Premises * *)
       vexpr Δ σ Λ false e (Vbool false) ->
-      vseq Δ σ Λ flag stmt' σ' Λ' ->
+      vseq Δ σ σ__w Λ flag stmt' σ__w' Λ' ->
       
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (If e Then stmt Else stmt') σ' Λ'
+      vseq Δ σ σ__w Λ flag (If e Then stmt Else stmt') σ__w' Λ'
 
 (** Evaluates a loop statement.
     
@@ -241,20 +241,20 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     with initial value.  *)
 
 | VSeqLoopInit :
-    forall flag id e e' stmt n n' Λi σ' Λ',
+    forall flag id e e' stmt n n' Λi σ__w' Λ',
 
       (* * Premises * *)
       vexpr Δ σ Λ false e (Vnat n) ->
       vexpr Δ σ Λ false e' (Vnat n') ->
       
-      vseq Δ σ Λi flag (For id In e To e' Loop stmt) σ' Λ' ->
+      vseq Δ σ σ__w Λi flag (For id In e To e' Loop stmt) σ__w' Λ' ->
 
       (* * Side conditions * *)
       ~NatMap.In id Λ ->     (* id ∉ Λ *)
       Λi = NatMap.add id (Tnat n n', Vnat n) Λ -> (* Λi = Λ ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ' Λ'
+      vseq Δ σ σ__w Λ flag (For id In e To e' Loop stmt) σ__w' Λ'
 
 (** Evaluates a loop statement.
     
@@ -263,21 +263,21 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     reached yet.  *)
 
 | VSeqLoopFalse :
-    forall flag id e e' stmt t n Λi σ' Λ' σ'' Λ'',
+    forall flag id e e' stmt t n Λi σ__w' Λ' σ__w'' Λ'',
 
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
       vexpr Δ σ Λi false (#id @= e') (Vbool false) ->
-      vseq Δ σ Λi flag stmt σ' Λ' ->
-      vseq Δ σ' Λ' flag (For id In e To e' Loop stmt) σ'' Λ'' ->
+      vseq Δ σ σ__w Λi flag stmt σ__w' Λ' ->
+      vseq Δ σ σ__w' Λ' flag (For id In e To e' Loop stmt) σ__w'' Λ'' ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) Λ ->
       Λi = NatMap.add id (t, Vnat (n + 1)) Λ ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ'' Λ''
+      vseq Δ σ σ__w Λ flag (For id In e To e' Loop stmt) σ__w'' Λ''
            
 (** Evaluates a loop statement.
     
@@ -297,7 +297,7 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
 
       (* * Conclusion * *)
       (* Removes the binding of id from the local environment. *)
-      vseq Δ σ Λ flag (For id In e To e' Loop stmt) σ (NatMap.remove id Λ)
+      vseq Δ σ σ__w Λ flag (For id In e To e' Loop stmt) σ__w (NatMap.remove id Λ)
            
 (** Evaluates a rising edge block statement when another flag than ↑
     is raised (i.e, during a stabilization, a ↓ or the initl phase).
@@ -305,20 +305,20 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     Does nothing; ↑ blocks only respond to ↑ flag. *)
            
 | VSeqRisingDefault :
-    forall flag stmt, flag <> re -> vseq Δ σ Λ flag (Rising stmt) σ Λ
+    forall flag stmt, flag <> re -> vseq Δ σ σ__w Λ flag (Rising stmt) σ__w Λ
 
 (** Evaluates a rising edge block statement when the [re] flag is raised. 
     Evaluates the inner block of the rising edge statement.
  *)
            
 | VSeqRising :
-    forall stmt σ' Λ',
+    forall stmt σ__w' Λ',
       
       (* * Premises * *)
-      vseq Δ σ Λ re stmt σ' Λ' ->
+      vseq Δ σ σ__w Λ re stmt σ__w' Λ' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ re (Rising stmt) σ' Λ'
+      vseq Δ σ σ__w Λ re (Rising stmt) σ__w' Λ'
 
 (** Evaluates a falling edge block statement when another flag than ↓
     is raised (i.e, during a stabilization, a ↑ or the initl phase).
@@ -326,36 +326,36 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     Does nothing; ↓ blocks only respond to ↓ flag. *)
                       
 | VSeqFallingDefault :
-    forall flag stmt, flag <> fe -> vseq Δ σ Λ flag (Rising stmt) σ Λ
+    forall flag stmt, flag <> fe -> vseq Δ σ σ__w Λ flag (Rising stmt) σ__w Λ
            
 (** Evaluates a falling edge block statement when the [fe] flag is
     raised. Evaluates the inner block of the falling edge statement. *)
                                    
 | VSeqFalling :
-    forall stmt σ' Λ',
+    forall stmt σ__w' Λ',
       
       (* * Premises * *)
-      vseq Δ σ Λ fe stmt σ' Λ' ->
+      vseq Δ σ σ__w Λ fe stmt σ__w' Λ' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ fe (Falling stmt) σ' Λ'
-
+      vseq Δ σ σ__w Λ fe (Falling stmt) σ__w' Λ'
+           
 (** Evaluates a rst block statement when another flag than [init] is
     raised (i.e, during a stabilization, a ↑ or a ↓ phase).
 
     The second inner statement is evaluated. *)
            
 | VSeqRstDefault :
-    forall flag stmt stmt' σ' Λ',
+    forall flag stmt stmt' σ__w' Λ',
 
       (* * Side conditions * *)
       flag <> initl ->
       
       (* * Premises * *)
-      vseq Δ σ Λ flag stmt' σ' Λ' ->
+      vseq Δ σ σ__w Λ flag stmt' σ__w' Λ' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (ss_rst stmt stmt') σ' Λ'
+      vseq Δ σ σ__w Λ flag (ss_rst stmt stmt') σ__w' Λ'
 
 (** Evaluates a rst block statement when the [init] flag is raised
     (i.e, during the initialization phase).
@@ -363,27 +363,27 @@ Inductive vseq (Δ : ElDesign) (σ : DState) (Λ : LEnv) : seqflag -> ss -> DSta
     The first inner statement is evaluated. *)
            
 | VSeqRst :
-    forall stmt stmt' σ' Λ',
+    forall stmt stmt' σ__w' Λ',
 
       (* * Premises * *)
-      vseq Δ σ Λ initl stmt σ' Λ' ->
+      vseq Δ σ σ__w Λ initl stmt σ__w' Λ' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ initl (ss_rst stmt stmt') σ' Λ'
+      vseq Δ σ σ__w Λ initl (ss_rst stmt stmt') σ__w' Λ'
            
 (** Evaluates the null statement. *)
 | VSeqNull :
-    forall flag, vseq Δ σ Λ flag (ss_null) σ Λ
+    forall flag, vseq Δ σ σ__w Λ flag (ss_null) σ__w Λ
                       
 (** Evaluates a sequence of statements. *)
 
 | VSeqSeq :
-    forall flag stmt stmt' σ' Λ' σ'' Λ'',
+    forall flag stmt stmt' σ__w' Λ' σ__w'' Λ'',
       
       (* * Premises * *)
-      vseq Δ σ Λ flag stmt σ' Λ' ->
-      vseq Δ σ' Λ' flag stmt σ'' Λ'' ->
+      vseq Δ σ σ__w Λ flag stmt σ__w' Λ' ->
+      vseq Δ σ σ__w' Λ' flag stmt σ__w'' Λ'' ->
 
       (* * Conclusion * *)
-      vseq Δ σ Λ flag (stmt ;; stmt') σ'' Λ''.
+      vseq Δ σ σ__w Λ flag (stmt ;; stmt') σ__w'' Λ''.
 

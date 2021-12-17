@@ -1,0 +1,4 @@
+Require Export transformation.proofs.GenerateInfosInvs.
+Require Export transformation.GenerateArchitectureInvs.
+Require Export transformation.GeneratePortsInvs.
+Require Export transformation.GenerateHVhdlInvs.

@@ -99,15 +99,20 @@ Hint Constructors eassocip : hvhdl.
     [listipm] relation) against the component environment [Δ__c].  *)
 
 Definition checkformals (Δ__c : ElDesign) (formals : list (ident * option nat)) : Prop :=
-  forall (id : ident),
-    (MapsTo id (Input Tbool) Δ__c \/ (exists l u, MapsTo id (Input (Tnat l u)) Δ__c) <-> List.In (id, None) formals)
-    /\ (forall t l u, MapsTo id (Input (Tarray t l u)) Δ__c -> forall i, l <= i <= u -> List.In (id, Some i) formals)
-    /\ (forall i, List.In (id, Some i) formals -> exists t l u, MapsTo id (Input (Tarray t l u)) Δ__c /\ l <= i <= u).
+  forall (id : ident) (t : type),
+    MapsTo id (Input t) Δ__c ->
+    match t with
+    | Tbool | Tnat _ _ => List.In (id, None) formals
+    | Tarray t' l u => List.In (id, None) formals \/ forall i, l <= i <= u -> List.In (id, Some i) formals
+    end.
 
 (** Defines the predicate stating that an "in" port map is valid. *)
 
-Definition validipm (Δ Δ__c : ElDesign) (σ : DState) (ipmap : list associp) (formals : list (ident * option nat)) : Prop :=
-  listipm Δ Δ__c σ [] ipmap formals /\ checkformals Δ__c formals.
+Inductive validipm (Δ Δ__c : ElDesign) (σ : DState) (i : list associp) : Prop :=
+| ValidIpm (formals : list (ident * option nat)) :  
+  listipm Δ Δ__c σ [] i formals ->
+  checkformals Δ__c formals ->
+  validipm Δ Δ__c σ i.
 
 (** ** Valid port map for "out" mode ports. *)
 
@@ -247,9 +252,10 @@ Hint Constructors eassocop : hvhdl.
 (** Defines the relation that checks the validity of an "out" port
     map. *)
 
-Definition validopm (Δ Δ__c : ElDesign) (opmap : list assocop)
-           (formals actuals : list (ident * option nat)) : Prop :=
-  listopm Δ Δ__c [] [] opmap formals actuals.
+Inductive validopm (Δ Δ__c : ElDesign) (o : list assocop) : Prop :=
+| ValidOpm (formals actuals : list (ident * option nat)) :  
+  listopm Δ Δ__c [] [] o formals actuals ->
+  validopm Δ Δ__c o.
     
 
 

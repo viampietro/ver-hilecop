@@ -37,7 +37,7 @@ Section StateAndErrMonad.
         end
       end.
 
-  Definition Bind2 {A B C: Type} (f: Mon (A * B)) (g: A -> B -> Mon C) : Mon C :=
+  Definition Bind2 {A B C: Type} (f : Mon (A * B)) (g : A -> B -> Mon C) : Mon C :=
     Bind f (fun xy => g (fst xy) (snd xy)).
   
   Definition Get : Mon state := fun s => OK s s.

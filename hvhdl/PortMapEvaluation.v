@@ -15,11 +15,10 @@ Require Import Environment.
 Require Import AbstractSyntax.
 Require Import ExpressionEvaluation.
 
-(** Defines the evaluation relation for "in" port maps, i.e, port maps
-    relating ports in "in" mode to expressions.
+(** Defines the evaluation relation for "input" port maps.
     
-    The evaluation of an "in" port map affects the current state of
-    the component instance to which the port map is related. *)
+    The evaluation of an "input" port map possibly modifies the value of
+    the input ports of the component instance [Δ__c]. *)
 
 Inductive mapip (Δ Δ__c : ElDesign) (σ σ__c : DState) : list associp -> DState -> Prop := 
 
@@ -35,68 +34,36 @@ Inductive mapip (Δ Δ__c : ElDesign) (σ σ__c : DState) : list associp -> DSta
       mapip Δ Δ__c σ σ__c (asip :: lofasips) σ__c''
 
 (** Defines the relation that evaluates a single association present
-    in an "in" port map.  *)
+    in an input port map.  *)
 with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> Prop := 
 
-(** Evaluates a "in" port map association, with a simple port
-    identifier in the formal part.
-    
-    Case where the evaluation generates an event, i.e a change of
-    value for the considered port identifier.  *)
+(** Evaluates a input port map association, with a simple port
+    identifier in the formal part. *)
   
 | VAssocipSimpleEvent :
-    forall id e newv currv t sigstore' events',
+    forall id e v t,
       
       (* * Premises * *)
-      vexpr Δ σ EmptyLEnv false e newv ->
-      is_of_type newv t ->
+      vexpr Δ σ EmptyLEnv false e v ->
+      is_of_type v t ->
 
       (* * Side conditions (where σc = <S,C,E>) * *)
-      NatMap.MapsTo id (Input t) Δ__c ->         (* id ∈ Ins(Δc) and Δc(id) = t *)
-      NatMap.MapsTo id currv (sigstore σ__c) -> (* id ∈ σc and σc(id) = v' *)
+      NatMap.MapsTo id (Input t) Δ__c -> (* id ∈ Ins(Δc) and Δc(id) = t *)
 
-      OVEq newv currv (Some false) -> (* new value <> current value *)
-      sigstore' = (NatMap.add id newv (sigstore σ__c)) -> (* S' = S(id) ← v  *)
-      events' = (NatSet.add id (events σ__c)) -> (* E' = E ∪ {id} *)
-      
       (* * Conclusion * *)
-      vassocip Δ Δ__c σ σ__c (associp_ ($id) e) (MkDState sigstore' (compstore σ__c) events')
+      vassocip Δ Δ__c σ σ__c (associp_ ($id) e) (sstore_add id v σ__c)
 
-(** Evaluates a "in" port map association, with a simple port
-    identifier in the formal part.
-    
-    Case where no event are generated.  *)
-  
-| VAssocipSimpleNoEvent :
-    forall id e newv currv t,
-      
-      (* * Premises * *)
-      vexpr Δ σ EmptyLEnv false e newv ->
-      is_of_type newv t ->
-
-      (* * Side conditions (where [σ__c = <S,C,E>]) * *)
-      NatMap.MapsTo id (Input t) Δ__c ->        (* [id ∈ Ins(Δ__c) and Δ__c(id) = t] *)
-      NatMap.MapsTo id currv (sigstore σ__c) -> (* [id ∈ σ__c and σ__c(id) = v'] *)
-
-      OVEq newv currv (Some true) -> (* new value = current value *)
-            
-      (* * Conclusion * *)
-      vassocip Δ Δ__c σ σ__c (associp_ ($id) e) σ__c
-
-(** Evaluates a "in" port map association, with an indexed port
-    identifier in the formal part.
-    
-    Case where the evaluation generates an event, i.e a change of
-    value for the considered port identifier.  *)
+(** Evaluates a input port map association, with an indexed port
+    identifier in the formal part.  *)
   
 | VAssocipPartialEvent :
-    forall id e ei newv i t l u aofv sigstore' events' idx_in_bounds,
+    forall id e ei v i t l u aofv idx_in_bounds,
 
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ σ EmptyLEnv false e newv ->
-      is_of_type newv t ->
+      vexpr Δ σ EmptyLEnv false e v ->
+      is_of_type v t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
@@ -105,42 +72,9 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       (* * Side conditions * *)
       NatMap.MapsTo id (Input (Tarray t l u)) Δ__c -> (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
       NatMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
-
-      OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value ≠ current value *)
-      events' = NatSet.add id (events σ__c) ->                     (* E' = E ∪ {id} *)
-      
-      (* S' = S(id) ← set_at(v, i, aofv) *)
-      sigstore' = NatMap.add id (Varr (set_at newv idx aofv idx_in_bounds)) (sigstore σ__c) ->
       
       (* * Conclusion * *)
-      vassocip Δ Δ__c σ σ__c (associp_ (id $[[ei]]) e) (MkDState sigstore' (compstore σ__c) events')
-
-(** Evaluates a "in" port map association, with an indexed port
-    identifier in the formal part.
-    
-    Case where the evaluation generates no event.  *)
-               
-| VAssocipPartialNoEvent :
-    forall id e ei newv i t l u aofv idx_in_bounds,
-
-      let idx := i - l in
-                       
-      (* * Premises * *)
-      vexpr Δ σ EmptyLEnv false e newv ->
-      is_of_type newv t ->
-
-      (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
-      l <= i <= u ->
-      
-      (* * Side conditions * *)
-      NatMap.MapsTo id (Input (Tarray t l u)) Δ__c ->    (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
-      NatMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
-
-      OVEq newv (get_at idx aofv idx_in_bounds) (Some true) -> (* new value = current value *)
-            
-      (* * Conclusion * *)
-      vassocip Δ Δ__c σ σ__c (associp_ (id$[[ei]]) e) σ__c.
+      vassocip Δ Δ__c σ σ__c (associp_ (id $[[ei]]) e) (sstore_add id (Varr (set_at v idx aofv idx_in_bounds)) σ__c).
     
 (** Defines the evaluation relation for "out" port maps, i.e, port
     maps relating ports in "out" mode to other out ports or declared

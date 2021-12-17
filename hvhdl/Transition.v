@@ -85,7 +85,6 @@ Definition transition_ports : list pdecl :=
 Definition s_condition_combination : ident := 12. 
 Definition s_enabled : ident := 13.
 Definition s_firable : ident := 14. 
-Definition s_fired : ident := 15.
 Definition s_firing_condition : ident := 16.
 Definition s_priority_combination : ident := 17.
 Definition s_reinit_time_counter : ident := 18.
@@ -98,7 +97,6 @@ Definition transition_sigs : list sdecl :=
   sdecl_ s_condition_combination tind_boolean;
   sdecl_ s_enabled               tind_boolean;
   sdecl_ s_firable               tind_boolean;
-  sdecl_ s_fired                 tind_boolean;
   sdecl_ s_firing_condition      tind_boolean;
   sdecl_ s_priority_combination  tind_boolean;
   sdecl_ s_reinit_time_counter   tind_boolean;
@@ -352,25 +350,7 @@ Definition fired_evaluation_ps :=
         []
 
         (* Process body. *)
-        (s_fired @<== (#s_firable @&& #s_priority_combination)).
-
-(** Process "publish_fired". *)
-
-(* Process id. *)
-Definition publish_fired : ident := 28.
-
-(* Process "publish_fired" declaration. *)
-
-Definition publish_fired_ps :=
-  cs_ps publish_fired
-        (* Sensitivity list. *)
-        {[s_fired]}
-        
-        (* Local variables. *)
-        []
-
-        (* Process body. *)
-        (fired @<== #s_fired).
+        (fired @<== (#s_firable @&& #s_priority_combination)).
 
 (** Declaration of the Transition design behavior. *)
 
@@ -382,8 +362,7 @@ Definition transition_behavior : cs :=
      // firing_condition_evaluation_ps
      // priority_authorization_evaluation_ps
      // firable_ps
-     // fired_evaluation_ps
-     // publish_fired_ps).
+     // fired_evaluation_ps).
 
 (** ** Declaration of the Place design. *)
 
