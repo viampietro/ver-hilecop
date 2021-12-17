@@ -1,5 +1,5 @@
 # KNOWNTARGETS will not be passed along to CoqMakefile
-KNOWNTARGETS := CoqMakefile
+KNOWNTARGETS := CoqMakefile with-proof without-proof
 
 # KNOWNFILES will not get implicit targets from the final rule, and so
 # depending on them won't invoke the submake
@@ -30,10 +30,10 @@ invoke-coqmakefile: CoqMakefile
 	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
 
 with-proof: gen-coqproject-p-option
-	@make
+	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
 
 without-proof: gen-coqproject-no-option
-	@make
+	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
 
 .PHONY: invoke-coqmakefile $(KNOWNFILES)
 

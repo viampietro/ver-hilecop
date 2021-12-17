@@ -15,8 +15,8 @@ Require Import String.
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.proofs.SInvTactics.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.proofs.SInvTactics.
 
 (** Tactic to solve state invariant lemmas. *)
 

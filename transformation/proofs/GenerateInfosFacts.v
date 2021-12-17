@@ -13,8 +13,8 @@ Require Import common.ListPlus.
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.proofs.GenerateInfosInvs.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.proofs.GenerateInfosInvs.
 
 (** ** Facts about Transition Information Generation *)
 

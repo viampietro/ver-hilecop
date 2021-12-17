@@ -13,8 +13,8 @@ Require Import sitpn.SitpnFacts.
 Require Import hvhdl.Place.
 Require Import hvhdl.AbstractSyntax.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.proofs.SInvTactics.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.proofs.SInvTactics.
 
 (** ** Facts about Architecture Generation Function *)
 

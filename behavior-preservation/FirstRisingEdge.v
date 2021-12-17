@@ -7,7 +7,7 @@ Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlHilecopLib.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
+Require Import transformation.Sitpn2HVhdl.
 
 Require Import soundness.SemanticPreservationDefs.
 

@@ -22,9 +22,9 @@ Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlSimulationLib.
 (* Require Import hvhdl.HVhdlSimulationFactsLib. *)
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.proofs.GenerateHVhdlFacts.
-(* Require Import sitpn2hvhdl.GenerateInfosFacts. *)
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.proofs.GenerateHVhdlFacts.
+(* Require Import transformation.GenerateInfosFacts. *)
 
 Require Import soundness.SemanticPreservationDefs.
 

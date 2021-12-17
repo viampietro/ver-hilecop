@@ -33,7 +33,7 @@ Require Import hvhdl.Transition.
 
 (* SITPN-to-H-HVDL libraries *)
 
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import transformation.Sitpn2HVhdlTypes.
 
 (** Defines the state similarity relation between an SITPN state and a
     H-VHDL design state, without similarity of condition values and reset orders.  *)

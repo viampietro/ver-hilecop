@@ -16,7 +16,7 @@ Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 Require Import hvhdl.Transition.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import transformation.Sitpn2HVhdlTypes.
 
 Import ErrMonadNotations.
 

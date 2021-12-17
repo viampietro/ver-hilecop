@@ -33,7 +33,7 @@ Require Import hvhdl.PortMapEvaluation.
 
 (* SITPN to H-VHDL Libraries *)
 
-Require Import sitpn2hvhdl.GenerateHVhdl.
+Require Import transformation.GenerateHVhdl.
 
 (* Soundness definitions and lemmas *)
 

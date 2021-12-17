@@ -13,10 +13,10 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Place.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.GenerateInfosFacts.
-Require Import sitpn2hvhdl.GenerateArchitectureFacts.
-Require Import sitpn2hvhdl.GeneratePortsFacts.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.GenerateInfosFacts.
+Require Import transformation.GenerateArchitectureFacts.
+Require Import transformation.GeneratePortsFacts.
 
 (** ** Generation of P Component Instances and State Invariants *)
 

@@ -13,8 +13,8 @@ Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.AbstractSyntax.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.GenerateArchitectureFacts.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.GenerateArchitectureFacts.
 
 (** ** Facts about Action Port Generation *)
 

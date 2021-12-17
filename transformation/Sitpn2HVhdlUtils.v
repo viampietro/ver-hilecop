@@ -11,7 +11,7 @@ Require Import String.
 Require Import sitpn.Sitpn.
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import transformation.Sitpn2HVhdlTypes.
 
 Section Sitpn2HVhdlUtils.
 

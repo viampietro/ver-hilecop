@@ -5,9 +5,9 @@ Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import common.proofs.ListMonadFacts.
 Require Import common.proofs.ListMonadTactics.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
-Require Import sitpn2hvhdl.GenerateInfos.
-Require Import sitpn2hvhdl.GenerateArchitecture.
+Require Import transformation.Sitpn2HVhdlTypes.
+Require Import transformation.GenerateInfos.
+Require Import transformation.GenerateArchitecture.
 
 Require Import String.
 Require Import FunInd.

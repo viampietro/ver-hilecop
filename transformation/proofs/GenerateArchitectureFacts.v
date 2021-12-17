@@ -12,8 +12,8 @@ Require Import sitpn.SitpnLib.
 Require Import hvhdl.Place.
 Require Import hvhdl.AbstractSyntax.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.proofs.GenerateArchitectureInvs.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.proofs.GenerateArchitectureInvs.
 
 (** ** Facts about Place Map Generation *)
 

@@ -18,9 +18,9 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Petri.
 Require Import hvhdl.Place.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
-Require Import sitpn2hvhdl.Sitpn2HVhdlUtils.
-Require Import sitpn2hvhdl.GenerateArchitecture.
+Require Import transformation.Sitpn2HVhdlTypes.
+Require Import transformation.Sitpn2HVhdlUtils.
+Require Import transformation.GenerateArchitecture.
 
 (** ** Common to action/function ports and process generation. *)
 

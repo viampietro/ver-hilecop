@@ -11,7 +11,7 @@ Require Import common.GlobalTypes.
 Require Import String.
 Require Import common.StateAndErrorMonad.
 Require Import common.ListMonad.
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
+Require Import transformation.Sitpn2HVhdlTypes.
 Require Import FunInd.
 
 Local Open Scope string_scope.
@@ -241,7 +241,7 @@ Section GenSitpnInfos.
            that all the transitions of the tail are not in conflict
            with [t]. Therefore, [t] is not needed anymore. *)
             do b <- all_conflicts_of_t_solved t tl;
-            if b then all_conflicts_solved_by_mutex tl else Ret false
+            if b then all_conflicts_solved_by_mutex_without_foldl tl else Ret false
         end.      
       
       (** Injects transition [t] in the list [stranss] depending on

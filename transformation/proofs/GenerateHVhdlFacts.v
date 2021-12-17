@@ -13,10 +13,10 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Place.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
-Require Import sitpn2hvhdl.proofs.Sitpn2HVhdlInvs.
-Require Import sitpn2hvhdl.proofs.GenerateInfosFacts.
-Require Import sitpn2hvhdl.proofs.GenerateArchitectureFacts.
+Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.proofs.Sitpn2HVhdlInvs.
+Require Import transformation.proofs.GenerateInfosFacts.
+Require Import transformation.proofs.GenerateArchitectureFacts.
 
 (** ** Facts about Generation of P Component Instances *)
 

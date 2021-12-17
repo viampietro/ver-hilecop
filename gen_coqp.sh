@@ -12,7 +12,7 @@ EOF
 # Regex pointing out the proof-related files in the VerHilecop
 # project.
 
-PROOF_FILES_PATTERN="\(.*/proofs/.*\|.*/soundness/.*\)"
+PROOF_FILES_PATTERN="\(.*/proofs/.*\|.*/behavior-preservation/.*\)"
 
 # Parsing the command options.
 
@@ -48,8 +48,8 @@ fi
 echo "-R common/ hilecop.common
 -R sitpn/ hilecop.sitpn
 -R hvhdl/ hilecop.hvhdl
--R sitpn2hvhdl/ hilecop.sitpn2hvhdl
--R soundness/ hilecop.soundness
+-R transformation/ hilecop.transformation
+-R behavior-preservation/ hilecop.soundness
 -R test/ hilecop.test" > _CoqProject
 
 # Displays all the Vernacular files (.v) of the project and adds them

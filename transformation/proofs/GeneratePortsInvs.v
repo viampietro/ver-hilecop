@@ -11,7 +11,7 @@ Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.AbstractSyntax.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
+Require Import transformation.Sitpn2HVhdl.
 
 (** ** Action Port Generation and State Invariants *)
 

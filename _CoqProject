@@ -1,17 +1,9 @@
 -R common/ hilecop.common
 -R sitpn/ hilecop.sitpn
 -R hvhdl/ hilecop.hvhdl
--R sitpn2hvhdl/ hilecop.sitpn2hvhdl
--R soundness/ hilecop.soundness
+-R transformation/ hilecop.transformation
+-R behavior-preservation/ hilecop.soundness
 -R test/ hilecop.test
-./sitpn2hvhdl/GeneratePorts.v
-./sitpn2hvhdl/GenerateInfos.v
-./sitpn2hvhdl/Sitpn2HVhdlUtils.v
-./sitpn2hvhdl/GenerateArchitecture.v
-./sitpn2hvhdl/Sitpn2HVhdl.v
-./sitpn2hvhdl/GenerateHVhdl.v
-./sitpn2hvhdl/Sitpn2HVhdlTypes.v
-./sitpn2hvhdl/GenerateInterconnections.v
 ./common/NMap.v
 ./common/NSet.v
 ./common/ListLib.v
@@ -73,3 +65,11 @@
 ./sitpn/SitpnSemantics.v
 ./sitpn/SitpnWellDefined.v
 ./sitpn/Sitpn.v
+./transformation/GeneratePorts.v
+./transformation/GenerateInfos.v
+./transformation/Sitpn2HVhdlUtils.v
+./transformation/GenerateArchitecture.v
+./transformation/Sitpn2HVhdl.v
+./transformation/GenerateHVhdl.v
+./transformation/Sitpn2HVhdlTypes.v
+./transformation/GenerateInterconnections.v

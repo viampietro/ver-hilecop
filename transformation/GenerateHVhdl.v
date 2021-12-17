@@ -14,11 +14,11 @@ Require Import hvhdl.HVhdlTypes.
 
 Require Import sitpn.Sitpn.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdlTypes.
-Require Import sitpn2hvhdl.GenerateInfos.
-Require Import sitpn2hvhdl.GenerateArchitecture.
-Require Import sitpn2hvhdl.GenerateInterconnections.
-Require Import sitpn2hvhdl.GeneratePorts.
+Require Import transformation.Sitpn2HVhdlTypes.
+Require Import transformation.GenerateInfos.
+Require Import transformation.GenerateArchitecture.
+Require Import transformation.GenerateInterconnections.
+Require Import transformation.GeneratePorts.
 
 Open Scope abss_scope.
 

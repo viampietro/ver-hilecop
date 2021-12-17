@@ -14,7 +14,7 @@ Require Import hvhdl.Environment.
 Require Import hvhdl.DesignElaboration.
 Require Import hvhdl.HilecopDesignStore.
 
-Require Import sitpn2hvhdl.Sitpn2HVhdl.
+Require Import transformation.Sitpn2HVhdl.
 
 Require Import soundness.SemanticPreservationDefs.
 
