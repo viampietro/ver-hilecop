@@ -29,10 +29,10 @@
 ./common/ListDep.v
 ./common/NatMap.v
 ./test/hvhdl/Adder.v
-./test/sitpn/dp/WellDefinedSitpns.v
-./test/sitpn/dp/IllDefinedSitpns.v
-./test/sitpn/dp/SitpnInstancesTactics.v
-./test/sitpn/dp/Example1.v
+./test/sitpn/WellDefinedSitpns.v
+./test/sitpn/IllDefinedSitpns.v
+./test/sitpn/SitpnInstancesTactics.v
+./test/sitpn/Example1.v
 ./hvhdl/AbstractSyntax.v
 ./hvhdl/HVhdlHilecopLib.v
 ./hvhdl/SynchronousEvaluation.v

@@ -5,7 +5,7 @@ Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnTypes.
-Require Import test.sitpn.dp.SitpnInstancesTactics.
+Require Import test.sitpn.SitpnInstancesTactics.
 
 Local Notation "[ e ]" := (exist _ e _).
 
