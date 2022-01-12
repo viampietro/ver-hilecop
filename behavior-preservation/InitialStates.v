@@ -63,7 +63,7 @@ Proof.
   (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
   (* Builds [comp(id__p', "place", gm, ipm, opm) ∈ (behavior d)] *)
-  edestruct @sitpn2hvhdl_p_comp with (sitpn := sitpn) (p := p)
+  edestruct @sitpn2hvhdl_p_comp_ex with (sitpn := sitpn) (p := p)
     as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
   (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)

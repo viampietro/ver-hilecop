@@ -38,7 +38,7 @@ Require Import transformation.GenerateHVhdl.
 (* Soundness definitions and lemmas *)
 
 Require Import soundness.SemanticPreservationDefs.
-Require Import soundness.FullBisimulation.
+Require Import soundness.TraceSimilarity.
 (* Require Import soundness.InitialStates. *)
 (* Require Import soundness.RisingEdge. *)
 (* Require Import soundness.FallingEdge. *)
@@ -175,7 +175,7 @@ Proof.
   unfold hfullsim; eapply FullSim; eauto.
 
   (* Similar traces. *)
-  eapply full_bisimulation; eauto.
+  eapply trace_sim; eauto.
   unfold hfullsim; eapply FullSim; eauto.  
 Qed.
 

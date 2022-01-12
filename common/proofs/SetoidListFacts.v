@@ -77,6 +77,7 @@ Section InAFacts.
   Qed.
 
   Hint Resolve InA_setv_inv_1 : setoidl.
+  Hint Extern 1 (InA _ (_, _) (setv _ _ _ _)) => eapply InA_setv_inv_1; eauto : setoidl.
   
   Lemma InA_setv_inv_2 :
     forall {A B : Type} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {y v l} {x : A} {z : B},
@@ -100,6 +101,7 @@ Section InAFacts.
   Qed.
 
   Hint Resolve InA_setv_inv_2 : setoidl.
+  Hint Extern 1 (InA _ (_, _) (setv _ _ _ _)) => eapply InA_setv_inv_2; eauto : setoidl.
   
   Lemma InA_setv :
     forall {A B : Type} {x : A} {z : B} {eqk eqv} {eqk_dec : forall x y, {eqk x y} + {~eqk x y}} {l},
@@ -248,6 +250,7 @@ Hint Resolve InA_setv_inv_1 : setoidl.
 Hint Resolve InA_setv_inv_2 : setoidl.
 Hint Resolve InA_setv : setoidl.
 Hint Extern 1 (InA _ (?x, ?z) (setv _ ?x ?z _)) => apply InA_setv : setoidl.
+Hint Extern 1 (InA _ (?x, _) (setv _ ?y _ _)) => eapply InA_setv_inv_1; eauto : setoidl.
 Hint Resolve InA_notin_fs_setv_inv : setoidl.
 Hint Resolve InA_neqA : setoidl.
 Hint Resolve nInA_eqA : setoidl.

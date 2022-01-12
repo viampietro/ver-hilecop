@@ -1,0 +1,275 @@
+#+STARTUP: indent
+
+* TODO Behavior Preservation [0%]
+** TODO Similar Initial States [28%]
+*** DONE Initial States Equal Marking (InitialStates.v) [91%]
+**** DONE NoDupA_fs_eqk_eqv (SetoidListFacts) [100%] 
+***** DONE InA_setv
+***** DONE getv_idle
+**** TODO sitpn2hvhdl_p_comp_ex (GenerateHVhdlFacts) [25%]
+***** DONE gen_sitpn_infos_sil_lofPs
+***** TODO gen_archi_p_comp_ex
+****** TODO gen_pcis_p_comp_ex
+******* DONE iter_prop_A_state
+******* DONE p_comp_ex_Peq_equiv
+******* DONE gen_pci_p_comp_ex
+******* TODO gen_pci_p_comp_ex_inv
+******* TODO SIL_forall_A
+****** TODO gen_tcis_t_comp_ex
+***** TODO gen_inter_p_comp_ex
+***** TODO gen_ports_p_comp_ex
+**** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]
+***** DONE gen_comp_insts_nodup_p2pcomp [100%]
+****** DONE iter_gen_pcomp_inst_nodup_p2pcomp [100%]
+******* DONE gen_pcomp_inst_nodup_p2pcomp
+******* DONE iter_gen_pcomp_inst_inv_nodup_p2pcomp
+***** DONE gen_sitpn_infos_inv_p2pcomp [100%]
+****** DONE check_wd_sitpn
+****** DONE gen_tinfos_inv_p2pcomp
+****** DONE gen_pinfos_inv_p2pcomp
+******* DONE all_conflicts_solved_by_mutex_inv_state
+******* DONE sort_by_priority_inv_state
+****** DONE gen_cinfos_inv_p2pcomp
+****** DONE gen_ainfos_inv_p2pcomp
+****** DONE gen_finfos_inv_p2pcomp
+***** DONE gen_arch_inv_p2pcomp [100%]
+****** DONE gen_pmap_entry_inv_γ 
+****** DONE gen_tmap_entry_inv_γ
+****** DONE interconnect_p_inv_γ 
+***** DONE gen_ports_inv_p2pcomp [100%]
+****** DONE gen_aports_inv_p2pcomp 
+****** DONE gen_fports_inv_p2pcomp
+****** DONE gen_cports_inv_p2pcomp
+***** DONE lofPs invariant for arch and ports, and SIL lofPs for infos.
+**** DONE AreCsCompIds_ex (WellDefinedDesignFacts)
+**** DONE elab_compid_in_comps (DesignElaborationFacts.v)
+**** DONE elab_compid_in_compstore (DesignElaborationFacts.v)
+**** DONE elab_nodup_compids (DesignElaborationFacts.v)
+***** DONE ebeh_nodup_compids
+****** DONE NoDup_app_cons (InAndNoDup)
+****** DONE AreCsCompIds_compid_iff (WellDefineddesignfacts)
+****** DONE ebeh_compid_is_unique (Designelaborationfacts)
+**** DONE elab_pcomp_Δ_s_marking (PlaceElaborationFacts.v)
+***** TODO ebeh_pcomp_Δ_s_marking (PlaceElabFacts.v)
+****** DONE elab_place_Δ_s_marking
+**** DONE elab_empty_events_for_comps (DesignElaborationFacts.v)
+***** DONE ebeh_empty_events_for_comps (DesignElaborationfacts.v)
+**** DONE elab_validipm (Designelaborationfacts)
+***** DONE ebeh_validipm (Designelaborationfacts)
+****** DONE listipm_eq_iff_eq_sigs (ValidPortMapFacts.v)
+******* DONE vexpr_eq_iff_eq_sigs (ExpressionEvaluationFacts.v)
+******* DONE is_gstatic_expr_eq_iff_eq_gens (StaticExpressionsFacts.v)
+**** DONE sitpn2hvhdl_bind_init_marking (Generatehvhdlfacts) [100%]
+***** DONE gen_arch_pcomp (GenerateArchitectureFacts)
+****** DONE gen_interconnections_pcomp (Generatearchitecturefacts)
+******* DONE iter_interconnect_p_pcomp (Generatearchitecturefacts)
+******** DONE interconnect_p_pcomp (Generatearchitecturefacts)
+******** DONE interconnect_p_inv_pcomp (Generatearchitecturefacts)
+***** DONE gen_comp_insts_bind_init_marking (Generatehvhdlfacts)
+****** DONE gen_pcomp_insts_bind_init_marking (Generatehvhdlfacts)
+******* DONE iter_gen_pcomp_inst_bind_init_marking (GenerateHVhdlfacts)
+******** DONE gen_pcomp_inst_bind_init_marking (Generatehvhdlfacts)
+********* DONE InputMap_to_AST_In_inl (Generatehvhdlfacts)
+********* DONE getv_compl (ListMonadFacts)
+********* DONE InA_setv_eqv (SetoidListFacts)
+******** DONE iter_gen_pcomp_inst_inv_nextid (Generatehvhdlfacts)
+******** DONE iter_gen_pcomp_inst_inv_arch (Generatehvhdlfacts)
+******** DONE gen_pcomp_inst_inv_p_comp_2 (Generatehvhdlfacts)
+********* DONE InA_setv_inv_2
+******** DONE iter_gen_pcomp_inst_inv_nextid_2 (Generatehvhdlfacts)
+********* DONE gen_p_comp_inst_inv_nextid_2
+********** DONE InA_setv_fst_or_in_tl
+****** DONE gen_tcomp_insts_gen_only_tcomp (Generatehvhdlfacts)
+***** DONE gen_ports_inv_plmap (GeneratePortsFacts)
+****** DONE gen_cports_inv_plmap 
+****** DONE gen_aports_inv_plmap
+******* DONE foldl_gen_aport_and_ss_inv_plmap
+******* DONE iter_add_amap_entry_inv_plmap
+******** DONE connect_marked_port_sil_plmap
+******** DONE connect_marked_port_inv_plmap
+********* DONE getv_correct (ListMonadFacts)
+********* DONE InA_setv_eqk (SetoidListFacts)
+****** DONE gen_fports_inv_plmap
+***** DONE gen_ports_inv_sil_plmap (GeneratePortsfacts)
+****** DONE gen_aports_inv_sil_plmap (GeneratePortsfacts)
+***** DONE gen_arch_sil_plmap (GenerateArchitectureFacts)
+****** DONE gen_pmap_sil_plmap (GenerateArchitectureFacts)
+****** DONE gen_interconnections_inv_sil_plmap (GenerateArchitectureInvs)
+***** DONE gen_sitpn_infos_inv_arch (GenerateInfosInvs)
+***** DONE gen_ports_inv_no_comps_in_beh (GeneratePortsInvs)
+***** DONE gen_arch_inv_beh (GenerateArchitectureInvs)
+***** DONE gen_sitpn_infos_inv_beh (GenerateInfosInvs)
+***** DONE gen_arch_bind_init_marking (GenerateArchitectureFacts)
+****** DONE gen_pmap_pcomp
+******* DONE map_aux_gen_pmap_entry_pcomp
+****** DONE gen_pmap_bind_init_marking
+****** DONE gen_interconnections_inv_pcomp_imap
+******* DONE iter_interconnect_p_inv_pcomp_imap
+******** DONE interconnect_p_inv_InA_plmap_1
+******** DONE interconnect_p_inv_pcomp_imap
+********* DONE connect_poutputs_inv_gmap_imap
+********** DONE foldl_connect_ptot_inv_gmap_imap
+*********** DONE connect_inv_comp_maps
+******** DONE iter_interconnect_p_inv_InA_plmap
+**** DONE init_s_marking_eq_nat (PInitializationFacts) [100%]
+***** DONE vruninit_maps_compstore_id (InitializationFacts) [100%]
+****** DONE vseq_inv_compstore_id (SSEvaluationFacts)
+****** DONE mapop_inv_compstore_id (PortMapEvaluationFacts)
+***** DONE stab_inv_s_marking (PStabilizeFacts) [100%]
+****** DONE vcomb_maps_compstore_id (CombinationalEvaluationFacts)
+****** DONE vcomb_inv_s_marking (Placeevaluationfacts) [100%]
+******* DONE nIn_nIn_Union (NatSet)
+******* DONE in_cs_comp_in_compids (WellDefinedDesignFacts)
+******* DONE AreCsCompIds_app (WellDefinedDesignFacts)
+******* DONE AreCsCompIds_ex (WellDefinedDesignFacts)
+******* DONE AreCsCompIds_determ (WellDefinedDesignFacts)
+******* DONE MapsTo_add_eqv (NatMap.v)
+******* DONE mapip_inv_sigstore (Portmapevaluationfacts.v)
+******* DONE vcomb_place_inv_s_marking (PlaceEvaluationFacts.v) [100%]
+******** DONE vcomb_par_comm (Combinationalevaluationfacts)
+******** DONE vcomb_par_assoc (Combinationalevaluationfacts)
+********* DONE IsMergedDState_ex [100%]
+********** DONE merge_sstore_compl_1
+********** DONE merge_sstore_compl_2
+********** DONE merge_sstore_compl_3
+********** DONE merge_sstore_sound_1
+*********** DONE merge_natmap_id_notin_set_2
+*********** DONE merge_natmap_notin_m1
+*********** DONE merge_natmap_EqualDom_1
+********** DONE merge_sstore_sound_2
+********** DONE merge_sstore_sound_3
+******** DONE vcomb_marking_ps_no_events (PlaceEvaluationfacts)
+******** DONE vcomb_not_in_events_if_not_assigned (Combinationalevaluationfacts)
+******* DONE vcomb_inv_cstate (CombinationalEvaluationFacts) 
+******* DONE vcomb_compid_not_in_events_1
+***** DONE vruninit_s_marking_eq_nat (PInitializationFacts) [100%]
+****** DONE vruninit_place_s_marking_eq_nat (PInitializationfacts) [100%]
+******* DONE vruninit_not_in_events_if_not_assigned (Initializationfacts)
+******* DONE vruninit_marking_ps_no_events_s_marking (PInitializationfacts)
+******* DONE vruninit_marking_ps_assign_s_marking (PInitializationfacts)
+****** DONE mapip_not_in_events_if_not_input (Portmapevaluationfacts)
+****** DONE mapip_eval_simpl_associp (Portmapevaluationfacts)
+******* DONE vassocip_eval_simpl_associp
+******* DONE mapip_inv_if_not_assoc
+******* DONE listipm_unique_simpl_associp
+****** DONE mapip_eq_state_if_no_events (Portmapevaluationfacts)
+****** DONE vruninit_eq_state_if_no_events (Initializationfacts)
+******* DONE mapop_eq_state_if_no_events (PortMapevaluationfacts)
+******* DONE vseq_eq_state_if_no_events (SSEvaluationfacts)
+****** DONE vruninit_inv_cstate (Initializationfacts)
+****** DONE vruninit_compid_not_in_events (Initializationfacts)
+*** DONE Initial States Equal Time Counter [100%]
+**** DONE sitpn2hvhdl_t_comp (Generatehvhdlfacts)
+***** DONE gen_comp_insts_t_comp (Generatehvhdlfacts)
+****** DONE gen_tcomp_insts_t_comp (Generatehvhdlfacts)
+******* DONE iter_gen_tcomp_inst_t_comp
+******** DONE gen_tcomp_inst_inv_t_comp_1
+******** DONE gen_tcomp_inst_t_comp
+****** DONE gen_pcomp_insts_inv_lofTs (Generatehvhdlinvs)
+***** DONE gen_ports_inv_lofTs (Generateportsinvs)
+***** DONE gen_arch_inv_lofTs (Generatearchitectureinvs)
+***** DONE gen_sitpn_infos_sil_lofTs (GenerateInfosFacts)
+**** DONE elab_tcomp_Δ_s_tc (TElaborationFacts)
+***** DONE elab_decl_of_comp (DesignElaborationfacts)
+**** DONE init_s_tc_eq_O (TInitializationFacts)
+***** DONE stab_inv_s_tc (TStabilizeFacts)
+****** DONE vcomb_inv_s_tc (TCombinationalEvaluationFacts)
+***** DONE vruninit_s_tc_eq_O (TInitializationFacts)
+****** DONE vruninit_transition_s_tc_eq_O (TInitializationFacts)
+******* DONE vruninit_tc_ps_assign_s_tc (TInitializationfacts)
+******* DONE vruninit_tc_ps_no_events_s_tc (TInitializationFacts)
+**** DONE sitpn2hvhdl_nodup_t2tcomp (Generatehvhdlfacts)
+***** DONE gen_comp_insts_nodup_t2tcomp (GenerateHvhdlinvs)
+****** DONE gen_tcomp_insts_nodup_t2tcomp (GenerateHvhdlinv)
+******* DONE iter_gen_tcomp_inst_nodup_t2tcomp (Generatehvhdlinvs)
+***** DONE gen_ports_inv_t2tcomp (Generateportsinvs)
+*** TODO Initial States Equal Reset Orders [26%]
+**** DONE elab_Tcomp_Δ_in_arcs_nb_1 (TElaborationFacts)
+**** DONE elab_Tcomp_σ_rt (TElaborationFacts)
+***** DONE ebeh_Tcomp_σ_rt
+****** DONE elab_T_σ_rt
+**** DONE init_maps_sstore_of_comp (InitializationFacts)
+***** DONE vruninit_maps_sstore_of_comp (Initializationfacts)
+****** DONE vruninit_maps_sstore
+******* DONE vseq_maps_sstore
+******* DONE mapop_maps_sstore
+****** DONE vruninit_compid_in_events_comp_in_cs
+****** DONE vruninit_is_compof_if_in_cs
+****** DONE vruninit_inv_not_in_events
+******* DONE vseq_inv_not_in_events
+******* DONE mapop_inv_in_events
+***** DONE stab_maps_sstore_of_comp (Stabilizefacts)
+****** DONE vcomb_maps_sstore_of_comp
+******* DONE vcomb_maps_sstore 
+******* DONE vcomb_compid_in_events_comp_in_cs
+******* DONE vcomb_is_compof_if_in_cs
+**** DONE elab_Tcomp_Δ_rt (TElaborationfacts)
+***** DONE ebeh_Tcomp_Δ_rt
+****** DONE elab_T_Δ_rt
+******* DONE eports_T_Δ_rt
+**** DONE elab_well_typed_values_in_sstore_of_comp (Designelaborationfacts)
+***** DONE ebeh_inv_well_typed_values_in_sstore_of_comp
+****** DONE elab_well_typed_values_in_sstore
+******* DONE ebeh_inv_well_typed_values_in_sstore
+******* DONE edecls_inv_well_typed_values_in_sstore
+******* DONE eports_inv_well_typed_values_in_sstore
+***** DONE eports_inv_Δ_if_not_port (PortElaborationFacts)
+***** DONE edecls_inv_Δ_if_not_decl (ArchitectureElaborationFacts)
+***** DONE egens_inv_Δ_if_not_gen (GenericElaborationFacts)
+**** DONE init_inv_well_typed_values_in_sstore_of_comp (Initializationfacts)
+***** DONE vruninit_inv_well_typed_values_in_sstore_of_comp 
+****** DONE vruninit_inv_well_typed_values_in_sstore (Initializationfacts)
+******* DONE vseq_inv_well_typed_values_in_sstore (SSEvaluationfacts)
+******** DONE is_of_type_inv_set_at (Semanticaldomainsfacts)
+******* DONE mapop_inv_well_typed_values_in_sstore (Portmapevaluationfacts)
+****** DONE mapip_inv_well_typed_values_in_sstore (PortMapevaluationfacts)
+***** DONE stab_inv_well_typed_values_in_sstore_of_comp (StabilizeFacts)
+**** TODO init_Tcomp_s_rtc_eq_bprod_of_rt (TInitializationFacts)
+***** TODO vruninit_Tcomp_s_rtc_eq_bprod_of_rt (TInitializationfacts)
+****** TODO vruninit_T_s_rtc_eq_bprod_of_rt (TInitializationfacts)
+***** TODO stab_Tcomp_s_rtc_eq_bprod_of_rt (TStabilizefacts)
+**** TODO PInputsOf_ex (SitpnSemanticsFacts)
+**** TODO init_Tcomp_eval_rt_0 (TInitializationfacts)
+**** TODO sitpn2hvhdl_emp_pinputs_rt (Generatehvhdlfacts)
+**** TODO sitpn2hvhdl_emp_pinputs_in_arcs_nb (Generatehvhdlfacts)
+**** TODO elab_wf_gmap_expr (DesignElaborationfacts)
+**** TODO elab_Tcomp_Δ_in_arcs_nb_2 (TElaborationfacts)
+**** TODO BProd_aofv_false (SemanticalDomainsFacts)
+**** TODO TOutputsOf_ex (Sitpnsemanticsfacts)
+**** TODO sitpn2hvhdl_connect_rtt_rt (Generatehvhdlfacts)
+**** TODO sitpn2hvhdl_nemp_pinputs_in_arcs_nb (Generatehvhdlfacts)
+**** TODO init_Tcomp_eval_rt_i (TInitializationfacts)
+**** DONE init_maps_compstore_id (Initializationfacts)
+**** TODO elab_Pcomp_σ_rtt (PElaborationfacts)
+**** TODO elab_Pcomp_Δ_out_arcs_nb_1 (PElaborationfacts)
+**** TODO elab_Pcomp_Δ_rtt (PElaborationfacts)
+**** TODO init_Pcomp_eval_rtt_i (PInitializationfacts)
+**** TODO init_Pcomp_rtt_eq_false (PInitializationfacts)
+**** TODO sitpn2hvhdl_nemp_toutputs_out_arcs_nb (Generatehvhdlfacts)
+**** TODO elab_Pcomp_Δ_out_arcs_nb_2 (PElaborationfacts)
+*** TODO Initial States Equal Conditions
+*** TODO Initial States Equal Actions
+*** TODO Initial States Equal Functions
+** TODO First Cycle 
+*** TODO 1st RE Equal Marking
+*** TODO 1st RE Equal Time Counters
+*** TODO 1st RE Equal Reset Orders
+*** TODO 1st RE Equal Actions
+*** TODO 1st RE Equal Functions
+*** TODO 1st RE Equal Sensitized
+** TODO Rising Edge
+*** TODO Rising Edge Equal Marking
+*** TODO Rising Edge Equal Time Counters
+*** TODO Rising Edge Equal Reset Orders
+*** TODO Rising Edge Equal Actions
+*** TODO Rising Edge Equal Functions
+*** TODO Rising Edge Equal Sensitized
+** TODO Falling Edge
+*** TODO Falling Edge Equal Marking
+*** TODO Falling Edge Equal Time Counters
+*** TODO Falling Edge Equal Reset Orders
+*** TODO Falling Edge Equal Conditions
+*** TODO Falling Edge Equal Actions
+*** TODO Falling Edge Equal Functions
+*** TODO Falling Edge Prepare Marking Update
+*** TODO Falling Edge Equal Fired

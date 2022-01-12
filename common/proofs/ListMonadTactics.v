@@ -7,12 +7,12 @@ Require Import StateAndErrorMonadTactics.
 
 Ltac solveSInv H :=
   match type of H with
-  | (OK _ _ = OK _ _) => try (minv1 H)
-  | (Get _ = OK _ _) => try (minv1 H)
-  | (Put _ _ = OK _ _) => try (minv1 H)
-  | (Ret _ _ = OK _ _) => try (minv1 H)
-  | (Err _ _ = OK _ _) => try (minv1 H)
-  | (Error _ = OK _ _) => try (minv1 H)
+  | (OK _ _ = OK _ _) => try (minv H)
+  | (Get _ = OK _ _) => try (minv H)
+  | (Put _ _ = OK _ _) => try (minv H)
+  | (Ret _ _ = OK _ _) => try (minv H)
+  | (Err _ _ = OK _ _) => try (minv H)
+  | (Error _ = OK _ _) => try (minv H)
   | (Bind ?F ?G ?S = OK ?X ?S') =>
     let x := fresh "x" in
     let s := fresh "s" in

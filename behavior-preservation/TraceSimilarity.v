@@ -43,9 +43,9 @@ Require Import soundness.FirstRisingEdge.
 Require Import soundness.FallingEdge.
 Require Import soundness.RisingEdge.
 
-(** ** Bisimulation lemma *)
+(** ** Trace similarity lemma *)
 
-Lemma bisimulation :
+Lemma trace_sim :
   forall sitpn decpr id__ent id__arch b d γ E__c E__p Δ σ__e τ s σ θ__s θ__σ, 
 
     (* sitpn translates into (d, γ). *)
@@ -87,13 +87,13 @@ Proof.
     end.      
 Qed.
 
-Hint Resolve bisimulation : hilecop.
+Hint Resolve trace_sim : hilecop.
 
 (** Assuming the existence of an elaborated design [Δ], a default
     state [σ__e], an initial state [σ0], and a simulation trace [θ__σ] for
     a given H-VHDL design [d]. *)
 
-Theorem full_bisimulation :
+Theorem full_trace_sim :
   forall sitpn decpr id__ent id__arch E__c τ θ__s d E__p b θ__σ γ Δ,
 
     (* [sitpn] is well-defined. *)
@@ -129,7 +129,7 @@ Proof.
     end.
 
   (* CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].   
-     Solved with [first_rising_edge], [falling_edge] and [bisimulation] lemmas. *)
+     Solved with [first_rising_edge], [falling_edge] and [trace_sim] lemmas. *)
     
   - lazymatch goal with
     | [ Hsimloop: simloop _ _ _ _ _ _ _ |- _ ] =>

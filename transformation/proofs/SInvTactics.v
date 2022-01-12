@@ -57,6 +57,10 @@ Proof.
   eapply IHc; eauto. 
 Qed.
 
+(* Solves lemmas about the invariance of the state through the call to
+   monadic functions, in the context of the state-and-error monad.
+   The invariance properties take the form of equality properties.  *)
+
 Ltac solve_sinv :=
   lazymatch goal with
   (* Solves the simplest forms of goals in the tactic *)
@@ -165,7 +169,11 @@ Ltac solve_sinv :=
   | [ H: (let (_, _, _) := ?G in _) _ ?S1 = OK ?X ?S2 |- ?S1 = ?S2 ] =>
       destruct G; try solve_sinv                      
                       
-  (*  *)
+  (* Deduces the equality between S1 and S2 (or F S1 and F S2) based
+     for specific case of generic functions over lists (monadic
+     version). *)
+
+  (* CASE [tmap] and [map] functions *)
   | [ H: ListMonad.tmap _ _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       pattern S1, S2; eapply (tmap_inv_state H); intros; eauto with typeclass_instances;
       try solve_sinv
@@ -177,33 +185,42 @@ Ltac solve_sinv :=
       try solve_sinv
   | [ H: ListMonad.map _ _ ?S1 = OK _ ?S2 |- ?S1 = ?S2 ] =>
       pattern S1, S2; eapply (map_inv_state H); intros; eauto with typeclass_instances;
-      try solve_sinv                                                          
+      try solve_sinv
+  (* CASE [fold_left] function *)
   | [ H: ListMonad.fold_left _ _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       pattern S1, S2; eapply (foldl_inv_state H); intros; eauto with typeclass_instances;
       try solve_sinv
   | [ H: ListMonad.fold_left _ _ _ ?S1 = OK _ ?S2 |- ?S1 = ?S2 ] =>
       pattern S1, S2; eapply (foldl_inv_state H); intros; eauto with typeclass_instances;
       try solve_sinv
+  (* CASE [iter] function *)
   | [ H: ListMonad.iter _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       pattern S1, S2; eapply (iter_inv_state H); intros; eauto with typeclass_instances;
       try solve_sinv
   | [ H: ListMonad.iter _ _ ?S1 = OK _ ?S2 |- ?S1 = ?S2 ] =>
       pattern S1, S2; eapply (iter_inv_state H); intros; eauto with typeclass_instances;
-      try solve_sinv          
+      try solve_sinv
+  (* CASE [find] function *)
   | [ H: ListMonad.find _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       pattern S1, S2; eapply (find_inv_state H); intros; eauto with typeclass_instances;
       try solve_sinv
   | [ H: ListMonad.find _ _ ?S1 = OK _ ?S2 |- ?S1 = ?S2 ] =>
       pattern S1, S2; eapply (find_inv_state H); intros; eauto with typeclass_instances;
-      try solve_sinv          
+      try solve_sinv
+  (* CASE [getv] function *)
   | [ H: ListMonad.getv _ _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       rewrite (getv_inv_state H); clear H; reflexivity
   | [ H: ListMonad.getv _ _ _ ?S1 = OK _ ?S2 |- ?S1 = ?S2 ] =>
-      rewrite (getv_inv_state H); clear H; reflexivity                                             
+      rewrite (getv_inv_state H); clear H; reflexivity
+  (* CASE [inject_t] function (this function is not a generic list
+     function but a specific case found in the HILECOP
+     transformation). It is added here as a convenient way to solve
+     state invariance goals. *)
   | [ H: inject_t _ _ _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       pattern S1, S2; erewrite (inject_t_inv_state H); eauto
   | [ H: inject_t _ _ _ _ ?S1 = OK _ ?S2 |- ?S1 = ?S2 ] =>
       pattern S1, S2; erewrite (inject_t_inv_state H); eauto
+  (* CASE [foreach] function *)
   | [ H: ListMonad.foreach _ _ ?S1 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
       pattern S1, S2; eapply (foreach_inv_state H); intros; eauto with typeclass_instances;
       try solve_sinv
@@ -293,8 +310,7 @@ Ltac solve_sinv_pattern :=
   (* If [H] is of the form [(match G with | Error _ => _ OK _ _ => _
      end) = OK X S2] where [G] is a function identifier, then solve
      the case where [Error = OK] with [discriminate], and tries to
-     solve the remaining case (i.e. where [G = OK]) with [solve_sinv_pattern]
-     . *)
+     solve the remaining case (i.e. where [G = OK]) with [solve_sinv_pattern]. *)
   | [ H: (match ?G with | Error _ => _ | OK _ _ => _ end = OK _ ?S2) |- ?P ?S1 ?S2 ]  =>
       case_eq G; [
         let msg := fresh "msg" in
@@ -372,6 +388,7 @@ Ltac solve_sinv_pattern :=
       ((progress cbn in H) || (unfold G in H)); try solve_sinv_pattern
   | [ H: ?G ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
       ((progress cbn in H) || (unfold G in H)); try solve_sinv_pattern
+                                                    
   end.
 
 (* Unit tests on [solve_sinv]. *)
