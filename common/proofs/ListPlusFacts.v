@@ -4,7 +4,7 @@ Require Import common.CoqLib.
 Require Import common.InAndNoDup.
 Require Import common.FstSplit.
 Require Import common.ListPlus.
-Require Import common.SetoidListFacts.
+Require Import common.proofs.SetoidListFacts.
 Require Import common.GlobalFacts.
 
 (** ** Facts about [Map] *)
@@ -88,6 +88,11 @@ Section SIL.
     constructor; inversion NoDupA_; eauto 2 with setoidl typeclass_instances.
   Qed.
 
+  Lemma SIL_forall_A :
+    forall A P (l : list { x : A | P x }),
+      Sig_in_List l -> forall a, InA P1SigEq a l.
+  Proof. inversion 1; assumption. Qed.
+  
 End SIL.
 
 Hint Resolve SIL_fs_setv : listplus.

@@ -121,21 +121,44 @@ Section FoldL.
   
 End FoldL.
 
-Remark iter_inv_state :
-  forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}
-         {Q : state -> state -> Prop},
-    iter f l s = OK v s' ->
-    Reflexive Q ->
-    Transitive Q ->
-    (forall a s1 x s2, f a s1 = OK x s2 -> Q s1 s2) ->
-    Q s s'.
-Proof.
-  intros until l; functional induction (iter f l) using iter_ind;
-    intros s v s' Q e; monadFullInv e; intros Qrefl Qtrans f_inv;
+(** ** Facts about [iter] *)
+
+Section Iter.
+
+  Remark iter_inv_state :
+    forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}
+           {Q : state -> state -> Prop},
+      iter f l s = OK v s' ->
+      Reflexive Q ->
+      Transitive Q ->
+      (forall a s1 x s2, f a s1 = OK x s2 -> Q s1 s2) ->
+      Q s s'.
+  Proof.
+    intros until l; functional induction (iter f l) using iter_ind;
+      intros s v s' Q e; monadFullInv e; intros Qrefl Qtrans f_inv;
       [ apply Qrefl |
         apply Qtrans with (y := s0);
         [ eapply IHm; eauto | apply (f_inv b s0 v s' EQ0) ] ].
-Qed.
+  Qed.
+
+  Remark iter_prop_A_state :
+    forall {state A : Type} {f : A -> Mon unit} {l} (eqA : A -> A -> Prop) {s : state} {v s'}
+           {Q : A -> state -> Prop},
+      iter f l s = OK v s' ->
+      (forall a b s, eqA a b -> Q a s <-> Q b s) ->
+      (forall a s1 x s2, f a s1 = OK x s2 -> Q a s2) ->
+      (forall a s1 x s2, f a s1 = OK x s2 -> forall b, Q b s1 -> Q b s2) ->
+      forall a, InA eqA a l -> Q a s'.
+  Proof.
+    intros until l; functional induction (iter f l) using iter_ind;
+      intros eqA s v s' Q e; monadFullInv e; intros Qequiv Qprop Qinv.
+    - inversion 1.
+    - inversion_clear 1; [ erewrite Qequiv; eauto | (eapply Qinv; eauto; eapply IHm; eauto) ].
+  Qed.
+
+  
+End Iter.
+
 
 Remark titer_inv_state :
   forall {state A B : Type} {f : B -> Mon unit} {l : list A} {Inl2B} {s : state} {v s'}
