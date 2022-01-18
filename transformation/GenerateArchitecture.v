@@ -220,8 +220,8 @@ Section GenArch.
           assocg_ Transition.conditions_number t_conds_nb;
           assocg_ Transition.maximal_time_counter t_max_time_counter].
 
-    (** Generates a part of the input port map for the transition
-        component representing transition [t]. *)
+    (** Generates a part of the input port map for the TCI
+        representing transition [t]. *)
 
     Definition init_tci_imap (t : T sitpn) (tinfo : TransInfo sitpn) :
       CompileTimeState inputmap :=      
@@ -265,7 +265,10 @@ Section GenArch.
                else Ret i1;
       Ret (g, i2, [assocop_simpl Transition.fired (Some ($id__s))]).
       
-    (** Generates a TransMap entry for transition t. *)
+    (** Generates a TCI which is a VHDL implementation of transition
+        [t] and adds the TCI as a new concurrent statement in the
+        behavior of the H-VHDL design being generated (i.e. the [beh]
+        field of the compile-time state). *)
 
     Definition generate_tci (t : T sitpn) :
       CompileTimeState unit :=
@@ -290,13 +293,16 @@ Section GenArch.
     (** Generates the TCIS in the behavior of compile-time state. *)
 
     Definition generate_tcis : CompileTimeState unit :=
-      do Tlist <- get_lofTs;
-      ListMonad.iter (fun t => generate_tci t) Tlist.
+      do Tlist <- get_lofTs; ListMonad.iter generate_tci Tlist.
     
   End GenerateTCIs.
 
-  (** Generates an Architecture structure based on the information
-        and the structure of [sitpn]. *)
+  (** Generates PCIs (Place Component Instances) and TCIs (Transition
+      Component Instances), adds them as concurrent statements
+      composing the behavior of the H-VHDL design being generated.
+
+      PCIs and TCIs are a H-VHDL implementation of the places and the
+      transitions of the input SITPN. *)
 
   Definition generate_architecture (b : P sitpn -> nat) :
     CompileTimeState unit :=

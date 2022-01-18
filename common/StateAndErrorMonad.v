@@ -14,14 +14,14 @@ Section StateAndErrMonad.
      be an error with a message or a couple state-value.
    *)
   
-  Inductive Res (A: Type) (s : state) : Type :=
-  | Error: string -> Res A s
-  | OK: A -> state -> Res A s.
+  Inductive Res (A: Type) : Type :=
+  | Error: string -> Res A
+  | OK: A -> state -> Res A.
 
-  Arguments OK {A s}.
-  Arguments Error {A s}.
+  Arguments OK {A}.
+  Arguments Error {A}.
   
-  Definition Mon (A : Type) : Type := forall s : state, Res A s.
+  Definition Mon (A : Type) : Type := forall s : state, Res A.
 
   Definition Ret {A : Type} : A -> Mon A := fun x s => OK x s.
   Definition Err {A: Type} (msg: string) : Mon A := fun (s: state) => Error msg.
@@ -45,8 +45,8 @@ Section StateAndErrMonad.
 
 End StateAndErrMonad.
 
-Arguments OK {state A s}.
-Arguments Error {state A s}.
+Arguments OK {state A}.
+Arguments Error {state A}.
 Arguments Mon {state}.
 Arguments Err {state A}.
 Arguments Ret {state A}.
