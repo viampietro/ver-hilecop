@@ -6,9 +6,9 @@
 **** DONE NoDupA_fs_eqk_eqv (SetoidListFacts) [100%] 
 ***** DONE InA_setv
 ***** DONE getv_idle
-**** TODO sitpn2hvhdl_p_comp_ex (GenerateHVhdlFacts) [25%]
+**** TODO sitpn2hvhdl_p_comp_ex (GenerateHVhdlFacts) [50%]
 ***** DONE gen_sitpn_infos_sil_lofPs
-***** TODO gen_archi_p_comp_ex
+***** DONE gen_archi_p_comp_ex
 ****** DONE gen_pcis_p_comp_ex
 ******* DONE iter_prop_A_state
 ******* DONE p_comp_ex_Peq_equiv
@@ -17,7 +17,7 @@
 ******** DONE build_pci_inv_state_beh
 ******** DONE build_pci_inv_state_gamma
 ******* DONE SIL_forall_A
-****** TODO gen_tcis_t_comp_ex
+****** DONE gen_tcis_t_comp_ex
 ***** TODO gen_inter_p_comp_ex
 ***** TODO gen_ports_p_comp_ex
 **** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]
