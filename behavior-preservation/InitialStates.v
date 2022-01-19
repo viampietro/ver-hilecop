@@ -474,4 +474,4 @@ Proof.
   eapply init_states_eq_conditions; eauto.
 Qed.
 
-Hint Resolve sim_init_states : hilecop.
+#[export] Hint Resolve sim_init_states : hilecop.

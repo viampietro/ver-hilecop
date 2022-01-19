@@ -37,8 +37,8 @@ Admitted.
 
 (* Tries to apply the [first_rising_edge] lemma when the goal is of the form
    [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
-Hint Resolve first_rising_edge_full : hilecop.
-Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_rising_edge_full; eauto : hilecop.
+#[export] Hint Resolve first_rising_edge_full : hilecop.
+#[export] Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_rising_edge_full; eauto : hilecop.
 
 Lemma first_rising_edge :
   forall sitpn decpr id__ent id__arch b d γ E__c E__p Δ σ__e σ0 τ σ__i σ__r σ,
@@ -66,5 +66,5 @@ Admitted.
 
 (* Tries to apply the [first_rising_edge] lemma when the goal is of the form
    [SimStateAfterFE _ _ _ _] or [_ ⊢ _ ∼ _]. *)
-Hint Resolve first_rising_edge : hilecop.
-Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_rising_edge; eauto : hilecop.
+#[export] Hint Resolve first_rising_edge : hilecop.
+#[export] Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_rising_edge; eauto : hilecop.

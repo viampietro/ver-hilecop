@@ -108,7 +108,7 @@ Inductive simloop
 | SimLoopEnd :
     simloop D__s E__p Δ σ behavior 0 [].
 
-Hint Constructors simloop : hvhdl.
+#[export] Hint Constructors simloop : hvhdl.
 
 (** Defines the full simulation (elaboration + simulation from initial
     state) relation that establish a link between a H-VHDL design and
@@ -152,7 +152,7 @@ Inductive fullsim
       (* * Conclusion * *)
       fullsim D__s Mg E__p τ Δ d (σ0 :: θ).
 
-Hint Constructors fullsim : hvhdl.
+#[export] Hint Constructors fullsim : hvhdl.
 
 (** Defines the full simulation relation for a H-VHDL design, in the
     HILECOP presets.

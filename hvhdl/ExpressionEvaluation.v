@@ -308,8 +308,8 @@ with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       vagofexprs Δ σ Λ outmode agofe arrofv ->
       vagofexprs Δ σ Λ outmode (agofe_cons e agofe) (Arr_cons v arrofv).
 
-Hint Constructors vexpr : hvhdl.
-Hint Constructors vagofexprs : hvhdl.
+#[export] Hint Constructors vexpr : hvhdl.
+#[export] Hint Constructors vagofexprs : hvhdl.
 
 Scheme vexpr_ind_mut := Induction for vexpr Sort Prop
   with vagofexprs_ind_mut := Induction for vagofexprs Sort Prop.

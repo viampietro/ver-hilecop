@@ -313,7 +313,7 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
    forall cstmt cstmt' l l',
      FlattenCs cstmt l -> FlattenCs cstmt' l' -> FlattenCs (cstmt // cstmt') (l ++ l').
 
-Hint Constructors FlattenCs : core.
+#[export] Hint Constructors FlattenCs : core.
 
 (** States that a given simple [cs] (i.e, not [cs_par]) is a part of a another [cs]. *)
 
@@ -338,7 +338,7 @@ Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
    forall cstmt cstmt' a a' a'' ,
      FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
 
-Hint Constructors FoldLCs : core.
+#[export] Hint Constructors FoldLCs : core.
 
 (** ** Signal Assignment Look-up *)
 

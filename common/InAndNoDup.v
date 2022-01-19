@@ -535,7 +535,7 @@ Section InAndNoDupLemmas.
 
 End InAndNoDupLemmas.
 
-Hint Resolve in_appl in_appr in_last : core.
+#[export] Hint Resolve in_appl in_appr in_last : core.
 
 
 (** ** Misc. tactics for [In] and [NoDup] predicates *)
@@ -685,11 +685,11 @@ Qed.
 
 (* Hints to solve In predicate goals *)
 
-Hint Resolve in_app_or : core.
-Hint Resolve in_cons : core.
-Hint Resolve nodup_app : core.
+#[export] Hint Resolve in_app_or : core.
+#[export] Hint Resolve in_cons : core.
+#[export] Hint Resolve nodup_app : core.
 
 (* Hints to solve NoDup predicate goals *)
 
-Hint Constructors NoDup : core.
+#[export] Hint Constructors NoDup : core.
 

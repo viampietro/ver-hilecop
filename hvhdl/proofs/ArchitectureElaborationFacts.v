@@ -56,7 +56,7 @@ Proof.
   - split; intros Hmap; [ apply (add_2 (Declared t0) Hneq_id Hmap) | apply (add_3 Hneq_id Hmap) ].
 Qed.
 
-Hint Resolve edecl_idle_gens : hvhdl.
+#[export] Hint Resolve edecl_idle_gens : hvhdl.
 
 Lemma edecls_inv_gens :
   forall {Δ σ sigs Δ' σ'},
@@ -64,7 +64,7 @@ Lemma edecls_inv_gens :
     EqGens Δ Δ'.
 Proof. induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl]. Qed.
 
-Hint Resolve edecls_inv_gens : hvhdl.
+#[export] Hint Resolve edecls_inv_gens : hvhdl.
 
 Lemma edecl_inv_Δ : 
   forall {Δ σ Δ' ad σ' id sobj},

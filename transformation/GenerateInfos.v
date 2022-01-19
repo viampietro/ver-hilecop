@@ -14,8 +14,6 @@ Require Import common.ListMonad.
 Require Import transformation.Sitpn2HVhdlTypes.
 Require Import FunInd.
 
-Local Open Scope string_scope.
-
 Import ErrMonadNotations.
 
 Section GenSitpnInfos.

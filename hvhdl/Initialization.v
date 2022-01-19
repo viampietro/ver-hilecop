@@ -167,4 +167,4 @@ Inductive init (D__s : IdMap design) (Δ : ElDesign) : DState -> cs -> DState ->
       (* * Conclusion * *)
       init D__s Δ σ behavior σ0.
 
-Hint Constructors vruninit : hvhdl.
+#[export] Hint Constructors vruninit : hvhdl.

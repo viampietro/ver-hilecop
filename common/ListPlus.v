@@ -6,7 +6,6 @@
 Require Import CoqLib.
 Require Import common.GlobalFacts.
 Require Import SetoidList.
-Require Import Omega.
 Require Import Classical_Prop.
 Require Import GlobalTypes.
 Require Export FstSplit.

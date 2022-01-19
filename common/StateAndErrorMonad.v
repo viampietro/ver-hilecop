@@ -55,10 +55,10 @@ Arguments Get {state}.
 Arguments Put {state}.
 
 Notation "'do' X <- A ; B" := (Bind A (fun X => B))
-                                (at level 200, X ident, A at level 100, B at level 200).
+                                (at level 200, X name, A at level 100, B at level 200).
 
 Notation "'do' '|(' X , Y ')|' <- A ; B" := (Bind2 A (fun X Y => B))
-   (at level 200, X ident, Y ident, A at level 100, B at level 200).
+   (at level 200, X name, Y name, A at level 100, B at level 200).
 
 Notation "'RedS' r" := match r with
                      | OK _ s => inl s

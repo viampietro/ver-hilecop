@@ -29,8 +29,8 @@ Qed.
 
 (** ** Hints to solve goals with MapsTo *)
 
-Hint Resolve MapsTo_fun add_1 add_2 add_3 : mapsto.
-Hint Extern 1 (MapsTo ?k ?v (add ?k ?v ?m)) => apply (add_1 m v eq_refl) : mapsto.
+#[export] Hint Resolve MapsTo_fun add_1 add_2 add_3 : mapsto.
+#[export] Hint Extern 1 (MapsTo ?k ?v (add ?k ?v ?m)) => apply (add_1 m v eq_refl) : mapsto.
 
 Export NatMap NatMapFacts.
 

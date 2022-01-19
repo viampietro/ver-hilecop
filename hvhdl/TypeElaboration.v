@@ -32,5 +32,5 @@ Inductive etypeg : tind -> type -> Prop :=
 
 (** Hints for etype and etypeg *)
 
-Hint Constructors etype : hvhdl.
-Hint Constructors etypeg : hvhdl.
+#[export] Hint Constructors etype : hvhdl.
+#[export] Hint Constructors etypeg : hvhdl.

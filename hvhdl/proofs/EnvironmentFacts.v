@@ -41,9 +41,9 @@ Add Parametric Morphism (id : ident) (t : type) (v : value) : (MapsTo id (Generi
     with signature (@EqGens ==> impl) as eqgens_mapsto_mor.
 Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
 
-Hint Resolve EqGens_refl : hvhdl.
-Hint Resolve EqGens_trans : hvhdl.
-Hint Resolve EqGens_sym : hvhdl.
+#[export] Hint Resolve EqGens_refl : hvhdl.
+#[export] Hint Resolve EqGens_trans : hvhdl.
+#[export] Hint Resolve EqGens_sym : hvhdl.
 
 (** *** Input Port Set Equivalence *)
 

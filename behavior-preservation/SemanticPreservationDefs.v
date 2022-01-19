@@ -341,7 +341,7 @@ Inductive SimTrace {sitpn} γ : list (SitpnState sitpn) -> list DState -> Clk ->
     SimTrace γ θ__s θ__σ re ->
     SimTrace γ (s :: θ__s) (σ :: θ__σ) fe.
 
-Hint Constructors SimTrace : core.
+#[export] Hint Constructors SimTrace : core.
 
 (** States that two execution trace are fully similar. The first
     states of each trace must verify the general state similarity
@@ -360,5 +360,5 @@ Inductive FullSimTrace {sitpn} γ : list (SitpnState sitpn) -> list DState -> Pr
     SimTrace γ θ__s θ__σ re ->
     FullSimTrace γ (s :: θ__s) (σ :: θ__σ).
 
-Hint Constructors FullSimTrace : core.
+#[export] Hint Constructors FullSimTrace : core.
 

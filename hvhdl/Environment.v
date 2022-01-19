@@ -45,9 +45,9 @@ Add Parametric Relation {A : Type} : (IdMap A) (EqualDom)
     transitivity proved by EqualDom_trans
       as EqualDom_rel.           
 
-Hint Resolve EqualDom_refl : hvhdl.
-Hint Resolve EqualDom_trans : hvhdl.
-Hint Resolve EqualDom_sym : hvhdl.
+#[export] Hint Resolve EqualDom_refl : hvhdl.
+#[export] Hint Resolve EqualDom_trans : hvhdl.
+#[export] Hint Resolve EqualDom_sym : hvhdl.
 
 (** Defines the relation stating that a set [idset] is the
     differentiated intersection of two maps [m] and [m'] mapping

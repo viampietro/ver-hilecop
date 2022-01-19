@@ -33,7 +33,7 @@ Proof.
   transitivity Δ'; eauto with hvhdl.
 Qed.
 
-Hint Resolve ebeh_eq_gens : hvhdl.
+#[export] Hint Resolve ebeh_eq_gens : hvhdl.
 
 Lemma ebeh_eq_sigs :
   forall {D__s Δ σ behavior Δ' σ'},

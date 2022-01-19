@@ -26,7 +26,7 @@ Inductive is_lstatic_expr : expr -> Prop :=
 | IsLStaticBinOp (e e' : expr) (bop : binop) :
     is_lstatic_expr e -> is_lstatic_expr e' -> is_lstatic_expr (e_binop bop e e').
 
-Hint Constructors is_lstatic_expr : hvhdl.
+#[export] Hint Constructors is_lstatic_expr : hvhdl.
 
 (** Defines the inductive predicate [is_gstatic_expr] stating that an
     expression is globally static, i.e it is:
@@ -48,4 +48,4 @@ Inductive is_gstatic_expr (Δ : ElDesign) : expr -> Prop :=
     (forall (e : expr), List.In e ag -> is_gstatic_expr Δ e) ->
     is_gstatic_expr Δ (e_aggreg ag).
     
-Hint Constructors is_gstatic_expr : hvhdl.
+#[export] Hint Constructors is_gstatic_expr : hvhdl.

@@ -28,4 +28,4 @@ Inductive defaultv : type -> value -> Prop :=
       defaultv t v ->
       defaultv (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).
 
-Hint Constructors defaultv : hvhdl.
+#[export] Hint Constructors defaultv : hvhdl.

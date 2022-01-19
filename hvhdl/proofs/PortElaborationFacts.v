@@ -43,7 +43,7 @@ Proof.
     ].
 Qed.
 
-Hint Resolve eport_inv_gens : hvhdl.
+#[export] Hint Resolve eport_inv_gens : hvhdl.
 
 Lemma eports_inv_gens :
   forall {Δ σ ports Δ' σ'},
@@ -53,7 +53,7 @@ Proof.
   induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl].
 Qed.
 
-Hint Resolve eports_inv_gens : hvhdl.
+#[export] Hint Resolve eports_inv_gens : hvhdl.
 
 Lemma eport_inv_sigstore :
   forall Δ σ pd Δ' σ' id v,
@@ -69,7 +69,7 @@ Proof.
     end.
 Qed.
 
-Hint Resolve eport_inv_sigstore : hvhdl.
+#[export] Hint Resolve eport_inv_sigstore : hvhdl.
 
 Lemma eports_inv_sigstore :
   forall Δ σ ports Δ' σ' id v,
@@ -112,7 +112,7 @@ Proof.
       end.
 Qed.
 
-Hint Resolve eport_inv_Δ : hvhdl.
+#[export] Hint Resolve eport_inv_Δ : hvhdl.
 
 Lemma eports_inv_Δ :
   forall Δ σ ports Δ' σ' id sobj,

@@ -45,7 +45,7 @@ Lemma falling_edge_full :
     FullSimStateAfterFE sitpn γ s' σ'.
 Admitted.
 
-Hint Resolve falling_edge_full : hilecop.
+#[export] Hint Resolve falling_edge_full : hilecop.
 
 Lemma falling_edge :
   forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__f σ',
@@ -73,4 +73,4 @@ Lemma falling_edge :
     SimStateAfterFE sitpn γ s' σ'.
 Admitted.
 
-Hint Resolve falling_edge : hilecop.
+#[export] Hint Resolve falling_edge : hilecop.

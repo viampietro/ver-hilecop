@@ -241,23 +241,23 @@ Section InAFacts.
   
 End InAFacts.
 
-Hint Resolve InA_fst_split : setoidl.
-Hint Extern 1 (InA _ _ (fs _)) => eapply InA_fst_split : setoidl.
-Hint Resolve not_InA_fst_split : setoidl.
-Hint Resolve InA_eqk : setoidl.
-Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk : setoidl.
-Hint Resolve InA_setv_inv_1 : setoidl.
-Hint Resolve InA_setv_inv_2 : setoidl.
-Hint Resolve InA_setv : setoidl.
-Hint Extern 1 (InA _ (?x, ?z) (setv _ ?x ?z _)) => apply InA_setv : setoidl.
-Hint Extern 1 (InA _ (?x, _) (setv _ ?y _ _)) => eapply InA_setv_inv_1; eauto : setoidl.
-Hint Resolve InA_notin_fs_setv_inv : setoidl.
-Hint Resolve InA_neqA : setoidl.
-Hint Resolve nInA_eqA : setoidl.
-Hint Resolve InA_fs_InA_fs_setv : setoidl.
-Hint Resolve InA_setv_eqk : setoidl.
-Hint Resolve InA_eq_In : setoidl.
-Hint Resolve InA_eq_pair_In : setoidl.
+#[export] Hint Resolve InA_fst_split : setoidl.
+#[export] Hint Extern 1 (InA _ _ (fs _)) => eapply InA_fst_split : setoidl.
+#[export] Hint Resolve not_InA_fst_split : setoidl.
+#[export] Hint Resolve InA_eqk : setoidl.
+#[export] Hint Extern 1 (InA _ (_, _) _) => eapply InA_eqk : setoidl.
+#[export] Hint Resolve InA_setv_inv_1 : setoidl.
+#[export] Hint Resolve InA_setv_inv_2 : setoidl.
+#[export] Hint Resolve InA_setv : setoidl.
+#[export] Hint Extern 1 (InA _ (?x, ?z) (setv _ ?x ?z _)) => apply InA_setv : setoidl.
+#[export] Hint Extern 1 (InA _ (?x, _) (setv _ ?y _ _)) => eapply InA_setv_inv_1; eauto : setoidl.
+#[export] Hint Resolve InA_notin_fs_setv_inv : setoidl.
+#[export] Hint Resolve InA_neqA : setoidl.
+#[export] Hint Resolve nInA_eqA : setoidl.
+#[export] Hint Resolve InA_fs_InA_fs_setv : setoidl.
+#[export] Hint Resolve InA_setv_eqk : setoidl.
+#[export] Hint Resolve InA_eq_In : setoidl.
+#[export] Hint Resolve InA_eq_pair_In : setoidl.
 
 (** ** Facts about [NoDupA] *)
 
@@ -371,11 +371,11 @@ Section NoDupAFacts.
   
 End NoDupAFacts.
 
-Hint Resolve NoDupA_fs_eqk_eq : setoidl.
-Hint Resolve NoDupA_setv_cons : setoidl.
-Hint Resolve NoDupA_tl : setoidl.
-Hint Resolve NoDupA_fs_tl : setoidl.
-Hint Resolve NoDupA_app_comm : setoidl.
+#[export] Hint Resolve NoDupA_fs_eqk_eq : setoidl.
+#[export] Hint Resolve NoDupA_setv_cons : setoidl.
+#[export] Hint Resolve NoDupA_tl : setoidl.
+#[export] Hint Resolve NoDupA_fs_tl : setoidl.
+#[export] Hint Resolve NoDupA_app_comm : setoidl.
 
 (** ** Facts about both [InA] and [NoDupA] *)
 
@@ -422,6 +422,6 @@ Section InAAnDNoDupAFacts.
   
 End InAAnDNoDupAFacts.
 
-Hint Resolve neqk_if_InA_NoDupA : setoidl.
-Hint Extern 1 False => eapply neqk_if_InA_NoDupA : setoidl.
-Hint Resolve eqv_if_InA_NoDupA_setv : setoidl.
+#[export] Hint Resolve neqk_if_InA_NoDupA : setoidl.
+#[export] Hint Extern 1 False => eapply neqk_if_InA_NoDupA : setoidl.
+#[export] Hint Resolve eqv_if_InA_NoDupA_setv : setoidl.

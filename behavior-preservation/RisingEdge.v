@@ -46,7 +46,7 @@ Lemma rising_edge_full :
     FullSimStateAfterRE sitpn γ E__c τ s' σ'.
 Admitted.
 
-Hint Resolve rising_edge_full : hilecop.
+#[export] Hint Resolve rising_edge_full : hilecop.
 
 Lemma rising_edge :
   forall sitpn decpr id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__i σ__r σ',
@@ -75,4 +75,4 @@ Lemma rising_edge :
     SimStateAfterRE sitpn γ s' σ'.
 Admitted.
 
-Hint Resolve rising_edge : hilecop.
+#[export] Hint Resolve rising_edge : hilecop.

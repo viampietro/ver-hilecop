@@ -67,9 +67,9 @@ Section GetV.
 
 End GetV.
 
-Hint Resolve getv_inv_state : listmonad.
-Hint Resolve getv_compl : listmonad.
-Hint Resolve getv_correct : listmonad.
+#[export] Hint Resolve getv_inv_state : listmonad.
+#[export] Hint Resolve getv_compl : listmonad.
+#[export] Hint Resolve getv_correct : listmonad.
 
 (** ** Facts about [foldl] *)
 
@@ -77,7 +77,7 @@ Section FoldL.
 
   Remark foldl_inv_state :
     forall {state A B : Type} {f : B -> A -> Mon B} {l b0} {s : state} {v s'}
-           (Q : state -> state -> Prop),
+           {Q : state -> state -> Prop},
       fold_left f l b0 s = OK v s' ->
       Reflexive Q ->
       Transitive Q ->
@@ -111,7 +111,7 @@ Section FoldL.
     forall {state A B : Type}
            {f : B -> A -> Mon B}
            {lofAs b1 b2} {s : state} {s'}
-           (Q : B -> B -> Prop),
+           {Q : B -> B -> Prop},
       fold_left f lofAs b1 s = OK b2 s' ->
       Reflexive Q ->
       Transitive Q ->
@@ -125,9 +125,9 @@ End FoldL.
 
 Section Iter.
 
-  Remark iter_inv_state :
+  Lemma iter_inv_state :
     forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}
-           (Q : state -> state -> Prop),
+           {Q : state -> state -> Prop},
       iter f l s = OK v s' ->
       Reflexive Q ->
       Transitive Q ->
@@ -162,7 +162,7 @@ End Iter.
 
 Remark titer_inv_state :
   forall {state A B : Type} {f : B -> Mon unit} {l : list A} {Inl2B} {s : state} {v s'}
-         (Q : state -> state -> Prop),
+         {Q : state -> state -> Prop},
     titer f l Inl2B s = OK v s' ->
     Reflexive Q ->
     Transitive Q ->
@@ -178,7 +178,7 @@ Qed.
 
 Remark foreach_aux_inv_state :
   forall {state A : Type} {f : A -> list A -> Mon unit} {rght lft : list A} {s : state} {v s'}
-         (Q : state -> state -> Prop),
+         {Q : state -> state -> Prop},
     foreach_aux state A f lft rght s = OK v s' ->
     Reflexive Q ->
     Transitive Q ->
@@ -194,7 +194,7 @@ Qed.
 
 Remark foreach_inv_state :
   forall {state A : Type} {f : A -> list A -> Mon unit} {l : list A} {s : state} {v s'}
-         (Q : state -> state -> Prop),
+         {Q : state -> state -> Prop},
     foreach f l s = OK v s' ->
     Reflexive Q ->
     Transitive Q ->
@@ -206,7 +206,7 @@ Qed.
 
 Remark find_inv_state :
   forall {state A : Type} {f : A -> Mon bool} {l : list A} {s : state} {v s'}
-         (Q : state -> state -> Prop),
+         {Q : state -> state -> Prop},
     find f l s = OK v s' ->
     Reflexive Q ->
     Transitive Q ->
@@ -226,7 +226,7 @@ Section Map.
 
   Remark map_aux_inv_state :
     forall {state B C : Type} {l} {f : B -> Mon C} {m} {s : state} {v s'}
-           (Q : state -> state -> Prop),
+           {Q : state -> state -> Prop},
       map_aux f l m s = OK v s' ->
       Reflexive Q ->
       Transitive Q ->
@@ -242,7 +242,7 @@ Section Map.
 
   Remark map_inv_state :
     forall {state B C : Type} {l} {f : B -> Mon C} {s : state} {v s'}
-           (Q : state -> state -> Prop),
+           {Q : state -> state -> Prop},
       map f l s = OK v s' ->
       Reflexive Q ->
       Transitive Q ->
@@ -266,7 +266,7 @@ End Map.
 
 Remark tmap_aux_inv_state :
   forall {state A B C : Type} {l : list A} {f : B -> Mon C} {m Inl2B} {s : state} {v s'}
-         (Q : state -> state -> Prop),
+         {Q : state -> state -> Prop},
     tmap_aux f l m Inl2B s = OK v s' ->
     Reflexive Q ->
     Transitive Q ->
@@ -282,7 +282,7 @@ Qed.
 
 Remark tmap_inv_state :
   forall {state A B C : Type} {l : list A} {f : B -> Mon C} {Inl2B} {s : state} {v s'}
-         (Q : state -> state -> Prop),
+         {Q : state -> state -> Prop},
     tmap f l Inl2B s = OK v s' ->
     Reflexive Q ->
     Transitive Q ->

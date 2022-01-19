@@ -65,8 +65,8 @@ End SigEq.
 
 (** Declares P1SigEq as an instance of the Equivalence class. *)
   
-  Instance Equivalence_P1SigEq {A : Type} (P : A -> Prop) : Equivalence (@P1SigEq A P) :=
-    { Equivalence_Reflexive := (@P1SigEq_refl A P);
+#[export] Instance Equivalence_P1SigEq {A : Type} (P : A -> Prop) : Equivalence (@P1SigEq A P) :=
+  { Equivalence_Reflexive := (@P1SigEq_refl A P);
       Equivalence_Symmetric := (@P1SigEq_sym A P);
       Equivalence_Transitive := (@P1SigEq_trans A P) }.
 
@@ -81,7 +81,7 @@ Add Parametric Relation {A : Type} {P : A -> Prop}
 Arguments P1SigEq {A P}.
 Arguments P1SigEqdec {A P}.
 
-Hint Unfold P1SigEq : core.
+#[export] Hint Unfold P1SigEq : core.
 
 
 

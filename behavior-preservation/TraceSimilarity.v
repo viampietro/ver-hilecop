@@ -87,7 +87,7 @@ Proof.
     end.      
 Qed.
 
-Hint Resolve trace_sim : hilecop.
+#[export] Hint Resolve trace_sim : hilecop.
 
 (** Assuming the existence of an elaborated design [Δ], a default
     state [σ__e], an initial state [σ0], and a simulation trace [θ__σ] for

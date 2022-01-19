@@ -92,8 +92,8 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
       (* Conclusion *)
       eassocip Δ Δ__c σ formals (associp_ (n_xid id ei) e) (formals ++ [(id, Some i)]).
 
-Hint Constructors listipm : hvhdl.
-Hint Constructors eassocip : hvhdl.
+#[export] Hint Constructors listipm : hvhdl.
+#[export] Hint Constructors eassocip : hvhdl.
 
 (** Defines the predicate that checks the [formals] list (built by the
     [listipm] relation) against the component environment [Δ__c].  *)
@@ -246,8 +246,8 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
                (assocop_idx idf ei (ida$[[ei']]))
                (formals ++ [(idf, Some i)]) (actuals ++ [(ida, Some i')]).
 
-Hint Constructors listopm : hvhdl.
-Hint Constructors eassocop : hvhdl.
+#[export] Hint Constructors listopm : hvhdl.
+#[export] Hint Constructors eassocop : hvhdl.
 
 (** Defines the relation that checks the validity of an "out" port
     map. *)

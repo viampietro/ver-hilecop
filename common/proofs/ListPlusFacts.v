@@ -95,5 +95,5 @@ Section SIL.
   
 End SIL.
 
-Hint Resolve SIL_fs_setv : listplus.
-Hint Extern 1 (Sig_in_List (fs (setv _ _ _ _))) => apply SIL_fs_setv : listplus.
+#[export] Hint Resolve SIL_fs_setv : listplus.
+#[export] Hint Extern 1 (Sig_in_List (fs (setv _ _ _ _))) => apply SIL_fs_setv : listplus.

@@ -218,8 +218,8 @@ with OArrOfVEq : arrofvalues -> arrofvalues -> option bool -> Prop :=
       OArrOfVEq aofv aofv' optb ->
       OArrOfVEq (Arr_cons v aofv) (Arr_cons v' aofv') None.
 
-Hint Constructors OVEq : hvhdl.
-Hint Constructors OArrOfVEq : hvhdl.
+#[export] Hint Constructors OVEq : hvhdl.
+#[export] Hint Constructors OArrOfVEq : hvhdl.
 
 Scheme OVEq_ind_mut := Induction for OVEq Sort Prop
   with OArrOfVEq_ind_mut := Induction for OArrOfVEq Sort Prop.

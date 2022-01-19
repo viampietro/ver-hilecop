@@ -39,7 +39,7 @@ Definition InA_Peq_dec sitpn (p : P sitpn) (lofP : list (P sitpn)) :
 
 Definition Equivalence_Peq sitpn := Equivalence_P1SigEq (In_P sitpn).
 
-Hint Unfold Peq Pkeq Peqdec : core.
+#[export] Hint Unfold Peq Pkeq Peqdec : core.
 
 (** For a given [sitpn], defines the equivalence relation [Teq]
     between two transitions as the equality between the first element
@@ -83,7 +83,7 @@ Definition InA_Teq_dec sitpn (t : T sitpn) (lofT : list (T sitpn)) :
   {SetoidList.InA (@Teq sitpn) t lofT} + {~SetoidList.InA (@Teq sitpn) t lofT} :=
   InA_P1SigEq_dec (fun n => In n sitpn.(transitions)) Nat.eq_dec t lofT.
 
-Hint Unfold Teq Tkeq Teqdec : core.
+#[export] Hint Unfold Teq Tkeq Teqdec : core.
 
 (** For a given [sitpn], defines the equivalence relation [Aeq]
     between two actions as the equality between the first element
@@ -106,7 +106,7 @@ Definition Aeqdec sitpn (x y : A sitpn) : {Aeq x y} + {~Aeq x y} :=
   P1SigEqdec Nat.eq_dec x y.
 Arguments Aeqdec {sitpn}.
 
-Hint Unfold Aeq Akeq Aeqdec : core.
+#[export] Hint Unfold Aeq Akeq Aeqdec : core.
 
 (** For a given [sitpn], defines the equivalence relation [Feq]
     between two functions as the equality between the first element of
@@ -129,7 +129,7 @@ Definition Feqdec sitpn (x y : F sitpn) : {Feq x y} + {~Feq x y} :=
   P1SigEqdec Nat.eq_dec x y.
 Arguments Feqdec {sitpn}.
 
-Hint Unfold Feq Fkeq Feqdec : core.
+#[export] Hint Unfold Feq Fkeq Feqdec : core.
 
 (** For a given [sitpn], defines the equivalence relation [Ceq]
     between two conditions as the equality between the first element
@@ -152,4 +152,4 @@ Definition Ceqdec sitpn (x y : C sitpn) : {Ceq x y} + {~Ceq x y} :=
   P1SigEqdec Nat.eq_dec x y.
 Arguments Ceqdec {sitpn}.
 
-Hint Unfold Ceq Ckeq Ceqdec : core.
+#[export] Hint Unfold Ceq Ckeq Ceqdec : core.
