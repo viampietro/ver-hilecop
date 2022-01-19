@@ -362,17 +362,6 @@ Section Sitpn2HVhdl.
   (*   end. *)
   (* Qed. *)
   
-  Lemma gen_inter_p_comp_ex :
-    forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
-      generate_interconnections s = OK v s' ->
-      (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
-      (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
-  Admitted.
-
   Lemma gen_ports_p_comp_ex :
     forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
       generate_ports s = OK v s' ->

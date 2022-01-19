@@ -103,11 +103,20 @@ Section Sitpn2HVhdlUtils.
       As [id] is a simple identifier the actual part associated with
       [id] in [m] is of type [option name]. *)
 
-  Fixpoint actual (id : ident) (m : outputmap) {struct m} : CompileTimeState (option name) :=
-    match m with
-    | nil => Err ("actual: found no actual part matching the given identifier")
-    | (assocop_simpl id' a) :: m' => if id =? id' then Ret a else actual id m'
-    | _ :: m' => actual id m'
+  Definition actual_aux (id : ident) (m : outputmap) : CompileTimeState (option assocop) :=
+    ListMonad.find (fun aop => match aop with
+                               | assocop_simpl id' a => Ret (id =? id')
+                               | _ => Ret false
+                               end) m.
+  
+  Definition actual (id : ident) (m : outputmap) : CompileTimeState (option name) :=
+    do opt_aop <- actual_aux id m;
+    match opt_aop with
+    | None => Err ("actual: found no actual part matching the given identifier")
+    | Some aop => match aop with
+                  | assocop_simpl _ a => Ret a
+                  | _ => Err ("actual: impossible case")
+                  end
     end.
 
   (** Generates a new internal signal identifier [id__s], declares [id__s]
