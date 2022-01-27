@@ -284,6 +284,28 @@ Record design : Type :=
 
 (** ** Misc. Definitions for the H-VHDL Abstract Syntax *)
 
+(** CS version of the [FoldL] relation.  *)
+
+Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
+| FoldLCs_null : forall a, FoldLCs f cs_null a (f a cs_null)
+| FoldLCs_ps :
+  forall id__p sl vars body a,
+    FoldLCs f (cs_ps id__p sl vars body) a (f a (cs_ps id__p sl vars body))
+| FoldLCs_comp :
+  forall id__c id__e gm ipm opm a,
+    FoldLCs f (cs_comp id__c id__e gm ipm opm) a (f a (cs_comp id__c id__e gm ipm opm))
+|FoldLCs_par :
+  forall cstmt cstmt' a a' a'' ,
+    FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
+
+#[export] Hint Constructors FoldLCs : core.
+
+Fixpoint foldl_cs {A : Type} (f : A -> cs -> A) (cstmt : cs) (acc : A) {struct cstmt} : A :=
+  match cstmt with
+  | cstmt0 // cstmt1 => foldl_cs f cstmt1 (foldl_cs f cstmt0 acc) 
+  | _ => f acc cstmt
+  end.
+
 (** Relation between a concurrent statement and its list
     representation.  For a given [cstmt] and a list [l] of [cs],
     [FlattenCs ctsmt l] states that l is the flattened version of
@@ -315,6 +337,10 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
 
 #[export] Hint Constructors FlattenCs : core.
 
+Fixpoint cs_to_list (cstmt : cs) {struct cstmt} : list cs :=
+  let add_to_list := fun (l :list cs) (cstmt0 : cs) => l ++ [cstmt0] in
+  foldl_cs add_to_list cstmt [].
+
 (** States that a given simple [cs] (i.e, not [cs_par]) is a part of a another [cs]. *)
 
 Fixpoint InCs (cstmt cstmt' : cs) {struct cstmt'} : Prop :=
@@ -323,22 +349,6 @@ Fixpoint InCs (cstmt cstmt' : cs) {struct cstmt'} : Prop :=
   | cstmt1 // cstmt2 =>
     InCs cstmt cstmt1 \/ InCs cstmt cstmt2
   end.
-
-(** CS version of the [FoldL] relation.  *)
-
-Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
-| FoldLCs_null : forall a, FoldLCs f cs_null a (f a cs_null)
-| FoldLCs_ps :
-    forall id__p sl vars body a,
-      FoldLCs f (cs_ps id__p sl vars body) a (f a (cs_ps id__p sl vars body))
-| FoldLCs_comp :
-    forall id__c id__e gm ipm opm a,
-      FoldLCs f (cs_comp id__c id__e gm ipm opm) a (f a (cs_comp id__c id__e gm ipm opm))
-|FoldLCs_par :
-   forall cstmt cstmt' a a' a'' ,
-     FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
-
-#[export] Hint Constructors FoldLCs : core.
 
 (** ** Signal Assignment Look-up *)
 

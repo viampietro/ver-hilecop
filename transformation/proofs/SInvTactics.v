@@ -6,6 +6,7 @@ Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import common.proofs.ListMonadFacts.
 Require Import common.proofs.ListMonadTactics.
 
+Require Import sitpn.SitpnLib.
 Require Import sitpn.SitpnFacts.
 
 Require Import hvhdl.AbstractSyntax.
@@ -34,6 +35,19 @@ Proof.
   eapply IHc; eauto. 
 Qed.
 
+Lemma put_comp_aux_inv_state :
+  forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o} {s : Sitpn2HVhdlState sitpn} {v s'},
+    put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+    s = s'.
+Proof.
+  induction cstmt; intros *; simpl;
+    intros e; try (monadInv e; reflexivity).
+  destruct (id__c0 =? id__c) in e; monadInv e; reflexivity.
+  monadInv e.
+  rewrite (get_comp_aux_inv_state EQ).
+  destruct x in EQ0; monadInv EQ0; eauto.
+Qed.
+
 Ltac intros_inv_state1 :=
   let a := fresh "a" in
   let x := fresh "x" in
@@ -59,17 +73,14 @@ Ltac solve_sinv_pattern :=
   (* Solves the simplest forms of goals in the tactic *)
   | [ |- ?P ?S1 ?S1 ] => auto
     
-  (* Substitutes [S1] by [S2] before solving the goal with [auto] *)
+  (* CASE the monadic function is one of [OK], [Ret], [Get] or [Put],
+     then substitutes [S1] by [S2] before solving the goal with [auto] *)
   | [ H: OK _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       inversion H; clear H; subst; auto
-               
-  (*  *)
   | [ H: Ret _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       inversion H; clear H; subst; auto
   | [ H: Get ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       inversion H; clear H; subst; auto
-                                     
-  (*  *)
   | [ H: Put ?S1 _ = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       inversion H; clear H; subst; auto
                                      
@@ -78,27 +89,30 @@ Ltac solve_sinv_pattern :=
   | [ H: Err _ _ = OK _ _ |- _ ] => discriminate
   | [ H: Error _ = OK _ _ |- _ ] => discriminate
                                       
-  (* CASE [Bind] function *)
+  (* CASE the monadic function is [Bind] *)
   | [ H: Bind ?F ?G ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
       let x := fresh "x" in
       let s := fresh "s" in
       let EQ1 := fresh "EQ" in
       let EQ2 := fresh "EQ" in
       destruct (Bind_inversion _ _ _ F G X S1 S2 H) as [x [s [EQ1 EQ2] ] ];
+      (* Hoping that [P] is a transitive property *)
       cut (RelationClasses.Transitive P); [
           let trans := fresh "trans" in
-          intros trans; apply (trans S1 s S2);
-          [ clear EQ2; pattern S1, s; try solve_sinv_pattern
-          | clear EQ1; pattern s, S2; try solve_sinv_pattern ]
+          intros trans; apply (trans S1 s S2); clear trans;
+          [ pattern S1, s; try solve_sinv_pattern
+          | pattern s, S2; try solve_sinv_pattern ]
         | try (eauto with typeclass_instances) ]                                            
                
-  (* Let binders with more than two binders in the list are not
+  (* CASE the monadic function is a let-binder.
+
+     Let binders with more than two binders in the list are not
      allowed in pattern matching anymore, for instance:
 
      | [ H: (let (_, _, _) := _ in _) _ = _ |- _ ] => 
      
-     not allowed
-   *)
+     not allowed!! *)
+                                            
   | [ H: (let (_, _) := ?G in _) ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
       destruct G; pattern S1, S2; try solve_sinv_pattern
   | [ H: (let _ := ?G in _) ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
@@ -108,15 +122,17 @@ Ltac solve_sinv_pattern :=
   | [ H: (let _ := ?G in _) _ ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
       destruct G; pattern S1, S2; try solve_sinv_pattern
                                             
-  (* If [H] is of the form [(if C then _ else _) S1 = OK X S2], then
-     calls [solve_sinv_pattern] in the two if branches. *)                        
+  (* CASE the monadic function is of the form [(if C then _ else _) S1
+     = OK X S2], then calls [solve_sinv_pattern] in the two
+     branches. *)                        
   | [ H: (if ?C then _ else _) ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>                                 
       case C in H; pattern S1, S2; try solve_sinv_pattern
         
-  (* If [H] is of the form [(match G with | Error _ => _ OK _ _ => _
-     end) = OK X S2] where [G] is a function identifier, then solve
-     the case where [Error = OK] with [discriminate], and tries to
-     solve the remaining case (i.e. where [G = OK]) with [solve_sinv_pattern]. *)
+  (* CASE the monadic function is of the form [(match G with | Error _
+     => _ OK _ _ => _ end) = OK X S2], then solve the case where
+     [Error = OK] with [discriminate], and tries to solve the
+     remaining case (i.e. where [G = OK]) with
+     [solve_sinv_pattern]. *)
   | [ H: (match ?G with | Error _ => _ | OK _ _ => _ end = OK _ ?S2) |- ?P ?S1 ?S2 ]  =>
       case_eq G; [
         let msg := fresh "msg" in
@@ -132,7 +148,10 @@ Ltac solve_sinv_pattern :=
                              
   | [ H: (match ?O with _ => _ end) ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
       case O in H; pattern S1, S2; try solve_sinv_pattern
-                                      
+                                       
+  (* ********************************************** *)
+  (* ** Particular cases of identified functions ** *)
+                                       
   (* CASE [iter] function *)
   | [ H: ListMonad.iter _ _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       eapply (iter_inv_state H);
@@ -174,7 +193,12 @@ Ltac solve_sinv_pattern :=
       [ eauto with typeclass_instances
       | eauto with typeclass_instances
       | intros_inv_state2 ]; try solve_sinv_pattern
-
+                                 
+  (* Monadic functions [getv], [inject_t], [get_comp] and
+     [put_comp_aux] do not modify the compile-time state.  Then,
+     rewrite the starting state with the new state in the current
+     goal.  *)
+                                 
   (* CASE [getv] function *)
   | [ H: ListMonad.getv _ _ _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       rewrite (getv_inv_state H); clear H; auto
@@ -187,8 +211,16 @@ Ltac solve_sinv_pattern :=
   | [ H: get_comp _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       erewrite (get_comp_inv_state H); eauto
 
+  (* CASE [put_comp_aux] function *)
+  | [ H: put_comp_aux _ _ _ _ _ _ _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
+      erewrite (put_comp_aux_inv_state H); eauto
+
+  (* CASE [set_beh] function *)
+  (* | [ H: set_beh _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] => eauto *)
+                                             
   (* If [H] is of the form [G A1 ... A__n S1 = OK X S2] where [G] is a
-     function identifier, then calls the [cbn] tactic on [H]. *)
+     function identifier not covered by the preceding match entries,
+     then calls the [cbn] tactic on [H] or tries to unfold [G]. *)
   | [ H: ?G _ _ _ _ _ _ ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
       ((progress cbn in H) || (unfold G in H)); try solve_sinv_pattern
   | [ H: ?G _ _ _ _ _ ?S1 = OK ?X ?S2 |- ?P ?S1 ?S2 ] =>
@@ -219,7 +251,6 @@ Ltac solve_sinv_pattern :=
 
 (* Unit tests on [solve_sinv]. *)
 
-Require Import Sitpn.
 Require Import common.ListPlus.
 Require Import RelationClasses.
 
@@ -277,10 +308,115 @@ Lemma conn_to_output_tcis_inv_γ :
   forall {sitpn : Sitpn} {pinfo i o} {s : Sitpn2HVhdlState sitpn} {v s'},
     connect_to_output_tcis pinfo i o s = OK v s' ->
     γ s = γ s'.
-Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern.
-       Print put_comp_aux.
+Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern. Qed.
+
+Require Import Lia.
+
+Lemma put_comp_aux_InCs_inv :
+  forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o} {s : Sitpn2HVhdlState sitpn} {v s'},
+    put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+    forall id__c' id__e' g' i' o',
+      id__c' <> id__c ->
+      InCs (cs_comp id__c' id__e' g' i' o') cstmt ->
+      InCs (cs_comp id__c' id__e' g' i' o') v.
+Proof. induction cstmt; intros *; simpl; try (solve [inversion 3]).
+       - case_eq (id__c0 =? id__c); intros e EQ; monadInv EQ.
+         + inversion 2; subst. 
+           rewrite Nat.eqb_eq in e; lia.
+         + inversion_clear 2; do 2 constructor.
+       - intros EQ; monadInv EQ.
+Admitted.
+
+Lemma put_comp_aux_comp_ex :
+  forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o} {s : Sitpn2HVhdlState sitpn} {v s'},
+    put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+    (exists g0 i0 o0, InCs (cs_comp id__c id__e g0 i0 o0) cstmt) ->
+    (exists g1 i1 o1, InCs (cs_comp id__c id__e g1 i1 o1) v).
+Admitted.
+
+Require Import hvhdl.HVhdlCoreLib.
+
+Lemma InCs_NoDup_comp_eq :
+  forall {cstmt id__c id__e0 g0 i0 o0 id__e1 g1 i1 o1},
+    InCs (cs_comp id__c id__e0 g0 i0 o0) cstmt ->
+    InCs (cs_comp id__c id__e1 g1 i1 o1) cstmt ->
+    NoDup (get_comp_ids cstmt) ->
+    cs_comp id__c id__e0 g0 i0 o0 = cs_comp id__c id__e1 g1 i1 o1.
+Admitted.
+
+Lemma put_comp_aux_InCs :
+  forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o} {s : Sitpn2HVhdlState sitpn} {v s'},
+    put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+    InCs (cs_comp id__c id__e g i o) v.
+Admitted.
+
+Lemma put_comp_aux_p_comp_ex :
+  forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o} {s : Sitpn2HVhdlState sitpn} {v s' p},
+    put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+    NoDup (get_comp_ids cstmt) ->
+    (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') cstmt) ->
+    (exists id__p g__p i__p o__p,
+        InA Pkeq (p, id__p) (p2pcomp (γ s))
+        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) cstmt) ->
+    (exists id__p g__p i__p o__p,
+        InA Pkeq (p, id__p) (p2pcomp (γ s'))
+        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) v).
+Proof.
+  intros *; intros EQ NoDup_compids InCs_idc_ex.  
+  destruct 1 as [ id__p [ g__p [ i__p [ o__p [ InA_ InCS_cstmt ] ] ] ] ].
+  
+  (* 2 CASES : [id__p = id__c] or [id__p <> id__c]. *)
+  destruct (Nat.eq_dec id__p id__c) as [ eq_idp_idc | diff_idp_idc ].
+
+  (* CASE [id__p = id__c] *)
+  - rewrite <- (put_comp_aux_inv_state EQ).
+    exists id__p, g, i, o; split; [ assumption | ].
+    destruct InCs_idc_ex as [ g' [ i' [ o' InCs_idc ] ] ].
+    rewrite eq_idp_idc.
+    assert (eq_ide_plid : id__e = Petri.place_entid).
+    {
+      rewrite eq_idp_idc in InCS_cstmt.
+      specialize (InCs_NoDup_comp_eq InCS_cstmt InCs_idc NoDup_compids) as eq_comp.
+      inversion eq_comp; subst; reflexivity.      
+    }
+    rewrite <- eq_ide_plid; eapply put_comp_aux_InCs; eauto.    
+           
+  (* CASE [id__p <> id__c] *)
+  - erewrite <- (put_comp_aux_inv_state EQ).
+    exists id__p, g__p, i__p, o__p; split;
+      [ assumption | (eapply (put_comp_aux_InCs_inv EQ); eauto) ].
 Qed.
 
+Lemma put_comp_p_comp_ex :
+  forall {sitpn : Sitpn} {id__c id__e} {g i o} {s : Sitpn2HVhdlState sitpn} {v s' p},
+    put_comp id__c id__e g i o s = OK v s' ->
+    NoDup (get_comp_ids (beh s)) ->
+    (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s)) ->
+    (exists id__p g__p i__p o__p,
+        InA Pkeq (p, id__p) (p2pcomp (γ s))
+        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
+    (exists id__p g__p i__p o__p,
+        InA Pkeq (p, id__p) (p2pcomp (γ s'))
+        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+Proof. intros *; intros e; monadFullInv e; cbn.
+       eapply put_comp_aux_p_comp_ex; eauto.  
+Qed.
+
+Lemma conn_to_output_tcis_p_comp_ex_inv :
+  forall {sitpn : Sitpn} {pinfo i o} {s : Sitpn2HVhdlState sitpn} {v s' p},
+    connect_to_output_tcis pinfo i o s = OK v s' ->
+    (exists id__p g__p i__p o__p,
+        InA Pkeq (p, id__p) (p2pcomp (γ s))
+        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
+    (exists id__p g__p i__p o__p,
+        InA Pkeq (p, id__p) (p2pcomp (γ s'))
+        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+Proof. intros *; intros H; pattern s,s'; solve_sinv_pattern.
+       - cbn.
+         inversion EQ15; clear EQ15; subst_right_no_fail; cbn.
+         rewrite <- (put_comp_aux_inv_state EQ12).
+Admitted.
+         
 Lemma gen_inter_p_comp_ex :
   forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
     generate_interconnections s = OK v s' ->
@@ -304,6 +440,7 @@ Proof.
   erewrite (conn_to_input_tcis_inv_beh EQ); eauto.
   erewrite (conn_to_input_tcis_inv_γ EQ); eauto.
   clear EQ.
-  pattern s4, s2; solve_sinv_pattern.
-
-Admitted.
+  case_eq x3; intros *; intros e; subst.
+  intro; eapply (put_comp_p_comp_ex EQ3); eauto.
+  eapply (conn_to_output_tcis_p_comp_ex_inv EQ2); eauto.
+Qed.

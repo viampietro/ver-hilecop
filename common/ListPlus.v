@@ -632,11 +632,17 @@ Section BoolAndLists.
   Definition BSum (l : list A) (sum : bool) : Prop :=
     FoldL (fun sum a => sum || f a) l false sum.
 
+  Definition bsum (l : list A) : bool :=
+    fold_left (fun sum a => sum || f a) l false.
+  
   (* States that the boolean [prod] is the product of the application
      of function [f] to the elements of list [l]. *)
 
   Definition BProd (l : list A) (prod : bool) : Prop :=
     FoldL (fun prod a => prod && f a) l true prod.
+
+  Definition bprod (l : list A) : bool :=
+    fold_left (fun prod a => prod && f a) l true.
   
 End BoolAndLists.
 
@@ -653,11 +659,17 @@ Section NatAndLists.
   Definition NatSum (l : list A) (sum : nat) : Prop :=
     FoldL (fun sum a => sum + f a) l 0 sum.
 
+  Definition natsum (l : list A) : nat :=
+    fold_left (fun sum a => sum + f a) l 0.
+  
   (* States that the nat [prod] is the product of the application
      of function [f] to the elements of list [l]. *)
 
   Definition NatProd (l : list A) (prod : nat) : Prop :=
     FoldL (fun prod a => prod * f a) l 1 prod.
+
+  Definition natprod (l : list A) : nat :=
+    fold_left (fun prod a => prod * f a) l 1.
   
 End NatAndLists.
 

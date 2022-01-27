@@ -1,6 +1,7 @@
 (** * Sitpn semantics definition. *)
 
 Require Import common.CoqLib.
+Require Import common.GlobalFacts.
 Require Import common.GlobalTypes.
 Require Import common.ListPlus.
 Require Import sitpn.Sitpn.
@@ -19,13 +20,6 @@ Local Notation "| e |" := (exist _ e _) (at level 50).
 Definition IsTransientMarking (sitpn : Sitpn) (s : SitpnState sitpn) (fired : list (T sitpn)) (m : P sitpn -> nat) :=
   MarkingSubPreSum (Fired s fired) (M s) m.
 
-(** States that marking [m] is the residual marking resulting of the
-    withdrawal of the tokens from the input places of transitions that
-    belong to the [Fired] field of state s.  *)
-
-Definition IsNewMarking (sitpn : Sitpn) (s : SitpnState sitpn) (fired : list (T sitpn)) (m : P sitpn -> nat) :=
-  MarkingSubPreSumAddPostSum (Fired s fired) (M s) m.
-
 (** Defines the Sitpn state transition relation. *)
 
 Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s' : SitpnState sitpn) : Clk -> Prop :=
@@ -34,13 +28,10 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (** Captures the new value of conditions, and determines the
         activation status for actions.  *)
     (forall c, cond s' c = E τ c) ->
-    (forall a, (exists p, (M s p) > 0 /\ has_A p a = true) -> (ex s' (inl a)) = true) ->
-    (forall a, (forall p, (M s p) = 0 \/ has_A p a = false) -> (ex s' (inl a)) = false) ->
 
-    (* Equivalent to the two lines above. *)
-    (forall a marked sum, @Sig_in_List (P sitpn) (fun p => M s p > 0) marked ->
-                          BSum (fun p => has_A (proj1_sig p) a) marked sum ->
-                          ex s' (inl a) = sum) ->
+    (forall a marked,
+        @Sig_in_List (P sitpn) (fun p => M s p > 0) marked ->
+        ex s' (inl a) = bsum (fun p => has_A (proj1_sig p) a) marked) ->
 
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
@@ -72,17 +63,34 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (** Marking at state s' is the new marking resulting of the firing
         of all transitions belonging to the Fired subset at state
         s. *)  
-    (* (forall fired, IsNewMarking s fired (M s')) -> *)
-    (forall fired p sum__pre sum__post,
+    (forall fired p,
         IsFiredList s fired ->
-        PreSum p (fun t => In t fired) sum__pre ->
-        PostSum p (fun t => In t fired) sum__post ->
-        M s' p = M s p - sum__pre + sum__post) ->
+        let fpre := fun t => match pre p t with Some (basic, |ω|) => ω | _ => 0 end in
+        let fpost := fun t => match post t p with Some (|ω|) => ω | _ => 1 end in
+        M s' p = M s p - (natsum fpre fired) + (natsum fpost fired)) ->
     
     (** Computes the reset orders for time counters and fired transitions. *)
-    (forall (t : Ti sitpn) fired m,
-        IsTransientMarking s fired m ->
-        (Sens (M s) t /\ ~Sensbt m t \/ Fired s fired t) -> reset s' t = true) ->
+    (forall (t : Ti sitpn) fired,
+        IsFiredList s fired ->
+        (InA P1SigEq (proj1_sig t) fired
+         \/ (exists p,
+                (match pre p t with
+                 | Some ((basic | test), |ω|) =>
+                     let fpre := fun t__i => match pre p t__i with Some (basic, |ω|) => ω | _ => 0 end in
+                     (natsum fpre fired > 0) /\ (M s p - natsum fpre fired < ω)
+                 | _ => False end))) ->
+        reset s' t = true) ->
+
+    (forall (t : Ti sitpn) fired,
+        IsFiredList s fired ->
+        ~(InA P1SigEq (proj1_sig t) fired
+          \/ (exists p,
+                 (match pre p t with
+                  | Some ((basic | test), |ω|) =>
+                      let fpre := fun t__i => match pre p t__i with Some (basic, |ω|) => ω | _ => 0 end in
+                      (natsum fpre fired > 0) /\ (M s p - natsum fpre fired < ω)
+                  | _ => False end))) ->
+        reset s' t = false) ->
     
     (forall (t : Ti sitpn) fired m,
         IsTransientMarking s fired m ->
@@ -90,11 +98,9 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
         ~Fired s fired t -> reset s' t = false) ->
 
     (** Determines if some functions are executed. *)
-    (forall f fired, (exists t, Fired s fired t /\ has_F t f = true) -> ex s' (inr f) = true) ->
-    (forall f fired, (forall t, ~Fired s fired t \/ has_F t f = false) -> ex s' (inr f) = false) ->
-
-    (* Equivalent to the two lines above. *)
-    (forall f fired sum, IsFiredList s fired -> BSum (fun t => has_F t f) fired sum -> ex s' (inr f) = sum) ->
+    (forall f fired,
+        IsFiredList s fired ->
+        ex s' (inr f) = bsum (fun t => has_F t f) fired) ->
     
     (** Condition values stay the same between s and s'. *)
     (forall c, cond s' c = cond s c) -> 

@@ -19,6 +19,10 @@
 ******* DONE SIL_forall_A
 ****** DONE gen_tcis_t_comp_ex
 ***** TODO gen_inter_p_comp_ex
+****** TODO gen_inter_p_comp_ex
+******* TODO put_comp_p_comp_ex
+******** TODO put_comp_aux_p_comp_ex
+******* TODO conn_to_output_tcis_p_comp_ex_inv
 ***** TODO gen_ports_p_comp_ex
 **** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]
 ***** DONE gen_comp_insts_nodup_p2pcomp [100%]
