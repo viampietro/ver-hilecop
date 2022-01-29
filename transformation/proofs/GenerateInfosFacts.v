@@ -8,6 +8,7 @@ Require Import common.ListDep.
 Require Import common.ListMonad.
 Require Import common.proofs.ListMonadFacts.
 Require Import common.proofs.ListMonadTactics.
+Require Import common.proofs.SetoidListFacts.
 Require Import common.ListPlus.
 
 Require Import sitpn.Sitpn.

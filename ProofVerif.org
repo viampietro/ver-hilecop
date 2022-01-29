@@ -2,11 +2,11 @@
 
 * TODO Behavior Preservation [0%]
 ** TODO Similar Initial States [16%]
-*** TODO Initial States Equal Marking (InitialStates.v) [91%]
+*** TODO [#B] Initial States Equal Marking (InitialStates.v) [91%]
 **** DONE NoDupA_fs_eqk_eqv (SetoidListFacts) [100%] 
 ***** DONE InA_setv
 ***** DONE getv_idle
-**** TODO sitpn2hvhdl_p_comp_ex (GenerateHVhdlFacts) [50%]
+**** TODO [#B] sitpn2hvhdl_p_comp_ex (GenerateHVhdlFacts) [50%]
 ***** DONE gen_sitpn_infos_sil_lofPs
 ***** DONE gen_archi_p_comp_ex
 ****** DONE gen_pcis_p_comp_ex
@@ -17,13 +17,22 @@
 ******** DONE build_pci_inv_state_beh
 ******** DONE build_pci_inv_state_gamma
 ******* DONE SIL_forall_A
-****** DONE gen_tcis_t_comp_ex
-***** TODO gen_inter_p_comp_ex
-****** TODO gen_inter_p_comp_ex
-******* TODO put_comp_p_comp_ex
-******** TODO put_comp_aux_p_comp_ex
-******* TODO conn_to_output_tcis_p_comp_ex_inv
-***** TODO gen_ports_p_comp_ex
+****** DONE gen_tcis_t_comp_ex (GenerateArchitectureInvs)
+***** TODO [#B] gen_inter_p_comp_ex (GenerateInterconnectionsFacts)
+****** DONE conn_to_input_tcis_inv_beh 
+****** DONE conn_to_input_tcis_inv_γ
+****** TODO [#A] put_comp_nodup_comp_ids
+****** TODO [#A] conn_to_output_tcis_nodup_comp_ids (GenerateInterconnectionsInvs)
+****** TODO [#B] put_comp_p_comp_ex
+******* TODO [#A] put_comp_aux_p_comp_ex
+******** DONE put_comp_aux_inv_state
+******** TODO [#A] InCs_NoDup_comp_eq
+******** TODO [#A] put_comp_aux_InCs
+******** TODO [#A] put_comp_aux_InCs_inv
+****** TODO [#A] conn_to_output_tcis_comp_ex (GenerateInterconnectionsInvs)
+****** TODO [#A] get_comp_aux_InCs (Sitpn2HVhdlUtilsFacts)
+****** TODO [#A] conn_to_output_tcis_p_comp_ex_inv (GenerateInterconnectionsInvs)
+***** TODO [#A] gen_ports_p_comp_ex
 **** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]
 ***** DONE gen_comp_insts_nodup_p2pcomp [100%]
 ****** DONE iter_gen_pcomp_inst_nodup_p2pcomp [100%]

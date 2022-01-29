@@ -140,7 +140,7 @@ Section Iter.
         apply Qtrans with (y := s0);
         [ eapply IHm; eauto | apply (f_inv b s0 v s' EQ0) ] ].
   Qed.
-
+  
   Remark iter_prop_A_state :
     forall {state A : Type} {f : A -> Mon unit} {l} (eqA : A -> A -> Prop) {s : state} {v s'}
            {Q : A -> state -> Prop},

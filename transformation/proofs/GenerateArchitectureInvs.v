@@ -16,7 +16,7 @@ Require Import hvhdl.AbstractSyntax.
 Require Import transformation.Sitpn2HVhdl.
 Require Import transformation.proofs.SInvTactics.
 
-(** ** Facts about Architecture Generation Function *)
+(** ** State Invariants about Architecture Generation Function *)
 
 Lemma gen_arch_inv_lofPs :
   forall {sitpn mm s v s'},
@@ -46,7 +46,10 @@ Lemma gen_tcis_p_comp_ex :
         InA Pkeq (p, id__p) (p2pcomp (γ s'))
         /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
 Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern.
-       inversion EQ1; subst; cbn.
+       match goal with
+       | [ EQ: OK _ _ = OK _ _ |- _ ] =>
+           inversion EQ; subst; cbn
+       end;
        destruct 1 as [id__p [g__p [i__p [o__p [InA_ InCs_] ] ] ] ].
        exists id__p, g__p, i__p, o__p; split; [ assumption | (right; assumption) ].
 Qed.

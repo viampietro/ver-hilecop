@@ -16,7 +16,8 @@ Require Import hvhdl.Place.
 Require Import transformation.Sitpn2HVhdl.
 Require Import transformation.proofs.Sitpn2HVhdlInvs.
 Require Import transformation.proofs.GenerateInfosFacts.
-(* Require Import transformation.proofs.GenerateArchitectureFacts. *)
+Require Import transformation.proofs.GenerateArchitectureFacts.
+Require Import transformation.proofs.GenerateInterconnectionsFacts.
 
 (** ** Facts about Generation of P Component Instances *)
 
@@ -72,42 +73,42 @@ Require Import transformation.proofs.GenerateInfosFacts.
 (*     exfalso; apply nex_InCs; exists Petri.place_entid, gm, ipm, opm; auto. *)
 (*   Qed. *)
   
-  Lemma iter_gen_p_comp_inst_p_comp :
-    forall {sitpn pls} {s v s'},
-      iter (generate_place_comp_inst sitpn) pls s = OK v s' ->
-      NoDupA Peq pls ->
-      forall p, InA Peq p pls ->
-        exists id__p gm ipm opm,
-          InA Pkeq (p, id__p) (p2pcomp (γ s')) /\
-          InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s').
-  Proof.
-    intros until pls; functional induction (iter (generate_place_comp_inst sitpn) pls) using iter_ind.
+  (* Lemma iter_gen_p_comp_inst_p_comp : *)
+  (*   forall {sitpn pls} {s v s'}, *)
+  (*     iter (generate_place_comp_inst sitpn) pls s = OK v s' -> *)
+  (*     NoDupA Peq pls -> *)
+  (*     forall p, InA Peq p pls -> *)
+  (*       exists id__p gm ipm opm, *)
+  (*         InA Pkeq (p, id__p) (p2pcomp (γ s')) /\ *)
+  (*         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s'). *)
+  (* Proof. *)
+  (*   intros until pls; functional induction (iter (generate_place_comp_inst sitpn) pls) using iter_ind. *)
 
-    (* BASE CASE *)
-    - inversion 3.
+  (*   (* BASE CASE *) *)
+  (*   - inversion 3. *)
 
-    (* IND. CASE *)
-    - intros;
-        lazymatch goal with
-        | [ Hm : (do _ <- _; _) _ = _, Hin: InA _ _ (_ :: _) |- _ ] =>
-          inversion_clear Hin as [ e1 e2 Peq_pb | e1 e2 HIn_ntl ]; monadInv Hm
-        end.
+  (*   (* IND. CASE *) *)
+  (*   - intros; *)
+  (*       lazymatch goal with *)
+  (*       | [ Hm : (do _ <- _; _) _ = _, Hin: InA _ _ (_ :: _) |- _ ] => *)
+  (*         inversion_clear Hin as [ e1 e2 Peq_pb | e1 e2 HIn_ntl ]; monadInv Hm *)
+  (*       end. *)
 
-      (* CASE a = n *)
-      + specialize (gen_p_comp_inst_p_comp EQ0) as (id__p, (gm, (ipm, (opm, (Hin_γs', Hin_behs'))))).
-        exists id__p, gm, ipm, opm; split; [ eauto with setoidl | auto].
+  (*     (* CASE a = n *) *)
+  (*     + specialize (gen_p_comp_inst_p_comp EQ0) as (id__p, (gm, (ipm, (opm, (Hin_γs', Hin_behs'))))). *)
+  (*       exists id__p, gm, ipm, opm; split; [ eauto with setoidl | auto]. *)
 
-      (* CASE n ∈ tl *)
-      + lazymatch goal with
-        | [ H: NoDupA _ _ |- _ ] => inversion_clear H as [ | e1 e2 Hnotin_a_tl Hnodup_tl ]
-        end.
-        specialize (IHm s x s0 EQ Hnodup_tl p HIn_ntl) as (id__p, (gm, (ipm, (opm, (Hγ, Hincs_comp))))).
+  (*     (* CASE n ∈ tl *) *)
+  (*     + lazymatch goal with *)
+  (*       | [ H: NoDupA _ _ |- _ ] => inversion_clear H as [ | e1 e2 Hnotin_a_tl Hnodup_tl ] *)
+  (*       end. *)
+  (*       specialize (IHm s x s0 EQ Hnodup_tl p HIn_ntl) as (id__p, (gm, (ipm, (opm, (Hγ, Hincs_comp))))). *)
 
-        (* Apply gen_pcomp_inst_inv_p_comp_1 *)
-        assert (nPeq : ~Peq p b) by (eapply InA_neqA; eauto).
-        specialize (gen_pcomp_inst_inv_p_comp_1 EQ0 nPeq Hγ Hincs_comp) as (Hγ', Hincs_comp').
-        exists id__p, gm, ipm, opm; auto.
-  Qed.
+  (*       (* Apply gen_pcomp_inst_inv_p_comp_1 *) *)
+  (*       assert (nPeq : ~Peq p b) by (eapply InA_neqA; eauto). *)
+  (*       specialize (gen_pcomp_inst_inv_p_comp_1 EQ0 nPeq Hγ Hincs_comp) as (Hγ', Hincs_comp'). *)
+  (*       exists id__p, gm, ipm, opm; auto. *)
+  (* Qed. *)
   
 (*   Lemma iter_gen_pcomp_inst_bind_init_marking : *)
 (*     forall {sitpn pls} {s v s'}, *)

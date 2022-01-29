@@ -121,24 +121,11 @@ Section GenActionPortsInvs.
     (* Qed. *)
   Admitted.
 
-  Require Import SInvTactics.
-  
   Lemma gen_aports_inv_lofPs :
     forall {sitpn s v s'},
       generate_action_ports_and_ps sitpn s = OK v s' ->
       lofPs s = lofPs s'.
-  Proof. intros; solve_sinv.
-         match goal with
-         | [ H: _ ?S3 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
-             idtac "OK"
-         end.
-         match goal with
-         | [ H: _ ?S3 = OK _ ?S2 |- ?F ?S1 = ?F ?S2 ] =>
-             tryif (check_is_state_record S3) then
-               tryif (change (F S1) with (F S3)) then idtac "OK" else fail
-             else fail
-         end.
-         solve_sinv.
+  Proof. 
   (*   intros *; intros e; minv e; auto; simpl. *)
   (*   transitivity (lofPs s1). *)
   (*   solve_listm EQ2; intros *; intros e. *)

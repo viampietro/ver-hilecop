@@ -24,20 +24,19 @@ Require Import transformation.proofs.SInvTactics.
 
 Section GenPCIsFacts.
 
-
   (** *** Facts about the [build_pci] function *)
   
   Lemma build_pci_inv_beh :
     forall {sitpn} {p : P sitpn} {pinfo n s v s'},
       build_pci p pinfo n s = OK v s' ->
       beh s = beh s'.
-  Proof. intros; solve_sinv. Qed.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
 
   Lemma build_pci_inv_γ :
     forall {sitpn} {p : P sitpn} {pinfo n s v s'},
       build_pci p pinfo n s = OK v s' ->
       γ s = γ s'.
-  Proof. intros; solve_sinv. Qed.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
   
   (** *** Facts about the [generate_pci] function *)
 
@@ -127,21 +126,7 @@ End GenPCIsFacts.
 
 Section GenTCIsFacts.
 
-
   (** *** Facts about the [generate_tcis] function *)
-  
-  Lemma gen_tcis_p_comp_ex :
-    forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
-      generate_tcis s = OK v s' ->
-      (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
-      (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
-  Proof.
-  Admitted.
-
   
 End GenTCIsFacts.
 

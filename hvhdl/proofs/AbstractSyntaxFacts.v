@@ -2,16 +2,31 @@
 
 Require Import common.CoqLib.
 Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.WellDefinedDesign.
+
+(** ** Facts about [InCs] *)
+
+Section InCsFacts.
+
+  Lemma InCs_NoDup_comp_eq :
+    forall {cstmt id__c id__e0 g0 i0 o0 id__e1 g1 i1 o1},
+      InCs (cs_comp id__c id__e0 g0 i0 o0) cstmt ->
+      InCs (cs_comp id__c id__e1 g1 i1 o1) cstmt ->
+      NoDup (get_comp_ids cstmt) ->
+      cs_comp id__c id__e0 g0 i0 o0 = cs_comp id__c id__e1 g1 i1 o1.
+  Admitted.
+
+End InCsFacts.
 
 Lemma flatten_cs_ex : forall beh, exists lofcs, FlattenCs beh lofcs.
 Proof.
   induction beh.
 
   (* CASE simple Process *)
-  - exists [cs_ps pid sl vars stmt]; auto.
+  - exists [cs_ps id__p sl vars stmt]; auto.
 
   (* CASE simple Component Instance *)
-  - exists [cs_comp compid entid gmap ipmap opmap]; auto.
+  - exists [cs_comp id__c id__e g i o]; auto.
     
   (* CASE parallel stmts *)
   - lazymatch goal with
@@ -72,4 +87,5 @@ Proof.
   assert (e : a' = a'0) by (eapply IHcstmt1; eauto).
   rewrite e in *; eapply IHcstmt2; eauto.
 Qed.
+
 
