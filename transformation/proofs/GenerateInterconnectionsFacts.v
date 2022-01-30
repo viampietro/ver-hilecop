@@ -41,7 +41,7 @@ Section ConnToOutputTcisFacts.
   Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern. Qed.
 
   
-  Lemma conn_to_output_tcis_p_comp_ex_inv :
+  Lemma conn_to_output_tcis_pci_ex_inv :
     forall {sitpn : Sitpn} {pinfo i o}
            {s : Sitpn2HVhdlState sitpn} {v s' p},
       connect_to_output_tcis pinfo i o s = OK v s' ->
@@ -57,12 +57,12 @@ Section ConnToOutputTcisFacts.
            rewrite <- (put_comp_aux_inv_state EQ12).
   Admitted.
   
-  Lemma conn_to_output_tcis_nodup_comp_ids :
+  Lemma conn_to_output_tcis_nodup_cids :
     forall {sitpn : Sitpn} {pinfo i o} {s : Sitpn2HVhdlState sitpn}
            {v s'},
       connect_to_output_tcis pinfo i o s = OK v s' ->
-      NoDup (get_comp_ids (beh s)) ->
-      NoDup (get_comp_ids (beh s')).
+      NoDup (get_cids (beh s)) ->
+      NoDup (get_cids (beh s')).
   Admitted.
   
   Lemma conn_to_output_tcis_comp_ex :
@@ -79,10 +79,10 @@ End ConnToOutputTcisFacts.
 
 Section GenInterFacts.
 
-  Lemma gen_inter_p_comp_ex :
+  Lemma gen_inter_pci_ex :
     forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
       generate_interconnections s = OK v s' ->
-      NoDup (get_comp_ids (beh s)) ->
+      NoDup (get_cids (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pcomp (γ s))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
@@ -92,13 +92,13 @@ Section GenInterFacts.
   Proof.  
     intros *; intros H; pattern s, s'.
     monadFullInv H.
-    intros NoDup_comp_ids pci_ex.
-    apply proj2 with (A := NoDup (get_comp_ids (beh s'))).
-    generalize NoDup_comp_ids, pci_ex.
+    intros NoDup_cids pci_ex.
+    apply proj2 with (A := NoDup (get_cids (beh s'))).
+    generalize NoDup_cids, pci_ex.
     pattern s0, s'; eapply (iter_inv_state EQ0); eauto.
     (*  *)
     - unfold Transitive.
-      intros *; intros tr_xy tr_yz NoDup_comp_ids_x pci_ex_x.
+      intros *; intros tr_xy tr_yz NoDup_cids_x pci_ex_x.
       apply tr_yz; eapply tr_xy; eauto.
       
     (*  *)
@@ -128,16 +128,16 @@ Section GenInterFacts.
       | [ E: (let (_, _) := ?X in _) _ = OK _ _ |- _ ] =>
           destruct X
       end.
-      intros NoDup_comp_ids1 pci_ex1; split.
-      + eapply put_comp_nodup_comp_ids; eauto;
-          eapply conn_to_output_tcis_nodup_comp_ids; eauto.
-      + eapply (put_comp_p_comp_ex EQ6); [
-            eapply conn_to_output_tcis_nodup_comp_ids; eauto
+      intros NoDup_cids1 pci_ex1; split.
+      + eapply put_comp_nodup_cids; eauto;
+          eapply conn_to_output_tcis_nodup_cids; eauto.
+      + eapply (put_comp_pci_ex EQ6); [
+            eapply conn_to_output_tcis_nodup_cids; eauto
           | eapply conn_to_output_tcis_comp_ex; eauto;
             erewrite <- conn_to_input_tcis_inv_beh; eauto;
             erewrite <- get_comp_aux_inv_state; eauto;
             exists g, i, o; eapply get_comp_aux_InCs; eauto
-          | eapply conn_to_output_tcis_p_comp_ex_inv; eauto
+          | eapply conn_to_output_tcis_pci_ex_inv; eauto
           ].      
   Qed.
   

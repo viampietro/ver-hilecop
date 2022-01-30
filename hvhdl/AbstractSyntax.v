@@ -9,7 +9,7 @@ Require Import HVhdlTypes.
 (** Declares the scope of notations for the H-VHDL abstract syntax. *)
 
 Declare Scope abss_scope.
-Open Scope abss_scope.
+Local Open Scope abss_scope.
 
 (** Set of binary operators. *)
 
@@ -50,11 +50,6 @@ with agofexprs : Type :=
 with name : Type :=
 | n_id : ident -> name  
 | n_xid : ident -> expr -> name.
-
-Module HVhdlExprNotations.
-
-  
-End HVhdlExprNotations.
 
 (** Notations and coercions for names. *)
 
@@ -123,28 +118,34 @@ Inductive ss : Type :=
 
 (** Notations for sequential statements. *)
 
-Infix "@<==" := ss_sig (at level 100) : abss_scope.
-Infix "@:=" := ss_var (at level 100) : abss_scope.
+Module HVhdlSsNotations.
 
-Notation "'If' c 'Then' e " :=
-  (ss_if c e)
-    (at level 200, right associativity,
-     format "'[v' 'If'  c '//' 'Then'  e ']'") : abss_scope.
+  Infix "@<==" := ss_sig (at level 100) : abss_scope.
+  Infix "@:=" := ss_var (at level 100) : abss_scope.
 
-Notation "'If' c 'Then' x 'Else' y" :=
-  (ss_ifelse c x y)
-    (at level 200, right associativity,
-     format "'[v' 'If'  c '//' 'Then'  x '//' 'Else'  y ']'") : abss_scope.
+  Notation "'If' c 'Then' e " :=
+    (ss_if c e)
+      (at level 200, right associativity,
+        format "'[v' 'If'  c '//' 'Then'  e ']'") : abss_scope.
 
-Notation "'For' i 'In' l 'To' u 'Loop' x " :=
-  (ss_loop i l u x)
-    (at level 200, format "'[v' 'For'  i  'In'  l  'To'  u  'Loop' '/' '['   x ']' ']'") : abss_scope.
+  Notation "'If' c 'Then' x 'Else' y" :=
+    (ss_ifelse c x y)
+      (at level 200, right associativity,
+        format "'[v' 'If'  c '//' 'Then'  x '//' 'Else'  y ']'") : abss_scope.
 
-Notation "'Rising' stmt" := (ss_rising stmt) (at level 200) : abss_scope.
-Notation "'Falling' stmt" := (ss_falling stmt) (at level 200) : abss_scope.
-Notation "'Rst' stmt1 'Else' stmt2" := (ss_rst stmt1 stmt2) (at level 200) : abss_scope.
+  Notation "'For' i 'InR' l 'To' u 'Loop' x " :=
+    (ss_loop i l u x)
+      (at level 200, format "'[v' 'For'  i  'InR'  l  'To'  u  'Loop' '/' '['   x ']' ']'") : abss_scope.
 
-Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) : abss_scope.
+  Notation "'Rising' stmt" := (ss_rising stmt) (at level 200) : abss_scope.
+  Notation "'Falling' stmt" := (ss_falling stmt) (at level 200) : abss_scope.
+  Notation "'Rst' stmt1 'Else' stmt2" := (ss_rst stmt1 stmt2) (at level 200) : abss_scope.
+
+  Notation " x ;; y ;; .. ;; z " := (ss_seq .. (ss_seq x y) .. z) (at level 100) : abss_scope.
+
+End HVhdlSsNotations.
+
+Import HVhdlSsNotations.
 
 (** ** Concurrent statements. *)
 
@@ -298,7 +299,8 @@ Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
   forall cstmt cstmt' a a' a'' ,
     FoldLCs f cstmt a a' -> FoldLCs f cstmt' a' a'' -> FoldLCs f (cstmt // cstmt') a a''.
 
-#[export] Hint Constructors FoldLCs : core.
+#[export]
+Hint Constructors FoldLCs : core.
 
 Fixpoint foldl_cs {A : Type} (f : A -> cs -> A) (cstmt : cs) (acc : A) {struct cstmt} : A :=
   match cstmt with
@@ -335,9 +337,10 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
    forall cstmt cstmt' l l',
      FlattenCs cstmt l -> FlattenCs cstmt' l' -> FlattenCs (cstmt // cstmt') (l ++ l').
 
-#[export] Hint Constructors FlattenCs : core.
+#[export]
+Hint Constructors FlattenCs : core.
 
-Fixpoint cs_to_list (cstmt : cs) {struct cstmt} : list cs :=
+Definition cs_to_list (cstmt : cs) : list cs :=
   let add_to_list := fun (l :list cs) (cstmt0 : cs) => l ++ [cstmt0] in
   foldl_cs add_to_list cstmt [].
 
@@ -378,3 +381,4 @@ Fixpoint AssignedInCs (id : ident) (cstmt : cs) :=
   | cs_par cstmt' cstmt'' =>
     AssignedInCs id cstmt' \/ AssignedInCs id cstmt''
   end.
+

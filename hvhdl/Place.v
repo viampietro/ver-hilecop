@@ -17,6 +17,7 @@ Require Import hvhdl.HVhdlTypes.
 Open Scope natset_scope.
 Open Scope abss_scope.
 
+Include HVhdlSsNotations.
 Include HVhdlCsNotations.
 
 (** Loop variable and local variable first fresh identifiers. *)
@@ -145,7 +146,7 @@ Definition input_tokens_sum_ps :=
         (
           ($v_internal_input_token_sum @:= 0);;
 
-          (For i In 0 To (#input_arcs_number @- 1) Loop
+          (For i InR 0 To (#input_arcs_number @- 1) Loop
                (If (input_transitions_fired[[ #i ]] @= true) Then
                    $v_internal_input_token_sum @:= (#v_internal_input_token_sum @+ (input_arcs_weights[[ #i ]])))
           );;
@@ -177,7 +178,7 @@ Definition output_tokens_sum_ps :=
         (
           ($v_internal_output_token_sum @:= 0);;
 
-          (For i In 0 To (#output_arcs_number @- 1) Loop 
+          (For i InR 0 To (#output_arcs_number @- 1) Loop 
                (If ((output_transitions_fired[[ #i ]] @= true) @&& (output_arcs_types[[ #i ]] @= basic)) Then
                    $v_internal_output_token_sum @:= (#v_internal_output_token_sum @+ (output_arcs_weights[[ #i ]])))
           );;
@@ -244,7 +245,7 @@ Definition marking_validation_evaluation_ps :=
         []
 
         (* Process body. *)
-        (For i In 0 To (#output_arcs_number @- 1) Loop (
+        (For i InR 0 To (#output_arcs_number @- 1) Loop (
              If ((((output_arcs_types[[ #i ]] @= basic) @|| (output_arcs_types[[ #i ]] @= test))
                     @&& (#s_marking @>= (output_arcs_weights[[ #i ]])))
                    @|| ((output_arcs_types[[ #i ]] @= inhibitor) @&& (#s_marking @< (output_arcs_weights[[ #i ]]))))
@@ -275,7 +276,7 @@ Definition priority_evaluation_ps :=
     (* Process body. *)
     (($v_saved_output_token_sum @:= 0);;
      
-     (For i In 0 To (#output_arcs_number @- 1) Loop
+     (For i InR 0 To (#output_arcs_number @- 1) Loop
           ((If (#s_marking @>= (#v_saved_output_token_sum @+ (output_arcs_weights[[ #i ]])))
                Then (priority_authorizations $[[ #i ]] @<== true)
                Else (priority_authorizations $[[ #i ]] @<== false));;
@@ -301,9 +302,9 @@ Definition reinit_transitions_time_evaluation_ps :=
     []
 
     (* Process body. *)
-    (Rst (For i In 0 To (#output_arcs_number @- 1) Loop (reinit_transitions_time $[[ #i ]] @<== false))
+    (Rst (For i InR 0 To (#output_arcs_number @- 1) Loop (reinit_transitions_time $[[ #i ]] @<== false))
          Else (Rising
-                 (For i In 0 To (#output_arcs_number @- 1) Loop
+                 (For i InR 0 To (#output_arcs_number @- 1) Loop
                       (If (((output_arcs_types[[ #i ]] @= basic @|| (output_arcs_types[[ #i ]] @= test))
                               @&& ((#s_marking @- #s_output_token_sum) @< (output_arcs_weights[[ #i ]]))
                               @&& (#s_output_token_sum @> 0))

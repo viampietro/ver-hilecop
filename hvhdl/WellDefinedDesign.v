@@ -25,7 +25,7 @@ Definition AreCsCompIds (cstmt : cs) (compids : list ident) : Prop :=
   let comp2id := fun cids cstmt => match cstmt with cs_comp id _ _ _ _ => cids ++ [id] | _ => cids end in
   FoldLCs comp2id cstmt [] compids.
 
-Definition get_comp_ids (cstmt : cs) : list ident :=
+Definition get_cids (cstmt : cs) : list ident :=
   let comp2id := fun cids cstmt => match cstmt with cs_comp id _ _ _ _ => cids ++ [id] | _ => cids end in
   foldl_cs comp2id cstmt [].
 

@@ -12,8 +12,11 @@ Section InCsFacts.
     forall {cstmt id__c id__e0 g0 i0 o0 id__e1 g1 i1 o1},
       InCs (cs_comp id__c id__e0 g0 i0 o0) cstmt ->
       InCs (cs_comp id__c id__e1 g1 i1 o1) cstmt ->
-      NoDup (get_comp_ids cstmt) ->
+      NoDup (get_cids cstmt) ->
       cs_comp id__c id__e0 g0 i0 o0 = cs_comp id__c id__e1 g1 i1 o1.
+  Proof.    
+    induction cstmt; try (solve [inversion 1]).
+    destruct 1; destruct 1; reflexivity.
   Admitted.
 
 End InCsFacts.

@@ -363,7 +363,7 @@ Section Sitpn2HVhdl.
   (*   end. *)
   (* Qed. *)
   
-  Lemma gen_ports_p_comp_ex :
+  Lemma gen_ports_pci_ex :
     forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
       generate_ports s = OK v s' ->
       (exists id__p g__p i__p o__p,
@@ -374,7 +374,7 @@ Section Sitpn2HVhdl.
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
   Admitted.
   
-  Lemma sitpn2hvhdl_p_comp_ex :
+  Lemma sitpn2hvhdl_pci_ex :
     forall {sitpn decpr id__ent id__arch mm d γ},
       sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
@@ -394,13 +394,18 @@ Section Sitpn2HVhdl.
     monadInv e; minv EQ4.
     inversion H; clear H; subst; simpl.
 
-    eapply gen_ports_p_comp_ex; eauto.
-    eapply gen_inter_p_comp_ex; eauto.
-    eapply gen_archi_p_comp_ex; eauto.
+    eapply gen_ports_pci_ex; eauto.
+    eapply gen_inter_pci_ex; eauto; [
+        (* [NoDup cids] and [all id__c < nextid]  *)
+        eapply gen_archi_nodup_cids; eauto;
+        erewrite <- (gen_sitpn_infos_inv_beh EQ); eauto; cbn;
+        [ destruct 1 | constructor ]
+      | ].
 
+    eapply gen_archi_pci_ex; eauto.
     lazymatch goal with
     | [ Hwd: IsWellDefined _ |- _ ] =>
-      apply (gen_sitpn_infos_sil_lofPs EQ (nodup_pls (wi_fsets Hwd)))
+        apply (gen_sitpn_infos_sil_lofPs EQ (nodup_pls (wi_fsets Hwd)))
     end.
   Qed.
 

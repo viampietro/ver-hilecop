@@ -55,11 +55,11 @@ Section PutCompFacts.
       (exists g1 i1 o1, InCs (cs_comp id__c id__e g1 i1 o1) v).
   Admitted.
   
-  Lemma put_comp_aux_p_comp_ex :
+  Lemma put_comp_aux_pci_ex :
     forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s' p},
       put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
-      NoDup (get_comp_ids cstmt) ->
+      NoDup (get_cids cstmt) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') cstmt) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pcomp (γ s))
@@ -94,11 +94,11 @@ Section PutCompFacts.
         [ assumption | (eapply (put_comp_aux_InCs_inv EQ); eauto) ].
   Qed.
 
-  Lemma put_comp_p_comp_ex :
+  Lemma put_comp_pci_ex :
     forall {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s' p},
       put_comp id__c id__e g i o s = OK v s' ->
-      NoDup (get_comp_ids (beh s)) ->
+      NoDup (get_cids (beh s)) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pcomp (γ s))
@@ -107,15 +107,15 @@ Section PutCompFacts.
           InA Pkeq (p, id__p) (p2pcomp (γ s'))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
   Proof. intros *; intros e; monadFullInv e; cbn.
-         eapply put_comp_aux_p_comp_ex; eauto.  
+         eapply put_comp_aux_pci_ex; eauto.  
   Qed.
   
-  Lemma put_comp_nodup_comp_ids :
+  Lemma put_comp_nodup_cids :
     forall {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s'},
       put_comp id__c id__e g i o s = OK v s' ->
-      NoDup (get_comp_ids (beh s)) ->
-      NoDup (get_comp_ids (beh s')).
+      NoDup (get_cids (beh s)) ->
+      NoDup (get_cids (beh s')).
   Admitted.
 
   

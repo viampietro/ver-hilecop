@@ -17,6 +17,7 @@ Require Import hvhdl.HVhdlTypes.
 Open Scope natset_scope.
 Open Scope abss_scope.
 
+Include HVhdlSsNotations.
 Include HVhdlCsNotations.
 
 Local Definition i := 50.
@@ -131,7 +132,7 @@ Definition condition_evaluation_ps :=
         (* Process body. *)
         (
           (v_internal_condition @:= true);;
-          (For i In 0 To (#conditions_number @- 1) Loop (
+          (For i InR 0 To (#conditions_number @- 1) Loop (
                  v_internal_condition @:= (#v_internal_condition @&& (input_conditions[[#i]]))
           ));;
           (s_condition_combination @<== #v_internal_condition)
@@ -160,7 +161,7 @@ Definition enable_evaluation_ps :=
         (* Process body. *)
         (
           (v_internal_enabled @:= true);;
-          (For i In 0 To (#input_arcs_number @- 1) Loop (
+          (For i InR 0 To (#input_arcs_number @- 1) Loop (
                  v_internal_enabled @:= (#v_internal_enabled @&& (input_arcs_valid[[#i]]))
           ));;
           (s_enabled @<== #v_internal_enabled)
@@ -189,7 +190,7 @@ Definition reinit_time_counter_evaluation_ps :=
         (* Process body. *)
         (
           (v_internal_reinit_time_counter @:= false);;
-          (For i In 0 To (#input_arcs_number @- 1) Loop (
+          (For i InR 0 To (#input_arcs_number @- 1) Loop (
                  v_internal_reinit_time_counter @:= (#v_internal_reinit_time_counter @&& (reinit_time[[#i]]))
           ));;
           (s_reinit_time_counter @<== #v_internal_reinit_time_counter)
@@ -304,7 +305,7 @@ Definition priority_authorization_evaluation_ps :=
         (
           (v_priority_combination @:= false);;
 
-          (For i In 0 To (#input_arcs_number @- 1) Loop (
+          (For i InR 0 To (#input_arcs_number @- 1) Loop (
                  v_priority_combination @:= (#v_priority_combination @&& priority_authorizations[[#i]])
           ));;
 

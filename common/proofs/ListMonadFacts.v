@@ -140,6 +140,20 @@ Section Iter.
         apply Qtrans with (y := s0);
         [ eapply IHm; eauto | apply (f_inv b s0 v s' EQ0) ] ].
   Qed.
+
+  Lemma iter_inv_state2 :
+    forall {state A : Type} {f : A -> Mon unit} {l} {s : state} {v s'}
+           {Q : state -> Prop},
+      iter f l s = OK v s' ->
+      (forall a s1 x s2, f a s1 = OK x s2 -> Q s1 -> Q s2) ->
+      Q s ->
+      Q s'.
+  Proof.
+    intros until l; functional induction (iter f l) using iter_ind;
+      intros s v s' Q e; monadFullInv e; intros f_inv;
+      [ trivial
+      | intros Qs; eapply f_inv; eauto; eapply IHm; eauto ].
+  Qed.
   
   Remark iter_prop_A_state :
     forall {state A : Type} {f : A -> Mon unit} {l} (eqA : A -> A -> Prop) {s : state} {v s'}
