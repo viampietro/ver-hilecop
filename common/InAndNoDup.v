@@ -82,6 +82,16 @@ Section InAndNoDupLemmas.
            
   Qed.
 
+  Lemma nodup_appl {A : Type} :
+    forall l l' : list A,
+      NoDup (l ++ l') -> NoDup l.
+  Proof. eapply nodup_app; eauto. Qed.
+
+  Lemma nodup_appr {A : Type} :
+    forall l l' : list A,
+      NoDup (l ++ l') -> NoDup l'.
+  Proof. eapply nodup_app; eauto. Qed.
+  
   (** ∀ l, ll, NoDup (l ++ l') ⇒ 
     ∀ a ∈ l ⇒ a ∉ l'. *)
 
@@ -535,8 +545,11 @@ Section InAndNoDupLemmas.
 
 End InAndNoDupLemmas.
 
-#[export] Hint Resolve in_appl in_appr in_last : core.
+#[export]
+Hint Resolve in_appl in_appr in_last : core.
 
+#[export]
+Hint Resolve nodup_app nodup_appl nodup_appr : nodup.
 
 (** ** Misc. tactics for [In] and [NoDup] predicates *)
 

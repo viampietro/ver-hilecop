@@ -1,6 +1,7 @@
 (** * Facts about H-VHDL Abstract Syntax *)
 
 Require Import common.CoqLib.
+Require Import common.ListLib.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.WellDefinedDesign.
 
@@ -8,6 +9,10 @@ Require Import hvhdl.WellDefinedDesign.
 
 Section InCsFacts.
 
+  Lemma get_cids_InCs :
+    forall cstmt id__c id__e g i o, InCs (cs_comp id__c id__e g i o) cstmt -> In id__c (get_cids cstmt).
+  Admitted.
+  
   Lemma InCs_NoDup_comp_eq :
     forall {cstmt id__c id__e0 g0 i0 o0 id__e1 g1 i1 o1},
       InCs (cs_comp id__c id__e0 g0 i0 o0) cstmt ->
@@ -17,6 +22,20 @@ Section InCsFacts.
   Proof.    
     induction cstmt; try (solve [inversion 1]).
     destruct 1; destruct 1; reflexivity.
+
+    assert (get_cids_app : get_cids (cs_par cstmt1 cstmt2) = get_cids cstmt1 ++ get_cids cstmt2) by admit.
+    
+    inversion_clear 1 as [ InCs0 | InCs0 ];
+      inversion_clear 1 as [ InCs1 | InCs1 ]; intros NoDup_par;
+      [ eapply IHcstmt1; eauto | | | eapply IHcstmt2; eauto ].
+
+    (* CASE [c0, c1 ∈ cstmt1] and CASE [c0, c1 ∈ cstmt2]. *)
+    1,4 : (rewrite get_cids_app in NoDup_par; eauto with nodup).
+
+    (* CASE [c0 ∈ cstmt1] and [c1 ∈ cstmt2], and CASE [c0 ∈ cstmt2]
+       and [c1 ∈ cstmt1]. Contradicts NoDup in the two cases. *)
+    
+        
   Admitted.
 
 End InCsFacts.
