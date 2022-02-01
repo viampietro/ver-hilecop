@@ -5,13 +5,125 @@ Require Import common.ListLib.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.WellDefinedDesign.
 
-(** ** Facts about [InCs] *)
+(** ** Facts about [FoldLCs] and [foldl_cs] *)
 
-Section InCsFacts.
+Section FoldLCsFacts.
+
+  Functional Scheme foldl_cs_ind := Induction for foldl_cs Sort Prop.
+  
+  Lemma FoldLCs_ex :
+    forall {A : Type} (f : A -> cs -> A) cstmt a, exists res, FoldLCs f cstmt a res.
+  Proof.
+    induction cstmt; intros; try
+                               (match goal with
+                                | |- exists _, FoldLCs ?f ?cstmt ?a _ =>
+                                    exists (f a cstmt); constructor
+                                end).
+    destruct (IHcstmt1 a) as (res, FoldLCs1).
+    destruct (IHcstmt2 res) as (res', FoldLCs2).
+    eexists; econstructor.
+    eexact (FoldLCs1). eexact FoldLCs2.
+  Qed.
+
+  Lemma FoldLCs_determ :
+    forall {A : Type} {f : A -> cs -> A} {cstmt a res res'},
+      FoldLCs f cstmt a res ->
+      FoldLCs f cstmt a res' ->
+      res = res'.
+  Proof.
+    induction cstmt; try (inversion_clear 1; inversion_clear 1; auto).
+    assert (e : a' = a'0) by (eapply IHcstmt1; eauto).
+    rewrite e in *; eapply IHcstmt2; eauto.
+  Qed.
+
+  Lemma foldl_cs_build_list_by_app_In :
+    forall {A : Type} {f : list A -> cs -> list A},
+      (forall lofAs1 a,
+        exists lofAs2, f lofAs1 a = lofAs1 ++ lofAs2) ->
+      forall {cstmt} {lofAs} a, In a lofAs -> In a (foldl_cs f cstmt lofAs).
+  Proof.
+    intros A f ex_app cstmt lofAs.
+    functional induction (foldl_cs f cstmt lofAs) using foldl_cs_ind; cbn.
+    1, 2, 4: (match goal with
+              | |- forall (_ : _), _ -> In _ (_ ?acc ?cstmt)  =>
+                  destruct (ex_app acc cstmt) as [ acc1 f_app ];
+                  rewrite f_app; auto
+              end).
+    auto.
+  Qed.
+
+  Lemma foldl_cs_build_list_by_app_nil :
+    forall {A : Type} {f : list A -> cs -> list A} {g : cs -> list A},
+      (forall lofAs1 a, f lofAs1 a = lofAs1 ++ g a) ->
+      forall {cstmt} {lofAs}, foldl_cs f cstmt lofAs = lofAs ++ foldl_cs f cstmt [].
+  Proof.
+    intros A f g ex_app.
+    induction cstmt; cbn; intros lofAs.
+    1, 2, 4: match goal with
+             | |- ?f ?acc ?cstmt = ?acc ++ ?f [] ?cstmt  =>
+                 rewrite (ex_app acc cstmt); rewrite (ex_app [] cstmt); auto
+             end.
+    rewrite (IHcstmt1 lofAs).
+    rewrite (IHcstmt2 (lofAs ++ foldl_cs f cstmt1 [])).
+    rewrite (IHcstmt2 (foldl_cs f cstmt1 [])).
+    rewrite app_assoc; reflexivity.
+  Qed.
+    
+End FoldLCsFacts.
+
+(** ** Facts about [get_cids] *)
+
+Section GetCIdsFacts.
 
   Lemma get_cids_InCs :
     forall cstmt id__c id__e g i o, InCs (cs_comp id__c id__e g i o) cstmt -> In id__c (get_cids cstmt).
-  Admitted.
+  Proof.
+    unfold get_cids.
+    set (build_cids := (fun (cids : list HVhdlTypes.ident) (cstmt : cs) => match cstmt with
+                                                                           | cs_comp id _ _ _ _ => cids ++ [id]
+                                                                           | _ => cids
+                                                                           end)).
+    intros cstmt.
+    functional induction (foldl_cs build_cids cstmt []) using foldl_cs_ind;
+    try (solve [inversion_clear 1]).
+
+    (* CASE [cstmt = cs_comp] *)
+    - inversion_clear 1; cbn; auto.
+
+    (* CASE [cs_comp ∈ cstmt1 || cstmt2] *)
+    - inversion_clear 1 as [ InCs0 | InCs1 ].
+      (* SUBCASE [cs_comp ∈ cstmt1] *)
+      + eapply foldl_cs_build_list_by_app_In; eauto; destruct a; cbn.
+        1, 3, 4: (exists []; eapply app_nil_end).
+        exists [id__c0]; reflexivity.
+      + eauto.
+  Qed.
+
+  Lemma get_cids_app:
+    forall cstmt1 cstmt2 : cs, get_cids (cs_par cstmt1 cstmt2) = get_cids cstmt1 ++ get_cids cstmt2.
+  Proof.
+    unfold get_cids.
+    set (build_cids := (fun (cids : list HVhdlTypes.ident) (cstmt : cs) => match cstmt with
+                                                                           | cs_comp id _ _ _ _ => cids ++ [id]
+                                                                           | _ => cids
+                                                                           end)).
+    cbn; intros *.
+    erewrite @foldl_cs_build_list_by_app_nil with (lofAs := foldl_cs build_cids cstmt1 [])
+                                                  (g := fun cstmt => match cstmt with
+                                                                     | cs_comp id _ _ _ _ => [id]
+                                                                     | _ => []
+                                                                     end).
+    reflexivity.
+    destruct a; cbn.
+    1, 3, 4: (eapply app_nil_end).
+    reflexivity.
+  Qed.
+  
+End GetCIdsFacts.
+
+(** ** Facts about [InCs] *)
+
+Section InCsFacts.
   
   Lemma InCs_NoDup_comp_eq :
     forall {cstmt id__c id__e0 g0 i0 o0 id__e1 g1 i1 o1},
@@ -23,8 +135,6 @@ Section InCsFacts.
     induction cstmt; try (solve [inversion 1]).
     destruct 1; destruct 1; reflexivity.
 
-    assert (get_cids_app : get_cids (cs_par cstmt1 cstmt2) = get_cids cstmt1 ++ get_cids cstmt2) by admit.
-    
     inversion_clear 1 as [ InCs0 | InCs0 ];
       inversion_clear 1 as [ InCs1 | InCs1 ]; intros NoDup_par;
       [ eapply IHcstmt1; eauto | | | eapply IHcstmt2; eauto ].
@@ -34,9 +144,10 @@ Section InCsFacts.
 
     (* CASE [c0 ∈ cstmt1] and [c1 ∈ cstmt2], and CASE [c0 ∈ cstmt2]
        and [c1 ∈ cstmt1]. Contradicts NoDup in the two cases. *)
-    
-        
-  Admitted.
+    1, 2: (elimtype False;
+           rewrite get_cids_app in NoDup_par;
+           eapply nodup_app_not_in; eauto; eapply get_cids_InCs; eauto).    
+  Qed.
 
 End InCsFacts.
 
@@ -85,29 +196,6 @@ Proof.
     + rewrite (IHFlattenCs1 l0 H2); rewrite (IHFlattenCs2 l'0 H3); reflexivity.
 Defined.
 
-Lemma FoldLCs_ex :
-  forall {A : Type} (f : A -> cs -> A) cstmt a, exists res, FoldLCs f cstmt a res.
-Proof.
-  induction cstmt; intros; try
-  (match goal with
-   | |- exists _, FoldLCs ?f ?cstmt ?a _ =>
-     exists (f a cstmt); constructor
-   end).
-  destruct (IHcstmt1 a) as (res, FoldLCs1).
-  destruct (IHcstmt2 res) as (res', FoldLCs2).
-  eexists; econstructor.
-  eexact (FoldLCs1). eexact FoldLCs2.
-Qed.
 
-Lemma FoldLCs_determ :
-  forall {A : Type} {f : A -> cs -> A} {cstmt a res res'},
-    FoldLCs f cstmt a res ->
-    FoldLCs f cstmt a res' ->
-    res = res'.
-Proof.
-  induction cstmt; try (inversion_clear 1; inversion_clear 1; auto).
-  assert (e : a' = a'0) by (eapply IHcstmt1; eauto).
-  rewrite e in *; eapply IHcstmt2; eauto.
-Qed.
 
 

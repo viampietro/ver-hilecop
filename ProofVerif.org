@@ -24,7 +24,9 @@
 ****** TODO [#Q] put_comp_pci_ex
 ******* TODO [#Q] put_comp_aux_pci_ex (Sitpn2HVhdlUtilsFacts)
 ******** DONE put_comp_aux_inv_state
-******** TODO [#A] InCs_NoDup_comp_eq (AbstractSyntaxFacts)
+******** DONE InCs_NoDup_comp_eq (AbstractSyntaxFacts)
+********* DONE get_cids_InCs (AbstractSyntaxFacts)
+********* DONE get_cids_app (AbstractSyntaxFacts)
 ******** TODO [#A] put_comp_aux_InCs
 ******** TODO [#A] put_comp_aux_InCs_inv
 ****** TODO [#A] put_comp_nodup_cids

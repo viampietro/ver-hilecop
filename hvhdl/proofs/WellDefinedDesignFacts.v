@@ -1,14 +1,14 @@
 (** * Facts about Well-defined H-VHDL Designs *)
 
 Require Import common.CoqLib.
-Require Import common.CoqTactics.
+Require Import common.proofs.CoqTactics.
 Require Import common.InAndNoDup.
-Require Import common.ListPlusFacts.
-Require Import common.ListPlusTactics.
+Require Import common.proofs.ListPlusFacts.
+Require Import common.proofs.ListPlusTactics.
 
 Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxFacts.
+Require Import hvhdl.proofs.AbstractSyntaxFacts.
 
 Import HVhdlCsNotations.
 
