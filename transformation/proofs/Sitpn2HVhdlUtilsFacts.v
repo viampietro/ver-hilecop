@@ -5,9 +5,8 @@ Require Import common.GlobalTypes.
 Require Import common.ListPlus.
 Require Import common.ListDep.
 Require Import common.StateAndErrorMonad.
-
-Require Import String.
 Require Import common.proofs.StateAndErrorMonadTactics.
+Require Import common.InAndNoDup.
 
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
@@ -20,10 +19,43 @@ Require Import transformation.Sitpn2HVhdlTypes.
 Require Import transformation.Sitpn2HVhdlUtils.
 Require Import transformation.proofs.SInvTactics.
 
+(** ** Facts about [get_comp] *)
+
+Section GetCompFacts.
+
+  (* Can not use [solve_sinv_pattern] to decide [get_comp_inv_state]
+     because it is used in [solve_sinv_pattern].  *)
+  
+  Lemma get_comp_aux_InCs :
+    forall {cstmt} {sitpn : Sitpn} {id__c : ident}
+           {s : Sitpn2HVhdlState sitpn} {s'}
+           {id__e g i o},
+      get_comp_aux sitpn id__c cstmt s = OK (Some (id__e, g, i, o)) s' ->
+      InCs (cs_comp id__c id__e g i o) cstmt.
+  Admitted.
+  
+End GetCompFacts.
+
+
 (** ** Facts about [put_comp] *)
 
 Section PutCompFacts.
 
+  Lemma put_comp_aux_InCs :
+    forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
+           {s : Sitpn2HVhdlState sitpn} {v s'},
+      put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+      InCs (cs_comp id__c id__e g i o) v.
+  Proof.
+    induction cstmt.
+    intros *; cbn; intros e; monadInv e; simpl; right; reflexivity.
+    intros *; cbn; intros e; destruct (id__c0 =? id__c); monadInv e;
+      [ constructor | simpl; right; reflexivity ].
+    intros *; cbn; intros e; monadInv e;
+      destruct x; monadInv EQ0; simpl; [ left | right ]; eauto.
+    intros *; cbn; intros e; monadInv e; simpl; right; reflexivity.
+  Qed.
+  
   Lemma put_comp_aux_InCs_inv :
     forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s'},
@@ -34,26 +66,33 @@ Section PutCompFacts.
         InCs (cs_comp id__c' id__e' g' i' o') v.
   Proof. induction cstmt; intros *; simpl; try (solve [inversion 3]).
          - case_eq (id__c0 =? id__c); intros e EQ; monadInv EQ.
-           + inversion 2; subst. 
-             rewrite Nat.eqb_eq in e; congruence.
+           + inversion 2; subst; rewrite Nat.eqb_eq in e; congruence.
            + inversion_clear 2; do 2 constructor.
          - intros EQ; monadInv EQ.
-  Admitted.
+           destruct x;
+             monadInv EQ1; intros *; intros neq_idc; destruct 1; simpl;
+             [ left | right | left | right ]; eauto.
+  Qed.
   
-  Lemma put_comp_aux_InCs :
-    forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
-           {s : Sitpn2HVhdlState sitpn} {v s'},
-      put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
-      InCs (cs_comp id__c id__e g i o) v.
-  Admitted.
-
   Lemma put_comp_aux_comp_ex :
     forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s'},
       put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
       (exists g0 i0 o0, InCs (cs_comp id__c id__e g0 i0 o0) cstmt) ->
       (exists g1 i1 o1, InCs (cs_comp id__c id__e g1 i1 o1) v).
-  Admitted.
+  Proof.
+    induction cstmt; intros *; cbn; intros e.
+    1,4: (monadInv e; simpl; destruct 1 as [ g0 [ i0 [ o0 eq_comp ] ] ]; inversion eq_comp).
+    destruct (id__c0 =? id__c); destruct 1 as [ g1 [ i1 [ o1 eq_comp ] ] ]; inversion eq_comp; subst;
+      monadInv e; do 3 eexists; [econstructor | cbn; left; econstructor].
+    monadInv e.
+    destruct x;
+      monadInv EQ0; intros *; destruct 1 as [ g0 [ i0 [ o0 [ InCs1 | InCs2 ] ] ] ].
+    edestruct IHcstmt1 as [ g1 [ i1 [ o1 InCsx ] ] ]; eauto; simpl; do 3 eexists; eauto.
+    simpl; do 3 eexists; eauto.
+    simpl; do 3 eexists; eauto.
+    edestruct IHcstmt2 as [ g1 [ i1 [ o1 InCsx ] ] ]; eauto; simpl; do 3 eexists; eauto.
+  Qed.
   
   Lemma put_comp_aux_pci_ex :
     forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
@@ -109,6 +148,31 @@ Section PutCompFacts.
   Proof. intros *; intros e; monadFullInv e; cbn.
          eapply put_comp_aux_pci_ex; eauto.  
   Qed.
+
+  Lemma put_comp_aux_nodup_cids :
+    forall (cstmt : cs) (sitpn : Sitpn) (id__c id__e : ident) (g : genmap) (i : inputmap) (o : outputmap)
+           (s : Sitpn2HVhdlState sitpn) (v : cs) (s' : Sitpn2HVhdlState sitpn),
+      put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
+      NoDup (get_cids cstmt) -> NoDup (get_cids v).
+  Proof.
+    induction cstmt; intros *; intros e; cbn in e.
+    (* process *)
+    monadInv e; cbn; eauto.
+    (* comp *)
+    case_eq (id__c0 =? id__c); intros eqb; rewrite eqb in e; monadInv e.
+    erewrite Nat.eqb_eq in eqb; eauto.
+    rewrite eqb; cbn; eauto.
+    cbn; constructor; eauto; edestruct 1; eauto.
+    intros; eapply beq_nat_false; eauto.
+    (* par *)
+    monadInv e.
+    destruct x.
+    monadInv EQ0.
+    do 2 rewrite get_cids_app.
+    intro; eapply NoDup_app_cons; eauto with nodup.
+    intros id__c' Inx In2.
+    
+  Admitted.
   
   Lemma put_comp_nodup_cids :
     forall {sitpn : Sitpn} {id__c id__e} {g i o}
@@ -116,24 +180,10 @@ Section PutCompFacts.
       put_comp id__c id__e g i o s = OK v s' ->
       NoDup (get_cids (beh s)) ->
       NoDup (get_cids (beh s')).
-  Admitted.
+  Proof. intros *; intros e; monadFullInv e; simpl.
+         eapply put_comp_aux_nodup_cids; eauto.
+  Qed.
 
   
 End PutCompFacts.
 
-(** ** Facts about [get_comp] *)
-
-Section GetCompFacts.
-
-  (* Can not use [solve_sinv_pattern] to decide [get_comp_inv_state]
-     because it is used in [solve_sinv_pattern].  *)
-  
-  Lemma get_comp_aux_InCs :
-    forall {cstmt} {sitpn : Sitpn} {id__c : ident}
-           {s : Sitpn2HVhdlState sitpn} {s'}
-           {id__e g i o},
-      get_comp_aux sitpn id__c cstmt s = OK (Some (id__e, g, i, o)) s' ->
-      InCs (cs_comp id__c id__e g i o) cstmt.
-  Admitted.
-  
-End GetCompFacts.

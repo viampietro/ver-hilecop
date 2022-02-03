@@ -13,13 +13,6 @@ Local Set Implicit Arguments.
 
 Local Notation "| e |" := (exist _ e _) (at level 50).
 
-(** States that marking [m] is the residual marking resulting of the
-    withdrawal of the tokens from the input places of transitions that
-    belong to the [Fired] field of state s.  *)
-
-Definition IsTransientMarking (sitpn : Sitpn) (s : SitpnState sitpn) (fired : list (T sitpn)) (m : P sitpn -> nat) :=
-  MarkingSubPreSum (Fired s fired) (M s) m.
-
 (** Defines the Sitpn state transition relation. *)
 
 Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s' : SitpnState sitpn) : Clk -> Prop :=
@@ -91,11 +84,6 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
                       (natsum fpre fired > 0) /\ (M s p - natsum fpre fired < ω)
                   | _ => False end))) ->
         reset s' t = false) ->
-    
-    (forall (t : Ti sitpn) fired m,
-        IsTransientMarking s fired m ->
-        (~Sens (M s) t \/ Sensbt m t) ->
-        ~Fired s fired t -> reset s' t = false) ->
 
     (** Determines if some functions are executed. *)
     (forall f fired,

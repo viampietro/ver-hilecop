@@ -21,15 +21,16 @@
 ***** TODO [#Q] gen_inter_pci_ex (GenerateInterconnectionsFacts)
 ****** DONE conn_to_input_tcis_inv_beh 
 ****** DONE conn_to_input_tcis_inv_γ
-****** TODO [#Q] put_comp_pci_ex
-******* TODO [#Q] put_comp_aux_pci_ex (Sitpn2HVhdlUtilsFacts)
+****** DONE put_comp_pci_ex
+******* DONE put_comp_aux_pci_ex (Sitpn2HVhdlUtilsFacts)
 ******** DONE put_comp_aux_inv_state
 ******** DONE InCs_NoDup_comp_eq (AbstractSyntaxFacts)
 ********* DONE get_cids_InCs (AbstractSyntaxFacts)
 ********* DONE get_cids_app (AbstractSyntaxFacts)
-******** TODO [#A] put_comp_aux_InCs
-******** TODO [#A] put_comp_aux_InCs_inv
-****** TODO [#A] put_comp_nodup_cids
+******** DONE put_comp_aux_InCs (Sitpn2HVhdlUtilsFacts)
+******** DONE put_comp_aux_InCs_inv (Sitpn2HVhdlUtilsFacts)
+****** DONE [#Q] put_comp_nodup_cids (Sitpn2hvhdlutilsfacts)
+******* TODO [#A] put_comp_aux_nodup_cids (Sitpn2hvhdlutilsfacts)
 ****** TODO [#A] conn_to_output_tcis_nodup_cids (GenerateInterconnectionsInvs)
 ****** TODO [#A] conn_to_output_tcis_comp_ex (GenerateInterconnectionsInvs)
 ****** TODO [#A] get_comp_aux_InCs (Sitpn2HVhdlUtilsFacts)
