@@ -30,10 +30,14 @@
 ******** DONE put_comp_aux_InCs (Sitpn2HVhdlUtilsFacts)
 ******** DONE put_comp_aux_InCs_inv (Sitpn2HVhdlUtilsFacts)
 ****** DONE [#Q] put_comp_nodup_cids (Sitpn2hvhdlutilsfacts)
-******* TODO [#A] put_comp_aux_nodup_cids (Sitpn2hvhdlutilsfacts)
+******* TODO [#Q] put_comp_aux_nodup_cids (Sitpn2hvhdlutilsfacts)
+******** DONE get_comp_aux_InCs
+******** DONE get_comp_aux_not_In_cids
+********* DONE get_comp_aux_not_InCs
+********* DONE get_cids_In_ex
+******** TODO [#A] put_comp_aux_cid_In_cstmt
 ****** TODO [#A] conn_to_output_tcis_nodup_cids (GenerateInterconnectionsInvs)
 ****** TODO [#A] conn_to_output_tcis_comp_ex (GenerateInterconnectionsInvs)
-****** TODO [#A] get_comp_aux_InCs (Sitpn2HVhdlUtilsFacts)
 ****** TODO [#A] conn_to_output_tcis_pci_ex_inv (GenerateInterconnectionsInvs)
 ***** TODO [#A] gen_archi_nodup_cids (GenerateArchitectureFacts)
 ***** TODO [#A] gen_ports_pci_ex

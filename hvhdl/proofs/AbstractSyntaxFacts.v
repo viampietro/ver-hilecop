@@ -2,8 +2,10 @@
 
 Require Import common.CoqLib.
 Require Import common.ListLib.
+
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.HVhdlTypes.
 
 (** ** Facts about [FoldLCs] and [foldl_cs] *)
 
@@ -98,7 +100,7 @@ Section GetCIdsFacts.
         exists [id__c0]; reflexivity.
       + eauto.
   Qed.
-
+  
   Lemma get_cids_app:
     forall cstmt1 cstmt2 : cs, get_cids (cs_par cstmt1 cstmt2) = get_cids cstmt1 ++ get_cids cstmt2.
   Proof.
@@ -117,6 +119,21 @@ Section GetCIdsFacts.
     destruct a; cbn.
     1, 3, 4: (eapply app_nil_end).
     reflexivity.
+  Qed.
+  
+  Lemma get_cids_In_ex:
+    forall (cstmt : cs) (id__c : ident),
+      In id__c (get_cids cstmt) ->
+      exists (id__e : ident) (g : genmap) (i : inputmap) (o : outputmap), InCs (cs_comp id__c id__e g i o) cstmt.
+  Proof.
+    induction cstmt; try (solve [inversion_clear 1]).
+    inversion_clear 1 as [ eq_idc | False_ ];
+      [ subst; exists id__e, g, i, o; reflexivity | destruct False_ ].
+    rewrite get_cids_app.
+    intros id__c In_app; edestruct in_app_or as [ In1 | In2 ]; eauto;
+      [ edestruct IHcstmt1 as [ id__e [ g [ i [ o InCs1 ] ] ] ]
+      | edestruct IHcstmt2 as [ id__e [ g [ i [ o InCs2 ] ] ] ] ];
+      eauto; do 4 eexists; [ left | right ]; eauto.
   Qed.
   
 End GetCIdsFacts.
