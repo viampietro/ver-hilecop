@@ -6,7 +6,7 @@
 **** DONE NoDupA_fs_eqk_eqv (SetoidListFacts) [100%] 
 ***** DONE InA_setv
 ***** DONE getv_idle
-**** TODO [#Q] sitpn2hvhdl_pci_ex (GenerateHVhdlFacts) [40%]
+**** TODO [#Q] sitpn2hvhdl_pci_ex (GenerateHVhdlFacts) [60%]
 ***** DONE gen_sitpn_infos_sil_lofPs
 ***** DONE gen_archi_pci_ex
 ****** DONE gen_pcis_pci_ex
@@ -18,7 +18,7 @@
 ******** DONE build_pci_inv_state_gamma
 ******* DONE SIL_forall_A
 ****** DONE gen_tcis_t_comp_ex (GenerateArchitectureInvs)
-***** TODO [#Q] gen_inter_pci_ex (GenerateInterconnectionsFacts)
+***** DONE gen_inter_pci_ex (GenerateInterconnectionsFacts)
 ****** DONE conn_to_input_tcis_inv_beh 
 ****** DONE conn_to_input_tcis_inv_γ
 ****** DONE put_comp_pci_ex
@@ -29,16 +29,18 @@
 ********* DONE get_cids_app (AbstractSyntaxFacts)
 ******** DONE put_comp_aux_InCs (Sitpn2HVhdlUtilsFacts)
 ******** DONE put_comp_aux_InCs_inv (Sitpn2HVhdlUtilsFacts)
-****** DONE [#Q] put_comp_nodup_cids (Sitpn2hvhdlutilsfacts)
-******* TODO [#Q] put_comp_aux_nodup_cids (Sitpn2hvhdlutilsfacts)
+****** DONE put_comp_nodup_cids (Sitpn2hvhdlutilsfacts)
+******* DONE put_comp_aux_nodup_cids (Sitpn2hvhdlutilsfacts)
 ******** DONE get_comp_aux_InCs
 ******** DONE get_comp_aux_not_In_cids
 ********* DONE get_comp_aux_not_InCs
 ********* DONE get_cids_In_ex
-******** TODO [#A] put_comp_aux_cid_In_cstmt
-****** TODO [#A] conn_to_output_tcis_nodup_cids (GenerateInterconnectionsInvs)
-****** TODO [#A] conn_to_output_tcis_comp_ex (GenerateInterconnectionsInvs)
-****** TODO [#A] conn_to_output_tcis_pci_ex_inv (GenerateInterconnectionsInvs)
+******** DONE put_comp_aux_cid_In_cstmt
+****** DONE conn_to_output_tcis_nodup_cids (GenerateInterconnectionsInvs)
+****** DONE conn_to_output_tcis_comp_ex (GenerateInterconnectionsInvs)
+******* DONE get_comp_uniq_comp
+******** DONE get_comp_aux_uniq_comp
+****** DONE conn_to_output_tcis_pci_ex_inv (GenerateInterconnectionsInvs)
 ***** TODO [#A] gen_archi_nodup_cids (GenerateArchitectureFacts)
 ***** TODO [#A] gen_ports_pci_ex
 **** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]

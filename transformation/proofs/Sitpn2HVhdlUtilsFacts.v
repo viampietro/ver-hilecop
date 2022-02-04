@@ -39,6 +39,16 @@ Section GetCompFacts.
       [ left; eapply IHcstmt1 | right; eapply IHcstmt2 ]; eauto.
   Qed.
 
+  Lemma get_comp_InCs :
+    forall {sitpn : Sitpn} {id__c : ident}
+           {s : Sitpn2HVhdlState sitpn} {s'}
+           {id__e g i o},
+      get_comp id__c s = OK (id__e, g, i, o) s' ->
+      InCs (cs_comp id__c id__e g i o) (beh s).
+  Proof. intros *; intros e; minv e.
+         eapply get_comp_aux_InCs; eauto.
+  Qed.
+  
   Lemma get_comp_aux_not_InCs:
     forall (cstmt : cs) (sitpn : Sitpn) (s s' : Sitpn2HVhdlState sitpn) (id__c : ident),
       get_comp_aux sitpn id__c cstmt s = OK None s' ->
@@ -60,8 +70,43 @@ Section GetCompFacts.
     forall (cstmt : cs) (sitpn : Sitpn) (s s' : Sitpn2HVhdlState sitpn) (id__c : ident),
       get_comp_aux sitpn id__c cstmt s = OK None s' -> In id__c (get_cids cstmt) -> False.
   Proof. (intros; eapply get_comp_aux_not_InCs; eauto; eapply get_cids_In_ex; eauto). Qed.
+
+  Lemma get_comp_aux_uniq_comp:
+    forall {sitpn : Sitpn} {id__c} {cstmt} {s s' : Sitpn2HVhdlState sitpn} {v},
+      get_comp_aux sitpn id__c cstmt s = OK (Some v) s' ->
+      forall (id__e : ident) (g : genmap) (i : inputmap) (o : outputmap)
+             (id__e' : ident) (g' : genmap) (i' : inputmap) (o' : outputmap),
+        InCs (cs_comp id__c id__e g i o) cstmt ->
+        InCs (cs_comp id__c id__e' g' i' o') cstmt ->
+        cs_comp id__c id__e g i o = cs_comp id__c id__e' g' i' o'.
+  Proof.
+    induction cstmt.
+    1, 4: inversion 2.
+    inversion_clear 2; inversion_clear 1; reflexivity.
+    intros *; intros e.
+    destruct 1 as [ InCs1 | InCs2]; destruct 1 as [ InCs1' | InCs2' ].
+    1, 4 : (minv e; (eauto || (elimtype False; eapply get_comp_aux_not_InCs; eauto))).
+    1,2 : (minv e; elimtype False; eapply get_comp_aux_not_InCs; eauto).
+  Qed.
+  
+  Lemma get_comp_uniq_comp:
+    forall (sitpn : Sitpn) (id__c : ident) (s s' : Sitpn2HVhdlState sitpn) v,
+      get_comp id__c s = OK v s' ->
+      forall (id__e : ident) (g : genmap) (i : inputmap) (o : outputmap)
+             (id__e' : ident) (g' : genmap) (i' : inputmap) (o' : outputmap),
+        InCs (cs_comp id__c id__e g i o) (beh s) ->
+        InCs (cs_comp id__c id__e' g' i' o') (beh s) ->
+        cs_comp id__c id__e g i o = cs_comp id__c id__e' g' i' o'.
+  Proof.
+    intros *; intros e; minv e.
+    eapply get_comp_aux_uniq_comp; eauto.
+  Qed.
   
 End GetCompFacts.
+
+#[export] Hint Resolve get_comp_aux_InCs get_comp_aux_not_InCs : get_comp.
+#[export] Hint Resolve get_comp_aux_not_In_cids : get_comp.
+#[export] Hint Resolve get_comp_uniq_comp : get_comp.
 
 (** ** Facts about [put_comp] *)
 
@@ -81,7 +126,9 @@ Section PutCompFacts.
       destruct x; monadInv EQ0; simpl; [ left | right ]; eauto.
     intros *; cbn; intros e; monadInv e; simpl; right; reflexivity.
   Qed.
-  
+
+
+    
   Lemma put_comp_aux_InCs_inv :
     forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s'},
@@ -181,7 +228,18 @@ Section PutCompFacts.
            (o : outputmap) (s' s : Sitpn2HVhdlState sitpn) (x : cs),
       put_comp_aux sitpn id__c id__e g i o cstmt s = OK x s' ->
       forall id__c' : ident, In id__c' (get_cids x) -> id__c <> id__c' -> In id__c' (get_cids cstmt).
-  Admitted.
+  Proof.
+    induction cstmt.
+    1, 4: (intros *; intros e; monadInv e; cbn; intros id__c' [ eq_ | ] neq_; congruence).
+    (* comp *)
+    intros *; intros e; cbn in e; destruct (id__c0 =? id__c) eqn: eq_idc.
+    monadInv e; cbn; intros id__c' [ eq_idc0 | ] neq_; auto.
+    monadInv e; cbn; intros id__c' [ eq_cc' | [ eq_c0c' | ] ] neq_; auto.
+    (* par *)
+    intros *; intros e; monadInv e.
+    destruct x0; monadInv EQ0; do 2 (rewrite get_cids_app);
+      intros; edestruct in_app_or; eauto.
+  Qed.
   
   Lemma put_comp_aux_nodup_cids :
     forall (cstmt : cs) (sitpn : Sitpn) (id__c id__e : ident) (g : genmap) (i : inputmap) (o : outputmap)
@@ -227,3 +285,13 @@ Section PutCompFacts.
   
 End PutCompFacts.
 
+#[export]
+Hint Resolve put_comp_aux_comp_ex put_comp_aux_pci_ex
+ put_comp_pci_ex : put_comp.
+
+#[export]
+Hint Resolve put_comp_aux_InCs put_comp_aux_InCs_inv : put_comp.
+
+#[export]
+Hint Resolve put_comp_aux_nodup_cids put_comp_nodup_cids
+ : put_comp.
