@@ -15,9 +15,15 @@ Local Notation "| e |" := (exist _ e _) (at level 50).
 
 (** Defines the Sitpn state transition relation. *)
 
-Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s s' : SitpnState sitpn) : Clk -> Prop :=
+Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) :
+  SitpnState sitpn -> SitpnState sitpn -> Clk -> Prop :=
 | SitpnStateTransition_falling :
 
+  forall Ma Ic rst exec cnd Ic' exec' cnd',
+
+    let s := BuildSitpnState Ma Ic rst exec cnd in
+    let s' := BuildSitpnState Ma Ic' rst exec' cnd' in
+    
     (** Captures the new value of conditions, and determines the
         activation status for actions.  *)
     (forall c, cond s' c = E τ c) ->
@@ -26,6 +32,9 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
         @Sig_in_List (P sitpn) (fun p => M s p > 0) marked ->
         ex s' (inl a) = bsum (fun p => has_A (proj1_sig p) a) marked) ->
 
+    (** Function execution status stay the same between s and s'. *)
+    (forall f, ex s' (inr f) = ex s (inr f)) ->
+    
     (** Updates the dynamic time intervals according to the firing
        status of transitions and the reset orders. *)
     (forall (t : Ti sitpn), ~Sens (M s) t -> I s' t = 0) ->
@@ -38,21 +47,17 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
         Sens (M s) t ->
         reset s t = false ->
         (upper t <> i+ /\ TcGtUpper s t) -> I s' t = I s t) ->
-
-    (** Marking stays the same between s and s'. *)
-    (forall p, M s p = M s' p) -> 
-
-    (** Reset orders stay the same between s and s'. *)
-    (forall t, reset s t = reset s' t) ->
-
-    (** Function states stay the same between s and s'. *)
-    (forall f, ex s (inr f) = ex s' (inr f)) ->
     
     (** Conclusion *)
     SitpnStateTransition E τ s s' fe
 
 | SitpnStateTransition_rising:
 
+  forall Ma Ic rst exec cnd Ma' exec' rst',
+
+    let s := BuildSitpnState Ma Ic rst exec cnd in
+    let s' := BuildSitpnState Ma' Ic rst' exec' cnd in
+    
     (** Marking at state s' is the new marking resulting of the firing
         of all transitions belonging to the Fired subset at state
         s. *)  
@@ -89,10 +94,7 @@ Inductive SitpnStateTransition sitpn (E : nat -> C sitpn -> bool) (τ : nat) (s 
     (forall f fired,
         IsFiredList s fired ->
         ex s' (inr f) = bsum (fun t => has_F t f) fired) ->
-    
-    (** Condition values stay the same between s and s'. *)
-    (forall c, cond s' c = cond s c) -> 
-    
+        
     (** Action states stay the same between s and s'. *)
     (forall a, ex s' (inl a) = ex s (inl a)) ->
     

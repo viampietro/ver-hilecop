@@ -5,6 +5,7 @@ Require Import GlobalTypes.
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 Require Import sitpn.SitpnTypes.
+Require Import sitpn.SitpnSemanticsDefs.
 
 Set Implicit Arguments.
 
@@ -37,22 +38,13 @@ Definition PriorityRelIsWellDefined (sitpn : Sitpn) :=
 
 (** ** Definitions about transitions in conflict *)
 
-(** Conflict group: a maximal subset of transitions that a linked to a
-    common input place by a basic arc. *)
-
-Definition IsConflictGroupOfP sitpn (p : P sitpn) (cg : list (T sitpn)) : Prop :=
-  NoDup cg /\ (forall t, List.In t cg <-> exists ω, pre p t = Some (basic, ω)).
-
-Definition IsConflictGroup sitpn (cg : list (T sitpn)) : Prop :=
-  exists p, IsConflictGroupOfP p cg.
-
 (* States that [{a, b}] is a pair in list [l] *)
 
-Definition IsAPair {A : Type} (a b : A) (l : list A) :=
-  List.In a l /\ List.In b l /\ a <> b.
+Definition IsAPair {A : Type} (eqA : A -> A -> Prop) (a b : A) (l : list A) :=
+  InA eqA a l /\ InA eqA b l /\ ~eqA a b.
 
-Definition ForallPair {A : Type} (P : A -> A -> Prop) (l : list A) : Prop:=
-  forall a b, IsAPair a b l -> P a b.
+Definition ForallPair {A : Type} (eqA : A -> A -> Prop) (P : A -> A -> Prop) (l : list A) : Prop:=
+  forall a b, IsAPair eqA a b l -> P a b.
 
 (* Cases of mutual exclusion between two transitions 
 
@@ -89,60 +81,28 @@ Definition MutualExcl {sitpn} (t t' : T sitpn) :=
 (* States that in a given conflict group, conflicts are solved by
    mutual exclusion for all pair of transitions. *)
 
-Definition AllConflictsSolvedByMutualExcl sitpn (cg : list (T sitpn)) (pf : IsConflictGroup cg) :=
-  ForallPair MutualExcl cg.
+Definition AllConflictsSolvedByMutualExcl sitpn (cg : list (T sitpn)) :=
+  ForallPair (@Teq sitpn) MutualExcl cg.
 
 (* States that for a given [sitpn], and for a given conflict group
    [cg], the priority relation is a strict total order of the elements
    of [cg]. *)
 
-Definition PrIsTotalOverConflictGroup sitpn (cg : list (T sitpn)) (pf : IsConflictGroup cg) : Prop.
-  refine (IsStrictTotalOrderOverList (T sitpn) (@Teq sitpn) (@pr sitpn) cg _);
-    unfold IsConflictGroup in pf;
-    inversion pf as (p, pf'); unfold IsConflictGroupOfP in pf'; apply (proj1 pf').
-Defined.
+Definition PrIsTotalOverConflictGroup sitpn (cg : list (T sitpn)) : Prop :=
+  IsStrictTotalOrder
+    { t | InA (@Teq sitpn) t cg }
+    (fun t t' => (@Teq sitpn (proj1_sig t) (proj1_sig t')))
+    (fun t t' => @pr sitpn (proj1_sig t) (proj1_sig t')).
 
-(* For all couple of transitions (in the set of transitions of
-   [sitpn]), either the couple is not in conflict or the conflict is
-   solved *)
+(* For all place [p], and conflicting output transitions of [p], all
+   pairs of conflict are either solved by mutual exclusion or the
+   priority relation is a strict total order over the set of
+   conflicting output transitions of [p]. *)
 
 Definition AllConflictsSolved (sitpn : Sitpn) :=
-  forall (cg : list (T sitpn)) (pf : IsConflictGroup cg),
-    AllConflictsSolvedByMutualExcl pf \/ PrIsTotalOverConflictGroup pf.
-
-(** Defines a predicate stating that the list of nat used in an
-    [Sitpn] structure to implement finite sets respect the [Nodup]
-    constraint. 
-
-    We define this property in a separate predicate because it is
-    an implementation-dependent property.
- *)
-
-Record AreWellImplementedFiniteSets (sitpn : Sitpn) : Prop :=
-  {
-  nodup_pls : NoDup (places sitpn);
-  nodup_trs : NoDup (transitions sitpn);
-  nodup_conds : NoDup (conditions sitpn);
-  nodup_actions : NoDup (actions sitpn);
-  nodup_funs : NoDup (functions sitpn);
-  }.
-
-(* Defines a predicate stating that the functions [pre, post, M0, I__s,
-   has_C, has_A, has_F] and also the [pr] relation of a given [sitpn],
-   yield the same value for inputs that verify the [P1SigEq] relation.
-   
- *)
-
-Record AreWellImplementedFunsAndRel (sitpn : Sitpn) := {
-  wi_pre : forall p1 p2 t1 t2, Peq p1 p2 -> Teq t1 t2 -> @pre sitpn p1 t1 = @pre sitpn p2 t2;
-  wi_post : forall p1 p2 t1 t2, Peq p1 p2 -> Teq t1 t2 -> @post sitpn t1 p1 = @post sitpn t2 p2;
-  wi_M0 : forall p1 p2, Peq p1 p2 -> @M0 sitpn p1 = @M0 sitpn p2;
-  wi_Is : forall t1 t2, Teq t1 t2 -> @Is sitpn t1 = @Is sitpn t2;
-  wi_has_C : forall t1 t2 c1 c2, Teq t1 t2 -> Ceq c1 c2 -> @has_C sitpn t1 c1 = @has_C sitpn t2 c2;
-  wi_has_A : forall p1 p2 a1 a2, Peq p1 p2 -> Aeq a1 a2 -> @has_A sitpn p1 a1 = @has_A sitpn p2 a2;
-  wi_has_F : forall t1 t2 f1 f2, Teq t1 t2 -> Feq f1 f2 -> @has_F sitpn t1 f1 = @has_F sitpn t2 f2;
-  wi_pr : forall t1 t2 t3 t4, Teq t1 t2 -> Teq t3 t4 -> @pr sitpn t1 t3 <-> @pr sitpn t2 t4;
-  }.
+  forall (p : P sitpn),
+    AllConflictsSolvedByMutualExcl (toutputs_c p)
+    \/ PrIsTotalOverConflictGroup (toutputs_c p).
 
 (** Defines a predicate stating that an [Sitpn] is well-defined, that is: 
 
@@ -156,15 +116,10 @@ Record AreWellImplementedFunsAndRel (sitpn : Sitpn) := {
 
 Record IsWellDefined (sitpn : Sitpn) :=
   {
-  pls_not_empty : places sitpn <> nil;
-  trs_not_empty : transitions sitpn <> nil;
-  no_iso_pl : HasNoIsolatedPlace sitpn;
-  no_iso_tr : HasNoIsolatedTransition sitpn;
-  pr_wd : PriorityRelIsWellDefined sitpn;
-  all_confl_solved : AllConflictsSolved sitpn;
-                              
-  (* Implementation-dependent property. *)
-  wi_fsets : AreWellImplementedFiniteSets sitpn;
-  wi_funs : AreWellImplementedFunsAndRel sitpn;
+    pls_not_empty : places sitpn <> nil;
+    trs_not_empty : transitions sitpn <> nil;
+    no_iso_pl : HasNoIsolatedPlace sitpn;
+    no_iso_tr : HasNoIsolatedTransition sitpn;
+    all_confl_solved : AllConflictsSolved sitpn;
   }.
 

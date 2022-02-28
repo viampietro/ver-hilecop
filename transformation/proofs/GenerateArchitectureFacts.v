@@ -14,6 +14,7 @@ Require Import sitpn.SitpnFacts.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.WellDefinedDesign.
+Require Import hvhdl.proofs.AbstractSyntaxFacts.
 
 Require Import transformation.Sitpn2HVhdl.
 Require Import transformation.proofs.SInvTactics.
@@ -35,6 +36,12 @@ Section GenPCIsFacts.
       build_pci p pinfo n s = OK v s' ->
       γ s = γ s'.
   Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma build_pci_inv_inc_nextid :
+    forall {sitpn} {p : P sitpn} {pinfo n s v s'},
+      build_pci p pinfo n s = OK v s' ->
+      nextid s <= nextid s'.
+  Admitted.
   
   (** *** Facts about the [generate_pci] function *)
 
@@ -182,6 +189,60 @@ Section GenArchiFacts.
     eapply gen_pcis_pci_ex; eauto.
   Qed.
 
+  Lemma gen_archi_nodup_cids2 :
+    forall (sitpn : Sitpn) (b : P sitpn -> nat)
+           (s : Sitpn2HVhdlState sitpn) v s',
+      generate_architecture b s = OK v s' ->
+      (forall id__c, In id__c (get_cids (beh s)) -> id__c < nextid s) /\ NoDup (get_cids (beh s)) ->
+      (forall id__c, In id__c (get_cids (beh s')) -> id__c < nextid s') /\ NoDup (get_cids (beh s')).
+  Proof.
+    intros *; intros H; pattern s, s'; solve_sinv_pattern.
+    cbn; minv EQ4; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    cbn; minv EQ14; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    2:{
+      cbn. minv EQ4.
+      destruct 1 as [lt_idc NoDup4 ]; split; [ | eauto].
+      intros id__c Inc; specialize (lt_idc id__c Inc); lia.
+    }
+    2:{
+      cbn. minv EQ10.
+      destruct 1 as [lt_idc NoDup4 ]; split; [ | eauto].
+      intros id__c Inc; specialize (lt_idc id__c Inc); lia.
+    }
+    (* new pci in beh *)
+    unfold build_pci in EQ6.
+    cbn.
+    clear EQ EQ3 EQ5 EQ7.
+    minv EQ8.
+    rewrite get_cids_app; simpl.
+    monadFullInv EQ4.
+    rewrite <- (build_pci_inv_beh EQ6).
+    destruct 1 as [lt_idc NoDup4 ]; split.
+    (* monadFullInv EQ4. *)
+    (* rewrite <- (build_pci_inv_beh EQ6). simpl. *)
+
+    (* CASE lt *)
+    rewrite get_cids_app; simpl.
+    intros id__c; destruct 1 as [eq_x2 | In4 ]; [ | eapply lt_idc; eauto ].
+    shelf_state EQ6.
+    assert (le_ : nextid s2 <= nextid s4)
+      by (eapply build_pci_inv_inc_nextid; eauto).
+    cbn in le_; lia.
+    (* CASE NoDup *)
+    rewrite get_cids_app; cbn. constructor; eauto.
+    monadInv EQ4.
+    monadInv EQ8.
+    monadInv EQ4.
+    intros In5; assert (lt4 : nextid s5 < nextid s4) by (eapply lt_idc; eauto).
+    cbn; minv EQ4; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    cbn; minv EQ10; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    admit.
+  Admitted.
+  
   Lemma gen_archi_nodup_cids :
     forall (sitpn : Sitpn) (b : P sitpn -> nat)
            (s : Sitpn2HVhdlState sitpn) v s',
@@ -189,7 +250,7 @@ Section GenArchiFacts.
       (forall id__c, In id__c (get_cids (beh s)) -> id__c < nextid s) ->
       NoDup (get_cids (beh s)) ->
       NoDup (get_cids (beh s')).
-  Admitted.
+  Proof. intros; eapply gen_archi_nodup_cids2; eauto. Qed.
   
 End GenArchiFacts.
 

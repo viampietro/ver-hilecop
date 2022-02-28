@@ -35,9 +35,7 @@ Section GenSitpnInfos.
     (** Returns the list of input places of transition [t].
 
         Correctness: Correct iff all input places of [t] are in the
-        returned list, and the returned list has no duplicates.
-    
-     *)
+        returned list, and the returned list has no duplicates. *)
 
     Definition get_inputs_of_t (t : T sitpn) : CompileTimeState (list (P sitpn)) :=    
       (* Tests if a place is an input of t. *)
@@ -51,9 +49,7 @@ Section GenSitpnInfos.
 
         Does not raise an error if the returned list is nil because it
         doesn't mean that [t] is an isolated transition; however [t] is a
-        "source" transition (without input).
-    
-     *)
+        "source" transition (without input). *)
 
     Definition get_outputs_of_t (t : T sitpn) : CompileTimeState (list (P sitpn)) :=    
       (* Tests if a place is an input of t. *)
@@ -283,26 +279,6 @@ Section GenSitpnInfos.
                          ++ $$t ++ " and "
                          ++ $$x ++ " are not comparable with the priority relation.")
         end.
-
-      (* let inj_t '(sl, l) x := *)
-      (*   (* If [t] has a higher priority than [x], then puts [t] as the *)
-      (*          head element of [stranss], and returns the list. *) *)
-      (*   if decpr t x then Ret (t :: stranss) *)
-      (*   (* If [x] has a higher priority than [t], then tries to *)
-      (*          inject [t] in the list's tail.  *) *)
-      (*   else *)
-      (*     if decpr x t then *)
-      (*       do stranss' <- inject_t t tl; Ret (x :: stranss') *)
-      (*     else *)
-      (*       (* If [x ⊁ t] and [t ⊁ x] then error because the two *)
-      (*                elements not comparable, and the priority *)
-      (*                relation is not a total order over [t ∪ stranss]. *) *)
-      (*       Err ("inject_t: transitions " *)
-      (*              ++ $$t ++ " and " *)
-      (*              ++ $$x ++ " are not comparable with the priority relation.") *)
-      (* in  *)
-      (* ListMonad.fold_left inj_t stranss [t] *)
-
       
       Functional Scheme inject_t_ind := Induction for inject_t Sort Prop.
       
@@ -538,30 +514,30 @@ Section GenSitpnInfos.
     Definition pr2nodup (pr : T sitpn -> T sitpn -> Prop) :=
       fun x y => pr (Innodup2In Nat.eq_dec x) (Innodup2In Nat.eq_dec y).
     
-    Definition check_wd_sitpn_nodup : CompileTimeState Sitpn :=
-      (* Raises an error if sitpn has an empty set of places or transitions. *)
-      if (places sitpn) then Err ("Found an empty set of places.")
-      else
-        if (transitions sitpn) then Err ("Found an empty set of transitions.")
-        else
-          (* Builds a new [sitpn] where the list of places, transitions,
-             actions, functions and conditions have no duplicate
-             element. *)
-          let sitpn_nodup :=
-              BuildSitpn (nodup Nat.eq_dec (places sitpn))
-                         (nodup Nat.eq_dec (transitions sitpn))
-                         (pre2nodup (@pre sitpn)) (post2nodup (@post sitpn))
-                         (M02nodup (@M0 sitpn)) (Is2nodup (@Is sitpn))
-                         (nodup Nat.eq_dec (conditions sitpn))
-                         (nodup Nat.eq_dec (actions sitpn))
-                         (nodup Nat.eq_dec (functions sitpn))
-                         (hasCtonodup (@has_C sitpn))
-                         (hasAtonodup (@has_A sitpn))
-                         (hasFtonodup (@has_F sitpn))
-                         (pr2nodup (@pr sitpn))
-          in
-          (* do _ <- pr_rel_is_strict_order sitpn_nodup; *)
-          Ret sitpn_nodup.
+    (* Definition check_wd_sitpn_nodup : CompileTimeState Sitpn := *)
+    (*   (* Raises an error if sitpn has an empty set of places or transitions. *) *)
+    (*   if (places sitpn) then Err ("Found an empty set of places.") *)
+    (*   else *)
+    (*     if (transitions sitpn) then Err ("Found an empty set of transitions.") *)
+    (*     else *)
+    (*       (* Builds a new [sitpn] where the list of places, transitions, *)
+    (*          actions, functions and conditions have no duplicate *)
+    (*          element. *) *)
+    (*       let sitpn_nodup := *)
+    (*           BuildSitpn (nodup Nat.eq_dec (places sitpn)) *)
+    (*                      (nodup Nat.eq_dec (transitions sitpn)) *)
+    (*                      (pre2nodup (@pre sitpn)) (post2nodup (@post sitpn)) *)
+    (*                      (M02nodup (@M0 sitpn)) (Is2nodup (@Is sitpn)) *)
+    (*                      (nodup Nat.eq_dec (conditions sitpn)) *)
+    (*                      (nodup Nat.eq_dec (actions sitpn)) *)
+    (*                      (nodup Nat.eq_dec (functions sitpn)) *)
+    (*                      (hasCtonodup (@has_C sitpn)) *)
+    (*                      (hasAtonodup (@has_A sitpn)) *)
+    (*                      (hasFtonodup (@has_F sitpn)) *)
+    (*                      (pr2nodup (@pr sitpn)) *)
+    (*       in *)
+    (*       (* do _ <- pr_rel_is_strict_order sitpn_nodup; *) *)
+    (*       Ret sitpn_nodup. *)
     
   End CheckWellDefinedSitpn.
     

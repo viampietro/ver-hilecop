@@ -4,6 +4,8 @@ Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.ListPlus.
+Require Import common.ListDep.
+
 Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnTypes.
 Require Import sitpn.SitpnFacts.
@@ -218,8 +220,34 @@ Inductive MarkingSubPreSumAddPostSum (sitpn : Sitpn) (Q : T sitpn -> Prop) (m m'
 
 (** ** Input and output places (resp. transitions) for a given transition (resp. place) *)
 
-Definition PInputsOf {sitpn} (t : T sitpn) (pinputs_of_t : list (P sitpn)) :=
-  @Set_in_ListA (P sitpn) Peq (fun p => pre p t <> None) pinputs_of_t.
+Definition PInputsOf {sitpn} (t : T sitpn) (inputs_of_t : list (P sitpn)) :=
+  @Set_in_ListA (P sitpn) Peq (fun p => pre p t <> None) inputs_of_t.
+
+Definition POutputsOf {sitpn} (t : T sitpn) (outputs_of_t : list (P sitpn)) :=
+  @Set_in_ListA (P sitpn) Peq (fun p => post t p <> None) outputs_of_t.
+
+Definition pinputs {sitpn} (t : T sitpn) : list (P sitpn) :=
+  let is_input_of_t := (fun p => if (pre p t) then true else false) in
+  tfilter is_input_of_t (places sitpn) nat_to_P.
+
+Definition poutputs {sitpn} (t : T sitpn) : list (P sitpn) :=
+  let is_output_of_t := (fun p => if (post t p) then true else false) in
+  tfilter is_output_of_t (places sitpn) nat_to_P.
+
+Definition TInputsOf {sitpn} (p : P sitpn) (inputs_of_p : list (T sitpn)) :=
+  @Set_in_ListA (T sitpn) Teq (fun t => post t p <> None) inputs_of_p.
 
 Definition TOutputsOf {sitpn} (p : P sitpn) (toutputs_of_p : list (T sitpn)) :=
   @Set_in_ListA (T sitpn) Teq (fun t => pre p t <> None) toutputs_of_p.
+
+Definition tinputs {sitpn} (p : P sitpn) : list (T sitpn) :=
+  let is_input_of_p := (fun t => if post t p then true else false) in
+  tfilter is_input_of_p (transitions sitpn) nat_to_T.
+
+Definition toutputs_c {sitpn} (p : P sitpn) : list (T sitpn) :=
+  let is_coutput_of_p := (fun t => match pre p t with Some (basic, _) => true | _ => false end) in
+  tfilter is_coutput_of_p (transitions sitpn) nat_to_T.
+
+Definition toutputs_nc {sitpn} (p : P sitpn) : list (T sitpn) :=
+  let is_ncoutput_of_p := (fun t => match pre p t with Some ((inhibitor | test), _) => true | _ => false end) in
+  tfilter is_ncoutput_of_p (transitions sitpn) nat_to_T.

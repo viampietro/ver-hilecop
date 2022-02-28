@@ -1,7 +1,9 @@
 (** * Sitpn and Sitpn state definitions. *)
 
-Require Import CoqLib.
-Require Import GlobalTypes.
+Require Import common.CoqLib.
+Require Import common.GlobalTypes.
+Require Import common.GlobalFacts.
+
 Require Import SitpnTypes.
 Require Import Datatypes.
 
@@ -92,8 +94,29 @@ Record Sitpn  :=
       has_F : T -> F -> bool;
 
       (* Priority relation between transitions. *)
-
       pr : T -> T -> Prop;
+      pr_so : IsStrictOrder T pr;
+      
+      (* The lists of nat used in an [Sitpn] structure to implement
+         finite sets respect the [NoDup] constraint. *)
+      nodup_pls : NoDup places;
+      nodup_trs : NoDup transitions;
+      nodup_conds : NoDup conditions;
+      nodup_actions : NoDup actions;
+      nodup_funs : NoDup functions;
+
+      (* The functions [pre, post, M0, I__s, has_C, has_A, has_F] and
+         also the [pr] relation of a given [sitpn], yield the same
+         value for inputs that verify the [P1SigEq] relation. *)
+      
+      wi_pre : forall p1 p2 t1 t2, P1SigEq p1 p2 -> P1SigEq t1 t2 -> pre p1 t1 = pre p2 t2;
+      wi_post : forall p1 p2 t1 t2, P1SigEq p1 p2 -> P1SigEq t1 t2 -> post t1 p1 = post t2 p2;
+      wi_M0 : forall p1 p2, P1SigEq p1 p2 -> M0 p1 = M0 p2;
+      wi_Is : forall t1 t2, P1SigEq t1 t2 -> Is t1 = Is t2;
+      wi_has_C : forall t1 t2 c1 c2, P1SigEq t1 t2 -> P1SigEq c1 c2 -> has_C t1 c1 = has_C t2 c2;
+      wi_has_A : forall p1 p2 a1 a2, P1SigEq p1 p2 -> P1SigEq a1 a2 -> has_A p1 a1 = has_A p2 a2;
+      wi_has_F : forall t1 t2 f1 f2, P1SigEq t1 t2 -> P1SigEq f1 f2 -> has_F t1 f1 = has_F t2 f2;
+      wi_pr : forall t1 t2 t3 t4, P1SigEq t1 t2 -> P1SigEq t3 t4 -> pr t1 t3 <-> pr t2 t4;
       
     }.
 

@@ -98,7 +98,6 @@ Qed.
 Lemma gen_sitpn_infos_sil_lofPs :
   forall {sitpn decpr s v s'},
     generate_sitpn_infos sitpn decpr s = OK v s' ->
-    List.NoDup (places sitpn) ->
     Sig_in_List (lofPs s').
 Proof.
   intros until s'; intros e; monadInv e; intros.
@@ -113,13 +112,12 @@ Proof.
           minv H; simpl; auto; clear H
         end).
   eapply tmap_aux_sil; eauto;
-    [intros p; left; exact (proj2_sig p) | inversion 1].
+    [intros p; left; exact (proj2_sig p) | inversion 1 | exact (nodup_pls sitpn)].
 Qed.
 
 Lemma gen_sitpn_infos_sil_lofTs :
   forall {sitpn decpr s v s'},
     generate_sitpn_infos sitpn decpr s = OK v s' ->
-    List.NoDup (transitions sitpn) ->
     Sig_in_List (lofTs s').
 Proof.
   intros *; intros e; monadInv e; intros.
@@ -134,5 +132,5 @@ Proof.
           minv H; simpl; auto; clear H
         end).
   eapply tmap_aux_sil; eauto;
-    [intros t; left; exact (proj2_sig t) | inversion 1].
+    [intros t; left; exact (proj2_sig t) | inversion 1 | exact (nodup_trs sitpn)].
 Qed.
