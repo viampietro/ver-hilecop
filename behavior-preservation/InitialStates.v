@@ -48,7 +48,7 @@ Lemma init_states_eq_marking :
     forall p id__p σ__p0,
       (* [id__p] is the identifier of the place component associated with
          place [p] by the [γ] binder. *)
-      InA Pkeq (p, id__p) (p2pcomp γ) ->
+      InA Pkeq (p, id__p) (p2pci γ) ->
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
@@ -100,7 +100,7 @@ Proof.
     
   (* (* Proves [id__p = id__p'] *) *)
   (* - erewrite NoDupA_fs_eqk_eq with (eqk := @Peq sitpn) (b := id__p'); eauto. *)
-  (*   eapply sitpn2hvhdl_nodup_p2pcomp; eauto. *)
+  (*   eapply sitpn2hvhdl_nodup_p2pci; eauto. *)
 
   (* (* Proves [s_marking ∉ (events σ__pe)] *) *)
   (* - erewrite elab_empty_events_for_comps; eauto with set. *)
@@ -124,7 +124,7 @@ Lemma init_states_eq_time_counters :
     init hdstore Δ σ__e (behavior d) σ0 ->
     
     forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
-      InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+      InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
       MapsTo id__t σ__t0 (compstore σ0) ->
       (upper t = i+ /\ TcLeLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t0)) /\
       (upper t = i+ /\ TcGtLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (lower t)) (sigstore σ__t0)) /\
@@ -144,7 +144,7 @@ Proof.
     
   (*   (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *) *)
   (*   edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t) *)
-  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto; *)
+  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tci, InCs_t))))); eauto; *)
 
   (*     (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
   (*     destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_); *)
@@ -173,7 +173,7 @@ Proof.
   (*           | *)
   (*           (* Proves [id__t = id__t'] *) *)
   (*           erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto; *)
-  (*           eapply sitpn2hvhdl_nodup_t2tcomp; eauto ]. *)
+  (*           eapply sitpn2hvhdl_nodup_t2tci; eauto ]. *)
   
   (* (* CASE [upper(I__s(t)) = ∞ and s0.I(t) > lower(I__s(t))] *) *)
   (* - destruct 1 as (upper_, TcGtLower_). *)
@@ -209,7 +209,7 @@ Lemma init_states_eq_reset_orders :
     init hdstore Δ σ__e (behavior d) σ0 ->
     
     (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
-        InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+        InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
         MapsTo id__t σ__t0 (compstore σ0) ->
         MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sigstore σ__t0)).
 Proof.
@@ -221,12 +221,12 @@ Proof.
   (* (* Building premises of [init_rtc_eq_bprod_of_rt] lemma. *) *)
   
   (* (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *)
-  (*    and [(t, id__t') ∈ t2tcomp γ], and rewrites [id__t'] as [id__t].  *) *)
+  (*    and [(t, id__t') ∈ t2tci γ], and rewrites [id__t'] as [id__t].  *) *)
   (* edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t) *)
-  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tcomp, InCs_t))))); eauto. *)
+  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tci, InCs_t))))); eauto. *)
   (* assert (eq_id__t : id__t = id__t') by *)
   (*     (erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto; *)
-  (*      eapply sitpn2hvhdl_nodup_t2tcomp; eauto). *)
+  (*      eapply sitpn2hvhdl_nodup_t2tci; eauto). *)
   (* rewrite <- eq_id__t in *; clear eq_id__t. *)
 
   (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)

@@ -41,7 +41,10 @@ Section GenPCIsFacts.
     forall {sitpn} {p : P sitpn} {pinfo n s v s'},
       build_pci p pinfo n s = OK v s' ->
       nextid s <= nextid s'.
-  Admitted.
+  Proof. intros; pattern s, s'; solve_sinv_pattern.
+         all: try (unfold Transitive; intros; lia).
+         cbn; minv EQ5; auto.
+  Qed.
   
   (** *** Facts about the [generate_pci] function *)
 
@@ -49,9 +52,9 @@ Section GenPCIsFacts.
     forall sitpn (x y : P sitpn) s,
       Peq x y ->
       ((exists id__p g__p i__p o__p,
-           InA Pkeq (x, id__p) (p2pcomp (γ s)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s))
+           InA Pkeq (x, id__p) (p2pci (γ s)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s))
        <-> (exists id__p g__p i__p o__p,
-               InA Pkeq (y, id__p) (p2pcomp (γ s)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s))).
+               InA Pkeq (y, id__p) (p2pci (γ s)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s))).
   Proof.
     intros; split;
       (edestruct 1 as (id__p, (g__p, (i__p, (o__p, (InA_a, InCs_)))));
@@ -62,7 +65,7 @@ Section GenPCIsFacts.
     forall sitpn (n : nat) (a : P sitpn) (s1 : Sitpn2HVhdlState sitpn) (x : unit) (s2 : Sitpn2HVhdlState sitpn),
       generate_pci a n s1 = OK x s2 ->
       exists id__p g__p i__p o__p,
-        InA Pkeq (a, id__p) (p2pcomp (γ s2)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s2).
+        InA Pkeq (a, id__p) (p2pci (γ s2)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s2).
   Proof.
     intros *; intros e; minv e.
     all: do 4 eexists; split; [ eauto with setoidl | left; eauto ].
@@ -73,9 +76,9 @@ Section GenPCIsFacts.
       generate_pci a n s1 = OK x s2 ->
       forall b,
         (exists id__p g__p i__p o__p,
-            InA Pkeq (b, id__p) (p2pcomp (γ s1)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s1)) ->
+            InA Pkeq (b, id__p) (p2pci (γ s1)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s1)) ->
         exists id__p g__p i__p o__p,
-          InA Pkeq (b, id__p) (p2pcomp (γ s2)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s2).
+          InA Pkeq (b, id__p) (p2pci (γ s2)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s2).
   Proof.
     intros *; intros e b; destruct (Peqdec a b) as [Peq_ab | nPeq_ab]. 
 
@@ -104,7 +107,7 @@ Section GenPCIsFacts.
       generate_pcis b s = OK v s' ->
       Sig_in_List (lofPs s) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
+          InA Pkeq (p, id__p) (p2pci (γ s'))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
   Proof.
     intros *; intros e; minv e. intros SIL_lofPs.
@@ -131,16 +134,33 @@ End GenPCIsFacts.
 
 Section GenTCIsFacts.
 
+  (** *** Facts about the [build_tci] function *)
+  
+  Lemma build_tci_inv_beh :
+    forall {sitpn} {t : T sitpn} {tinfo s v s'},
+      build_tci t tinfo s = OK v s' ->
+      beh s = beh s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma build_tci_inv_inc_nextid :
+    forall {sitpn} {t : T sitpn} {tinfo s v s'},
+      build_tci t tinfo s = OK v s' ->
+      nextid s <= nextid s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern.
+         all: try (unfold Transitive; intros; lia).
+         cbn; minv EQ2; auto.
+  Qed.
+  
   (** *** Facts about the [generate_tcis] function *)
 
   Lemma gen_tcis_pci_ex :
     forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
       generate_tcis s = OK v s' ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s))
+          InA Pkeq (p, id__p) (p2pci (γ s))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
+          InA Pkeq (p, id__p) (p2pci (γ s'))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
   Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern.
          match goal with
@@ -150,7 +170,6 @@ Section GenTCIsFacts.
          destruct 1 as [id__p [g__p [i__p [o__p [InA_ InCs_] ] ] ] ].
          exists id__p, g__p, i__p, o__p; split; [ assumption | (right; assumption) ].
   Qed.
-
   
 End GenTCIsFacts.
 
@@ -181,7 +200,7 @@ Section GenArchiFacts.
       generate_architecture b s = OK v s' ->
       Sig_in_List (lofPs s) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
+          InA Pkeq (p, id__p) (p2pci (γ s'))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
   Proof.
     intros *; intros e; monadInv e; intros SIL_lofPs.
@@ -196,52 +215,42 @@ Section GenArchiFacts.
       (forall id__c, In id__c (get_cids (beh s)) -> id__c < nextid s) /\ NoDup (get_cids (beh s)) ->
       (forall id__c, In id__c (get_cids (beh s')) -> id__c < nextid s') /\ NoDup (get_cids (beh s')).
   Proof.
-    intros *; intros H; pattern s, s'; solve_sinv_pattern.
-    cbn; minv EQ4; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
-    cbn; minv EQ14; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
-    2:{
-      cbn. minv EQ4.
-      destruct 1 as [lt_idc NoDup4 ]; split; [ | eauto].
-      intros id__c Inc; specialize (lt_idc id__c Inc); lia.
-    }
-    2:{
-      cbn. minv EQ10.
-      destruct 1 as [lt_idc NoDup4 ]; split; [ | eauto].
-      intros id__c Inc; specialize (lt_idc id__c Inc); lia.
-    }
-    (* new pci in beh *)
-    unfold build_pci in EQ6.
-    cbn.
-    clear EQ EQ3 EQ5 EQ7.
-    minv EQ8.
-    rewrite get_cids_app; simpl.
-    monadFullInv EQ4.
-    rewrite <- (build_pci_inv_beh EQ6).
-    destruct 1 as [lt_idc NoDup4 ]; split.
-    (* monadFullInv EQ4. *)
-    (* rewrite <- (build_pci_inv_beh EQ6). simpl. *)
-
-    (* CASE lt *)
-    rewrite get_cids_app; simpl.
-    intros id__c; destruct 1 as [eq_x2 | In4 ]; [ | eapply lt_idc; eauto ].
-    shelf_state EQ6.
-    assert (le_ : nextid s2 <= nextid s4)
-      by (eapply build_pci_inv_inc_nextid; eauto).
-    cbn in le_; lia.
-    (* CASE NoDup *)
-    rewrite get_cids_app; cbn. constructor; eauto.
-    monadInv EQ4.
-    monadInv EQ8.
-    monadInv EQ4.
-    intros In5; assert (lt4 : nextid s5 < nextid s4) by (eapply lt_idc; eauto).
-    cbn; minv EQ4; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    intros *; intros H Pstart; generalize Pstart; pattern s, s'; solve_sinv_pattern.
+    (* new tci in beh *)
+    cbn; minv EQ4; minv EQ8.
+    destruct 1 as [ Inlt4 NoDup4 ]; split; rewrite get_cids_app; cbn.
+    destruct 1 as [ eq_idc | ]; [ rewrite <- eq_idc | eauto ].
+    shelf_state EQ6; unfold lt.
+    change (S (nextid s6)) with (nextid s2).
+    eapply build_tci_inv_inc_nextid; eauto.
+    constructor; eauto.
+    rewrite <- (build_tci_inv_beh EQ6); simpl.
+    intros In6; apply (Nat.lt_irrefl (nextid s6)).
+    eapply (proj1 (P1 P0)); eauto.
+    (* get_nextid *)
     cbn; minv EQ10; destruct 1; split;
       [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
-    admit.
-  Admitted.
+    (* get_nextid *)
+    cbn; minv EQ4; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    (* new pci in beh *)
+    cbn; minv EQ4; minv EQ8.
+    destruct 1 as [ Inlt4 NoDup4 ]; split; rewrite get_cids_app; cbn.
+    destruct 1 as [ eq_idc | ]; [ rewrite <- eq_idc | eauto ].
+    shelf_state EQ6; unfold lt.
+    change (S (nextid s6)) with (nextid s2).
+    eapply build_pci_inv_inc_nextid; eauto.
+    constructor; eauto.
+    rewrite <- (build_pci_inv_beh EQ6); simpl.
+    intros In6; apply (Nat.lt_irrefl (nextid s6)).
+    eapply (proj1 (P0 P)); eauto.
+    (* get_nextid *)
+    cbn; minv EQ14; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    (* get_nextid *)
+    cbn; minv EQ4; destruct 1; split;
+      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+  Qed.
   
   Lemma gen_archi_nodup_cids :
     forall (sitpn : Sitpn) (b : P sitpn -> nat)

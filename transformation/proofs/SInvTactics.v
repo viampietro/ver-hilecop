@@ -24,12 +24,12 @@ Ltac check_is_state_record S :=
   end.
 
 Lemma inject_t_inv_state :
-  forall {sitpn decpr t lofTs s v s'},
-    inject_t sitpn decpr t lofTs s = OK v s' ->
+  forall {sitpn t lofTs s v s'},
+    inject_t sitpn t lofTs s = OK v s' ->
     s = s'.
 Proof.
   intros until s;
-  functional induction (inject_t sitpn decpr t lofTs) using inject_t_ind;
+  functional induction (inject_t sitpn t lofTs) using inject_t_ind;
     intros until s'; intros f; minv f; auto.
   eapply IHc; eauto. 
 Qed.
@@ -71,6 +71,10 @@ Proof.
   destruct x in EQ0; monadInv EQ0; eauto.
 Qed.
 
+(* In [intros_inv_state1] and [intros_inv_state2], if the property to
+   solve takes the form of an implication, then introduce the first
+   part of the implication in the context. *)
+
 Ltac intros_inv_state1 :=
   let a := fresh "a" in
   let x := fresh "x" in
@@ -78,6 +82,12 @@ Ltac intros_inv_state1 :=
   let S' := fresh "s'" in
   let EQ := fresh "EQ" in
   intros a S x S' EQ;
+  match goal with
+  | |- _ -> _ =>
+      let prop := fresh "P" in
+      intros prop; generalize prop
+  | _ => idtac
+  end;
   pattern S, S'.
 
 Ltac intros_inv_state2 :=
@@ -88,6 +98,12 @@ Ltac intros_inv_state2 :=
   let S' := fresh "s'" in
   let EQ := fresh "EQ" in
   intros b a S x S' EQ;
+  match goal with
+  | |- _ -> _ =>
+      let prop := fresh "P" in
+      intros prop; generalize prop
+  | _ => idtac
+  end;
   pattern S, S'.
 
 Ltac solve_sinv_pattern :=
@@ -119,14 +135,22 @@ Ltac solve_sinv_pattern :=
       let EQ1 := fresh "EQ" in
       let EQ2 := fresh "EQ" in
       destruct (Bind_inversion _ _ _ F G X S1 S2 H) as [x [s [EQ1 EQ2] ] ];
-      (* Hoping that [P] is a transitive property *)
-      cut (RelationClasses.Transitive P); [
-          let trans := fresh "trans" in
-          intros trans; apply (trans S1 s S2); clear trans;
-          [ pattern S1, s; try solve_sinv_pattern
-          | pattern s, S2; try solve_sinv_pattern ]
-        | try (eauto with typeclass_instances) ]                                            
-               
+      (* Try to prove [P S1 s], and then [P s S2] knowing [P S1 s].
+         Then, proves [P S1 S2] hoping that [P] is a transitive
+         property.  *)
+      cut (P S1 s); [
+          let prop1 := fresh "P" in
+          intros prop1;
+          cut (P s S2); [
+              let prop2 := fresh "P" in
+              intros prop2;
+              cut (RelationClasses.Transitive P); [
+                  let trans := fresh "trans" in
+                  intros trans; apply (trans S1 s S2 prop1 prop2); clear trans
+                | try (eauto with typeclass_instances) ]
+            | try solve_sinv_pattern ]
+        | try solve_sinv_pattern ]
+             
   (* CASE the monadic function is a let-binder.
 
      Let binders with more than two binders in the list are not
@@ -227,7 +251,7 @@ Ltac solve_sinv_pattern :=
       rewrite (getv_inv_state H); clear H; auto
                                              
   (* CASE [inject_t] function *)
-  | [ H: inject_t _ _ _ _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
+  | [ H: inject_t _ _ _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
       erewrite (inject_t_inv_state H); eauto
 
   (* CASE [get_comp] function *)
@@ -272,6 +296,28 @@ Ltac solve_sinv_pattern :=
         else (fail 0 S1 "and" S3 "are not convertible")
   end.
 
-(* Unit tests on [solve_sinv]. *)
+(* Tries to solve a goal of the form [P S1 Sn] based on a context of
+   obtained from the inversion of bind constructs (state-and-error monad), i.e.:
+   [ H1 : _ S1 = OK _ S2, H2 : _ S2 = OK _ S3, ..., H__n-1 : _ S__n-1 = OK _ S__n] *)
+
+Ltac mend_sinv :=
+  match goal with
+  | [ H : _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S2 ] =>
+      try solve_sinv_pattern
+  | [ H : _ ?S1 = OK _ ?S2 |- ?P ?S1 ?S3 ] =>
+      cut (P S1 S2); [
+        let prop1 := fresh "P" in
+        intros prop1;
+        cut (P S2 S3); [
+            let prop2 := fresh "P" in
+            intros prop2;
+            cut (RelationClasses.Transitive P); [
+                let trans := fresh "trans" in
+                intros trans; apply (trans S1 S2 S3 prop1 prop2); clear trans
+              | try (eauto with typeclass_instances) ]
+          | try mend_sinv ]
+      | try solve_sinv_pattern ]
+  end.
+
 
 

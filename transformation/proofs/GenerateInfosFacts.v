@@ -15,30 +15,155 @@ Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 
 Require Import transformation.Sitpn2HVhdl.
-Require Import transformation.proofs.GenerateInfosInvs.
+Require Import transformation.proofs.SInvTactics.
 
 (** ** Facts about Transition Information Generation *)
 
 Section TInfos.
+
+  Lemma gen_tinfos_inv_γ :
+    forall {sitpn s v s'},
+      generate_trans_infos sitpn s = OK v s' ->
+      γ s = γ s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_tinfos_inv_lofPs :
+    forall {sitpn s v s'},
+      generate_trans_infos sitpn s = OK v s' ->
+      lofPs s = lofPs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_tinfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_trans_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_tinfos_inv_beh :
+    forall {sitpn s v s'},
+      generate_trans_infos sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
   
 End TInfos.
 
 (** ** Facts about Place Information Generation *)
 
 Section PInfos.
-  
+
+  Lemma gen_pinfos_inv_γ :
+    forall {sitpn s v s'},
+      generate_place_infos sitpn s = OK v s' ->
+      γ s = γ s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_pinfos_inv_lofPs :
+    forall {sitpn s v s'},
+      generate_place_infos sitpn s = OK v s' ->
+      lofPs s = lofPs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_pinfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_place_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_pinfos_inv_beh :
+    forall {sitpn s v s'},
+      generate_place_infos sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
 End PInfos.
 
 (** ** Facts about Generation of Interpretation Information *)
 
 Section InterprInfos.
 
+  Lemma gen_cinfos_inv_γ :
+    forall {sitpn s v s'},
+      generate_cond_infos sitpn s = OK v s' ->
+      γ s = γ s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_cinfos_inv_lofPs :
+    forall {sitpn s v s'},
+      generate_cond_infos sitpn s = OK v s' ->
+      lofPs s = lofPs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_cinfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_cond_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_cinfos_inv_beh :
+    forall {sitpn s v s'},
+      generate_cond_infos sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+  
+  Lemma gen_ainfos_inv_γ :
+    forall {sitpn s v s'},
+      generate_action_infos sitpn s = OK v s' ->
+      γ s = γ s'.
+  Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_ainfos_inv_lofPs :
+    forall {sitpn s v s'},
+      generate_action_infos sitpn s = OK v s' ->
+      lofPs s = lofPs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_ainfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_action_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_ainfos_inv_beh :
+    forall {sitpn s v s'},
+      generate_action_infos sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+  
+  Lemma gen_finfos_inv_γ :
+    forall {sitpn s v s'},
+      generate_fun_infos sitpn s = OK v s' ->
+      γ s = γ s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_finfos_inv_lofPs :
+    forall {sitpn s v s'},
+      generate_fun_infos sitpn s = OK v s' ->
+      lofPs s = lofPs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_finfos_inv_lofTs :
+    forall {sitpn s v s'},
+      generate_fun_infos sitpn s = OK v s' ->
+      lofTs s = lofTs s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+  Lemma gen_finfos_inv_beh :
+    forall {sitpn s v s'},
+      generate_fun_infos sitpn s = OK v s' ->
+      beh s = beh s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+  
 End InterprInfos.
 
 (** ** Facts about Checking of Sitpn Well-definition *)
 
 Section CheckWDSitpn.
 
+  Lemma check_wd_sitpn_inv_eq_state :
+    forall {sitpn s v s'},
+      check_wd_sitpn sitpn s = OK v s' ->
+      s = s'.
+  Proof. intros; pattern s, s'; solve_sinv_pattern. Defined.
   
 End CheckWDSitpn.
 
@@ -95,9 +220,21 @@ Qed.
 
 (** ** Facts about Sitpn Information Generation Function *)
 
+Lemma gen_sitpn_infos_inv_γ :
+  forall {sitpn s v s'},
+    generate_sitpn_infos sitpn s = OK v s' ->
+    γ s = γ s'.
+Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
+Lemma gen_sitpn_infos_inv_beh :
+  forall {sitpn s v s'},
+    generate_sitpn_infos sitpn s = OK v s' ->
+    beh s = beh s'.
+Proof. intros; pattern s, s'; solve_sinv_pattern. Qed.
+
 Lemma gen_sitpn_infos_sil_lofPs :
-  forall {sitpn decpr s v s'},
-    generate_sitpn_infos sitpn decpr s = OK v s' ->
+  forall {sitpn s v s'},
+    generate_sitpn_infos sitpn s = OK v s' ->
     Sig_in_List (lofPs s').
 Proof.
   intros until s'; intros e; monadInv e; intros.
@@ -116,8 +253,8 @@ Proof.
 Qed.
 
 Lemma gen_sitpn_infos_sil_lofTs :
-  forall {sitpn decpr s v s'},
-    generate_sitpn_infos sitpn decpr s = OK v s' ->
+  forall {sitpn s v s'},
+    generate_sitpn_infos sitpn s = OK v s' ->
     Sig_in_List (lofTs s').
 Proof.
   intros *; intros e; monadInv e; intros.

@@ -44,7 +44,7 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
   (forall p id__p σ__p,
       (* [id__p] is the identifier of the place component associated with
          place [p] by the [γ] binder. *)
-      InA Pkeq (p, id__p) (p2pcomp γ) ->
+      InA Pkeq (p, id__p) (p2pci γ) ->
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
@@ -58,7 +58,7 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
   /\ (forall (t : Ti sitpn) id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -100,7 +100,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
   /\ (forall (t : Ti sitpn) id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -134,7 +134,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
   /\ (forall (t : Ti sitpn) id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (proj1_sig t, id__t) (t2tcomp γ) ->
+         InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -159,7 +159,7 @@ Definition FullSimStateAfterRE sitpn
   /\ (forall t id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -171,7 +171,7 @@ Definition FullSimStateAfterRE sitpn
   /\ (forall t id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -184,7 +184,7 @@ Definition FullSimStateAfterRE sitpn
   /\ (forall t id__t σ__t conds_of_t bprod,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of TCI [id__t] is the global
             design state [σ]. *)
@@ -247,7 +247,7 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
   /\ (forall t id__t σ__t fired,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -261,7 +261,7 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
   /\ (forall t id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
             transition [t] by the [γ] binder. *)
-         InA Tkeq (t, id__t) (t2tcomp γ) ->
+         InA Tkeq (t, id__t) (t2tci γ) ->
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
@@ -275,7 +275,7 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
   /\ (forall p id__p σ__p fired pre__sum,
          (* [id__p] is the identifier of the place component associated with
             place [p] by the [γ] binder. *)
-         InA Pkeq (p, id__p) (p2pcomp γ) ->
+         InA Pkeq (p, id__p) (p2pci γ) ->
 
          (* [σ__p] is the current state of component [id__p] is the global
             design state [σ]. *)
@@ -291,7 +291,7 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
   /\ (forall p id__p σ__p fired post__sum,
          (* [id__p] is the identifier of the place component associated with
             place [p] by the [γ] binder. *)
-         InA Pkeq (p, id__p) (p2pcomp γ) ->
+         InA Pkeq (p, id__p) (p2pci γ) ->
 
          (* [σ__p] is the current state of component [id__p] is the global
             design state [σ]. *)

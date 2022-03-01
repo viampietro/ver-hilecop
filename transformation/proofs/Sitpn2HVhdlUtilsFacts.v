@@ -174,10 +174,10 @@ Section PutCompFacts.
       NoDup (get_cids cstmt) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') cstmt) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s))
+          InA Pkeq (p, id__p) (p2pci (γ s))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) cstmt) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
+          InA Pkeq (p, id__p) (p2pci (γ s'))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) v).
   Proof.
     intros *; intros EQ NoDup_compids InCs_idc_ex.  
@@ -213,10 +213,10 @@ Section PutCompFacts.
       NoDup (get_cids (beh s)) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s))
+          InA Pkeq (p, id__p) (p2pci (γ s))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pcomp (γ s'))
+          InA Pkeq (p, id__p) (p2pci (γ s'))
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
   Proof. intros *; intros e; monadFullInv e; cbn.
          eapply put_comp_aux_pci_ex; eauto.  

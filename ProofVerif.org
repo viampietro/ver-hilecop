@@ -2,11 +2,11 @@
 
 * TODO Behavior Preservation [0%]
 ** TODO Similar Initial States [16%]
-*** TODO [#B] Initial States Equal Marking (InitialStates.v) [91%]
+*** TODO [#B] Initial States Equal Marking (InitialStates.v) [100%]
 **** DONE NoDupA_fs_eqk_eqv (SetoidListFacts) [100%] 
 ***** DONE InA_setv
 ***** DONE getv_idle
-**** TODO [#Q] sitpn2hvhdl_pci_ex (GenerateHVhdlFacts) [60%]
+**** DONE sitpn2hvhdl_pci_ex (GenerateHVhdlFacts) [100%]
 ***** DONE gen_sitpn_infos_sil_lofPs
 ***** DONE gen_archi_pci_ex
 ****** DONE gen_pcis_pci_ex
@@ -41,8 +41,11 @@
 ******* DONE get_comp_uniq_comp
 ******** DONE get_comp_aux_uniq_comp
 ****** DONE conn_to_output_tcis_pci_ex_inv (GenerateInterconnectionsInvs)
-***** TODO [#A] gen_archi_nodup_cids (GenerateArchitectureFacts)
-***** TODO [#A] gen_ports_pci_ex
+***** DONE gen_archi_nodup_cids (GenerateArchitectureFacts)
+****** DONE build_pci_inv_inc_nextid (GenerateArchitectureFacts)
+****** DONE build_tci_inv_inc_nextid (GenerateArchitectureFacts)
+***** DONE gen_ports_pci_ex
+****** DONE gen_cports_pci_ex
 **** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]
 ***** DONE gen_comp_insts_nodup_p2pcomp [100%]
 ****** DONE iter_gen_pcomp_inst_nodup_p2pcomp [100%]

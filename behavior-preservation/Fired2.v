@@ -86,12 +86,12 @@ Lemma fe_equal_fired_aux :
       IsFiredListAux s' T__s F Flist ->
       (* Extra. Hypothesis. *)
       (forall t' id__t' σ'__t',
-          InA Tkeq (t', id__t') (t2tcomp γ) ->
+          InA Tkeq (t', id__t') (t2tci γ) ->
           MapsTo id__t' σ'__t' (compstore σ') ->
           (InA Teq t' F -> MapsTo Transition.fired (Vbool true) (sigstore σ'__t'))
           /\ (MapsTo Transition.fired (Vbool true) (sigstore σ'__t') -> InA Teq t' F \/ InA Teq t' T__s)) ->
       forall t id__t σ'__t,
-        InA Tkeq (t, id__t) (t2tcomp γ) ->
+        InA Tkeq (t, id__t) (t2tci γ) ->
         MapsTo id__t σ'__t (compstore σ') ->
         InA Teq t Flist <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
 Proof.
@@ -153,7 +153,7 @@ Lemma fe_equal_fired :
     stabilize hdstore Δ σ__f (behavior d) σ' ->
 
     forall t id__t σ'__t,
-      InA Tkeq (t, id__t) (t2tcomp γ) ->
+      InA Tkeq (t, id__t) (t2tci γ) ->
       MapsTo id__t σ'__t (compstore σ') ->
       forall Flist,
         IsFiredList s' Flist ->

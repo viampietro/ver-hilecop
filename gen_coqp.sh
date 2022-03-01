@@ -49,8 +49,7 @@ echo "-R common/ hilecop.common
 -R sitpn/ hilecop.sitpn
 -R hvhdl/ hilecop.hvhdl
 -R transformation/ hilecop.transformation
--R behavior-preservation/ hilecop.soundness
--R test/ hilecop.test" > _CoqProject
+-R behavior-preservation/ hilecop.soundness" > _CoqProject
 
 # Displays all the Vernacular files (.v) of the project and adds them
 # in the _CoqProject file.
@@ -58,7 +57,8 @@ echo "-R common/ hilecop.common
 # Filters out all files matching the PROOF_FILES_PATTERN pattern, the
 # "./common/DFMapWeakList.v" or file names beginning with a dot.
 
-find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" ! -regex ".*/\..+" ! -regex "./common/DFMapWeakList.v" >> _CoqProject
+# Do not add to _CoqProject the files under the "test" folder.
+find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" ! -regex ".*/\..+" ! -regex ".*/test/.*" ! -regex "./common/DFMapWeakList.v" >> _CoqProject
 
 
 

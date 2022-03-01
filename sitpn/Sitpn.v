@@ -95,6 +95,7 @@ Record Sitpn  :=
 
       (* Priority relation between transitions. *)
       pr : T -> T -> Prop;
+      pr_dec : forall x y, {pr x y} + {~pr x y};
       pr_so : IsStrictOrder T pr;
       
       (* The lists of nat used in an [Sitpn] structure to implement

@@ -7,6 +7,8 @@ Require Import SemanticalDomains.
 
 Open Scope abss_scope.
 
+Import HVhdlSsNotations.
+
 (** Defines the relation that evaluates the sequential statements
     of H-VHDL. 
     
@@ -247,14 +249,14 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       vexpr Δ σ Λ false e (Vnat n) ->
       vexpr Δ σ Λ false e' (Vnat n') ->
       
-      vseq Δ σ σ__w Λi flag (For id In e To e' Loop stmt) σ__w' Λ' ->
+      vseq Δ σ σ__w Λi flag (For id InR e To e' Loop stmt) σ__w' Λ' ->
 
       (* * Side conditions * *)
       ~NatMap.In id Λ ->     (* id ∉ Λ *)
       Λi = NatMap.add id (Tnat n n', Vnat n) Λ -> (* Λi = Λ ∪ (id, (nat(n,n'), n)) *)
 
       (* * Conclusion * *)
-      vseq Δ σ σ__w Λ flag (For id In e To e' Loop stmt) σ__w' Λ'
+      vseq Δ σ σ__w Λ flag (For id InR e To e' Loop stmt) σ__w' Λ'
 
 (** Evaluates a loop statement.
     
@@ -270,14 +272,14 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
       vexpr Δ σ Λi false (#id @= e') (Vbool false) ->
       vseq Δ σ σ__w Λi flag stmt σ__w' Λ' ->
-      vseq Δ σ σ__w' Λ' flag (For id In e To e' Loop stmt) σ__w'' Λ'' ->
+      vseq Δ σ σ__w' Λ' flag (For id InR e To e' Loop stmt) σ__w'' Λ'' ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) Λ ->
       Λi = NatMap.add id (t, Vnat (n + 1)) Λ ->
 
       (* * Conclusion * *)
-      vseq Δ σ σ__w Λ flag (For id In e To e' Loop stmt) σ__w'' Λ''
+      vseq Δ σ σ__w Λ flag (For id InR e To e' Loop stmt) σ__w'' Λ''
            
 (** Evaluates a loop statement.
     
@@ -297,7 +299,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
 
       (* * Conclusion * *)
       (* Removes the binding of id from the local environment. *)
-      vseq Δ σ σ__w Λ flag (For id In e To e' Loop stmt) σ__w (NatMap.remove id Λ)
+      vseq Δ σ σ__w Λ flag (For id InR e To e' Loop stmt) σ__w (NatMap.remove id Λ)
            
 (** Evaluates a rising edge block statement when another flag than ↑
     is raised (i.e, during a stabilization, a ↓ or the initl phase).

@@ -16,6 +16,7 @@ Require Import hvhdl.WellDefinedDesign.
 Local Open Scope abss_scope.
 Local Open Scope natset_scope.
 
+Import HVhdlSsNotations.
 Import HVhdlCsNotations.
 
 (** ** Input ports *)

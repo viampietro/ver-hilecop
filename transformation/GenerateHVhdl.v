@@ -28,11 +28,6 @@ Section Sitpn2HVhdl.
 
   Variable sitpn : Sitpn.
 
-  (* Proof of decidability for the priority relation of [sitpn].
-     Necessary to the [generate_sitpn_infos] function.
-   *)
-  Variable decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}.
-  
   (* Alias for the state-and-error monad instantiated with the
      compile-time state.  *)
 
@@ -49,7 +44,7 @@ Section Sitpn2HVhdl.
   Definition sitpn_to_hvhdl (id__e id__a : ident) (b : P sitpn -> nat) :
     (design * Sitpn2HVhdlMap sitpn) + string :=
     RedV 
-      ((do _ <- generate_sitpn_infos sitpn decpr;
+      ((do _ <- generate_sitpn_infos sitpn;
         do _ <- generate_architecture b;
         do _ <- generate_interconnections;
         do _ <- generate_ports;
@@ -60,6 +55,8 @@ End Sitpn2HVhdl.
 Require Import FunInd.
 
 Functional Scheme sitpn_to_hvhdl_ind := Induction for sitpn_to_hvhdl Sort Prop.
+
+
 
 
 

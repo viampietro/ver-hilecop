@@ -20,10 +20,6 @@ Section GenSitpnInfos.
 
   Variable sitpn : Sitpn.
 
-  (* Proof of decidability for the priority relation of [sitpn] *)
-  
-  Variable decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}.
-  
   (* The instantiated state type is [SitpnInfo sitpn] *)
 
   Definition CompileTimeState := @Mon (Sitpn2HVhdlState sitpn).
@@ -265,11 +261,11 @@ Section GenSitpnInfos.
         | x :: tl =>
             (* If [t] has a higher priority than [x], then puts [t] as the
                head element of [stranss], and returns the list. *)
-            if decpr t x then Ret (t :: stranss)
+            if pr_dec t x then Ret (t :: stranss)
             (* If [x] has a higher priority than [t], then tries to
                inject [t] in the list's tail.  *)
             else
-                if decpr x t then
+                if pr_dec x t then
                   do stranss' <- inject_t t tl; Ret (x :: stranss')
                 else
                   (* If [x ⊁ t] and [t ⊁ x] then error because the two
@@ -410,7 +406,7 @@ Section GenSitpnInfos.
         error if x ≻ y and y ≻ z but x ⊁ z.  *)
     
     Let check_trans (x y z : T sitpn) : CompileTimeState unit :=
-      match decpr y z, decpr x z with
+      match pr_dec y z, pr_dec x z with
       | left _, right _ => Err ("check_trans: priority relation is not transitive. "
                                   ++ $$x ++ " ≻ " ++ $$y
                                   ++ " and " ++ $$y ++ " ≻ " ++ $$z
@@ -431,7 +427,7 @@ Section GenSitpnInfos.
     Definition foreach_x_check_trans (x : T sitpn) (trs : list (T sitpn)) :
       CompileTimeState unit :=
       let f := fun y trs' =>
-                 if decpr x y
+                 if pr_dec x y
                  then iter_xy_check_trans x y trs'
                  else Ret tt
       in foreach f trs.
@@ -440,8 +436,7 @@ Section GenSitpnInfos.
         error if not. *)
     
     Definition check_pr_is_trans :=
-      let f := fun x trs => foreach_x_check_trans x trs in
-      do Tlist <- get_lofTs; foreach f Tlist.
+      do Tlist <- get_lofTs; foreach foreach_x_check_trans Tlist.
 
     (** Checks that the priority relation is irreflexive; returns
         an error if not. *)
@@ -449,7 +444,7 @@ Section GenSitpnInfos.
     Definition check_pr_is_irrefl : CompileTimeState unit :=
       let check_irrefl :=
           (fun t =>
-             if decpr t t
+             if pr_dec t t
              then Err ("pr_rel_is_strict_order: priority relation is reflexive for transition "
                          ++ $$t ++ ".")
              else Ret tt) in
@@ -468,9 +463,7 @@ Section GenSitpnInfos.
         This is a partial checking of the well-definition of an SITPN
         model. The other properties of the well-definition will
         checked all along the transformation (e.g. the SITPN model is
-        conflict-free during the generation of place infos, etc.).
-
-     *)
+        conflict-free during the generation of place infos, etc.). *)
     
     Definition check_wd_sitpn : CompileTimeState unit :=
       (* Raises an error if sitpn has an empty set of places or transitions. *)
@@ -547,9 +540,7 @@ End GenSitpnInfos.
 
 (** Returns an SitpnInfo instance computed from [sitpn]. *)
 
-Definition generate_sitpn_infos
-           (sitpn : Sitpn)
-           (decpr : forall x y : T sitpn, {x >~ y} + {~x >~ y}) :=
+Definition generate_sitpn_infos (sitpn : Sitpn) :=
 
   (* Turns the list of places, transitions, conditions, actions and
      functions of [sitpn], into dependently-typed lists, and sets them
@@ -568,9 +559,10 @@ Definition generate_sitpn_infos
   (* Call to [generate_trans_infos] must precede the call to
      [generate_place_infos] because the latter uses transition
      informations.  *)
-  do _ <- check_wd_sitpn sitpn decpr;
+  do _ <- check_wd_sitpn sitpn;
   do _ <- generate_trans_infos sitpn;
-  do _ <- generate_place_infos sitpn decpr;
+  do _ <- generate_place_infos sitpn;
   do _ <- generate_cond_infos sitpn; 
   do _ <- generate_action_infos sitpn;
   generate_fun_infos sitpn.
+
