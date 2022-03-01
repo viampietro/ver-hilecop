@@ -31,13 +31,13 @@ Require Import soundness.SemanticPreservationDefs.
 (** ** Initial States Equal Marking Lemma *)    
 
 Lemma init_states_eq_marking :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -63,13 +63,13 @@ Proof.
   (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
   (* Builds [comp(id__p', "place", gm, ipm, opm) ∈ (behavior d)] *)
-  edestruct @sitpn2hvhdl_p_comp_ex with (sitpn := sitpn) (p := p)
+  edestruct @sitpn2hvhdl_pci_ex with (sitpn := sitpn) (p := p)
     as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
-  (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
+  (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
   (* destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds). *)
 
-  (* (* Builds [id__p' ∈ Comps(Δ)] *) *)
+  (* Builds [id__p' ∈ Comps(Δ)] *)
   (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto. *)
 
   (* (* Builds [id__p' ∈ (compstore σ__e)] *) *)

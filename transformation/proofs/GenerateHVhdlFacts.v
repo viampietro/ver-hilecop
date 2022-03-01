@@ -400,8 +400,8 @@ Section Sitpn2HVhdl.
   Qed.
 
   Lemma sitpn2hvhdl_t_comp :
-    forall {sitpn decpr id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    forall {sitpn id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t, exists id__t gm ipm opm,
           InA Tkeq (t, id__t) (t2tci γ)
@@ -426,9 +426,9 @@ Section Sitpn2HVhdl.
   Admitted.    
   
   Lemma sitpn2hvhdl_bind_init_marking :
-    forall {sitpn decpr id__ent id__arch mm d γ},
+    forall {sitpn id__ent id__arch mm d γ},
       (* [sitpn] translates into [(d, γ)]. *)
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall p id__p gm ipm opm,
         InA Pkeq (p, id__p) (p2pci γ) ->
@@ -506,8 +506,8 @@ Section Sitpn2HVhdl.
   Admitted.
   
   Lemma sitpn2hvhdl_emp_pinputs_rt :
-    forall {sitpn decpr id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    forall {sitpn id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm,
         InA Tkeq (t, id__t) (t2tci γ) ->
@@ -517,8 +517,8 @@ Section Sitpn2HVhdl.
   Admitted.
 
   Lemma sitpn2hvhdl_emp_pinputs_in_arcs_nb :
-    forall {sitpn decpr id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    forall {sitpn id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm,
         InA Tkeq (t, id__t) (t2tci γ) ->
@@ -528,8 +528,8 @@ Section Sitpn2HVhdl.
   Admitted.
 
   Lemma sitpn2hvhdl_connect_rtt_rt :
-    forall {sitpn decpr id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    forall {sitpn id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm__t ipm__t opm__t p id__p gm__p ipm__p opm__p pinputs_of_t toutputs_of_p,
         @pre sitpn p t <> None ->
@@ -547,8 +547,8 @@ Section Sitpn2HVhdl.
   Admitted.
 
   Lemma sitpn2hvhdl_nemp_pinputs_in_arcs_nb :
-    forall {sitpn decpr id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    forall {sitpn id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm pinputs_of_t,
         InA Tkeq (t, id__t) (t2tci γ) ->
@@ -559,8 +559,8 @@ Section Sitpn2HVhdl.
   Admitted.
 
   Lemma sitpn2hvhdl_nemp_toutputs_out_arcs_nb :
-    forall {sitpn decpr id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    forall {sitpn id__ent id__arch mm d γ},
+      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall p id__p gm ipm opm toutputs_of_p,
         InA Pkeq (p, id__p) (p2pci γ) ->
