@@ -15,7 +15,7 @@ Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.WellDefinedDesign.
 
-Require Import hvhdl.CombinationalEvaluationFacts.
+Require Import hvhdl.proofs.CombinationalEvaluationFacts.
 
 
 Lemma last_no_event :

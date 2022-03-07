@@ -2,7 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 
 Require Import hvhdl.HVhdlTypes.
@@ -12,34 +12,34 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.ExpressionEvaluation.
 
-Require Import hvhdl.SemanticalDomainsFacts.
+Require Import hvhdl.proofs.SemanticalDomainsFacts.
 
 Open Scope abss_scope.
 
 Lemma vseq_inv_compstore :
-  forall {Δ σ Λ flag stmt σ' Λ' id__c σ__c},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
-    MapsTo id__c σ__c (compstore σ) ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ' id__c σ__c},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
+    MapsTo id__c σ__c (compstore σ__w) ->
     MapsTo id__c σ__c (compstore σ').
 Proof. induction 1; try subst; auto. Qed.
 
 Lemma vseq_inv_compstore_2 :
-  forall {Δ σ Λ flag stmt σ' Λ' id__c σ__c},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ' id__c σ__c},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     MapsTo id__c σ__c (compstore σ') ->
-    MapsTo id__c σ__c (compstore σ).
+    MapsTo id__c σ__c (compstore σ__w).
 Proof. induction 1; try subst; auto. Qed.
 
 Lemma vseq_maps_sstore :
-  forall {Δ σ Λ flag stmt σ' Λ'},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ'},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     forall {id v},
-      MapsTo id v (sigstore σ) ->
+      MapsTo id v (sigstore σ__w) ->
       exists v', MapsTo id v' (sigstore σ').
 Proof.
   induction 1; try (solve [do 2 intro; exists v; assumption]); auto.
   1, 2:
-    subst σ'; cbn; intros id0 v MapsTo_;
+    subst σ__w'; cbn; intros id0 v MapsTo_;
     destruct (Nat.eq_dec id id0) as [eq_ | neq_ ];
     [match goal with
      | |- exists v', MapsTo ?id0 v' (NatMap.add ?id ?v'' _) =>
@@ -50,9 +50,9 @@ Proof.
 Qed.
 
 Lemma vseq_not_in_events_if_not_assigned :
-  forall {Δ σ Λ flag stmt σ' Λ' id},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
-    ~NatSet.In id (events σ) ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ' id},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
+    ~NatSet.In id (events σ__w) ->
     ~AssignedInSS id stmt ->
     ~NatSet.In id (events σ').
 Proof.
@@ -61,9 +61,9 @@ Proof.
 Qed.
 
 Lemma vseq_not_in_events_if_not_sig :
-  forall {Δ σ Λ flag stmt σ' Λ' id},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
-    ~NatSet.In id (events σ) ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ' id},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
+    ~NatSet.In id (events σ__w) ->
     ~OutputOf Δ id  ->
     ~DeclaredOf Δ id ->
     ~NatSet.In id (events σ').
@@ -83,33 +83,33 @@ Proof.
 Qed.
      
 Lemma vseq_eq_state_if_no_events :
-  forall {Δ σ Λ flag stmt σ' Λ'},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ'},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     Equal (events σ') {[]} ->
-    σ = σ'.
+    σ__w = σ'.
 Proof.
   induction 1; auto; subst; simpl; intros.
-  3, 4: transitivity σ'; [rewrite IHvseq1; auto; rewrite IHvseq2; auto | rewrite IHvseq2; auto].
-  1, 2: contrad_add_empty.
+  all: try contrad_add_empty.
+  all: transitivity σ__w'; [rewrite IHvseq1; auto; rewrite IHvseq2; auto | rewrite IHvseq2; auto].
 Qed.
 
 Lemma vseq_inv_not_in_events :
-  forall {Δ σ Λ flag stmt σ' Λ'},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ'},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     forall {id},
       ~NatSet.In id (events σ') ->
-      ~NatSet.In id (events σ).
+      ~NatSet.In id (events σ__w).
 Proof.
   induction 1; try (solve [intro; auto]);
-    subst σ'; cbn; intros id0; eauto with set.
+    subst σ__w'; cbn; intros id0; eauto with set.
 Qed.
 
 Lemma vseq_inv_well_typed_values_in_sstore : 
-  forall {Δ σ Λ flag stmt σ' Λ'},
-    vseq Δ σ Λ flag stmt σ' Λ' ->
+  forall {Δ σ σ__w Λ flag stmt σ' Λ'},
+    vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ) ->
+        MapsTo id v (sigstore σ__w) ->
         is_of_type v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
@@ -118,7 +118,7 @@ Lemma vseq_inv_well_typed_values_in_sstore :
 Proof.
   induction 1; try (solve [auto]).
   (* CASE eventful signal assignment *)
-  - intros WT id0 t1 v MapsTo_Δ; subst σ'; cbn.
+  - intros WT id0 t1 v MapsTo_Δ; subst σ__w'; cbn.
     destruct (Nat.eq_dec id id0) as [eq_ | neq_ ].
     (* CASE [id0 = id] *)
     rewrite eq_ in *.
@@ -138,7 +138,7 @@ Proof.
     (* CASE [id0 ≠ id] *)
     intro; eapply WT; eauto with mapsto.
   (* CASE eventful idx signal assignment *)
-  - intros WT id0 t1 v MapsTo_Δ; subst σ'; cbn.
+  - intros WT id0 t1 v MapsTo_Δ; subst σ__w'; cbn.
     destruct (Nat.eq_dec id id0) as [eq_ | neq_ ].
     (* CASE [id0 = id] *)
     rewrite eq_ in *.

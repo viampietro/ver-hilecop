@@ -1,6 +1,6 @@
 (** * H-VHDL Core Facts Modules *)
 
-Require Export hvhdl.AbstractSyntaxFacts.
-Require Export hvhdl.EnvironmentFacts.
-Require Export hvhdl.WellDefinedDesignFacts.
-Require Export hvhdl.SemanticalDomainsFacts.
+Require Export hvhdl.proofs.AbstractSyntaxFacts.
+Require Export hvhdl.proofs.EnvironmentFacts.
+Require Export hvhdl.proofs.WellDefinedDesignFacts.
+Require Export hvhdl.proofs.SemanticalDomainsFacts.

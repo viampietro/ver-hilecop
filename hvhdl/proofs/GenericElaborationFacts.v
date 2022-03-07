@@ -2,7 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.

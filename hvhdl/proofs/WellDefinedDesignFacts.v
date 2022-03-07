@@ -10,6 +10,7 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.proofs.AbstractSyntaxFacts.
 
+Open Scope abss_scope.
 Import HVhdlCsNotations.
 
 (** ** Facts about [AreCsCompIds]  *)
@@ -76,7 +77,7 @@ Proof.
 
   (* CASE behavior = comp(...) *)
   - rewrite app_nil_l; inversion_clear 1;
-      [try subst; exists entid, gmap, ipmap, opmap; reflexivity | contradiction ].
+      [ try subst; exists id__e, g, i, o; reflexivity | contradiction ].
   - rewrite app_nil_l; inversion_clear 1; constructor; reflexivity.
 
   (* CASE behavior = beh1 || beh2 *)

@@ -2,11 +2,12 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlElaborationLib.
-Require Import hvhdl.DefaultValueFacts.
+Require Import hvhdl.proofs.DefaultValueFacts.
+Require Import hvhdl.proofs.EnvironmentFacts.
 
 Lemma eport_inv_gens :
   forall {Δ σ pd Δ' σ'},

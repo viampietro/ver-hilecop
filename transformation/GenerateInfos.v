@@ -402,6 +402,11 @@ Section GenSitpnInfos.
 
   Section CheckWellDefinedSitpn.
 
+    (** Mostly checks that the priority relation is a strict
+        order. However, now that the property is a part of the Sitpn
+        record type, the check_wd_sitpn is no longer useful. Will
+        probably delete it in versions to come. *)
+    
     (** Assuming that x ≻ y, checks that x ≻ z if y ≻ z.  Returns an
         error if x ≻ y and y ≻ z but x ⊁ z.  *)
     
@@ -559,7 +564,7 @@ Definition generate_sitpn_infos (sitpn : Sitpn) :=
   (* Call to [generate_trans_infos] must precede the call to
      [generate_place_infos] because the latter uses transition
      informations.  *)
-  do _ <- check_wd_sitpn sitpn;
+  (* do _ <- check_wd_sitpn sitpn; *)
   do _ <- generate_trans_infos sitpn;
   do _ <- generate_place_infos sitpn;
   do _ <- generate_cond_infos sitpn; 

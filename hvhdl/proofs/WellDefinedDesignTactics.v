@@ -4,7 +4,7 @@ Require Import common.ListLib.
 
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
 Import HVhdlCsNotations.
 
 Ltac solve_nodup_compids_l :=

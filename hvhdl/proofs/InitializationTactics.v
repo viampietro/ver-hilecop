@@ -2,7 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
@@ -13,11 +13,11 @@ Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.ValidPortMap.
 
-Require Import hvhdl.StabilizeFacts.
-Require Import hvhdl.SSEvaluationFacts.
-Require Import hvhdl.PortMapEvaluationFacts.
-Require Import hvhdl.InitializationFacts.
-Require Import hvhdl.PStabilizeFacts.
+Require Import hvhdl.proofs.StabilizeFacts.
+Require Import hvhdl.proofs.SSEvaluationFacts.
+Require Import hvhdl.proofs.PortMapEvaluationFacts.
+Require Import hvhdl.proofs.InitializationFacts.
+Require Import hvhdl.proofs.PStabilizeFacts.
 
 Ltac solve_vruninit_par_l :=
   match goal with

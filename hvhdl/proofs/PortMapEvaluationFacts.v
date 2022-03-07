@@ -2,7 +2,7 @@
 
 Require Import common.NatSet.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.CoqLib.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
@@ -14,10 +14,10 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.ValidPortMap.
 Require Import hvhdl.SemanticalDomains.
-Require Import hvhdl.SemanticalDomainsFacts.
+Require Import hvhdl.proofs.SemanticalDomainsFacts.
 
-Require Import hvhdl.EnvironmentFacts.
-Require Import hvhdl.ValidPortMapFacts.
+Require Import hvhdl.proofs.EnvironmentFacts.
+Require Import hvhdl.proofs.ValidPortMapFacts.
 
 (** ** Facts about Input Port Map Evaluation *)
 
@@ -63,9 +63,7 @@ Section IPMap.
       exists v, vexpr Δ σ EmptyLEnv false e v /\
                 MapsTo id v (sigstore σ__c').
   Proof. inversion 1.
-         subst; simpl; exists newv; auto with mapsto.
-         subst; simpl; exists currv; split; [ | auto].
-         erewrite <- OVEq_eq_1; eauto.
+         subst; simpl; exists v; auto with mapsto.
   Qed.
 
   Lemma vassocip_inv_if_not_assoc :
@@ -78,7 +76,7 @@ Section IPMap.
         MapsTo id__i v (sigstore σ__c').
   Proof.
     inversion 1; subst; simpl; auto.
-    all : intros id__i v nex_1 nex_2; intros.
+    all : intros id__i v' nex_1 nex_2; intros.
     destruct (Nat.eq_dec id__i id) as [eq1 | neq1].
     subst; elimtype False; apply nex_1; exists e; reflexivity.
     eauto with mapsto.
@@ -97,15 +95,15 @@ Section IPMap.
     intros; exfalso; eapply add_empty_false; eauto.
   Qed.
   
-  Lemma vassocip_eq_state_if_no_events :
-    forall {Δ Δ__c σ σ__c asip σ__c'},
-      vassocip Δ Δ__c σ σ__c asip σ__c' ->
-      Equal (events σ__c') {[]} ->
-      σ__c = σ__c'.
-  Proof.
-    inversion 1; auto; subst; simpl;
-      intros; exfalso; eapply add_empty_false; eauto.
-  Qed.
+  (* Lemma vassocip_eq_state_if_no_events : *)
+  (*   forall {Δ Δ__c σ σ__c asip σ__c'}, *)
+  (*     vassocip Δ Δ__c σ σ__c asip σ__c' -> *)
+  (*     Equal (events σ__c') {[]} -> *)
+  (*     σ__c = σ__c'. *)
+  (* Proof. *)
+  (*   inversion 1; auto; subst; simpl. *)
+  (*     intros; exfalso; eapply add_empty_false; eauto. *)
+  (* Qed. *)
 
   Lemma vassocip_maps_sstore :
     forall {Δ Δ__c σ σ__c asip σ__c' id v},
@@ -113,11 +111,11 @@ Section IPMap.
       MapsTo id v (sigstore σ__c) ->
       exists v', MapsTo id v' (sigstore σ__c').
   Proof.
-    inversion_clear 1; subst; cbn; (try solve [exists v; assumption]);
+    inversion_clear 1; subst; cbn;
       destruct (Nat.eq_dec id id0) as [eq_ | neq_ ].
-    subst; exists newv; eauto with mapsto.
+    subst; exists v0; eauto with mapsto.
     exists v; eauto with mapsto.
-    subst; exists (Varr (set_at newv idx aofv idx_in_bounds)); eauto with mapsto.
+    subst; exists (Varr (set_at v0 idx aofv idx_in_bounds)); eauto with mapsto.
     exists v; eauto with mapsto.
   Qed.
 
@@ -136,9 +134,8 @@ Section IPMap.
     induction 1; try (solve [eauto]).
     (* CASE [id ⇒ e] and [id(i) ⇒ e]*)
     all:
-      intros WT; intros *; intros MapsTo_Δ;
-      subst sigstore'; cbn;
-        destruct (Nat.eq_dec id0 id) as [eq_ | neq_ ];
+      intros WT; intros *; intros MapsTo_Δ; cbn;
+      destruct (Nat.eq_dec id0 id) as [eq_ | neq_ ];
         [ (* CASE [id0 = id] *)
           rewrite eq_ in *; intros MapsTo_sstore;
           match goal with
@@ -255,18 +252,18 @@ Section IPMap.
     intros; eapply vassocip_no_events; eauto.
   Qed.
   
-  Lemma mapip_eq_state_if_no_events :
-    forall {Δ Δ__c σ σ__c ipm σ__c'},
-      mapip Δ Δ__c σ σ__c ipm σ__c' ->
-      Equal (events σ__c') {[]} ->
-      σ__c = σ__c'.
-  Proof.
-    induction 1; auto.
-    intros Equal_emp.
-    transitivity σ__c'; auto.
-    eapply vassocip_eq_state_if_no_events; eauto.
-    eapply mapip_no_events; eauto.
-  Qed.
+  (* Lemma mapip_eq_state_if_no_events : *)
+  (*   forall {Δ Δ__c σ σ__c ipm σ__c'}, *)
+  (*     mapip Δ Δ__c σ σ__c ipm σ__c' -> *)
+  (*     Equal (events σ__c') {[]} -> *)
+  (*     σ__c = σ__c'. *)
+  (* Proof. *)
+  (*   induction 1; auto. *)
+  (*   intros Equal_emp. *)
+  (*   transitivity σ__c'; auto. *)
+  (*   eapply vassocip_eq_state_if_no_events; eauto. *)
+  (*   eapply mapip_no_events; eauto. *)
+  (* Qed. *)
 
   Lemma mapip_maps_sstore :
     forall {Δ Δ__c σ σ__c ipm σ__c' },

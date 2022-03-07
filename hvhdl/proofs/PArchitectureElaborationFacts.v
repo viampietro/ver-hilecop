@@ -5,16 +5,16 @@ Require Import common.NatMap.
 Require Import common.InAndNoDup.
 
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxFacts.
+Require Import hvhdl.proofs.AbstractSyntaxFacts.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.WellDefinedDesignFacts.
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
-Require Import hvhdl.ArchitectureElaborationFacts.
-Require Import hvhdl.DesignElaborationFacts.
+Require Import hvhdl.proofs.ArchitectureElaborationFacts.
+Require Import hvhdl.proofs.DesignElaborationFacts.
 
 (** ** Place Declared Signal Elaboration *)
 

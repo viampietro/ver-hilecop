@@ -12,8 +12,9 @@ Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.StaticExpressions.
 Require Import hvhdl.HVhdlTypes.
 
-Require Import hvhdl.ExpressionEvaluationFacts.
-Require Import hvhdl.StaticExpressionsFacts.
+Require Import hvhdl.proofs.ExpressionEvaluationFacts.
+Require Import hvhdl.proofs.StaticExpressionsFacts.
+Require Import hvhdl.proofs.EnvironmentFacts.
 
 (** ** Facts about [listipm] *)
 

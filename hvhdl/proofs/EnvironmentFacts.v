@@ -1,11 +1,11 @@
 (** * Facts about H-VHDL Environment *)
 
 Require Import common.CoqLib.
-Require Import common.CoqTactics.
+Require Import common.proofs.CoqTactics.
 Require Import common.NatSet.
 
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 
 Require Import hvhdl.HVhdlTypes.

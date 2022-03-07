@@ -1,9 +1,9 @@
 (** * Facts about Initialization *)
 
 Require Import common.CoqLib.
-Require Import common.CoqTactics.
+Require Import common.proofs.CoqTactics.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
@@ -11,14 +11,14 @@ Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlHilecopLib.
 
-Require Import hvhdl.StabilizeFacts.
-Require Import hvhdl.SSEvaluationFacts.
-Require Import hvhdl.PortMapEvaluationFacts.
-Require Import hvhdl.EnvironmentFacts.
-Require Import hvhdl.WellDefinedDesignFacts.
-Require Import hvhdl.SSEvaluationFacts.
+Require Import hvhdl.proofs.StabilizeFacts.
+Require Import hvhdl.proofs.SSEvaluationFacts.
+Require Import hvhdl.proofs.PortMapEvaluationFacts.
+Require Import hvhdl.proofs.EnvironmentFacts.
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
+Require Import hvhdl.proofs.SSEvaluationFacts.
 
-Require Import hvhdl.EnvironmentTactics.
+Require Import hvhdl.proofs.EnvironmentTactics.
 
 (** ** Facts about [vruninit] *)
 

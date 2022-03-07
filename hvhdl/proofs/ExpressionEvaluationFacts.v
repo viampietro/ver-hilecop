@@ -9,6 +9,8 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.HVhdlTypes.
 
+Require Import hvhdl.proofs.EnvironmentFacts.
+
 Lemma vexpr_eq_iff_eq_sigs :
   forall {Δ1 σ1 Δ2 σ2 flag e v},
     EqGens Δ1 Δ2 /\ EqSigs Δ1 Δ2 ->

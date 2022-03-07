@@ -2,13 +2,13 @@
 
 Require Import String.
 Require Import common.CoqLib.
-(* Require Import common.CoqTactics. *)
+(* Require Import common.proofs.CoqTactics. *)
 Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.NatMap.
 Require Import common.ListLib.
 Require Import common.StateAndErrorMonad.
-(* Require Import common.StateAndErrorMonadTactics. *)
+Require Import common.proofs.StateAndErrorMonadTactics.
 
 Require Import sitpn.SitpnLib.
 
@@ -21,23 +21,27 @@ Require Import hvhdl.HVhdlHilecopLib.
 (* Require Import hvhdl.HVhdlHilecopFactsLib. *)
 Require Import hvhdl.HVhdlSimulationLib.
 (* Require Import hvhdl.HVhdlSimulationFactsLib. *)
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
+Require Import hvhdl.proofs.DesignElaborationFacts.
+Require Import hvhdl.proofs.PElaborationFacts.
+Require Import hvhdl.proofs.PInitializationFacts.
 
 Require Import transformation.Sitpn2HVhdl.
 Require Import transformation.proofs.GenerateHVhdlFacts.
-(* Require Import transformation.GenerateInfosFacts. *)
+Require Import transformation.proofs.GenerateInfosFacts.
 
 Require Import soundness.SemanticPreservationDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
 
 Lemma init_states_eq_marking :
-  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__e id__a mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -62,27 +66,27 @@ Proof.
 
   (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
-  (* Builds [comp(id__p', "place", gm, ipm, opm) ∈ (behavior d)] *)
+  (* Builds [comp(id__p', "place", g__p, i__p, o__p) ∈ (behavior d)] *)
   edestruct @sitpn2hvhdl_pci_ex with (sitpn := sitpn) (p := p)
     as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
   (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
-  (* destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds). *)
+  destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds).
 
   (* Builds [id__p' ∈ Comps(Δ)] *)
-  (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto. *)
+  edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto.
 
-  (* (* Builds [id__p' ∈ (compstore σ__e)] *) *)
-  (* edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto. *)
+  (* Builds [id__p' ∈ (compstore σ__e)] *)
+  edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
 
-  (* (* Builds [Δ__p("s_marking") = Declared (Tnat 0 n)] *) *)
-  (* edestruct @elab_Pcomp_Δ_s_marking as (n, MapsTo_smarking); eauto. *)
+  (* Builds [Δ__p("s_marking") = Declared (Tnat 0 n)] *)
+  edestruct @elab_PCI_Δ_s_marking as (n, MapsTo_smarking); eauto.
 
-  (* (* Builds proof that [ipm] is well-formed *) *)
-  (* edestruct @elab_validipm as (formals, (listipm_ipm, checkformals_ipm)); eauto. *)
+  (* Builds proof that [ipm] is well-formed *)
+  edestruct @elab_validipm as (formals, (listipm_ipm, checkformals_ipm)); eauto.
   
-  (* (* To prove [σ__p0("s_marking") = M0(p)] *) *)
-  (* eapply init_s_marking_eq_nat; eauto. *)
+  (* To prove [σ__p0("s_marking") = M0(p)] *)
+  eapply init_s_marking_eq_nat; eauto.
   
   (* (* 6 subgoals left. *) *)
 
@@ -96,7 +100,7 @@ Proof.
   (* - eapply sitpn2hvhdl_bind_init_marking; eauto. *)
 
   (* (* Proves [initial_marking ∈ Ins(Δ__p) *) *)
-  (* - eapply elab_Pcomp_Δ_init_marking; eauto. *)
+  (* - eapply elab_PCI_Δ_init_marking; eauto. *)
     
   (* (* Proves [id__p = id__p'] *) *)
   (* - erewrite NoDupA_fs_eqk_eq with (eqk := @Peq sitpn) (b := id__p'); eauto. *)
@@ -337,13 +341,13 @@ Proof.
   (*       as (σ__pe, MapsTo_σ__pe); eauto. *)
   (*   edestruct @init_maps_compstore_id with (D__s := hdstore) *)
   (*     as (σ__p0, MapsTo_σ__p0); eauto. *)
-  (*   edestruct @elab_Pcomp_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e); *)
+  (*   edestruct @elab_PCI_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e); *)
   (*     eauto. *)
   (*   assert (MapsTo_rtt0_ex: exists aofv, MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0)). *)
   (*   { edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1. *)
-  (*     edestruct @elab_Pcomp_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
+  (*     edestruct @elab_PCI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
   (*     assert (MapsTo reinit_transitions_time (Output (Tarray Tbool 0 (m - 1))) Δ__p) by *)
-  (*         (eapply elab_Pcomp_Δ_rtt; eauto). *)
+  (*         (eapply elab_PCI_Δ_rtt; eauto). *)
   (*     assert (is_of_type (Varr aofv__pe) (Tarray Tbool 0 (m - 1))) by *)
   (*         (eapply elab_well_typed_values_in_sstore_of_comp; eauto). *)
   (*     edestruct @init_maps_sstore_of_comp with (D__s := hdstore) *)
@@ -356,7 +360,7 @@ Proof.
   (*   } *)
   (*   destruct MapsTo_rtt0_ex as (aofv__P0, MapsTo_rtt0). *)
     
-  (*   eapply @init_Pcomp_eval_rtt_i; eauto 1. *)
+  (*   eapply @init_PCI_eval_rtt_i; eauto 1. *)
     
   (*   (* SUBGOAL [σ__p0("rtt")(j) = false] *) *)
 
@@ -366,9 +370,9 @@ Proof.
   (*   edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1. *)
 
   (*   (* Builds [Δ__p("out_arcs_nb") = (t__oan, m)] *) *)
-  (*   edestruct @elab_Pcomp_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
+  (*   edestruct @elab_PCI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
     
-  (*   eapply @init_Pcomp_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto. *)
+  (*   eapply @init_PCI_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto. *)
 
   (*   (* SUBGOAL [Δ__p("out_arcs_nb") = |output(p)|] *) *)
   (*   assert (List.In (assocg_ output_arcs_number (length toutputs_of_p)) gm__p). *)
@@ -378,7 +382,7 @@ Proof.
   (*     rewrite <- ((proj1 TOutputsOf_p) (proj1_sig t)); assumption. } *)
 
   (*   edestruct @elab_wf_gmap_expr with (D__s := hdstore) (gm := gm__p) as (v, vexpr_); eauto. *)
-  (*   edestruct @elab_Pcomp_Δ_out_arcs_nb_2 as (t__oan0, MapsTo_oan0); eauto 1. *)
+  (*   edestruct @elab_PCI_Δ_out_arcs_nb_2 as (t__oan0, MapsTo_oan0); eauto 1. *)
   (*   inversion_clear vexpr_ in MapsTo_oan0. *)
   (*   assert (e1 : Generic t__oan (Vnat m) = Generic t__oan0 (Vnat (length toutputs_of_p))) *)
   (*     by eauto with mapsto. *)

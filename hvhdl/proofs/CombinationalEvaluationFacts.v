@@ -2,7 +2,7 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.InAndNoDup.
 Require Import common.NatSet.
 
@@ -15,15 +15,15 @@ Require Import hvhdl.Place.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.SSEvaluation.
-Require Import hvhdl.SSEvaluationFacts.
+Require Import hvhdl.proofs.SSEvaluationFacts.
 Require Import hvhdl.PortMapEvaluation.
-Require Import hvhdl.PortMapEvaluationFacts.
+Require Import hvhdl.proofs.PortMapEvaluationFacts.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.AbstractSyntaxTactics.
-Require Import hvhdl.WellDefinedDesignFacts.
-Require Import hvhdl.WellDefinedDesignTactics.
-Require Import hvhdl.EnvironmentFacts.
-Require Import hvhdl.EnvironmentTactics.
+Require Import hvhdl.proofs.AbstractSyntaxTactics.
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
+Require Import hvhdl.proofs.WellDefinedDesignTactics.
+Require Import hvhdl.proofs.EnvironmentFacts.
+Require Import hvhdl.proofs.EnvironmentTactics.
 
 (** ** Facts about [vcomb] *)
 
@@ -40,7 +40,7 @@ Proof.
     
   (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
-  - simpl; destruct (Nat.eq_dec compid id__c).
+  - simpl; destruct (Nat.eq_dec id__c0 id__c).
     + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
     + exists σ__c; apply NatMap.add_2; auto.
       eapply mapop_inv_compstore; eauto.
@@ -274,7 +274,7 @@ Proof.
   induction 1.
       
   (* CASE active process *)
-  - eapply @vseq_maps_sstore with (σ := NoEvDState σ); eauto.
+  - eapply @vseq_maps_sstore with (σ__w := NoEvDState σ); eauto.
     
   (* CASE comp evaluation with events. *)
   - cbn; eapply @mapop_maps_sstore with (σ := NoEvDState σ); eauto.
@@ -310,9 +310,9 @@ Proof.
     destruct 1; destruct CompOf_; mapsto_discriminate.
     
   (* CASE eventful comp *)
-  - cbn; intros id__c CompOf_.
+  - cbn; intros id__c0 CompOf_.
     rewrite add_iff; inversion 1.
-    subst compid; exists entid, gmap, ipmap, opmap; reflexivity.
+    subst id__c; exists id__e, g, i, o; reflexivity.
     exfalso.
     eapply mapop_not_in_events_if_not_sig; eauto.
     cbn; eauto with set.
@@ -320,7 +320,7 @@ Proof.
     destruct 1; destruct CompOf_; mapsto_discriminate.
 
   (* CASE eventless comp *)
-  - cbn; intros id__c CompOf_; intros.
+  - cbn; intros * CompOf_; intros.
     exfalso.
     eapply mapop_not_in_events_if_not_sig; eauto.
     cbn; eauto with set.
@@ -379,7 +379,7 @@ Proof.
   (* CASE comp evaluation with no events.*)
   - inversion_clear 1; cbn; intros.
     exists v.
-    assert (MapsTo compid σ__c (compstore σ'))
+    assert (MapsTo id__c σ__c (compstore σ'))
       by (eapply mapop_inv_compstore; eauto).      
     erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
     erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
@@ -455,7 +455,7 @@ Lemma vcomb_inv_well_typed_values_in_sstore :
 Proof.
   induction 1; intros WT; try (solve [trivial]).
   (* CASE process *)
-  - eapply @vseq_inv_well_typed_values_in_sstore with (σ := NoEvDState σ); eauto.
+  - eapply @vseq_inv_well_typed_values_in_sstore with (σ__w := NoEvDState σ); eauto.
   (* CASE eventful component *)
   - cbn; eapply @mapop_inv_well_typed_values_in_sstore with (σ := NoEvDState σ); eauto.
   (* CASE eventless component *)
@@ -502,25 +502,25 @@ Proof.
   induction 1; intros WT; trivial.
   (* CASE process *)
   - intros; eapply WT; eauto.
-    eapply @vseq_inv_compstore_2 with (σ := NoEvDState σ); eauto.
+    eapply @vseq_inv_compstore_2 with (σ__w := NoEvDState σ); eauto.
   (* CASE eventful component *)
   - cbn; do 5 intro.
     (* 2 CASES: [id__c = compid] or [id__c ≠ compid] *)
-    destruct (Nat.eq_dec id__c compid) as [ eq_ | neq_ ].
-    (* CASE [id__c = compid] *)
+    destruct (Nat.eq_dec id__c id__c0) as [ eq_ | neq_ ].
+    (* CASE [id__c = id__c0] *)
     + rewrite eq_ in *; intros.
       assert (eq_Δ : Component Δ__c0 = Component Δ__c) by (eauto with mapsto).
       inject_left eq_Δ; eauto.
       eapply vcomb_inv_well_typed_values_in_sstore; eauto.
       eapply mapip_inv_well_typed_values_in_sstore; eauto.
       erewrite <- @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
-    (* CASE [id__c ≠ compid] *)
-    + assert (MapsTo id__c σ'__c (compstore σ)) by
-          (eapply @mapop_inv_compstore_2 with (σ := NoEvDState σ); eauto with mapsto).
+    (* CASE [id__c ≠ id__c0] *)
+    + assert (MapsTo id__c0 σ'__c (compstore σ)) by
+        (eapply @mapop_inv_compstore_2 with (σ := NoEvDState σ); eauto with mapsto).
       eapply WT; eauto.
   (* CASE eventless component *)
   - cbn; do 5 intro.
-    assert (MapsTo id__c σ'__c (compstore σ)) by
+    assert (MapsTo id__c0 σ'__c (compstore σ)) by
         (eapply @mapop_inv_compstore_2 with (σ := NoEvDState σ); eauto with mapsto).
     eapply WT; eauto.
   (* CASE || *)

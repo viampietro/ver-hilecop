@@ -1,7 +1,7 @@
 (** * Tactics for the H-VHDL Abstract Syntax *)
 
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxFacts.
+Require Import hvhdl.proofs.AbstractSyntaxFacts.
 
 Ltac build_lofcs beh :=
   lazymatch type of beh with

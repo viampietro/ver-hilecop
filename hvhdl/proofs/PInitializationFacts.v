@@ -2,22 +2,22 @@
 
 Require Import common.CoqLib.
 Require Import common.NatMap.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
 Require Import hvhdl.HVhdlCoreLib.
-Require Import hvhdl.HVhdlCoreFactsLib.
-Require Import hvhdl.HVhdlCoreTacticsLib.
+Require Import hvhdl.proofs.HVhdlCoreFactsLib.
+Require Import hvhdl.proofs.HVhdlCoreTacticsLib.
 Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.ValidPortMap.
 
-Require Import hvhdl.StabilizeFacts.
-Require Import hvhdl.SSEvaluationFacts.
-Require Import hvhdl.PortMapEvaluationFacts.
-Require Import hvhdl.InitializationFacts.
-Require Import hvhdl.PStabilizeFacts.
+Require Import hvhdl.proofs.StabilizeFacts.
+Require Import hvhdl.proofs.SSEvaluationFacts.
+Require Import hvhdl.proofs.PortMapEvaluationFacts.
+Require Import hvhdl.proofs.InitializationFacts.
+Require Import hvhdl.proofs.PStabilizeFacts.
 Require Import hvhdl.InitializationTactics.
 Require Import hvhdl.SSEvaluationTactics.
 Require Import hvhdl.ExpressionEvaluationTactics.
@@ -243,7 +243,7 @@ Section PInit.
     eapply vruninit_s_marking_eq_nat; eauto.
   Qed.
 
-  Lemma init_Pcomp_eval_rtt_i :
+  Lemma init_PCI_eval_rtt_i :
     forall D__s Δ σ behavior σ0,
       init D__s Δ σ behavior σ0 ->
       forall id__p gm ipm opm σ__p0 aofv id i b ,
@@ -255,7 +255,7 @@ Section PInit.
         MapsTo id (Vbool b) (sigstore σ0).
   Admitted.
   
-  Lemma init_Pcomp_rtt_eq_false :
+  Lemma init_PCI_rtt_eq_false :
     forall D__s Δ σ behavior σ0,
       init D__s Δ σ behavior σ0 ->
       forall id__p gm ipm opm σ__p0 Δ__p aofv i t n,

@@ -5,21 +5,22 @@ Require Import common.NatMap.
 Require Import common.InAndNoDup.
 
 Require Import hvhdl.AbstractSyntax.
-Require Import hvhdl.AbstractSyntaxFacts.
+Require Import hvhdl.proofs.AbstractSyntaxFacts.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.WellDefinedDesignFacts.
+
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
-Require Import hvhdl.ArchitectureElaborationFacts.
-Require Import hvhdl.DesignElaborationFacts.
-Require Import hvhdl.PArchitectureElaborationFacts.
+Require Import hvhdl.proofs.ArchitectureElaborationFacts.
+Require Import hvhdl.proofs.DesignElaborationFacts.
+Require Import hvhdl.proofs.PArchitectureElaborationFacts.
 
 (** ** Facts about the [output_arcs_number] generic constant *)
 
-Lemma elab_Pcomp_Δ_out_arcs_nb_1 :
+Lemma elab_PCI_Δ_out_arcs_nb_1 :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -27,7 +28,7 @@ Lemma elab_Pcomp_Δ_out_arcs_nb_1 :
     exists t n, MapsTo Place.output_arcs_number (Generic t (Vnat n)) Δ__p.
 Admitted.
 
-Lemma elab_Pcomp_Δ_out_arcs_nb_2 :
+Lemma elab_PCI_Δ_out_arcs_nb_2 :
   forall {d Δ σ__e id__p gm ipm opm Δ__p e v},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -75,7 +76,7 @@ Proof.
   - apply IHebeh2; auto.
 Qed.
 
-Lemma elab_Pcomp_Δ_s_marking :
+Lemma elab_PCI_Δ_s_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -88,7 +89,7 @@ Qed.
 
 (** ** Facts about the [initial_marking] input port *)
 
-Lemma elab_Pcomp_Δ_init_marking :
+Lemma elab_PCI_Δ_init_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -102,7 +103,7 @@ Qed.
 
 (** ** Facts about the [reinit_transitions_time] output port *)
 
-Lemma elab_Pcomp_σ_rtt : 
+Lemma elab_PCI_σ_rtt : 
   forall {d Δ σ__e id__p gm ipm opm σ__pe},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
@@ -110,7 +111,7 @@ Lemma elab_Pcomp_σ_rtt :
     exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sigstore σ__pe).
 Admitted.
 
-Lemma elab_Pcomp_Δ_rtt : 
+Lemma elab_PCI_Δ_rtt : 
   forall {d Δ σ__e},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     forall {id__p gm ipm opm Δ__p t n},

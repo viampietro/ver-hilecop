@@ -238,16 +238,13 @@ Lemma gen_sitpn_infos_sil_lofPs :
     Sig_in_List (lofPs s').
 Proof.
   intros until s'; intros e; monadInv e; intros.
-  rewrite <- (gen_finfos_inv_lofPs EQ15); clear EQ15.
-  rewrite <- (gen_ainfos_inv_lofPs EQ13); clear EQ13.
-  rewrite <- (gen_cinfos_inv_lofPs EQ12); clear EQ12.
-  rewrite <- (gen_pinfos_inv_lofPs EQ11); clear EQ11.
-  rewrite <- (gen_tinfos_inv_lofPs EQ10); clear EQ10.
-  rewrite <- (check_wd_sitpn_inv_eq_state EQ9); clear EQ9.
-  do 5 (match goal with
-        | [ H: ?F _ _ = OK _ ?st1 |- Sig_in_List (lofPs ?st1) ] =>
-          minv H; simpl; auto; clear H
-        end).
+  assert (eq_lofPs : x = lofPs s') by
+  (transitivity (lofPs s5);
+   [ match goal with
+     | [ H: set_lofPs _ _ = OK _ _ |- _ ] => minv H; reflexivity
+     end
+   | pattern s5, s'; mend_sinv ]).
+  rewrite <- eq_lofPs.
   eapply tmap_aux_sil; eauto;
     [intros p; left; exact (proj2_sig p) | inversion 1 | exact (nodup_pls sitpn)].
 Qed.
@@ -257,17 +254,15 @@ Lemma gen_sitpn_infos_sil_lofTs :
     generate_sitpn_infos sitpn s = OK v s' ->
     Sig_in_List (lofTs s').
 Proof.
-  intros *; intros e; monadInv e; intros.
-  rewrite <- (gen_finfos_inv_lofTs EQ15); clear EQ15.
-  rewrite <- (gen_ainfos_inv_lofTs EQ13); clear EQ13.
-  rewrite <- (gen_cinfos_inv_lofTs EQ12); clear EQ12.
-  rewrite <- (gen_pinfos_inv_lofTs EQ11); clear EQ11.
-  rewrite <- (gen_tinfos_inv_lofTs EQ10); clear EQ10.
-  rewrite <- (check_wd_sitpn_inv_eq_state EQ9); clear EQ9.
-  do 4 (match goal with
-        | [ H: ?F _ _ = OK _ ?st1 |- Sig_in_List (lofTs ?st1) ] =>
-          minv H; simpl; auto; clear H
-        end).
+  intros until s'; intros e; monadInv e; intros.
+  match goal with
+  | [ H: set_lofTs ?X ?S1 = OK _ ?S2 |- Sig_in_List (lofTs ?S3) ] =>
+      cut (X = lofTs S3); [
+        intros eq_lofTs |
+        (transitivity (lofTs S2); [ (minv H; reflexivity) | (pattern S2, S3; mend_sinv) ])
+      ]
+  end.
+  rewrite <- eq_lofTs.
   eapply tmap_aux_sil; eauto;
-    [intros t; left; exact (proj2_sig t) | inversion 1 | exact (nodup_trs sitpn)].
+    [intros p; left; exact (proj2_sig p) | inversion 1 | exact (nodup_trs sitpn)].
 Qed.

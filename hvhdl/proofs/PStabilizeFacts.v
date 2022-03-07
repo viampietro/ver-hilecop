@@ -14,8 +14,8 @@ Require Import hvhdl.Stabilize.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.WellDefinedDesign.
-Require Import hvhdl.CombinationalEvaluationFacts.
-Require Import hvhdl.PCombinationalEvaluationFacts.
+Require Import hvhdl.proofs.CombinationalEvaluationFacts.
+Require Import hvhdl.proofs.PCombinationalEvaluationFacts.
 
 (** Value of signal [s_marking] in a given P component [id__p] is
     invariant during stabilization. *)

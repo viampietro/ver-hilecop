@@ -1,24 +1,26 @@
 (** * Facts about Design Elaboration Relations *)
 
 Require Import common.CoqLib.
-Require Import common.CoqTactics.
+Require Import common.proofs.CoqTactics.
 Require Import common.NatSet.
 Require Import common.NatMap.
 Require Import common.InAndNoDup.
-Require Import common.NatMapTactics.
+Require Import common.proofs.NatMapTactics.
 
 Require Import hvhdl.HVhdlCoreLib.
-Require Import hvhdl.AbstractSyntaxFacts.
+Require Import hvhdl.proofs.AbstractSyntaxFacts.
 Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.Place.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.ValidPortMap.
-Require Import hvhdl.WellDefinedDesignFacts.
-Require Import hvhdl.ArchitectureElaborationFacts.
-Require Import hvhdl.PortElaborationFacts.
-Require Import hvhdl.ValidPortMapFacts.
-Require Import hvhdl.DefaultValueFacts.
-Require Import hvhdl.GenericElaborationFacts.
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
+Require Import hvhdl.proofs.ArchitectureElaborationFacts.
+Require Import hvhdl.proofs.PortElaborationFacts.
+Require Import hvhdl.proofs.ValidPortMapFacts.
+Require Import hvhdl.proofs.DefaultValueFacts.
+Require Import hvhdl.proofs.GenericElaborationFacts.
+
+Require Import hvhdl.proofs.EnvironmentFacts.
 
 (** ** Facts about Behavior Elaboration *)
 
@@ -385,8 +387,8 @@ Proof.
     erewrite @MapsTo_add_eqv with (e := Component Δ__c0) (e' := Component Δ__c); eauto.
     inject_left e.
     match goal with
-    | [ H: validipm _ _ _ _ _ |- _ ] =>
-      unfold validipm in H; destruct H; exists formals; split; auto
+    | [ H: validipm _ _ _ _ |- _ ] =>
+        destruct H; exists formals; split; auto
     end.
     (* SUBCASE listpipm *)
     erewrite @listipm_eq_iff_eq_sigs with (Δ2 := Δ) (σ2 := σ); eauto.

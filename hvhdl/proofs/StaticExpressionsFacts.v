@@ -5,6 +5,8 @@ Require Import hvhdl.StaticExpressions.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 
+Require Import hvhdl.proofs.EnvironmentFacts.
+
 (** ** Facts about Locally Static Expressions *)
 
 Section LStatic.
