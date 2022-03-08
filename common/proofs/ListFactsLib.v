@@ -1,3 +1,3 @@
-Require Export common.ListMonadFacts.
-Require Export common.ListPlusFacts.
-Require Export common.SetoidListFacts.
+Require Export common.proofs.ListMonadFacts.
+Require Export common.proofs.ListPlusFacts.
+Require Export common.proofs.SetoidListFacts.

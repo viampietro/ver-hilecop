@@ -7,9 +7,9 @@ Require Import common.proofs.NatMapTactics.
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlElaborationLib.
-Require Import hvhdl.HVhdlElaborationFactsLib.
-Require Import hvhdl.ExpressionEvaluationTactics.
-Require Import hvhdl.HVhdlElaborationTacticsLib.
+Require Import hvhdl.proofs.HVhdlElaborationFactsLib.
+Require Import hvhdl.proofs.ExpressionEvaluationTactics.
+Require Import hvhdl.proofs.HVhdlElaborationTacticsLib.
 
 (** ** Facts about the [reinit_time] input port *)
 

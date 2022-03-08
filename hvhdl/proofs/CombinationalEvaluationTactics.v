@@ -7,11 +7,11 @@ Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 
 Require Import hvhdl.HVhdlCoreLib.
-Require Import hvhdl.HVhdlCoreTacticsLib.
-Require Import hvhdl.HVhdlCoreFactsLib.
+Require Import hvhdl.proofs.HVhdlCoreTacticsLib.
+Require Import hvhdl.proofs.HVhdlCoreFactsLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlSimulationLib.
-Require Import hvhdl.HVhdlSimulationFactsLib.
+Require Import hvhdl.proofs.HVhdlSimulationFactsLib.
 
 
 Ltac solve_vcomb_par_l :=

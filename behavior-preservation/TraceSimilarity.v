@@ -46,10 +46,10 @@ Require Import soundness.RisingEdge.
 (** ** Trace similarity lemma *)
 
 Lemma trace_sim :
-  forall sitpn decpr id__ent id__arch b d γ E__c E__p Δ σ__e τ s σ θ__s θ__σ, 
+  forall sitpn id__ent id__arch b d γ E__c E__p Δ σ__e τ s σ θ__s θ__σ, 
 
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch b = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->
@@ -94,13 +94,13 @@ Qed.
     a given H-VHDL design [d]. *)
 
 Theorem full_trace_sim :
-  forall sitpn decpr id__ent id__arch E__c τ θ__s d E__p b θ__σ γ Δ,
+  forall sitpn id__ent id__arch E__c τ θ__s d E__p b θ__σ γ Δ,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch b = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->

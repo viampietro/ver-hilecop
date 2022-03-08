@@ -13,14 +13,14 @@ Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.HVhdlCoreLib.
-(* Require Import hvhdl.HVhdlCoreFactsLib. *)
-(* Require Import hvhdl.HVhdlCoreTacticsLib. *)
+(* Require Import hvhdl.proofs.HVhdlCoreFactsLib. *)
+(* Require Import hvhdl.proofs.HVhdlCoreTacticsLib. *)
 Require Import hvhdl.HVhdlElaborationLib.
-(* Require Import hvhdl.HVhdlElaborationFactsLib. *)
+(* Require Import hvhdl.proofs.HVhdlElaborationFactsLib. *)
 Require Import hvhdl.HVhdlHilecopLib.
 (* Require Import hvhdl.HVhdlHilecopFactsLib. *)
 Require Import hvhdl.HVhdlSimulationLib.
-(* Require Import hvhdl.HVhdlSimulationFactsLib. *)
+(* Require Import hvhdl.proofs.HVhdlSimulationFactsLib. *)
 Require Import hvhdl.proofs.WellDefinedDesignFacts.
 Require Import hvhdl.proofs.DesignElaborationFacts.
 Require Import hvhdl.proofs.PElaborationFacts.
@@ -113,13 +113,13 @@ Admitted.
 (** ** Initial States Equal Time Counters *)
 
 Lemma init_states_eq_time_counters :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -170,7 +170,7 @@ Proof.
   (*           eapply elab_empty_events; eauto *)
   (*           | *)
   (*           (* Proves [DeclaredOf Δ__t "s_tc"] *) *)
-  (*           eapply @elab_Tcomp_Δ_s_tc; eauto *)
+  (*           eapply @elab_TCI_Δ_s_tc; eauto *)
   (*           | *)
   (*           (* Proves ["s_tc" ∉ (events σ__te)] *) *)
   (*           erewrite elab_empty_events_for_comps; eauto with set *)
@@ -198,13 +198,13 @@ Proof.
 Admitted.
 
 Lemma init_states_eq_reset_orders :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -243,13 +243,13 @@ Proof.
   (* edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto. *)
 
   (* (* Builds [Δ__t("in_arcs_nb") = (t, n)] *) *)
-  (* edestruct @elab_Tcomp_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto. *)
+  (* edestruct @elab_TCI_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto. *)
   
   (* (* Builds [σ__t0("rt") = aofv] *) *)
   (* assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0)). *)
-  (* { edestruct @elab_Tcomp_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto. *)
+  (* { edestruct @elab_TCI_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto. *)
   (*   assert (MapsTo reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t) by *)
-  (*       (eapply elab_Tcomp_Δ_rt; eauto). *)
+  (*       (eapply elab_TCI_Δ_rt; eauto). *)
   (*   assert (is_of_type (Varr aofv) (Tarray Tbool 0 (n - 1))) by *)
   (*       (eapply elab_well_typed_values_in_sstore_of_comp; eauto). *)
   (*   edestruct @init_maps_sstore_of_comp as (v', MapsTo_v'); eauto. *)
@@ -261,7 +261,7 @@ Proof.
   (* } *)
   (* destruct aofv_ex as (aofv, MapsTo_rt). *)
   
-  (* eapply init_Tcomp_s_rtc_eq_bprod_of_rt; eauto; *)
+  (* eapply init_TCI_s_rtc_eq_bprod_of_rt; eauto; *)
   (*   (* 3 SUBGOALS *) *)
   (*   (* Proves [CsHasUniqueCompIds (behavior d) compids] *) *)
   (*   [split; eauto; eapply elab_nodup_compids; eauto *)
@@ -283,14 +283,14 @@ Proof.
   (*   replace (get_bool_at aofv 0) with false. *)
   (*   constructor. *)
   (*   (* SUBGOAL [get_bool_at aofv 0 = false] *) *)
-  (*   + symmetry; eapply init_Tcomp_eval_rt_0; eauto. *)
+  (*   + symmetry; eapply init_TCI_eval_rt_0; eauto. *)
   (*     eapply sitpn2hvhdl_emp_pinputs_rt; eauto. *)
 
   (*   (* SUBGOAL [Δ__t("in_arcs_nb") = 1] *) *)
   (*   + assert (List.In (assocg_ input_arcs_number 1) gm) *)
   (*       by (eapply sitpn2hvhdl_emp_pinputs_in_arcs_nb ; eauto). *)
   (*     edestruct @elab_wf_gmap_expr with (D__s := hdstore) as (v, vexpr_); eauto. *)
-  (*     edestruct @elab_Tcomp_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
+  (*     edestruct @elab_TCI_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
   (*     inversion_clear vexpr_ in Mapsto_ian0. *)
   (*     assert (e1 : Generic t__ian0 (Vnat 1) = Generic t__ian (Vnat n)) *)
   (*       by eauto with mapsto. *)
@@ -324,14 +324,14 @@ Proof.
   (*     assert (List.In (assocg_ input_arcs_number (length (p :: pinputs_of_t))) gm) *)
   (*       by (eapply sitpn2hvhdl_nemp_pinputs_in_arcs_nb; eauto; cbn; lia). *)
   (*     edestruct @elab_wf_gmap_expr with (D__s := hdstore) (gm := gm) as (v, vexpr_); eauto. *)
-  (*     edestruct @elab_Tcomp_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
+  (*     edestruct @elab_TCI_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
   (*     inversion_clear vexpr_ in Mapsto_ian0. *)
   (*     assert (e1 : Generic t__ian0 (Vnat (S (Datatypes.length pinputs_of_t))) = Generic t__ian (Vnat n)) *)
   (*       by eauto with mapsto. *)
   (*     inversion e1; reflexivity. } *)
     
   (*   (* SUBGOAL [σ__t0("rt")(i) = false] *) *)
-  (*   eapply init_Tcomp_eval_rt_i; eauto. *)
+  (*   eapply init_TCI_eval_rt_i; eauto. *)
 
   (*   (* Then, show [σ0("id__ji") = false] *) *)
 
@@ -390,13 +390,13 @@ Proof.
 Admitted.
 
 Lemma init_states_eq_actions :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -410,13 +410,13 @@ Lemma init_states_eq_actions :
 Admitted.
 
 Lemma init_states_eq_functions :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -430,13 +430,13 @@ Lemma init_states_eq_functions :
 Admitted.
 
 Lemma init_states_eq_conditions :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -452,13 +452,13 @@ Admitted.
 (** ** Similar Initial States Lemma *)
 
 Lemma sim_init_states :
-  forall sitpn decpr id__ent id__arch b d γ Δ σ__e σ0,
+  forall sitpn id__ent id__arch b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch b = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->

@@ -1,6 +1,6 @@
 (** * HVhdl Simulation Tactics Modules *)
 
-Require Export hvhdl.ExpressionEvaluationTactics.
-Require Export hvhdl.CombinationalEvaluationTactics.
-Require Export hvhdl.SSEvaluationTactics.
-Require Export hvhdl.InitializationTactics.
+Require Export hvhdl.proofs.ExpressionEvaluationTactics.
+Require Export hvhdl.proofs.CombinationalEvaluationTactics.
+Require Export hvhdl.proofs.SSEvaluationTactics.
+Require Export hvhdl.proofs.InitializationTactics.

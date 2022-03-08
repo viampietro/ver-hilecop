@@ -7,7 +7,7 @@ Require Import common.proofs.NatMapTactics.
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlElaborationLib.
-Require Import hvhdl.HVhdlElaborationFactsLib.
+Require Import hvhdl.proofs.HVhdlElaborationFactsLib.
 
 (** ** Facts about the [input_arcs_number] generic constant *)
 

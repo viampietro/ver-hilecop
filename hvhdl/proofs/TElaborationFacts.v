@@ -7,9 +7,9 @@ Require Import common.proofs.NatMapTactics.
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlElaborationLib.
-Require Import hvhdl.HVhdlElaborationFactsLib.
-Require Import hvhdl.TGenericElaborationFacts.
-Require Import hvhdl.TPortElaborationFacts.
+Require Import hvhdl.proofs.HVhdlElaborationFactsLib.
+Require Import hvhdl.proofs.TGenericElaborationFacts.
+Require Import hvhdl.proofs.TPortElaborationFacts.
 
 (** ** Facts about the [input_arcs_number] generic constant *)
 
@@ -26,7 +26,7 @@ Proof.
   erewrite <- @eports_inv_gens with (Δ := Δ0) (Δ' := Δ'); eauto 1.
 Qed.
 
-Lemma ebeh_Tcomp_Δ_in_arcs_nb_1 : 
+Lemma ebeh_TCI_Δ_in_arcs_nb_1 : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm Δ__t},
     ebeh hdstore Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
@@ -52,7 +52,7 @@ Proof.
   - apply IHebeh2; auto.  
 Qed.
 
-Lemma elab_Tcomp_Δ_in_arcs_nb_1 :
+Lemma elab_TCI_Δ_in_arcs_nb_1 :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -60,10 +60,10 @@ Lemma elab_Tcomp_Δ_in_arcs_nb_1 :
     exists t n, MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t.
 Proof.
   inversion 1.
-  eapply ebeh_Tcomp_Δ_in_arcs_nb_1; eauto.
+  eapply ebeh_TCI_Δ_in_arcs_nb_1; eauto.
 Qed.
 
-Lemma elab_Tcomp_Δ_in_arcs_nb_2 :
+Lemma elab_TCI_Δ_in_arcs_nb_2 :
   forall {d Δ σ__e id__t gm ipm opm Δ__t e v},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -97,7 +97,7 @@ Proof.
   eapply edecls_inv_Δ; eauto.
 Qed.
 
-Lemma ebeh_Tcomp_Δ_rt : 
+Lemma ebeh_TCI_Δ_rt : 
   forall {Δ σ behavior Δ' σ'},
     ebeh hdstore Δ σ behavior Δ' σ' ->
     forall {id__t gm ipm opm Δ__t t n},
@@ -129,7 +129,7 @@ Proof.
     eapply IHebeh2; eauto.
 Qed.
 
-Lemma elab_Tcomp_Δ_rt : 
+Lemma elab_TCI_Δ_rt : 
   forall {d Δ σ__e},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     forall {id__t gm ipm opm Δ__t t n},
@@ -139,7 +139,7 @@ Lemma elab_Tcomp_Δ_rt :
       MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t.
 Proof.
   inversion 1.
-  eapply ebeh_Tcomp_Δ_rt; eauto.
+  eapply ebeh_TCI_Δ_rt; eauto.
 Qed.
 
 Lemma elab_T_σ_rt :
@@ -154,7 +154,7 @@ Proof.
   eapply edecls_inv_sigstore; eauto.
 Qed.
 
-Lemma ebeh_Tcomp_σ_rt : 
+Lemma ebeh_TCI_σ_rt : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm σ'__t},
     ebeh hdstore Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
@@ -181,7 +181,7 @@ Proof.
   - apply IHebeh2; auto.  
 Qed.
 
-Lemma elab_Tcomp_σ_rt : 
+Lemma elab_TCI_σ_rt : 
   forall {d Δ σ__e id__t gm ipm opm σ__te},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -189,10 +189,10 @@ Lemma elab_Tcomp_σ_rt :
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__te).
 Proof.
   inversion 1.
-  eapply ebeh_Tcomp_σ_rt; eauto.
+  eapply ebeh_TCI_σ_rt; eauto.
 Qed.
 
-Lemma elab_Tcomp_σ_rt_2 : 
+Lemma elab_TCI_σ_rt_2 : 
   forall {d Δ σ__e id__t gm ipm opm σ__te Δ__t t n},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -206,7 +206,7 @@ Admitted.
 
 (** ** Facts about the [s_time_counter] declared signal *)
 
-Lemma elab_Tcomp_Δ_s_tc :
+Lemma elab_TCI_Δ_s_tc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
@@ -218,7 +218,7 @@ Proof.
   firstorder.
 Qed.
 
-Lemma elab_Tcomp_Δ_s_rtc :
+Lemma elab_TCI_Δ_s_rtc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->

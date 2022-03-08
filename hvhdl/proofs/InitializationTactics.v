@@ -7,8 +7,8 @@ Require Import common.NatSet.
 Require Import common.InAndNoDup.
 
 Require Import hvhdl.HVhdlCoreLib.
-Require Import hvhdl.HVhdlCoreFactsLib.
-Require Import hvhdl.HVhdlCoreTacticsLib.
+Require Import hvhdl.proofs.HVhdlCoreFactsLib.
+Require Import hvhdl.proofs.HVhdlCoreTacticsLib.
 Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.ValidPortMap.

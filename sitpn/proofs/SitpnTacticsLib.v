@@ -1,1 +1,1 @@
-Require Export sitpn.SitpnWellDefinedTactics.
+Require Export sitpn.proofs.SitpnWellDefinedTactics.

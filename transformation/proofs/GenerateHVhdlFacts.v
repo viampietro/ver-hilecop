@@ -316,13 +316,13 @@ Section Sitpn2HVhdl.
   (* Qed. *)
 
   (* Lemma sitpn2hvhdl_nodup_t2tci : *)
-  (*   forall {sitpn decpr id__ent id__arch mm d γ},     *)
-  (*     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) -> *)
+  (*   forall {sitpn id__ent id__arch mm d γ},     *)
+  (*     sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) -> *)
   (*     IsWellDefined sitpn -> *)
   (*     NoDupA Teq (fs (t2tci γ)). *)
   (* Proof. *)
   (*   intros until mm;   *)
-  (*     functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) *)
+  (*     functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) *)
   (*                using sitpn_to_hvhdl_ind; (try (solve [inversion 1])). *)
   (*   intros *; intros e1 IWD; monadInv e. *)
   (*   minv EQ4; inversion_clear e1.     *)
@@ -337,14 +337,14 @@ Section Sitpn2HVhdl.
   (* Qed. *)
   
   (* Lemma sitpn2hvhdl_nodup_p2pci : *)
-  (*   forall {sitpn decpr id__ent id__arch mm d γ},     *)
+  (*   forall {sitpn id__ent id__arch mm d γ},     *)
   (*     (* [sitpn] translates into [(d, γ)]. *) *)
-  (*     sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) -> *)
+  (*     sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) -> *)
   (*     IsWellDefined sitpn -> *)
   (*     NoDupA Peq (fs (p2pci γ)). *)
   (* Proof. *)
   (*   intros until mm;   *)
-  (*     functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) *)
+  (*     functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) *)
   (*                using sitpn_to_hvhdl_ind.   *)
   (*   (* Error *) *)
   (*   inversion 1. *)
@@ -408,7 +408,7 @@ Section Sitpn2HVhdl.
           /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d).
   Proof.
     (*   intros *.  *)
-    (*   functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) using sitpn_to_hvhdl_ind. *)
+    (*   functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) using sitpn_to_hvhdl_ind. *)
 
     (*   (* ERROR CASE *) *)
     (*   inversion 1. *)
@@ -436,7 +436,7 @@ Section Sitpn2HVhdl.
         List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
   Proof.
     (*   intros until mm;   *)
-    (*     functional induction (sitpn_to_hvhdl sitpn decpr id__ent id__arch mm) *)
+    (*     functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) *)
     (*                using sitpn_to_hvhdl_ind. *)
     
     (*   (* Error *) *)

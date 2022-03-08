@@ -12,10 +12,10 @@ Require Import transformation.Sitpn2HVhdl.
 Require Import soundness.SemanticPreservationDefs.
 
 Lemma first_rising_edge_full :
-  forall sitpn decpr id__ent id__arch b d γ E__c E__p Δ σ__e σ0 τ σ__i σ__r σ,
+  forall sitpn id__ent id__arch b d γ E__c E__p Δ σ__e σ0 τ σ__i σ__r σ,
 
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch b = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->
@@ -41,10 +41,10 @@ Admitted.
 #[export] Hint Extern 1 ( _ ⊢ _ ∼ _ ) => eapply first_rising_edge_full; eauto : hilecop.
 
 Lemma first_rising_edge :
-  forall sitpn decpr id__ent id__arch b d γ E__c E__p Δ σ__e σ0 τ σ__i σ__r σ,
+  forall sitpn id__ent id__arch b d γ E__c E__p Δ σ__e σ0 τ σ__i σ__r σ,
 
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch b = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->

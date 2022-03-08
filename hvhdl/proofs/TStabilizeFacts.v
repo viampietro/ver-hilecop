@@ -7,8 +7,8 @@ Require Import common.ListLib.
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlSimulationLib.
-Require Import hvhdl.HVhdlSimulationFactsLib.
-Require Import hvhdl.TCombinationalEvaluationFacts.
+Require Import hvhdl.proofs.HVhdlSimulationFactsLib.
+Require Import hvhdl.proofs.TCombinationalEvaluationFacts.
 
 (** Value of signal [s_tc] in a given T component [id__t] is
       invariant during stabilization. *)
@@ -37,7 +37,7 @@ Proof.
     eapply vcomb_inv_s_tc; eauto.
 Qed.
 
-Lemma stab_Tcomp_s_rtc_eq_bprod_of_rt :
+Lemma stab_TCI_s_rtc_eq_bprod_of_rt :
   forall Δ σ behavior σ',
     stabilize hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t t n,

@@ -1,1 +1,1 @@
-Require Export sitpn.SitpnSemanticsFacts.
+Require Export sitpn.proofs.SitpnSemanticsFacts.

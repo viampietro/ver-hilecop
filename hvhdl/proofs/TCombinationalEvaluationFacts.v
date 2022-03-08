@@ -7,12 +7,12 @@ Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 
 Require Import hvhdl.HVhdlCoreLib.
-Require Import hvhdl.HVhdlCoreFactsLib.
-Require Import hvhdl.HVhdlCoreTacticsLib.
+Require Import hvhdl.proofs.HVhdlCoreFactsLib.
+Require Import hvhdl.proofs.HVhdlCoreTacticsLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import hvhdl.HVhdlSimulationLib.
-Require Import hvhdl.HVhdlSimulationFactsLib.
-Require Import hvhdl.CombinationalEvaluationTactics.
+Require Import hvhdl.proofs.HVhdlSimulationFactsLib.
+Require Import hvhdl.proofs.CombinationalEvaluationTactics.
 
 Lemma vcomb_tc_ps_inv_sigstore :
   forall {D__s Δ σ σ' id v},
@@ -23,7 +23,7 @@ Proof.
   unfold time_counter_ps.
   inversion 1; auto.
   do 2 (match goal with
-        | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
+        | [ H: vseq _ _ _ _ _ _ _ _ |- _ ] =>
           inversion H
         end); simpl; auto.
 Qed.
@@ -36,7 +36,7 @@ Proof.
   unfold time_counter_ps.
   inversion 1; auto; simpl; try reflexivity.
   do 2 (match goal with
-        | [ H: vseq _ _ _ _ _ _ _ |- _ ] =>
+        | [ H: vseq _ _ _ _ _ _ _ _ |- _ ] =>
           inversion H
         end); simpl; auto; try reflexivity.
 Qed.
@@ -88,7 +88,7 @@ Proof.
   - inversion 1.
     cbn; subst; subst_transition_design.
     erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__t'); eauto.
-    erewrite @MapsTo_fun with (x := compid) (e := σ__t) (e' := σ__c) in *; eauto.
+    erewrite @MapsTo_fun with (x := id__c) (e := σ__t) (e' := σ__c) in *; eauto.
     assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
     inject_left e; eauto.
     eapply vcomb_transition_inv_s_tc; eauto.

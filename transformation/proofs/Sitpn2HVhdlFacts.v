@@ -1,4 +1,4 @@
-Require Export transformation.GenerateInfosFacts.
-Require Export transformation.GenerateArchitectureFacts.
-Require Export transformation.GeneratePortsFacts.
-Require Export transformation.GenerateHVhdlFacts.
+Require Export transformation.proofs.GenerateInfosFacts.
+Require Export transformation.proofs.GenerateArchitectureFacts.
+Require Export transformation.proofs.GeneratePortsFacts.
+Require Export transformation.proofs.GenerateHVhdlFacts.

@@ -1,7 +1,11 @@
 (** * Facts about the Sitpn Semantics  *)
 
-Require Import Sitpn.
-Require Import SitpnSemanticsDefs.
+Require Import common.CoqLib.
+Require Import common.ListLib.
+Require Import common.GlobalFacts.
+Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnSemanticsDefs.
+Require Import sitpn.SitpnFacts.
 
 Lemma PInputsOf_ex : forall sitpn (t : T sitpn), exists pinputs_of_t, PInputsOf t pinputs_of_t.
   intros sitpn t; unfold PInputsOf.
@@ -11,9 +15,9 @@ Lemma TOutputsOf_ex : forall sitpn (p : P sitpn), exists toutputs_of_p, TOutputs
 Admitted.
 
 Lemma NoDup_tfilter :
-  forall {A B : Type} (l : list A) (f : { a : A | In a l } -> bool)
-         (InA2sigInA : forall a : A, In a l -> { a : A | In a l }),
-    NoDup l -> NoDupA P1SigEq (tfilter f l InA2sigInA).
+  forall {A B : Type} (l : list A) (f : { a : A | List.In a l } -> bool)
+         (InA2sigInA : forall a : A, List.In a l -> { a : A | List.In a l }),
+    List.NoDup l -> SetoidList.NoDupA P1SigEq (tfilter f l InA2sigInA).
 Admitted.
 
 Lemma pinputs_correct :

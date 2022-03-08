@@ -53,13 +53,13 @@ Local Unset Implicit Arguments.
     SITPN model [sitpn]. *)
 
 Axiom sitpn2hvhdl_elab_ex :
-  forall sitpn decpr id__ent id__arch mm d γ,
+  forall sitpn id__ent id__arch mm d γ,
 
     (* The SITPN model [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* there exists an elaborated version [Δ] of [d], with a default state [σ__e] *)
     exists Δ σ__e, edesign hdstore (NatMap.empty value) d Δ σ__e.
@@ -72,13 +72,13 @@ Axiom sitpn2hvhdl_elab_ex :
     default design state [σ__e].  *)
 
 Axiom sitpn2vhdl_init_state_ex :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e,
 
     (* The SITPN model [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -107,7 +107,7 @@ Axiom SimEnv_ex : forall sitpn γ E__c, exists E__p, SimEnv sitpn γ E__c E__p.
     bounded SITPN model [sitpn]. *)
 
 Axiom sitpn2vhdl_sim_ex :
-  forall sitpn decpr id__ent id__arch mm d γ Δ σ__e σ0 τ E__p b,
+  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0 τ E__p b,
 
     (* The SITPN model [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
@@ -116,7 +116,7 @@ Axiom sitpn2vhdl_sim_ex :
     @BoundedSitpn sitpn b ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -132,7 +132,7 @@ Axiom sitpn2vhdl_sim_ex :
 (** ** Semantic preservation theorem  *)
 
 Theorem sitpn2vhdl_semantic_preservation :
-  forall sitpn decpr id__ent id__arch b d γ E__c τ θ__s,
+  forall sitpn id__ent id__arch b d γ E__c τ θ__s,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
@@ -141,7 +141,7 @@ Theorem sitpn2vhdl_semantic_preservation :
     @BoundedSitpn sitpn b ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn decpr id__ent id__arch b = (inl (d, γ)) ->
+    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
     
     (* SITPN [sitpn] yields execution trace [θ__s] after [τ] execution cycles. *)
     
@@ -163,21 +163,21 @@ Theorem sitpn2vhdl_semantic_preservation :
         (* Traces are fully similar. *)
         FullSimTrace γ θ__s θ__σ.
 Proof.
-  intros.
-  edestruct sitpn2hvhdl_elab_ex as (Δ, (σ__e, Helab)); eauto.
-  edestruct sitpn2vhdl_init_state_ex as (σ0, Hinit); eauto.
-  exists Δ; intros.
-  edestruct @sitpn2vhdl_sim_ex with (τ := τ) as (θ__σ, Hsim); eauto.  
-  exists (σ0 :: θ__σ). split.
+  (* intros. *)
+  (* edestruct sitpn2hvhdl_elab_ex as (Δ, (σ__e, Helab)); eauto. *)
+  (* edestruct sitpn2vhdl_init_state_ex as (σ0, Hinit); eauto. *)
+  (* exists Δ; intros. *)
+  (* edestruct @sitpn2vhdl_sim_ex with (τ := τ) as (θ__σ, Hsim); eauto.   *)
+  (* exists (σ0 :: θ__σ). split. *)
 
   (* Existence of an elaborated design [Δ], a default state [σ__e], an
      initial state [σ0], and a simulation trace [θ__σ]. *)
-  unfold hfullsim; eapply FullSim; eauto.
+  (* unfold hfullsim; eapply FullSim; eauto. *)
 
   (* Similar traces. *)
-  eapply trace_sim; eauto.
-  unfold hfullsim; eapply FullSim; eauto.  
-Qed.
+  (* eapply trace_sim; eauto. *)
+  (* unfold hfullsim; eapply FullSim; eauto.   *)
+Admitted.
 
 
 
