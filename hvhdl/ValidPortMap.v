@@ -64,7 +64,7 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
 
       (* Premises *)
       vexpr Δ σ EmptyLEnv false e v ->
-      is_of_type v t ->
+      IsOfType v t ->
 
       (* Side conditions *)
       (~exists optn, List.In (id, optn) formals) ->  (* (id, optn) ∉ formals *)
@@ -78,11 +78,11 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
     forall id ei e v i t l u,
 
       (* Premises *)
-      is_gstatic_expr Δ ei ->
+      IGStaticExpr Δ ei ->
       vexpr Δ σ EmptyLEnv false e v ->
       vexpr Δ σ EmptyLEnv false ei (Vnat i) ->
-      is_of_type v t ->
-      is_of_type (Vnat i) (Tnat l u) ->
+      IsOfType v t ->
+      IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       ~List.In (id, None) formals -> (* (id, None) ∉ formals *)
@@ -167,9 +167,9 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
     forall idf ida ei i t l u,
 
       (* Premises *)
-      is_gstatic_expr Δ ei ->
+      IGStaticExpr Δ ei ->
       vexpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
-      is_of_type (Vnat i) (Tnat l u) ->
+      IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       (forall optv, ~List.In (idf, optv) formals) -> 
@@ -204,9 +204,9 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
     forall idf ei ida i t l u,
 
       (* Premises *)
-      is_gstatic_expr Δ ei ->
+      IGStaticExpr Δ ei ->
       vexpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
-      is_of_type (Vnat i) (Tnat l u) ->
+      IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       ~List.In (idf, None) formals ->
@@ -226,12 +226,12 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
     forall idf ei ida ei' i i' t l u l' u',
 
       (* Premises *)
-      is_gstatic_expr Δ ei ->
-      is_gstatic_expr Δ ei' ->
+      IGStaticExpr Δ ei ->
+      IGStaticExpr Δ ei' ->
       vexpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
       vexpr Δ EmptyDState EmptyLEnv false ei' (Vnat i') ->
-      is_of_type (Vnat i) (Tnat l u) ->
-      is_of_type (Vnat i') (Tnat l' u') ->
+      IsOfType (Vnat i) (Tnat l u) ->
+      IsOfType (Vnat i') (Tnat l' u') ->
       
       (* Side conditions *)
       ~List.In (idf, None) formals ->

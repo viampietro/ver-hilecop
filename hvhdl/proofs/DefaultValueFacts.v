@@ -5,14 +5,14 @@ Require Import common.CoqLib.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.DefaultValue.
 
-Lemma defaultv_is_well_typed :
+Lemma DefaultV_is_well_typed :
   forall t v,
-    defaultv t v -> is_of_type v t.
+    DefaultV t v -> IsOfType v t.
 Proof.
   induction 1.
   constructor.
   constructor; lia.
-  constructor.
+  constructor; auto.
   induction (u - l).
   cbn; constructor.
   simpl; constructor; auto.

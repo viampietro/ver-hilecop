@@ -43,10 +43,10 @@ with egen (Δ : ElDesign) (M__g : IdMap value) : gdecl -> ElDesign -> Prop :=
       
       (* Premises *)
       etypeg τ t ->
-      is_lstatic_expr e ->
+      IsLStaticExpr e ->
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
-      is_of_type dv t ->
-      is_of_type v t ->
+      IsOfType dv t ->
+      IsOfType v t ->
       
       (* Side conditions *)
       ~NatMap.In idg Δ ->           (* idg ∉ Δ *)
@@ -61,9 +61,9 @@ with egen (Δ : ElDesign) (M__g : IdMap value) : gdecl -> ElDesign -> Prop :=
       
       (* Premises *)
       etypeg τ t ->
-      is_lstatic_expr e ->
+      IsLStaticExpr e ->
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
-      is_of_type dv t ->
+      IsOfType dv t ->
 
       (* Side conditions *)
       ~NatMap.In idg Δ ->      (* idg ∉ Δ *)

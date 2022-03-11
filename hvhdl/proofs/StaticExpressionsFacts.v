@@ -17,11 +17,11 @@ End LStatic.
 
 Section GStatic.
 
-  Lemma is_gstatic_expr_eq_iff_eq_gens :
+  Lemma IGStaticExpr_eq_iff_eq_gens :
     forall {Δ1 Δ2 e},
       EqGens Δ1 Δ2 ->
-      is_gstatic_expr Δ1 e <->
-      is_gstatic_expr Δ2 e.
+      IGStaticExpr Δ1 e <->
+      IGStaticExpr Δ2 e.
   Proof.
     split.
     (* CASE A -> B *)

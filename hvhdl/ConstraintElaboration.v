@@ -18,8 +18,8 @@ Inductive econstr (Δ : ElDesign) (e e' : expr) (n n' : nat) : Prop :=
 | EConstr :
     (* Premises *)
 
-    is_gstatic_expr Δ e ->   (* Expression e must be globally static. *)
-    is_gstatic_expr Δ e' ->  (* Expression e' must be globally static. *)
+    IGStaticExpr Δ e ->   (* Expression e must be globally static. *)
+    IGStaticExpr Δ e' ->  (* Expression e' must be globally static. *)
     
     (* vexpr checks that the bounds are nat values comprised in the
        interval [0, NATMAX]. *)
@@ -36,8 +36,8 @@ Inductive econstrg (e e' : expr) (n n' : nat) : Prop :=
 | EConstrG :
     (* Premises *)
 
-    is_lstatic_expr e ->   (* Expression e must be globally static. *)
-    is_lstatic_expr e' ->  (* Expression e' must be globally static. *)
+    IsLStaticExpr e ->   (* Expression e must be globally static. *)
+    IsLStaticExpr e' ->  (* Expression e' must be globally static. *)
     
     vexpr EmptyElDesign EmptyDState EmptyLEnv false e (Vnat n) -> (* e evaluates to (Vnat n) *)
     vexpr EmptyElDesign EmptyDState EmptyLEnv false e' (Vnat n') -> (* e' evaluates to (Vnat n') *)

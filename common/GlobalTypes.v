@@ -151,6 +151,10 @@ Inductive optionE (A : Type) : Type :=
 Arguments Success {A} a.
 Arguments Err {A}.
 
+Definition Ret (A : Type) (x : A) := Success x.
+
+Arguments Ret {A}.
+
 Module ErrMonadNotations.
 
   Notation "[| x |]" := (Success x).

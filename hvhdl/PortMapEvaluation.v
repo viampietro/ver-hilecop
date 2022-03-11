@@ -45,7 +45,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       
       (* * Premises * *)
       vexpr Δ σ EmptyLEnv false e v ->
-      is_of_type v t ->
+      IsOfType v t ->
 
       (* * Side conditions (where σc = <S,C,E>) * *)
       NatMap.MapsTo id (Input t) Δ__c -> (* id ∈ Ins(Δc) and Δc(id) = t *)
@@ -63,7 +63,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       
       (* * Premises * *)
       vexpr Δ σ EmptyLEnv false e v ->
-      is_of_type v t ->
+      IsOfType v t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
@@ -117,7 +117,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
       
       (* * Side conditions * *)
 
@@ -143,7 +143,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
       
       (* * Side conditions * *)
 
@@ -169,7 +169,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
@@ -207,7 +207,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
@@ -237,7 +237,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e'__i]])) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
@@ -276,7 +276,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e__i' (Vnat i) ->
@@ -304,7 +304,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
       
       (* * Side conditions * *)
 
@@ -331,7 +331,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* * Premises * *)
       vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
-      is_of_type newv t ->
+      IsOfType newv t ->
       
       (* * Side conditions * *)
 

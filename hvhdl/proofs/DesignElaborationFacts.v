@@ -438,11 +438,11 @@ Lemma ebeh_inv_well_typed_values_in_sstore :
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ) ->
-        is_of_type v t) ->
+        IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      is_of_type v t.
+      IsOfType v t.
 Proof.
   intros *; intros ebeh_ WT; intros *; intros MapsTo_or MapsTo_sstore.
   eapply WT with (id := id); eauto.
@@ -460,7 +460,7 @@ Lemma elab_well_typed_values_in_sstore :
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
       MapsTo id v (sigstore σ__e) ->
-      is_of_type v t.
+      IsOfType v t.
 Proof.
   inversion 1.
   eapply ebeh_inv_well_typed_values_in_sstore; eauto.
@@ -478,14 +478,14 @@ Lemma ebeh_inv_well_typed_values_in_sstore_of_comp :
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sigstore σ__c) ->
-          is_of_type v t) ->
+          IsOfType v t) ->
     forall {id__c Δ'__c σ'__c},
       MapsTo id__c (Component Δ'__c) Δ' ->
       MapsTo id__c σ'__c (compstore σ') ->
       forall {id t v},
         (MapsTo id (Declared t) Δ'__c \/ MapsTo id (Input t) Δ'__c \/ MapsTo id (Output t) Δ'__c) ->
         MapsTo id v (sigstore σ'__c) ->
-        is_of_type v t.
+        IsOfType v t.
 Proof.
   induction 1.
 
@@ -528,7 +528,7 @@ Lemma elab_well_typed_values_in_sstore_of_comp :
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sigstore σ__ce) ->
-        is_of_type v t.
+        IsOfType v t.
 Proof.
   inversion 1.
   eapply ebeh_inv_well_typed_values_in_sstore_of_comp; eauto.

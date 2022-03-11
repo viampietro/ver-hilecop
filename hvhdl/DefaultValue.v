@@ -10,22 +10,63 @@
  *)
 
 Require Import common.CoqLib.
-Require Import GlobalTypes.
-Require Import SemanticalDomains.
+Require Import common.GlobalTypes.
 
-(** The [defaultv] relation states that a type is associated 
+Require Import hvhdl.SemanticalDomains.
+
+(** The [DefaultV] relation states that a type is associated 
     to an implicit default value. *)
 
-Inductive defaultv : type -> value -> Prop :=
+Inductive DefaultV : type -> value -> Prop :=
   
-| DefaultVBool : defaultv Tbool (Vbool false)
-| DefaultVNat : forall l u, l <= u -> defaultv (Tnat l u) (Vnat l)
+| DefaultVBool : DefaultV Tbool (Vbool false)
+| DefaultVNat : forall l u, l <= u -> DefaultV (Tnat l u) (Vnat l)
 | DefaultVArray :
     forall t l u v,
       (* Proof that (u - l) + 1 is greater than zero *)
       let plus1_gt_O := (gt_Sn_O (u - l)) in
       l <= u ->
-      defaultv t v ->
-      defaultv (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).
+      DefaultV t v ->
+      DefaultV (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).
 
-#[export] Hint Constructors defaultv : hvhdl.
+#[export] Hint Constructors DefaultV : hvhdl.
+
+(** Defines the function yielding the implicit default value
+    associated to a type. *)
+
+Import ErrMonadNotations.
+Require Import String.
+
+Fixpoint defaultv (t : type) {struct t} : optionE value :=
+  match t with
+  | Tbool => Ret (Vbool false)
+  | Tnat l u => if le_dec l u then Ret (Vnat l) else Err "defaultv: found ill-formed natural range"
+  | Tarray ta l u =>
+      if le_dec l u then
+        v <- defaultv ta; Ret (Varr (create_arr (S (u - l)) v (gt_Sn_O (u - l))))
+      else Err "defaultv: found ill-formed index range"
+  end.
+
+Functional Scheme defaultv_ind := Induction for defaultv Sort Prop.
+
+(** Soundness of [defaultv] *)
+
+Lemma defaultv_sound :
+  forall t v, defaultv t = Success v -> DefaultV t v.
+Proof.
+  intros t; functional induction (defaultv t) using defaultv_ind.
+  all: try (solve [inversion 1]); inversion 1; constructor; auto.
+Qed.
+
+(** Completeness of [defaultv] *)
+
+Lemma defaultv_compl :
+  forall t v, DefaultV t v -> defaultv t = Success v.
+Proof.
+  intros t; induction 1.
+  cbn; reflexivity.
+  cbn; edestruct (le_dec l u); (contradiction || eauto).
+  cbn iota delta [defaultv]; edestruct (le_dec l u); (contradiction || eauto).
+  rewrite IHDefaultV.
+  reflexivity.
+Qed.

@@ -42,7 +42,7 @@ with eport (Δ : ElDesign) (σ : DState) : pdecl -> ElDesign -> DState -> Prop :
     
       (* Premises. *)
       etype Δ τ t ->
-      defaultv t v ->
+      DefaultV t v ->
       
       (* Side conditions. *)
       ~NatMap.In id Δ ->           (* id ∉ Δ *)
@@ -57,7 +57,7 @@ with eport (Δ : ElDesign) (σ : DState) : pdecl -> ElDesign -> DState -> Prop :
       
       (* Premises. *)
       etype Δ τ t ->
-      defaultv t v ->
+      DefaultV t v ->
       
       (* Side conditions. *)
       ~NatMap.In id Δ ->           (* id ∉ Δ *)

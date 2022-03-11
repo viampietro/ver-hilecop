@@ -32,7 +32,7 @@ Section ListIPM.
       erewrite vexpr_eq_iff_eq_sigs; eauto;
         try ((split; symmetry; firstorder) || (symmetry; eauto)).
     all: eapply EAssocipPartial with (t := t0); eauto;
-      [ erewrite is_gstatic_expr_eq_iff_eq_gens; eauto;
+      [ erewrite IGStaticExpr_eq_iff_eq_gens; eauto;
         try ((symmetry; firstorder) || firstorder)
       | erewrite vexpr_eq_iff_eq_sigs; eauto;
         try ((split; symmetry; firstorder) || (symmetry; eauto))

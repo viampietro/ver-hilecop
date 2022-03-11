@@ -10,44 +10,52 @@ Lemma BProd_aofv_false :
     BProd (get_bool_at aofv) (seq n m) false.
 Admitted.
 
-(** ** Facts about [is_of_type] *)
+(** ** Facts about [IsOfType] *)
 
 Lemma arrisoftype_inv_set_at :
   forall aofv n t,
-    arris_of_type aofv n t ->
+    ArrIsOfType aofv n t ->
     forall i in_bounds v,
-      is_of_type v t ->
-      arris_of_type (set_at v i aofv in_bounds) n t.
+      IsOfType v t ->
+      ArrIsOfType (set_at v i aofv in_bounds) n t.
 Proof.
   induction 1.
   - intro; destruct i; cbn; [constructor | lia ].
   - intro; destruct i; cbn.
     constructor; assumption.
     constructor. assumption.
-    eapply IHarris_of_type; eauto.
+    eapply IHArrIsOfType; eauto.
 Qed.
 
-Lemma is_of_type_inv_set_at :
+Lemma IsOfType_inv_set_at :
   forall i aofv v in_bounds t l u,
-    is_of_type (Varr aofv) (Tarray t l u) ->
-    is_of_type v t ->
-    is_of_type (Varr (set_at v i aofv in_bounds)) (Tarray t l u).
+    IsOfType (Varr aofv) (Tarray t l u) ->
+    IsOfType v t ->
+    IsOfType (Varr (set_at v i aofv in_bounds)) (Tarray t l u).
 Proof.
   intros until in_bounds;
     functional induction (set_at v i aofv in_bounds) using set_at_ind.
   (* CASE aofv = [v0] and i = 0 *)
-  - inversion_clear 1; constructor.
-    inversion_clear H0; constructor.
+  - inversion_clear 1; constructor; auto.
+    match goal with
+    | H: ArrIsOfType _ _ _ |- _ =>
+        inversion_clear H; constructor
+    end.
   (* CASE aofv = v0 :: tl and i = 0 *)
-  - inversion_clear 1; constructor.
-    inversion_clear H0; constructor; assumption.
+  - inversion_clear 1; constructor; auto.
+    match goal with
+    | H: ArrIsOfType _ _ _ |- _ =>
+        inversion_clear H; constructor; assumption
+    end.    
   (* CASE aofv = [v0] and i > 0 *)
   - cbn in H; lia.
   (* CASE aofv = v0 :: tl and i > 0 *)
-  - inversion_clear 1; constructor.
-    inversion_clear H1; constructor.
-    assumption.
-    eapply arrisoftype_inv_set_at; eauto.
+  - inversion_clear 1; constructor; auto.
+    match goal with
+    | H: ArrIsOfType _ _ _ |- _ =>
+        inversion_clear H; constructor;
+        [ assumption | eapply arrisoftype_inv_set_at; eauto ]
+    end.
 Qed.
 
 (** ** Facts about [OVEq] *)

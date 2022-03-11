@@ -30,8 +30,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv -> (* e ⇝ newv *)
-      is_of_type newv t ->             (* [newv ∈c t] *)
-      is_of_type currv t ->            (* [currv ∈c t] *)
+      IsOfType newv t ->             (* [newv ∈c t] *)
+      IsOfType currv t ->            (* [currv ∈c t] *)
       
       (* * Side conditions * *)
       
@@ -59,8 +59,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
-      is_of_type newv t ->
-      is_of_type currv t ->
+      IsOfType newv t ->
+      IsOfType currv t ->
       
       (* * Side conditions * *)
 
@@ -88,8 +88,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (*  * Premises * *)
       vexpr Δ σ Λ false e newv ->
-      is_of_type newv t ->
-      is_of_type (Varr curraofv) (Tarray t l u) ->
+      IsOfType newv t ->
+      IsOfType (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei → vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->
@@ -127,8 +127,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
-      is_of_type newv t ->
-      is_of_type (Varr curraofv) (Tarray t l u) ->
+      IsOfType newv t ->
+      IsOfType (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei → vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->
@@ -154,8 +154,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
-      is_of_type newv t ->
-      is_of_type currv t ->
+      IsOfType newv t ->
+      IsOfType currv t ->
       
       (* * Side conditions * *)
       NatMap.MapsTo id (t, currv) Λ -> (* id ∈ Λ and Λ(id) = (t, currv) *)
@@ -174,8 +174,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* * Premises * *)
       vexpr Δ σ Λ false e newv ->
-      is_of_type newv t ->
-      is_of_type (Varr curraofv) (Tarray t l u) ->
+      IsOfType newv t ->
+      IsOfType (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
       vexpr Δ σ Λ false ei (Vnat i) ->

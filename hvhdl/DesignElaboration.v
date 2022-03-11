@@ -46,7 +46,7 @@ with evar (Δ : ElDesign) (Λ : LEnv) : vdecl -> LEnv -> Prop :=
       
       (* Premises *)
       etype Δ tau t ->
-      defaultv t v ->
+      DefaultV t v ->
 
       (* Side conditions *)
       ~NatMap.In id Λ ->            (* id ∉ Λ *)
@@ -81,7 +81,7 @@ with eassocg (M__g : IdMap value) : assocg -> IdMap value -> Prop :=
     forall id e v,
 
       (* Premises *)
-      is_lstatic_expr e ->
+      IsLStaticExpr e ->
       vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
 
       (* Side conditions *)

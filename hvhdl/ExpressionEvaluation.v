@@ -86,7 +86,7 @@ Inductive vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 
       (* Premises *)
       vexpr Δ σ Λ true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->
+      IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
 
@@ -106,7 +106,7 @@ Inductive vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 
       (* Premises *)
       vexpr Δ σ Λ outmode ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->
+      IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
 
@@ -126,7 +126,7 @@ Inductive vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 
       (* Premises *)
       vexpr Δ σ Λ outmode ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
-      is_of_type (Vnat i) (Tnat l u) ->   (* index value is in array bounds. *)
+      IsOfType (Vnat i) (Tnat l u) ->   (* index value is in array bounds. *)
       
       (* Side conditions *)
       MapsTo id ((Tarray t l u), (Varr aofv)) Λ -> (* id ∈ Λ(Δ) and Λ(id) = (array(t, l, u), lofvalues) *)

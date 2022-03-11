@@ -34,7 +34,7 @@ Inductive binop : Set :=
  *)
 
 Inductive expr : Type :=
-| e_nat : nat-> expr (** Natural constant *)
+| e_nat : nat -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
 | e_name : name -> expr (** Name constant *)
 | e_aggreg : agofexprs -> expr (** Aggregate of expressions *)

@@ -94,8 +94,8 @@ Axiom sitpn2vhdl_init_state_ex :
 
 Definition IsWellDefinedSimEnv (Δ : ElDesign) (E__p : nat -> IdMap value) : Prop :=
   forall τ,
-    (forall id v, MapsTo id v (E__p τ) -> exists t, MapsTo id (Input t) Δ /\ is_of_type v t)
-    /\ (forall id t, MapsTo id (Input t) Δ -> exists v, MapsTo id v (E__p τ) /\ is_of_type v t).
+    (forall id v, MapsTo id v (E__p τ) -> exists t, MapsTo id (Input t) Δ /\ IsOfType v t)
+    /\ (forall id t, MapsTo id (Input t) Δ -> exists v, MapsTo id v (E__p τ) /\ IsOfType v t).
 
 Axiom IsWellDefinedSimEnv_ex :
   forall Δ, exists E__p, IsWellDefinedSimEnv Δ E__p.

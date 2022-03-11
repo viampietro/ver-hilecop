@@ -447,11 +447,11 @@ Lemma vcomb_inv_well_typed_values_in_sstore :
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ) ->
-        is_of_type v t) ->
+        IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
       MapsTo id v (sigstore σ') ->
-      is_of_type v t.
+      IsOfType v t.
 Proof.
   induction 1; intros WT; try (solve [trivial]).
   (* CASE process *)
@@ -490,14 +490,14 @@ Lemma vcomb_inv_well_typed_values_in_sstore_of_comp :
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sigstore σ__c) ->
-          is_of_type v t) ->
+          IsOfType v t) ->
     forall {id__c Δ__c σ'__c},
       MapsTo id__c (Component Δ__c) Δ ->
       MapsTo id__c σ'__c (compstore σ') ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sigstore σ'__c) ->
-        is_of_type v t.
+        IsOfType v t.
 Proof.
   induction 1; intros WT; trivial.
   (* CASE process *)

@@ -110,11 +110,11 @@ Lemma vseq_inv_well_typed_values_in_sstore :
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ__w) ->
-        is_of_type v t) ->
+        IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
       MapsTo id v (sigstore σ') ->
-      is_of_type v t.
+      IsOfType v t.
 Proof.
   induction 1; try (solve [auto]).
   (* CASE eventful signal assignment *)
@@ -156,7 +156,7 @@ Proof.
     erewrite @MapsTo_add_eqv
       with (e := v) (e' := (Varr (set_at newv idx curraofv idx_in_bounds))); eauto.
     rewrite <- eq_t.
-    eapply is_of_type_inv_set_at; eauto.      
+    eapply IsOfType_inv_set_at; eauto.      
     (* CASE [id0 ≠ id] *)
     intro; eapply WT; eauto with mapsto.
   (* CASE for loop *)

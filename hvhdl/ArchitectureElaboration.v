@@ -42,7 +42,7 @@ with edecl (Δ : ElDesign) (σ : DState)  : sdecl -> ElDesign -> DState -> Prop 
       
       (* Premises. *)
       etype Δ τ t ->
-      defaultv t v ->
+      DefaultV t v ->
       
       (* Side conditions. *)
       ~NatMap.In id Δ -> (* id ∉ Δ *)

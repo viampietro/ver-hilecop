@@ -155,11 +155,11 @@ Lemma edecl_inv_well_typed_values_in_sstore :
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ) ->
-        is_of_type v t) ->
+        IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      is_of_type v t.
+      IsOfType v t.
 Proof.
   inversion_clear 1.
   intros WT; intros *.
@@ -175,7 +175,7 @@ Proof.
       inject_left eq_type.
       assert (eq_val : v0 = v) by (eauto with mapsto).
       inject_left eq_val.
-      eapply defaultv_is_well_typed; eauto.
+      eapply DefaultV_is_well_typed; eauto.
     (* CASE Input or Output *)
     + inject_left eq_; mapsto_discriminate.
 
@@ -195,11 +195,11 @@ Lemma edecls_inv_well_typed_values_in_sstore :
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ) ->
-        is_of_type v t) ->
+        IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sigstore σ') ->
-      is_of_type v t.
+      IsOfType v t.
 Proof.
   induction 1; try (solve [auto]).
   intros WT; intros; eapply IHedecls; eauto.

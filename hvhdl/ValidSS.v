@@ -19,7 +19,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
 
       (* Premises *)
       vexpr Δ σ Λ false e v ->
-      is_of_type v t ->
+      IsOfType v t ->
 
       (* Side conditions *)
       MapsTo id (Declared t) Δ -> (* id ∈ Sigs(Δ) and Δ(id) = t *)
@@ -33,7 +33,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
 
       (* Premises *)
       vexpr Δ σ Λ false e v ->
-      is_of_type v t ->
+      IsOfType v t ->
 
       (* Side conditions *)
       MapsTo id (Output t) Δ -> (* id ∈ Outs(Δ) and Δ(id) = t *)
@@ -49,8 +49,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
       (* Premises *)
       vexpr Δ σ Λ false e v ->
       vexpr Δ σ Λ false ei vi ->
-      is_of_type v t ->
-      is_of_type vi (Tnat l u) ->
+      IsOfType v t ->
+      IsOfType vi (Tnat l u) ->
                  
       (* Side conditions *)
       MapsTo id (Declared (Tarray t l u)) Δ -> (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
@@ -66,8 +66,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
       (* Premises *)
       vexpr Δ σ Λ false e v ->
       vexpr Δ σ Λ false ei vi ->
-      is_of_type v t ->
-      is_of_type vi (Tnat l u) ->
+      IsOfType v t ->
+      IsOfType vi (Tnat l u) ->
       
       (* Side conditions *)
       MapsTo id (Output (Tarray t l u)) Δ -> (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
@@ -81,7 +81,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
 
       (* Premises *)
       vexpr Δ σ Λ false e v ->
-      is_of_type v t ->
+      IsOfType v t ->
             
       (* Side conditions *)
       MapsTo id (t, val) Λ -> (* id ∈ Λ and Λ(id) = (t, val) *)
@@ -96,8 +96,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
       (* Premises *)
       vexpr Δ σ Λ false e v ->
       vexpr Δ σ Λ false ei vi ->
-      is_of_type v t ->
-      is_of_type vi (Tnat l u) ->
+      IsOfType v t ->
+      IsOfType vi (Tnat l u) ->
       
       (* Side conditions *)
       MapsTo id (Tarray t l u, val) Λ -> (* id ∈ Λ and Λ(id) = (array(t,l,u), val) *)
@@ -111,7 +111,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
 
       (* Premises *)
       vexpr Δ σ Λ false e v ->
-      is_of_type v Tbool ->
+      IsOfType v Tbool ->
       validss Δ σ Λ stmt ->
       
       (* Conclusion *)
@@ -123,7 +123,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
 
       (* Premises *)
       vexpr Δ σ Λ false e v ->
-      is_of_type v Tbool ->
+      IsOfType v Tbool ->
       validss Δ σ Λ stmt ->
       validss Δ σ Λ stmt' ->
       
@@ -137,7 +137,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
       (* Premises *)
 
       (** If [vexpr] interprets [e] and [e'] into [nat] values then it
-         implies [is_of_type (Vnat n) nat(0,NATMAX)] and [is_of_type
+         implies [IsOfType (Vnat n) nat(0,NATMAX)] and [IsOfType
          (Vnat n') nat(0,NATMAX)].  *)
       vexpr Δ σ Λ false e (Vnat n) ->
       vexpr Δ σ Λ false e' (Vnat n') ->

@@ -125,11 +125,11 @@ Section IPMap.
       (forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sigstore σ__c) ->
-          is_of_type v t) ->
+          IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sigstore σ'__c) ->
-        is_of_type v t.
+        IsOfType v t.
   Proof.
     induction 1; try (solve [eauto]).
     (* CASE [id ⇒ e] and [id(i) ⇒ e]*)
@@ -145,7 +145,7 @@ Section IPMap.
             |- _ =>
             assert (eq_t : t1 = t2) by (solve_mapsto_fun);
             erewrite @MapsTo_add_eqv with (e := v3) (e' := v4); eauto; rewrite <- eq_t;
-            (assumption || (eapply is_of_type_inv_set_at; eauto; rewrite eq_t; eapply WT; eauto))
+            (assumption || (eapply IsOfType_inv_set_at; eauto; rewrite eq_t; eapply WT; eauto))
           end
 
         | (* CASE [id0 ≠ id] *)
@@ -283,11 +283,11 @@ Section IPMap.
       (forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sigstore σ__c) ->
-          is_of_type v t) ->
+          IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sigstore σ__c') ->
-        is_of_type v t.
+        IsOfType v t.
   Proof.
     induction 1; try (solve [trivial]).
     intros WT; eapply IHmapip.
@@ -366,11 +366,11 @@ Section OPMap.
       (forall {id t v},
           (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
           MapsTo id v (sigstore σ) ->
-          is_of_type v t) ->
+          IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ') ->
-        is_of_type v t.
+        IsOfType v t.
   Proof.
     induction 1; try (solve [eauto]).
     (* CASE [id__f ⇒ id__a] and [id__f(j) ⇒ id__a] *)
@@ -398,7 +398,7 @@ Section OPMap.
           erewrite @MapsTo_add_eqv
             with (e := v) (e' := (Varr (set_at newv idx aofv idx_in_bounds))); eauto;
           rewrite <- eq_t;
-          eapply is_of_type_inv_set_at; eauto;
+          eapply IsOfType_inv_set_at; eauto;
           rewrite eq_t; eapply WT; eauto
         | (* CASE [id__a ≠ id] *)
         intro; eapply WT; eauto with mapsto ].
@@ -490,11 +490,11 @@ Section OPMap.
       (forall {id t v},
           (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
           MapsTo id v (sigstore σ) ->
-          is_of_type v t) ->
+          IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sigstore σ') ->
-        is_of_type v t.
+        IsOfType v t.
   Proof.
     induction 1; try (solve [trivial]).
     intros WT; eapply IHmapop.
