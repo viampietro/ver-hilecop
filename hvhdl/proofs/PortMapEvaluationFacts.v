@@ -60,7 +60,7 @@ Section IPMap.
   Lemma vassocip_eval_simpl_associp :
     forall {Δ Δ__c σ σ__c σ__c'} {id : ident} {e},
       vassocip Δ Δ__c σ σ__c (associp_ id e) σ__c' ->
-      exists v, vexpr Δ σ EmptyLEnv false e v /\
+      exists v, VExpr Δ σ EmptyLEnv false e v /\
                 MapsTo id v (sigstore σ__c').
   Proof. inversion 1.
          subst; simpl; exists v; auto with mapsto.
@@ -225,7 +225,7 @@ Section IPMap.
       forall {id__i : ident} {e formals formals'},
         List.In (associp_ id__i e) ipm ->
         listipm Δ Δ__c σ formals ipm formals' ->
-        exists v, vexpr Δ σ EmptyLEnv false e v /\
+        exists v, VExpr Δ σ EmptyLEnv false e v /\
                   MapsTo id__i v (sigstore σ__c').
   Proof.
     induction 1; try (solve [inversion 1]).

@@ -34,7 +34,7 @@ Lemma elab_PCI_Δ_out_arcs_nb_2 :
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
     MapsTo id__p (Component Δ__p) Δ ->
     List.In (assocg_ Place.output_arcs_number e) gm ->
-    vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
+    VExpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
     exists t, MapsTo Place.output_arcs_number (Generic t v) Δ__p.
 Admitted.
 

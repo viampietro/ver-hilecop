@@ -87,7 +87,7 @@ Section PVRunInit.
       end
     |
     match goal with
-    | [ H: vexpr _ _ _ _ _ _ |- _ ] =>
+    | [ H: VExpr _ _ _ _ _ _ |- _ ] =>
       inversion_clear H
     end
     ].

@@ -63,7 +63,7 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
     forall id e v t,
 
       (* Premises *)
-      vexpr Δ σ EmptyLEnv false e v ->
+      VExpr Δ σ EmptyLEnv false e v ->
       IsOfType v t ->
 
       (* Side conditions *)
@@ -79,8 +79,8 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
 
       (* Premises *)
       IGStaticExpr Δ ei ->
-      vexpr Δ σ EmptyLEnv false e v ->
-      vexpr Δ σ EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ σ EmptyLEnv false e v ->
+      VExpr Δ σ EmptyLEnv false ei (Vnat i) ->
       IsOfType v t ->
       IsOfType (Vnat i) (Tnat l u) ->
       
@@ -168,7 +168,7 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
 
       (* Premises *)
       IGStaticExpr Δ ei ->
-      vexpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
       IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
@@ -205,7 +205,7 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
 
       (* Premises *)
       IGStaticExpr Δ ei ->
-      vexpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
       IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
@@ -228,8 +228,8 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
       (* Premises *)
       IGStaticExpr Δ ei ->
       IGStaticExpr Δ ei' ->
-      vexpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
-      vexpr Δ EmptyDState EmptyLEnv false ei' (Vnat i') ->
+      VExpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ EmptyDState EmptyLEnv false ei' (Vnat i') ->
       IsOfType (Vnat i) (Tnat l u) ->
       IsOfType (Vnat i') (Tnat l' u') ->
       

@@ -85,7 +85,7 @@ Section GStaticExpr.
          | agofe_one e => is_gstatic_expr Δ e
          | agofe_cons e agtl => is_gstatic_expr Δ e && is_gstatic_agofexprs Δ agtl
          end.
-
+        
 End GStaticExpr.
 
     

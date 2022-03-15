@@ -32,7 +32,7 @@ Section TVRunInit.
     vseqinv_cl; subst; cbn.
     vexprinv_cl; eauto with mapsto.
     match goal with
-    | [ H: vexpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
+    | [ H: VExpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
       inversion H in H'; erewrite <- OVEq_eq_1 with (val2 := currv) in H''; eauto
     end.
   Qed.
@@ -48,7 +48,7 @@ Section TVRunInit.
     vseqinv_cl; subst; cbn.
     cbn in H; contrad_not_in_add.
     match goal with
-    | [ H: vexpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
+    | [ H: VExpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
       inversion H in H'; erewrite <- OVEq_eq_1 with (val2 := currv) in H''; eauto
     end.
   Qed.

@@ -15,16 +15,16 @@ Lemma vexpr_eq_iff_eq_sigs :
   forall {Δ1 σ1 Δ2 σ2 flag e v},
     EqGens Δ1 Δ2 /\ EqSigs Δ1 Δ2 ->
     EqSStore σ1 σ2 ->
-    vexpr Δ1 σ1 EmptyLEnv flag e v <->
-    vexpr Δ2 σ2 EmptyLEnv flag e v.
+    VExpr Δ1 σ1 EmptyLEnv flag e v <->
+    VExpr Δ2 σ2 EmptyLEnv flag e v.
 Proof.
   intros *; intros (EqGens_, EqSigs_) EqSStore_.
   split; intro.
   (* CASE A -> B *)
-  apply (vexpr_ind_mut
+  apply (VExpr_ind_mut
            Δ1 σ1 EmptyLEnv
-           (fun b e v H => vexpr Δ2 σ2 EmptyLEnv b e v)
-           (fun b a arrofv H => vagofexprs Δ2 σ2 EmptyLEnv b a arrofv));
+           (fun b e v H => VExpr Δ2 σ2 EmptyLEnv b e v)
+           (fun b a arrofv H => VAgOfExprs Δ2 σ2 EmptyLEnv b a arrofv));
     intros; eauto with hvhdl.
   (* CASE VExprSig *)
   econstructor; eauto.
@@ -50,10 +50,10 @@ Proof.
   (* CASE VExprVar *)
   rewrite empty_mapsto_iff in m; contradiction.
   (* CASE B -> A *)
-  apply (vexpr_ind_mut
+  apply (VExpr_ind_mut
            Δ2 σ2 EmptyLEnv
-           (fun b e v H => vexpr Δ1 σ1 EmptyLEnv b e v)
-           (fun b a arrofv H => vagofexprs Δ1 σ1 EmptyLEnv b a arrofv));
+           (fun b e v H => VExpr Δ1 σ1 EmptyLEnv b e v)
+           (fun b a arrofv H => VAgOfExprs Δ1 σ1 EmptyLEnv b a arrofv));
     intros; eauto with hvhdl.
   (* CASE VExprSig *)
   econstructor; eauto.

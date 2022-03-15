@@ -44,7 +44,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
     forall id e v t,
       
       (* * Premises * *)
-      vexpr Δ σ EmptyLEnv false e v ->
+      VExpr Δ σ EmptyLEnv false e v ->
       IsOfType v t ->
 
       (* * Side conditions (where σc = <S,C,E>) * *)
@@ -62,11 +62,11 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ σ EmptyLEnv false e v ->
+      VExpr Δ σ EmptyLEnv false e v ->
       IsOfType v t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
@@ -116,7 +116,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     forall id__f id__a newv t currv sigstore' events' σ',
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
       IsOfType newv t ->
       
       (* * Side conditions * *)
@@ -142,7 +142,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     forall id__f id__a newv t currv,
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
       IsOfType newv t ->
       
       (* * Side conditions * *)
@@ -168,11 +168,11 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
       IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
@@ -206,11 +206,11 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
       IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
@@ -236,11 +236,11 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e'__i]])) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e'__i]])) newv ->
       IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false ei (Vnat i) ->
       l <= i <= u ->
       
       (* * Side conditions * *)
@@ -275,11 +275,11 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
       IsOfType newv t ->
 
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false e__i' (Vnat i) ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false e__i' (Vnat i) ->
       l <= i <= u ->
       
       (* * Side conditions * *)
@@ -303,7 +303,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     forall id__f id__a e__i newv t currv sigstore' events' σ',
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
       IsOfType newv t ->
       
       (* * Side conditions * *)
@@ -330,7 +330,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     forall id__f e__i id__a newv t currv,
       
       (* * Premises * *)
-      vexpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
+      VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
       IsOfType newv t ->
       
       (* * Side conditions * *)

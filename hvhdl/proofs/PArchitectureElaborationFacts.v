@@ -25,8 +25,8 @@ Lemma edecl_s_marking :
 Proof.
   inversion 1.
   match goal with | [ H: etype _ _ _ |- _ ] => inversion H end.
-  match goal with | [ H: econstr _ _ _ _ _ |- _ ] => inversion H end.
-  match goal with | [ H: vexpr _ _ _ _ _ (Vnat n) |- _ ] => inversion H end.
+  match goal with | [ H: EConstr _ _ _ _ _ |- _ ] => inversion H end.
+  match goal with | [ H: VExpr _ _ _ _ _ (Vnat n) |- _ ] => inversion H end.
   exists n'; apply add_1; auto.
 Qed.
 

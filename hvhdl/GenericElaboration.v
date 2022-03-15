@@ -44,7 +44,7 @@ with egen (Δ : ElDesign) (M__g : IdMap value) : gdecl -> ElDesign -> Prop :=
       (* Premises *)
       etypeg τ t ->
       IsLStaticExpr e ->
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
       IsOfType dv t ->
       IsOfType v t ->
       
@@ -62,7 +62,7 @@ with egen (Δ : ElDesign) (M__g : IdMap value) : gdecl -> ElDesign -> Prop :=
       (* Premises *)
       etypeg τ t ->
       IsLStaticExpr e ->
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false e dv ->
       IsOfType dv t ->
 
       (* Side conditions *)

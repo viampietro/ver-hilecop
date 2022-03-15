@@ -429,7 +429,7 @@ Lemma elab_wf_gmap_expr :
     edesign D__s M__g d Δ σ__e ->
     InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
     List.In (assocg_ id e) gm ->
-    exists v, vexpr EmptyElDesign EmptyDState EmptyLEnv false e v.
+    exists v, VExpr EmptyElDesign EmptyDState EmptyLEnv false e v.
 Admitted.
 
 Lemma ebeh_inv_well_typed_values_in_sstore :

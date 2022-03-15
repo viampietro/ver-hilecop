@@ -9,6 +9,7 @@ Require Import common.ListLib.
 Import ErrMonadNotations.
 
 Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.HVhdlTypes.
 
 (** ** Value type and functions about values *)
 
@@ -151,6 +152,33 @@ Section Types.
   | Tnat (l : nat) (u : nat)               (** Constrained natural. *)
   | Tarray (t : type) (l : nat) (u : nat). (** Fixed-size array. *)
 
+  (** Well-formed type predicate *)
+
+  Inductive WFType : type -> Prop :=
+  | WFBool : WFType Tbool
+  | WFNat : forall l u, l <= u -> u <= NATMAX -> WFType (Tnat l u)
+  | WFArr : forall t l u, l <= u -> u <= NATMAX -> WFType t -> WFType (Tarray t l u).
+
+  Fixpoint WFType_dec (t : type) : {WFType t} + {~WFType t}.
+    refine (match t with
+            | Tbool => left WFBool
+            | Tnat l u =>
+                match le_dec l u, le_dec u NATMAX with
+                | left lelu, left leuN => left (WFNat l u lelu leuN)
+                | _, _ => right _
+                end
+            | Tarray t__a l u =>
+                match WFType_dec t__a with
+                | left WFt__a =>
+                    match le_dec l u, le_dec u NATMAX with
+                    | left lelu, left leuN => left (WFArr t__a l u lelu leuN WFt__a)
+                    | _, _ => right _
+                    end
+                | _ => right _
+                end
+            end); inversion 1; contradiction.
+  Defined.
+  
   (** Defines the typing relation [IsOfType]. *)
 
   Inductive IsOfType : value -> type -> Prop :=
@@ -158,14 +186,14 @@ Section Types.
 
   (** Value n must satisfy the index constraint, i.e n ∈ [l,u]. *)
   | IsNat : forall (n l u : nat),
-      l <= u -> l <= n <= u -> IsOfType (Vnat n) (Tnat l u)
+      WFType (Tnat l u) -> l <= n <= u -> IsOfType (Vnat n) (Tnat l u)
 
   (** All elements of the array of values [aofv] must be of type [t],
     and the length of [aofv] must satisfy the index constraint.
    *)
   | IsArrOfT (l u : nat) :
     forall (aofv : arrofvalues) (t : type),
-      l <= u ->
+      WFType (Tarray t l u) ->
       ArrIsOfType aofv (S (u - l)) t ->
       IsOfType (Varr aofv) (Tarray t l u)
                
@@ -175,7 +203,7 @@ Section Types.
     is equal to the second argument (of type [nat]). *)
                
   with ArrIsOfType: arrofvalues -> nat -> type -> Prop :=
-  | ArrIsOfTypeOne : forall t v, ArrIsOfType (Arr_one v) 1 t
+  | ArrIsOfTypeOne : forall t v, IsOfType v t -> ArrIsOfType (Arr_one v) 1 t
   | ArrIsOfTypeCons :
     forall aofv size t v,
       IsOfType v t ->
@@ -191,16 +219,16 @@ Section Types.
     match v, t with
     | Vbool b, Tbool => Ret true
     | Vnat n, Tnat l u =>
-        if le_dec l u then
+        if WFType_dec t then
           match le_dec l n, le_dec n u with
           | left _, left _ => Ret true
           | _, _ => Ret false
           end
-        else Err "is_of_type: found an ill-formed natural range"
+        else Err "is_of_type: found an ill-formed nat type"
     | Varr aofv, Tarray ta l u =>
-        if le_dec l u then
+        if WFType_dec t then
           arr_is_of_type aofv ta (S (u - l))
-        else Err "is_of_type: found an ill-formed index range"
+        else Err "is_of_type: found an ill-formed array type"
     | _, _ => Ret false
     end
   with arr_is_of_type (aofv : arrofvalues) (t : type) (size : nat) {struct aofv} : optionE bool :=

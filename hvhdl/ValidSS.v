@@ -18,7 +18,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {id e v t},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false e v ->
       IsOfType v t ->
 
       (* Side conditions *)
@@ -32,7 +32,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {id e v t},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false e v ->
       IsOfType v t ->
 
       (* Side conditions *)
@@ -47,8 +47,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {id e ei v vi t l u},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
-      vexpr Δ σ Λ false ei vi ->
+      VExpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false ei vi ->
       IsOfType v t ->
       IsOfType vi (Tnat l u) ->
                  
@@ -64,8 +64,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {id e ei v vi t l u},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
-      vexpr Δ σ Λ false ei vi ->
+      VExpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false ei vi ->
       IsOfType v t ->
       IsOfType vi (Tnat l u) ->
       
@@ -80,7 +80,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {id e t v val},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false e v ->
       IsOfType v t ->
             
       (* Side conditions *)
@@ -94,8 +94,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {id e ei t v vi val l u},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
-      vexpr Δ σ Λ false ei vi ->
+      VExpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false ei vi ->
       IsOfType v t ->
       IsOfType vi (Tnat l u) ->
       
@@ -110,7 +110,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {e stmt v},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false e v ->
       IsOfType v Tbool ->
       validss Δ σ Λ stmt ->
       
@@ -122,7 +122,7 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
     forall {e stmt stmt' v},
 
       (* Premises *)
-      vexpr Δ σ Λ false e v ->
+      VExpr Δ σ Λ false e v ->
       IsOfType v Tbool ->
       validss Δ σ Λ stmt ->
       validss Δ σ Λ stmt' ->
@@ -139,8 +139,8 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
       (** If [vexpr] interprets [e] and [e'] into [nat] values then it
          implies [IsOfType (Vnat n) nat(0,NATMAX)] and [IsOfType
          (Vnat n') nat(0,NATMAX)].  *)
-      vexpr Δ σ Λ false e (Vnat n) ->
-      vexpr Δ σ Λ false e' (Vnat n') ->
+      VExpr Δ σ Λ false e (Vnat n) ->
+      VExpr Δ σ Λ false e' (Vnat n') ->
       validss Δ σ lenv' stmt ->
       
       (* Side conditions *)

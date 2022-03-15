@@ -82,7 +82,7 @@ with eassocg (M__g : IdMap value) : assocg -> IdMap value -> Prop :=
 
       (* Premises *)
       IsLStaticExpr e ->
-      vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
+      VExpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
 
       (* Side conditions *)
       ~NatMap.In id M__g ->

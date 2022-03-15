@@ -69,7 +69,7 @@ Lemma elab_TCI_Δ_in_arcs_nb_2 :
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
     List.In (assocg_ input_arcs_number e) gm ->
-    vexpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
+    VExpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
     exists t, MapsTo input_arcs_number (Generic t v) Δ__t.
 Admitted.
 

@@ -20,7 +20,7 @@ Lemma arrisoftype_inv_set_at :
       ArrIsOfType (set_at v i aofv in_bounds) n t.
 Proof.
   induction 1.
-  - intro; destruct i; cbn; [constructor | lia ].
+  - intro; destruct i; cbn; [ constructor; assumption | lia ].
   - intro; destruct i; cbn.
     constructor; assumption.
     constructor. assumption.
@@ -39,7 +39,7 @@ Proof.
   - inversion_clear 1; constructor; auto.
     match goal with
     | H: ArrIsOfType _ _ _ |- _ =>
-        inversion_clear H; constructor
+        inversion_clear H; constructor; assumption
     end.
   (* CASE aofv = v0 :: tl and i = 0 *)
   - inversion_clear 1; constructor; auto.

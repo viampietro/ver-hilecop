@@ -29,7 +29,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag id e newv t currv σ__w',
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e newv -> (* e ⇝ newv *)
+      VExpr Δ σ Λ false e newv -> (* e ⇝ newv *)
       IsOfType newv t ->             (* [newv ∈c t] *)
       IsOfType currv t ->            (* [currv ∈c t] *)
       
@@ -58,7 +58,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag id e newv t currv,
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e newv ->
+      VExpr Δ σ Λ false e newv ->
       IsOfType newv t ->
       IsOfType currv t ->
       
@@ -87,12 +87,12 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       let idx := i - l in
       
       (*  * Premises * *)
-      vexpr Δ σ Λ false e newv ->
+      VExpr Δ σ Λ false e newv ->
       IsOfType newv t ->
       IsOfType (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei → vi ∧ vi ∈c nat(l,u) *)
-      vexpr Δ σ Λ false ei (Vnat i) ->
+      VExpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
         
       (* * Side conditions * *)
@@ -126,12 +126,12 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e newv ->
+      VExpr Δ σ Λ false e newv ->
       IsOfType newv t ->
       IsOfType (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei → vi ∧ vi ∈c nat(l,u) *)
-      vexpr Δ σ Λ false ei (Vnat i) ->
+      VExpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->
       
       (* Side conditions *)
@@ -153,7 +153,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag id e newv t currv,
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e newv ->
+      VExpr Δ σ Λ false e newv ->
       IsOfType newv t ->
       IsOfType currv t ->
       
@@ -173,12 +173,12 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       let idx := i - l in
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e newv ->
+      VExpr Δ σ Λ false e newv ->
       IsOfType newv t ->
       IsOfType (Varr curraofv) (Tarray t l u) ->
       
       (* These two lines are equivalent to: ei ⇝ vi ∧ vi ∈c nat(l,u) *)
-      vexpr Δ σ Λ false ei (Vnat i) ->
+      VExpr Δ σ Λ false ei (Vnat i) ->
       l <= i <= u ->      
 
       (* * Side conditions * *)
@@ -196,7 +196,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag e stmt σ__w' Λ',
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e (Vbool true) ->
+      VExpr Δ σ Λ false e (Vbool true) ->
       vseq Δ σ σ__w Λ flag stmt σ__w' Λ' ->
       
       (* * Conclusion * *)
@@ -208,7 +208,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag e stmt,
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e (Vbool false) ->
+      VExpr Δ σ Λ false e (Vbool false) ->
       
       (* * Conclusion * *)
       vseq Δ σ σ__w Λ flag (If e Then stmt) σ__w Λ
@@ -219,7 +219,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag e stmt stmt' σ__w' Λ',
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e (Vbool true) ->
+      VExpr Δ σ Λ false e (Vbool true) ->
       vseq Δ σ σ__w Λ flag stmt σ__w' Λ' ->
       
       (* * Conclusion * *)
@@ -231,7 +231,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag e stmt stmt' σ__w' Λ',
       
       (* * Premises * *)
-      vexpr Δ σ Λ false e (Vbool false) ->
+      VExpr Δ σ Λ false e (Vbool false) ->
       vseq Δ σ σ__w Λ flag stmt' σ__w' Λ' ->
       
       (* * Conclusion * *)
@@ -246,8 +246,8 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag id e e' stmt n n' Λi σ__w' Λ',
 
       (* * Premises * *)
-      vexpr Δ σ Λ false e (Vnat n) ->
-      vexpr Δ σ Λ false e' (Vnat n') ->
+      VExpr Δ σ Λ false e (Vnat n) ->
+      VExpr Δ σ Λ false e' (Vnat n') ->
       
       vseq Δ σ σ__w Λi flag (For id InR e To e' Loop stmt) σ__w' Λ' ->
 
@@ -270,7 +270,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       (* * Premises * *)
       
       (* The upper bound is not reached. id = e' ⇝ ⊥ *)
-      vexpr Δ σ Λi false (#id @= e') (Vbool false) ->
+      VExpr Δ σ Λi false (#id @= e') (Vbool false) ->
       vseq Δ σ σ__w Λi flag stmt σ__w' Λ' ->
       vseq Δ σ σ__w' Λ' flag (For id InR e To e' Loop stmt) σ__w'' Λ'' ->
 
@@ -291,7 +291,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
     forall flag id e e' stmt t n Λi,
 
       (* * Premises * *)
-      vexpr Δ σ Λi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
+      VExpr Δ σ Λi false (e_binop bo_eq (e_name (n_id id)) e') (Vbool true) ->
 
       (* * Side conditions * *)
       NatMap.MapsTo id (t, Vnat n) Λ ->

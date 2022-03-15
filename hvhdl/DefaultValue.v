@@ -20,12 +20,12 @@ Require Import hvhdl.SemanticalDomains.
 Inductive DefaultV : type -> value -> Prop :=
   
 | DefaultVBool : DefaultV Tbool (Vbool false)
-| DefaultVNat : forall l u, l <= u -> DefaultV (Tnat l u) (Vnat l)
+| DefaultVNat : forall l u, WFType (Tnat l u) -> DefaultV (Tnat l u) (Vnat l)
 | DefaultVArray :
     forall t l u v,
       (* Proof that (u - l) + 1 is greater than zero *)
       let plus1_gt_O := (gt_Sn_O (u - l)) in
-      l <= u ->
+      WFType (Tarray t l u) ->
       DefaultV t v ->
       DefaultV (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).
 
@@ -40,11 +40,11 @@ Require Import String.
 Fixpoint defaultv (t : type) {struct t} : optionE value :=
   match t with
   | Tbool => Ret (Vbool false)
-  | Tnat l u => if le_dec l u then Ret (Vnat l) else Err "defaultv: found ill-formed natural range"
+  | Tnat l u => if WFType_dec t then Ret (Vnat l) else Err "defaultv: found ill-formed nat type"
   | Tarray ta l u =>
-      if le_dec l u then
+      if WFType_dec t then
         v <- defaultv ta; Ret (Varr (create_arr (S (u - l)) v (gt_Sn_O (u - l))))
-      else Err "defaultv: found ill-formed index range"
+      else Err "defaultv: found ill-formed array type"
   end.
 
 Functional Scheme defaultv_ind := Induction for defaultv Sort Prop.
@@ -65,8 +65,9 @@ Lemma defaultv_compl :
 Proof.
   intros t; induction 1.
   cbn; reflexivity.
-  cbn; edestruct (le_dec l u); (contradiction || eauto).
-  cbn iota delta [defaultv]; edestruct (le_dec l u); (contradiction || eauto).
+  cbv iota beta delta [defaultv].
+  edestruct (WFType_dec (Tnat l u)); (contradiction || eauto).
+  cbn iota delta [defaultv]; edestruct (WFType_dec (Tarray t l u)); (contradiction || eauto).
   rewrite IHDefaultV.
   reflexivity.
 Qed.

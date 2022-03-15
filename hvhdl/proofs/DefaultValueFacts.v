@@ -11,10 +11,11 @@ Lemma DefaultV_is_well_typed :
 Proof.
   induction 1.
   constructor.
-  constructor; lia.
+  constructor; [assumption | inversion H; lia ].
   constructor; auto.
   induction (u - l).
   cbn; constructor.
+  assumption.
   simpl; constructor; auto.
 Qed.
 
