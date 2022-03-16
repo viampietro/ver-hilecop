@@ -1,17 +1,22 @@
+(** * H-VHDL expression evaluation *)
+
 (** Module that implement the relation evaluating H-VHDL
     expressions. *)
 
-Require Import CoqLib.
-Require Import ListPlus.
-Require Import GlobalTypes.
-Require Import AbstractSyntax.
-Require Import Environment.
-Require Import SemanticalDomains.
-Require Import HVhdlTypes.
+Require Import common.CoqLib.
+Require Import common.ListPlus.
+Require Import common.GlobalTypes.
+
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.Environment.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.HVhdlTypes.
 
 Import NatMap.
 Open Scope abss_scope.
 Local Open Scope nat_scope.
+
+(** ** Expression evaluation relation *)
 
 (** Defines the expression evaluation relation. 
     
@@ -36,8 +41,8 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
                                          
 (** Evaluates aggregate expression.
     
-    The list of expressions [lofexprs] and the list of values
-    [lofvalues] in parameter must be of the same length. *)
+    The aggregate of expressions [agofe] and the array of values
+    [arrofvalues] in parameter must be of the same length. *)
 | VExprAggreg (outmode : bool) (agofe : agofexprs) (arrofv : arrofvalues) :
     VAgOfExprs Δ σ Λ outmode agofe arrofv ->
     VExpr Δ σ Λ outmode (e_aggreg agofe) (Varr arrofv)
@@ -278,7 +283,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       (* Premises *)
       VExpr Δ σ Λ outmode e v ->
       VExpr Δ σ Λ outmode e' v' ->
-      ~VEq v v' ->
+      OVEq v v' (Some false) ->
       
       (* Conclusion: Δ,σ,Λ ⊢ e = e' ⇝ b *)      
       VExpr Δ σ Λ outmode (e_binop bo_eq e e') (Vbool false)
@@ -314,3 +319,89 @@ with VAgOfExprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 Scheme VExpr_ind_mut := Induction for VExpr Sort Prop
   with VAgOfExprs_ind_mut := Induction for VAgOfExprs Sort Prop.
 
+(** ** H-VHDL expression interpret *)
+
+Require Import String.
+Import ErrMonadNotations.
+
+(** Interprets the application of the binary operator [bop] to the
+    values [v1] and [v2]. *)
+
+Definition vbinop (bop : binop) (v1 v2 : value) : optionE value :=
+  match bop, v1, v2 with
+  (** Evaluates Boolean operators: "and" and "or".  *)
+  | bo_and, (Vbool b1), (Vbool b2) => Ret (Vbool (b1 && b2))
+  | bo_or, (Vbool b1), (Vbool b2) => Ret (Vbool (b1 || b2))
+  (** Evaluates natural number arithmetic operators: addition and substraction. *)
+  | bo_add, (Vnat n1), (Vnat n2) =>
+      let n := n1 + n2 in
+      if le_dec n NATMAX then Ret (Vnat n)
+      else Err "vbinop: addition of natural numbers causes an overflow"
+  | bo_sub, (Vnat n1), (Vnat n2) =>
+      if le_dec n2 n1 then Ret (Vnat (n1 - n2))
+      else Err "vbinop: result substraction is below zero"
+  (** Evaluates comparisons operations: eq, ne, gt, ge, lt, le *)
+  | bo_eq, _, _ => do b <- veq v1 v2; Ret (Vbool b)
+  | bo_neq, _, _ => do b <- veq v1 v2; Ret (Vbool (negb b))
+  | bo_gt, (Vnat n1), (Vnat n2) => Ret (Vbool (n2 <? n1))
+  | bo_ge, (Vnat n1), (Vnat n2) => Ret (Vbool (n2 <=? n1))
+  | bo_lt, (Vnat n1), (Vnat n2) => Ret (Vbool (n1 <? n2))
+  | bo_le, (Vnat n1), (Vnat n2) => Ret (Vbool (n1 <=? n2))
+  | _, _, _ => Err "vbinop: found incompatible binary operator and operands"
+  end.
+
+(** Defines a interpret for H-VHDL expressions. *)
+
+Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+         (e : expr) {struct e} : optionE value :=
+  match e with
+  (** Evaluates nat constant. *) 
+  | e_nat n => if le_dec n NATMAX then Ret (Vnat n) else Err "vexpr: found a natural number greater than NATMAX"
+  (** Evaluates bool constant. *)
+  | e_bool b => Ret (Vbool b)
+  (** Evaluates aggregate expression. *)
+  | e_aggreg agofe => do aofv <- vagofexprs Δ σ Λ outmode agofe; Ret (Varr aofv)
+  (** Evaluates binary operation *)
+  | e_binop bop e1 e2 =>
+      do v1 <- vexpr Δ σ Λ outmode e1;
+      do v2 <- vexpr Δ σ Λ outmode e2;
+      vbinop bop v1 v2
+  (** Evaluates Boolean negation operation *)
+  | e_not e1 =>
+      do v1 <- vexpr Δ σ Λ outmode e1;
+      match v1 with Vbool b => Ret (Vbool (negb b))
+               | _ => Err "vexpr: negation must be applied to a Boolean expression" end
+        
+  (** Evaluates a name that can refer to a generic constant, a signal
+      or a local variable identifier, possibly indexed, in the context
+      [Δ, σ, Λ], and given a certain [outmode] flag. *)
+  | e_name n => vname Δ σ Λ outmode n
+  end
+
+with vname (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+           (n : name) {struct n} : optionE value :=
+       match n with
+       | n_id id =>
+           match find id Λ, find id (sigstore σ), find id Δ with
+           (* id is a local variable identifier *)
+           | Some (_, v), None, None => Ret v
+           (* id is a input signal or an declared signal identifier. *)
+           | None, Some v, Some (Input _ | Declared _) => Ret v
+           (* id is an output signal identifier, checks that outmode
+              is on to return the associated value; error otherwise. *)
+           | None, Some v, Some (Output _) =>
+               if outmode then Ret v
+               else Err "vname: trying to read an output signal identifier with outmode off"
+           (* Error cases *)
+           | _, _, _ => Err ""
+           end
+       | n_xid id e =>
+           do i <- vexpr Δ σ Λ outmode e; Ret i
+       end
+
+with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+                (agofe : agofexprs) {struct agofe} : optionE arrofvalues :=
+       match agofe with
+       | agofe_one e => do v <- vexpr Δ σ Λ outmode e; Ret (Arr_one v)
+       | _ => Ret (Arr_one (Vnat 0))
+       end.

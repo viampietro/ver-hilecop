@@ -43,7 +43,7 @@ Fixpoint defaultv (t : type) {struct t} : optionE value :=
   | Tnat l u => if WFType_dec t then Ret (Vnat l) else Err "defaultv: found ill-formed nat type"
   | Tarray ta l u =>
       if WFType_dec t then
-        v <- defaultv ta; Ret (Varr (create_arr (S (u - l)) v (gt_Sn_O (u - l))))
+        do v <- defaultv ta; Ret (Varr (create_arr (S (u - l)) v (gt_Sn_O (u - l))))
       else Err "defaultv: found ill-formed array type"
   end.
 

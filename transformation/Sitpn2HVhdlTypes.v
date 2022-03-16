@@ -13,8 +13,6 @@ Require Import sitpn.SitpnFacts.
 Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.AbstractSyntax.
 
-Import ErrMonadNotations.
-
 (** ** Types used in the Sitpn2HVhdl transformation. *)
 
 Section CompileTimeTypes.

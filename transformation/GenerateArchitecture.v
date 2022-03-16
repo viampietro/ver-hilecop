@@ -18,8 +18,6 @@ Require Import hvhdl.Transition.
 
 Require Import transformation.Sitpn2HVhdlTypes.
 
-Import ErrMonadNotations.
-
 Set Implicit Arguments.
 
 Section GenArch.

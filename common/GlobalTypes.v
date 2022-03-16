@@ -158,27 +158,32 @@ Arguments Ret {A}.
 Module ErrMonadNotations.
 
   Notation "[| x |]" := (Success x).
-
+  
   Notation "x <- e1 ; e2" := (match e1 with
                               | Err msg => Err msg
                               | Success x => e2
                               end)
-                               (right associativity, at level 60).
+                               (right associativity, at level 200).
   
-  Notation "'|(' x , y ')|' <- e1 ; e2" :=
-    (z <- e1; let '(x, y) := z in e2)
-      (right associativity, at level 60).
+  Notation "'do' X <- A ; B" := (match A with
+                                 | Err msg => Err msg
+                                 | Success X => B
+                                 end)
+                                  (at level 200, X name, A at level 100, B at level 200).
+  
+  Notation "'do' '|(' x , y ')|' <- e1 ; e2" :=
+    (do z <- e1; let '(x, y) := z in e2)
+      (right associativity, at level 200).
 
-  Notation "'|(' x , y , z ')|' <- e1 ; e2" :=
-    (a <- e1; let '(x, y, z) := a in e2)
-      (right associativity, at level 60).
+  Notation "'do' '|(' x , y , z ')|' <- e1 ; e2" :=
+    (do a <- e1; let '(x, y, z) := a in e2)
+      (right associativity, at level 200).
     
   Definition f (n : nat) : optionE (nat * nat * nat) :=
     [| (0, 0, 0) |].
 
   Definition g (n : nat) : optionE (nat * nat) :=
-    |( x, y , z )| <- f n; [| (x, y) |].
-
+    do |( x, y , z )| <- f n; [| (x, y) |].
   
 End ErrMonadNotations.
 

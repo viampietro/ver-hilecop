@@ -5,6 +5,7 @@
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
 Require Import common.ListLib.
+Require Import String.
 
 Import ErrMonadNotations.
 
@@ -62,7 +63,7 @@ Section Values.
     arrofvalues [aofv], accesses the value at position [i] in [aofv].
    *)
 
-  Fixpoint get_at (i : nat) (aofv : arrofvalues) {struct aofv} : i < length aofv -> value.
+  Fixpoint get_at (i : nat) (aofv : arrofvalues) {struct aofv} : i < List.length aofv -> value.
     refine (
         match i, aofv with
         (* Error, index out of bounds. *)
@@ -72,7 +73,7 @@ Section Values.
         | (S j), Arr_cons a aofv' => fun pf => get_at j aofv' _
         end);
       [apply lt_S_n in l; apply Nat.nlt_0_r in l; contradiction
-      | apply (lt_S_n j (length aofv') pf)].
+      | apply (lt_S_n j (List.length aofv') pf)].
   Defined.
 
   (** Stores value [v] at position [i] in list of values [lofv]. 
@@ -98,7 +99,7 @@ Section Values.
     [aofv], stores value [v] at position [i] in [aofv], and returns
     the new [arrofvalues].  *)
 
-  Fixpoint set_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : i < length aofv -> arrofvalues.
+  Fixpoint set_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : i < List.length aofv -> arrofvalues.
     refine (match i, aofv with
             (* Error, index out of bounds. *)
             | S j, Arr_one _ => fun _ => _
@@ -107,7 +108,7 @@ Section Values.
             | (S j), Arr_cons v' tl => fun _ => Arr_cons v' (set_at v j tl _)
             end).
     apply lt_pred in l; simpl in l; apply Nat.nlt_0_r in l; contradiction.
-    apply (lt_S_n j (length tl) l).
+    apply (lt_S_n j (List.length tl) l).
   Defined.
 
   Functional Scheme set_at_ind := Induction for set_at Sort Prop.
@@ -136,7 +137,7 @@ End Values.
 
 (** ** Semantic type *)
 
-Require Import String.
+
 
 Section Types.
 
@@ -235,7 +236,7 @@ Section Types.
          match aofv, size with
          | Arr_one v, 1 => is_of_type v t
          | Arr_cons v tl, S n =>
-             (b1 <- is_of_type v t; b2 <- arr_is_of_type tl t n; Ret (b1 && b2))
+             do b1 <- is_of_type v t; do b2 <- arr_is_of_type tl t n; Ret (b1 && b2)
          | _, _ => Ret false
          end.
   
@@ -370,38 +371,29 @@ Section ValueEq.
 
    *)
 
-  Fixpoint veq (v v' : value) {struct v} : option bool :=
+  Fixpoint veq (v v' : value) {struct v} : optionE bool :=
     match v, v' with
-    | Vbool b, Vbool b' => Some (Bool.eqb b b')
-    | Vnat n, Vnat n' => Some (Nat.eqb n n')
+    | Vbool b, Vbool b' => Ret (Bool.eqb b b')
+    | Vnat n, Vnat n' => Ret (Nat.eqb n n')
     | Varr aofv, Varr aofv' => arrofveq aofv aofv'
-
-    (* Error, cannot compare two values of different domains. *)
-    | _, _ => None
+    | _, _ => Err "veq: can not compare two values of different domains"
     end                              
   (** Implements the equality operator between arrays of values.
       
-   Returns [Some true] if values of [aofv] and [aofv'] are equal pair-wise.
+      Returns [Some true] if values of [aofv] and [aofv'] are equal pair-wise.
       
-   Returns an error if a pair-wise comparison returns an error or if
-   the arrays are of different length. *)
+      Returns an error if a pair-wise comparison returns an error or if
+      the arrays are of different length. *)
       
-  with arrofveq (aofv aofv' : arrofvalues) {struct aofv} : option bool :=
+  with arrofveq (aofv aofv' : arrofvalues) {struct aofv} : optionE bool :=
          match aofv, aofv' with
          (* Two empty lists are v-equal. *)
          | Arr_one v, Arr_one v' => veq v v'
                                         
          (* Checks that a and b are v-equal. *)
          | (Arr_cons v a), (Arr_cons v' a') =>
-             match veq v v' with
-             (* Pair-wise comparison returned a boolean value. *)
-             | Some false => Some false
-             | Some true => arrofveq a a'
-             (* Error, pair-wise comparison failed. *)
-             | None => None
-             end
-         (* Error, l and l' are not of the same length. *)
-         | _, _ => None
+             do b <- veq v v'; if b then arrofveq a a' else Ret false
+         | _, _ => Err "arrofveq: can not compare to array of values of different size"
          end.
   
 End ValueEq.

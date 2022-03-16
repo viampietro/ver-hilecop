@@ -14,8 +14,6 @@ Require Import common.ListMonad.
 Require Import transformation.Sitpn2HVhdlTypes.
 Require Import FunInd.
 
-Import ErrMonadNotations.
-
 Section GenSitpnInfos.
 
   Variable sitpn : Sitpn.

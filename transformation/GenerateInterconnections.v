@@ -19,8 +19,6 @@ Require Import hvhdl.Transition.
 Require Import transformation.Sitpn2HVhdlTypes.
 Require Import transformation.Sitpn2HVhdlUtils.
 
-Import ErrMonadNotations.
-
 Set Implicit Arguments.
 
 Section GenInter.
