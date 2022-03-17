@@ -350,6 +350,61 @@ Definition vbinop (bop : binop) (v1 v2 : value) : optionE value :=
   | _, _, _ => Err "vbinop: found incompatible binary operator and operands"
   end.
 
+(** Returns the value associated with identifier [id] in the
+    environment composed of an elaborated design [Δ], a design state
+    [σ] and a local environment [Λ].
+
+    [id] must either refer to a local variable identifier, a signal
+    identifier (possibly an output port if [outmode] is on), or a
+    generic constant identifier.
+
+    An error is returned if [id] is not referenced at all in the
+    environment, if it identifies another kind of construct than those
+    cited above (e.g. [id] refers to a component instance identifier),
+    or if the environment is inconsistent (e.g. [id] refers to both a
+    local variable and a declared signal). *)
+
+Definition read (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+           (id : ident) : optionE value :=
+  match find id Λ, find id (sigstore σ), find id (compstore σ), find id Δ with
+  (* [id] is a local variable identifier *)
+  | Some (_, v), None, None, None => Ret v
+  (* [id] is a input signal or an declared signal identifier. *)
+  | None, Some v, None, Some (Input _ | Declared _) => Ret v
+  (* [id] is an output signal identifier, checks that [outmode]
+     is on to return the associated value; error otherwise. *)
+  | None, Some v, None, Some (Output _) =>
+      if outmode then Ret v
+      else Err "read: trying to read an output signal identifier with outmode off"
+  | None, None, Some _, Some (Component _) =>
+      Err "read: trying to read a component instance identifier"
+  | None, None, None, Some (Process _) =>
+      Err "read: trying to read a process identifier"
+  (* Error: id is not referenced in Δ, σ or Λ *)
+  | None, None, None, None => Err "read: found an unknown identifier"
+  (* Error: inconsistent environment *)
+  | _, _, _, _ => Err "read: found an inconsistent environment"
+  end.
+
+(** Returns the value read at the index [v__i] in the array [v__a], where
+    [v__a] must be a value of the array type, and [v__i] must be a value
+    of the nat type, and [v__i] must correspond to a index within the
+    bounds of [v__a]. Otherwise an error is raised. *)
+
+Definition read_at (v__a v__i : value) : optionE value :=
+  match v__a with
+  | Varr aofv => 
+      match v__i with
+      | Vnat i =>
+          match lt_dec i (List.length aofv) with
+          | left lt_i_lgth => Ret (get_at i aofv lt_i_lgth)
+          | _ => Err "read_at: index out of bounds"
+          end
+      | _ =>   Err "read_at: index value is not a natural number"
+      end
+  | _ => Err "read_at: first value is not of the array type"
+  end.
+
 (** Defines a interpret for H-VHDL expressions. *)
 
 Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
@@ -369,8 +424,10 @@ Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
   (** Evaluates Boolean negation operation *)
   | e_not e1 =>
       do v1 <- vexpr Δ σ Λ outmode e1;
-      match v1 with Vbool b => Ret (Vbool (negb b))
-               | _ => Err "vexpr: negation must be applied to a Boolean expression" end
+      match v1 with
+      | Vbool b => Ret (Vbool (negb b))
+      | _ => Err "vexpr: negation must be applied to a Boolean expression"
+      end
         
   (** Evaluates a name that can refer to a generic constant, a signal
       or a local variable identifier, possibly indexed, in the context
@@ -381,22 +438,13 @@ Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
 with vname (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
            (n : name) {struct n} : optionE value :=
        match n with
-       | n_id id =>
-           match find id Λ, find id (sigstore σ), find id Δ with
-           (* id is a local variable identifier *)
-           | Some (_, v), None, None => Ret v
-           (* id is a input signal or an declared signal identifier. *)
-           | None, Some v, Some (Input _ | Declared _) => Ret v
-           (* id is an output signal identifier, checks that outmode
-              is on to return the associated value; error otherwise. *)
-           | None, Some v, Some (Output _) =>
-               if outmode then Ret v
-               else Err "vname: trying to read an output signal identifier with outmode off"
-           (* Error cases *)
-           | _, _, _ => Err ""
-           end
+       (** Reads the value associated with the identifier [id]. *)
+       | n_id id => do v <- read Δ σ Λ outmode id; Ret v
+       (** Reads the value of array [v__a] at index [v__i] *)
        | n_xid id e =>
-           do i <- vexpr Δ σ Λ outmode e; Ret i
+           do v__i <- vexpr Δ σ Λ outmode e;
+           do v__a <- read Δ σ Λ outmode id;
+           read_at v__a v__i
        end
 
 with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
@@ -405,3 +453,5 @@ with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
        | agofe_one e => do v <- vexpr Δ σ Λ outmode e; Ret (Arr_one v)
        | _ => Ret (Arr_one (Vnat 0))
        end.
+
+(* Compute (vexpr EmptyElDesign EmptyDState EmptyLEnv false (e_nat 2)). *)
