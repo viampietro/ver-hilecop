@@ -19,6 +19,7 @@
 (** * General-purpose libraries *)
 
 Require Export Arith.
+Require Export NArith.
 Require Export Bool.
 Require Export List.
 

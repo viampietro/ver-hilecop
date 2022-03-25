@@ -12,7 +12,7 @@ Require Import NatSet.
 
  *)
 
-Definition NATMAX : nat := 2147483647.
+Definition NATMAX : N := 2147483647.
 
 (** Type of identifiers, defined as natural. *)
 

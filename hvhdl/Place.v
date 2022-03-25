@@ -1,8 +1,7 @@
 (** * Definition of the HILECOP's Place design in H-VHDL abstract syntax. *)
 
 (** Defines the Place design used in the generation of
-    VHDL listing from SITPNs.
- *)
+    VHDL listing from SITPNs. *)
 
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
@@ -41,9 +40,9 @@ Definition maximal_marking    : ident := 3.
 (** Defines the generic clause of the Place design. *)
 
 Definition place_gens : list gdecl :=
-  [gdecl_ input_arcs_number  (tind_natural 0 NATMAX) 1;
-   gdecl_ output_arcs_number (tind_natural 0 NATMAX) 1;
-   gdecl_ maximal_marking    (tind_natural 0 NATMAX) 1].
+  [gdecl_ input_arcs_number  (tind_natural 0%N NATMAX) 1%N;
+   gdecl_ output_arcs_number (tind_natural 0%N NATMAX) 1%N;
+   gdecl_ maximal_marking    (tind_natural 0%N NATMAX) 1%N].
 
 (** *** Ports of the Place design. *)
 
@@ -69,19 +68,21 @@ Definition marked                  : ident := 13.
    Used in the range constraints of port type indications.
  *)
 
-Definition out_arcs_nb_minus_1 := #output_arcs_number @- 1.
-Definition in_arcs_nb_minus_1 := #input_arcs_number @- 1.
+Definition out_arcs_nb_minus_1 := #output_arcs_number @- 1%N.
+Definition in_arcs_nb_minus_1 := #input_arcs_number @- 1%N.
 
 (* Port clause. *)
+
+Open Scope N_scope.
 
 Definition place_ports : list pdecl :=
   [
     (* Input ports. *)
   pdecl_in clk                      tind_boolean;
-  pdecl_in initial_marking          (tind_natural 0 (#maximal_marking));
-  pdecl_in input_arcs_weights       (weight_vector_t 0 (#input_arcs_number @- 1));
-  pdecl_in output_arcs_types        (arc_vector_t 0 (#output_arcs_number @- 1));
-  pdecl_in output_arcs_weights      (weight_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_in initial_marking          (tind_natural 0%N (#maximal_marking));
+  pdecl_in input_arcs_weights       (weight_vector_t 0%N (#input_arcs_number @- 1%N));
+  pdecl_in output_arcs_types        (arc_vector_t 0%N (#output_arcs_number @- 1%N));
+  pdecl_in output_arcs_weights      (weight_vector_t 0%N (#output_arcs_number @- 1%N));
   pdecl_in input_transitions_fired  (bool_vector_t 0 (#output_arcs_number @- 1));
   pdecl_in output_transitions_fired (bool_vector_t 0 (#output_arcs_number @- 1));
 
@@ -103,9 +104,9 @@ Definition local_weight_t := tind_natural 0 (#maximal_marking).
 
 (** Declared signal identifiers. *)
 
-Definition s_input_token_sum : ident := 14.
-Definition s_marking : ident := 15.
-Definition s_output_token_sum : ident := 16.
+Definition s_input_token_sum : ident := 14%nat.
+Definition s_marking : ident := 15%nat.
+Definition s_output_token_sum : ident := 16%nat.
 
 (** Architecture declaration list. *)
 

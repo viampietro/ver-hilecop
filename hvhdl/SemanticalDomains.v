@@ -157,21 +157,21 @@ Section Types.
 
   Inductive WFType : type -> Prop :=
   | WFBool : WFType Tbool
-  | WFNat : forall l u, l <= u -> u <= NATMAX -> WFType (Tnat l u)
-  | WFArr : forall t l u, l <= u -> u <= NATMAX -> WFType t -> WFType (Tarray t l u).
+  | WFNat : forall l u, l <= u -> (N.of_nat u <= NATMAX)%N -> WFType (Tnat l u)
+  | WFArr : forall t l u, l <= u -> (N.of_nat u <= NATMAX)%N -> WFType t -> WFType (Tarray t l u).
 
   Fixpoint WFType_dec (t : type) : {WFType t} + {~WFType t}.
     refine (match t with
             | Tbool => left WFBool
             | Tnat l u =>
-                match le_dec l u, le_dec u NATMAX with
+                match le_dec l u, (N_le_dec (N.of_nat u) NATMAX)%N with
                 | left lelu, left leuN => left (WFNat l u lelu leuN)
                 | _, _ => right _
                 end
             | Tarray t__a l u =>
                 match WFType_dec t__a with
                 | left WFt__a =>
-                    match le_dec l u, le_dec u NATMAX with
+                    match le_dec l u, (N_le_dec (N.of_nat u) NATMAX) with
                     | left lelu, left leuN => left (WFArr t__a l u lelu leuN WFt__a)
                     | _, _ => right _
                     end

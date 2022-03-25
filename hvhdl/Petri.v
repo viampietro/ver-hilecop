@@ -43,14 +43,14 @@ Definition ffid : ident := 10.
 
 (** Global constant macros. *)
 
-Definition MAXIMAL_GLOBAL_MARKING : nat := 255.
+Definition MAXIMAL_GLOBAL_MARKING : N := 255.
 
 (** Type and subtype macros. *)
 
-Definition arc_t           : tind := tind_natural 0 2.
-Definition transition_t    : tind := tind_natural 0 3.
+Definition arc_t           : tind := tind_natural 0%N 2%N.
+Definition transition_t    : tind := tind_natural 0%N 3%N.
 
-Definition weight_t        : tind := tind_natural 0 MAXIMAL_GLOBAL_MARKING.
+Definition weight_t        : tind := tind_natural 0%N MAXIMAL_GLOBAL_MARKING.
 Definition weight_vector_t : expr -> expr -> tind := tind_array weight_t.
 Definition arc_vector_t    : expr -> expr -> tind := tind_array arc_t.
 Definition bool_vector_t   : expr -> expr -> tind := tind_array tind_boolean.

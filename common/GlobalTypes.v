@@ -29,6 +29,25 @@ Definition eightns := exist _ 8 (gt_Sn_O 7).
 Definition ninens := exist _ 9 (gt_Sn_O 8).
 Definition tenns := exist _ 10 (gt_Sn_O 9).
 
+(** ** Properties on N  *)
+
+Definition N_nleb_nle (n m : N) : ((n <=? m) = false <-> ~n <= m)%N.
+  split.
+  intros. intro. rewrite ((proj2 (N.leb_le n m)) H0) in H.
+  inversion H.
+  destruct (n <=? m)%N eqn: eq_le_bool.
+  intro. elimtype False. apply H.
+  apply ((proj1 (N.leb_le n m)) eq_le_bool).
+  reflexivity.
+Defined.
+
+Definition N_le_dec (n m : N) : ({n <= m} + {~n <= m})%N.
+  destruct (n <=? m)%N eqn: eq_le_bool.
+  exact (left ((proj1 (N.leb_le n m)) eq_le_bool)).
+  exact (right ((proj1 (N_nleb_nle n m)) eq_le_bool)).
+Defined.
+
+
 (** ** Definitions and Facts about strict orders and boolean functions *)
 
 Section StrictOrders.

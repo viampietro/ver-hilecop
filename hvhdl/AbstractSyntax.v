@@ -34,7 +34,7 @@ Inductive binop : Set :=
  *)
 
 Inductive expr : Type :=
-| e_nat : nat -> expr (** Natural constant *)
+| e_nat : N -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
 | e_name : name -> expr (** Name constant *)
 | e_aggreg : agofexprs -> expr (** Aggregate of expressions *)
@@ -79,7 +79,7 @@ Notation " x @- y "  := (e_binop bo_sub x y) (at level 100) : abss_scope.
 Notation " x @|| y @|| .. @|| z " := (e_binop bo_or .. (e_binop bo_or x y) .. z) (at level 100) : abss_scope.
 Notation " x @&& y @&& .. @&& z " := (e_binop bo_and .. (e_binop bo_and x y) .. z) (at level 100) : abss_scope.
 
-Coercion e_nat : nat >-> expr.
+Coercion e_nat : N >-> expr.
 Coercion e_bool : bool >-> expr.
 
 (** Converts an aggregate of expressions into a list. *)
