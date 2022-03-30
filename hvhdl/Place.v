@@ -1,7 +1,7 @@
 (** * Definition of the HILECOP's Place design in H-VHDL abstract syntax. *)
 
 (** Defines the Place design used in the generation of
-    VHDL listing from SITPNs. *)
+    H-VHDL designs from SITPNs. *)
 
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
@@ -15,14 +15,15 @@ Require Import hvhdl.HVhdlTypes.
 
 Open Scope natset_scope.
 Open Scope abss_scope.
+Open Scope N_scope.
 
 Include HVhdlSsNotations.
 Include HVhdlCsNotations.
 
 (** Loop variable and local variable first fresh identifiers. *)
 
-Local Definition i := 50.
-Local Definition local_var_ffid := 51.
+Local Definition i : ident := 50%nat.
+Local Definition local_var_ffid : ident := 51%nat.
 
 (** ** Entity part of the Place design. *)
 
@@ -33,34 +34,34 @@ Local Definition local_var_ffid := 51.
     Begins the identifier with 1, since 0 is reserved for the clock
     input port.  *)
 
-Definition input_arcs_number  : ident := 1.
-Definition output_arcs_number : ident := 2.
-Definition maximal_marking    : ident := 3.
+Definition input_arcs_number  : ident := 1%nat.
+Definition output_arcs_number : ident := 2%nat.
+Definition maximal_marking    : ident := 3%nat.
 
 (** Defines the generic clause of the Place design. *)
 
 Definition place_gens : list gdecl :=
-  [gdecl_ input_arcs_number  (tind_natural 0%N NATMAX) 1%N;
-   gdecl_ output_arcs_number (tind_natural 0%N NATMAX) 1%N;
-   gdecl_ maximal_marking    (tind_natural 0%N NATMAX) 1%N].
+  [gdecl_ input_arcs_number  (tind_natural 0 NATMAX) 1;
+   gdecl_ output_arcs_number (tind_natural 0 NATMAX) 1;
+   gdecl_ maximal_marking    (tind_natural 0 NATMAX) 1].
 
 (** *** Ports of the Place design. *)
 
 (** Input ports identifiers. *)
 
-Definition initial_marking          : ident := 4.
-Definition input_arcs_weights       : ident := 5.
-Definition output_arcs_types        : ident := 6.
-Definition output_arcs_weights      : ident := 7.
-Definition input_transitions_fired  : ident := 8.
-Definition output_transitions_fired : ident := 9.
+Definition initial_marking          : ident := 4%nat.
+Definition input_arcs_weights       : ident := 5%nat.
+Definition output_arcs_types        : ident := 6%nat.
+Definition output_arcs_weights      : ident := 7%nat.
+Definition input_transitions_fired  : ident := 8%nat.
+Definition output_transitions_fired : ident := 9%nat.
 
 (** Output ports identifiers. *)
 
-Definition output_arcs_valid       : ident := 10.
-Definition priority_authorizations : ident := 11.
-Definition reinit_transitions_time : ident := 12.
-Definition marked                  : ident := 13.
+Definition output_arcs_valid       : ident := 10%nat.
+Definition priority_authorizations : ident := 11%nat.
+Definition reinit_transitions_time : ident := 12%nat.
+Definition marked                  : ident := 13%nat.
 
 (** Port clause of the Place design. *)
 
@@ -68,21 +69,21 @@ Definition marked                  : ident := 13.
    Used in the range constraints of port type indications.
  *)
 
-Definition out_arcs_nb_minus_1 := #output_arcs_number @- 1%N.
-Definition in_arcs_nb_minus_1 := #input_arcs_number @- 1%N.
+Definition out_arcs_nb_minus_1 := #output_arcs_number @- 1.
+Definition in_arcs_nb_minus_1 := #input_arcs_number @- 1.
 
 (* Port clause. *)
 
-Open Scope N_scope.
+
 
 Definition place_ports : list pdecl :=
   [
     (* Input ports. *)
   pdecl_in clk                      tind_boolean;
-  pdecl_in initial_marking          (tind_natural 0%N (#maximal_marking));
-  pdecl_in input_arcs_weights       (weight_vector_t 0%N (#input_arcs_number @- 1%N));
-  pdecl_in output_arcs_types        (arc_vector_t 0%N (#output_arcs_number @- 1%N));
-  pdecl_in output_arcs_weights      (weight_vector_t 0%N (#output_arcs_number @- 1%N));
+  pdecl_in initial_marking          (tind_natural 0 (#maximal_marking));
+  pdecl_in input_arcs_weights       (weight_vector_t 0 (#input_arcs_number @- 1));
+  pdecl_in output_arcs_types        (arc_vector_t 0 (#output_arcs_number @- 1));
+  pdecl_in output_arcs_weights      (weight_vector_t 0 (#output_arcs_number @- 1));
   pdecl_in input_transitions_fired  (bool_vector_t 0 (#output_arcs_number @- 1));
   pdecl_in output_transitions_fired (bool_vector_t 0 (#output_arcs_number @- 1));
 
@@ -126,11 +127,11 @@ Definition place_sigs : list sdecl :=
 (** Process "input_tokens_sum". *)
 
 (* Process id. *)
-Definition input_tokens_sum : ident := 17.
+Definition input_tokens_sum : ident := 17%nat.
 
 (* Process "input_tokens_sum" declarative part. *)
 
-Definition v_internal_input_token_sum : ident := local_var_ffid.
+Definition v_internal_input_token_sum : ident := local_var_ffid%nat.
 
 (* Process "input_tokens_sum" declaration. *)
 
@@ -158,7 +159,7 @@ Definition input_tokens_sum_ps :=
 (** Process "output_tokens_sum". *)
 
 (* Process id. *)
-Definition output_tokens_sum : ident := 18.
+Definition output_tokens_sum : ident := 18%nat.
 
 (* Process "output_tokens_sum" declarative part. *)
 
@@ -190,7 +191,7 @@ Definition output_tokens_sum_ps :=
 (** Process "marking". *)
 
 (* Process id. *)
-Definition marking : ident := 19.
+Definition marking : ident := 19%nat.
 
 (* Process "marking" declaration. *)
 
@@ -214,7 +215,7 @@ Definition marking_ps :=
 (** Process "determine_marked". *)
 
 (* Process id. *)
-Definition determine_marked : ident := 20.
+Definition determine_marked : ident := 20%nat.
 
 (* Process "determine_marked" declaration. *)
 
@@ -233,7 +234,7 @@ Definition determine_marked_ps :=
 (** Process "marking_validation_evaluation". *)
 
 (* Process id. *)
-Definition marking_validation_evaluation := 21.
+Definition marking_validation_evaluation := 21%nat.
 
 (* Process "marking_validation_evaluation" declaration. *)
 Definition marking_validation_evaluation_ps :=
@@ -258,7 +259,7 @@ Definition marking_validation_evaluation_ps :=
 (** Process "priority_evaluation". *)
 
 (* Process id. *)
-Definition priority_evaluation := 22.
+Definition priority_evaluation := 22%nat.
 
 (* Process "priority_evaluation" local variables. *)
 Definition v_saved_output_token_sum : ident := local_var_ffid.
@@ -288,7 +289,7 @@ Definition priority_evaluation_ps :=
 (** Process "reinit_transitions_time_evaluation". *)
 
 (* Process id. *)
-Definition reinit_transitions_time_evaluation := 23.
+Definition reinit_transitions_time_evaluation := 23%nat.
 
 (* Process "priority_evaluation" declaration. *)
 

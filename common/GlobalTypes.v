@@ -47,6 +47,21 @@ Definition N_le_dec (n m : N) : ({n <= m} + {~n <= m})%N.
   exact (right ((proj1 (N_nleb_nle n m)) eq_le_bool)).
 Defined.
 
+Definition N_nltb_nlt (n m : N) : ((n <? m) = false <-> ~n < m)%N.
+  split.
+  intros. intro. rewrite ((proj2 (N.ltb_lt n m)) H0) in H.
+  inversion H.
+  destruct (n <? m)%N eqn: eq_le_bool.
+  intro. elimtype False. apply H.
+  apply ((proj1 (N.ltb_lt n m)) eq_le_bool).
+  reflexivity.
+Defined.
+
+Definition N_lt_dec (n m : N) : ({n < m} + {~n < m})%N.
+  destruct (n <? m)%N eqn: eq_le_bool.
+  exact (left ((proj1 (N.ltb_lt n m)) eq_le_bool)).
+  exact (right ((proj1 (N_nltb_nlt n m)) eq_le_bool)).
+Defined.
 
 (** ** Definitions and Facts about strict orders and boolean functions *)
 
@@ -133,6 +148,17 @@ Definition ArcT_in_nat (a : ArcT) :=
 
 Coercion ArcT_in_nat : ArcT >-> nat.
 
+(** Cast from ArcT to N. *)
+
+Definition ArcT_in_N (a : ArcT) : N :=
+  match a with
+  | basic => 0
+  | test => 1
+  | inhibitor => 2
+  end.
+
+Coercion ArcT_in_N : ArcT >-> N.
+
 (** Defines the type of Petri net transitions. *)
 
 Inductive TransitionT : Type := not_temporal | temporal_a_b |
@@ -149,6 +175,18 @@ Definition TransitionT_in_nat (t : TransitionT) :=
   end.
 
 Coercion TransitionT_in_nat : TransitionT >-> nat.
+
+(** Cast from TransitionT to N. *)
+
+Definition TransitionT_in_N (t : TransitionT) : N :=
+  match t with
+  | not_temporal => 0
+  | temporal_a_b => 1
+  | temporal_a_a => 2
+  | temporal_a_inf => 3
+  end.
+
+Coercion TransitionT_in_N : TransitionT >-> N.
 
 (** Implements the equality between two transition_t values. *)
 

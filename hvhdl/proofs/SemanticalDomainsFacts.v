@@ -4,11 +4,11 @@ Require Import common.CoqLib.
 Require Import common.ListPlus.
 Require Import hvhdl.SemanticalDomains.
 
-Lemma BProd_aofv_false : 
-  forall aofv n m,
-    (exists i, n <= i < m /\ get_bool_at aofv i = false) ->
-    BProd (get_bool_at aofv) (seq n m) false.
-Admitted.
+(* Lemma BProd_aofv_false :  *)
+(*   forall aofv n m, *)
+(*     (exists i, n <= i < m /\ get_bool_at aofv i = false) -> *)
+(*     BProd (get_bool_at aofv) (seq n m) false. *)
+(* Admitted. *)
 
 (** ** Facts about [IsOfType] *)
 
@@ -28,15 +28,18 @@ Proof.
 Qed.
 
 Lemma IsOfType_inv_set_at :
-  forall i aofv v in_bounds t l u,
+  forall aofv i v in_bounds t l u,
     IsOfType (Varr aofv) (Tarray t l u) ->
     IsOfType v t ->
     IsOfType (Varr (set_at v i aofv in_bounds)) (Tarray t l u).
 Proof.
-  intros until in_bounds;
-    functional induction (set_at v i aofv in_bounds) using set_at_ind.
+  induction aofv.
   (* CASE aofv = [v0] and i = 0 *)
   - inversion_clear 1; constructor; auto.
+    assert (eq_i_0 : i = 0) by (cbn in in_bounds; lia).
+    generalize in_bounds.
+    rewrite eq_i_0.
+    cbn.
     match goal with
     | H: ArrIsOfType _ _ _ |- _ =>
         inversion_clear H; constructor; assumption
@@ -45,7 +48,7 @@ Proof.
   - inversion_clear 1; constructor; auto.
     match goal with
     | H: ArrIsOfType _ _ _ |- _ =>
-        inversion_clear H; constructor; assumption
+        inversion_clear H(* ; constructor(* ; assumption *) *)
     end.    
   (* CASE aofv = [v0] and i > 0 *)
   - cbn in H; lia.

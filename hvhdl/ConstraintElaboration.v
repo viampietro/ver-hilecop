@@ -6,15 +6,19 @@
     Some validity check are performed on the constraint being
     transformed.  *)
 
+Require Import common.CoqLib.
+
 Require Import AbstractSyntax.
 Require Import Environment.
 Require Import StaticExpressions.
 Require Import ExpressionEvaluation.
 Require Import SemanticalDomains.
 
+Open Scope N_scope.
+
 (** The constraint elaboration relation (general definition). *)
 
-Inductive EConstr (Δ : ElDesign) (e e' : expr) (n n' : nat) : Prop :=
+Inductive EConstr (Δ : ElDesign) (e e' : expr) (n n' : N) : Prop :=
 | EConstr_ :
     (* Premises *)
 
@@ -33,7 +37,7 @@ Inductive EConstr (Δ : ElDesign) (e e' : expr) (n n' : nat) : Prop :=
 
 (** The constraint elaboration relation (definition for generic constant declaration). *)
 
-Inductive EConstrG (e e' : expr) (n n' : nat) : Prop :=
+Inductive EConstrG (e e' : expr) (n n' : N) : Prop :=
 | EConstrG_ :
     (* Premises *)
 

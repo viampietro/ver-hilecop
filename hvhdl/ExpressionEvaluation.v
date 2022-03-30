@@ -14,7 +14,7 @@ Require Import hvhdl.HVhdlTypes.
 
 Import NatMap.
 Open Scope abss_scope.
-Local Open Scope nat_scope.
+Open Scope N_scope.
 
 (** ** Expression evaluation relation *)
 
@@ -34,7 +34,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
   bool -> expr -> value -> Prop :=
 
 (** Evaluates nat constant. *) 
-| VExprNat (outmode : bool) (n : nat) : n <= NATMAX -> VExpr Δ σ Λ outmode (e_nat n) (Vnat n) 
+| VExprNat (outmode : bool) (n : N) : (n <= NATMAX)%N -> VExpr Δ σ Λ outmode (e_nat n) (Vnat n) 
 
 (** Evaluates bool constant. *)
 | VExprBool (outmode : bool) (b : bool) : VExpr Δ σ Λ outmode (e_bool b) (Vbool b)
@@ -86,8 +86,8 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates an indexed out port identifier. *)
   
 | VExprIdxOut (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
-           (idx_in_bounds : i - l < length aofv),
+    forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues)
+           (idx_in_bounds : i - l < (N.of_nat (length aofv))),
 
       (* Premises *)
       VExpr Δ σ Λ true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
@@ -106,8 +106,8 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates an indexed declared signal identifier. *)
           
 | VExprIdxSig (outmode : bool) (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
-           (idx_in_bounds : i - l < length aofv),
+    forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues)
+           (idx_in_bounds : i - l < (N.of_nat (length aofv))),
 
       (* Premises *)
       VExpr Δ σ Λ outmode ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
@@ -126,8 +126,8 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates an indexed variable identifier. *)
 
 | VExprIdxVar (outmode : bool) (id : ident) (ei : expr):
-    forall (t : type) (i l u : nat) (v : value) (aofv : arrofvalues)
-           (idx_in_bounds : i - l < length aofv),
+    forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues)
+           (idx_in_bounds : i - l < (N.of_nat (length aofv))),
 
       (* Premises *)
       VExpr Δ σ Λ outmode ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
@@ -147,7 +147,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
  *)
 
 | VExprAdd (outmode : bool) (e e' : expr):
-    forall (n n' : nat),
+    forall (n n' : N),
 
       (* Premises:
          - Checks that operands evaluate to nat.
@@ -167,7 +167,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
  *)
 
 | VExprSub (outmode : bool) (e e' : expr):
-    forall (n n' : nat),
+    forall (n n' : N),
 
       (* Premises:
          - Checks that operands evaluate to nat.     
@@ -184,7 +184,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates expression with the "less or equal" operator. *)
 
 | VExprLE (outmode : bool) (e e' : expr):
-    forall (n n' : nat),
+    forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
       VExpr Δ σ Λ outmode e (Vnat n) -> 
@@ -196,7 +196,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates expression with the "strictly less" operator. *)
 
 | VExprLT (outmode : bool) (e e' : expr):
-    forall (n n' : nat),
+    forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
       VExpr Δ σ Λ outmode e (Vnat n) -> 
@@ -208,7 +208,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates expression with the "greater or equal" operator. *)
 
 | VExprGE (outmode : bool) (e e' : expr):
-    forall (n n' : nat),
+    forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
       VExpr Δ σ Λ outmode e (Vnat n) -> 
@@ -220,7 +220,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates expression with the "strictly greater" operator. *)
 
 | VExprGT (outmode : bool) (e e' : expr):
-    forall (n n' : nat),
+    forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
       VExpr Δ σ Λ outmode e (Vnat n) -> 
@@ -335,10 +335,10 @@ Definition vbinop (bop : binop) (v1 v2 : value) : optionE value :=
   (** Evaluates natural number arithmetic operators: addition and substraction. *)
   | bo_add, (Vnat n1), (Vnat n2) =>
       let n := n1 + n2 in
-      if le_dec n NATMAX then Ret (Vnat n)
+      if N_le_dec n NATMAX then Ret (Vnat n)
       else Err "vbinop: addition of natural numbers causes an overflow"
   | bo_sub, (Vnat n1), (Vnat n2) =>
-      if le_dec n2 n1 then Ret (Vnat (n1 - n2))
+      if N_le_dec n2 n1 then Ret (Vnat (n1 - n2))
       else Err "vbinop: result substraction is below zero"
   (** Evaluates comparisons operations: eq, ne, gt, ge, lt, le *)
   | bo_eq, _, _ => do b <- veq v1 v2; Ret (Vbool b)
@@ -396,7 +396,7 @@ Definition read_at (v__a v__i : value) : optionE value :=
   | Varr aofv => 
       match v__i with
       | Vnat i =>
-          match lt_dec i (List.length aofv) with
+          match N_lt_dec i (N.of_nat (List.length aofv)) with
           | left lt_i_lgth => Ret (get_at i aofv lt_i_lgth)
           | _ => Err "read_at: index out of bounds"
           end
@@ -411,7 +411,7 @@ Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
          (e : expr) {struct e} : optionE value :=
   match e with
   (** Evaluates nat constant. *) 
-  | e_nat n => if le_dec n NATMAX then Ret (Vnat n) else Err "vexpr: found a natural number greater than NATMAX"
+  | e_nat n => if N_le_dec n NATMAX then Ret (Vnat n) else Err "vexpr: found a natural number greater than NATMAX"
   (** Evaluates bool constant. *)
   | e_bool b => Ret (Vbool b)
   (** Evaluates aggregate expression. *)
@@ -454,4 +454,3 @@ with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
        | _ => Ret (Arr_one (Vnat 0))
        end.
 
-(* Compute (vexpr EmptyElDesign EmptyDState EmptyLEnv false (e_nat 2)). *)

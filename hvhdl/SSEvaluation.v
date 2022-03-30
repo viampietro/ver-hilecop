@@ -1,13 +1,17 @@
 (** * Evaluation of sequential statements. *)
 
+Require Import common.CoqLib.
+
 Require Import Environment.
 Require Import AbstractSyntax.
 Require Import ExpressionEvaluation.
 Require Import SemanticalDomains.
 
 Open Scope abss_scope.
+Open Scope N_scope.
 
 Import HVhdlSsNotations.
+
 
 (** Defines the relation that evaluates the sequential statements
     of H-VHDL. 

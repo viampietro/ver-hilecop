@@ -14,6 +14,8 @@ Require Import common.GlobalTypes.
 
 Require Import hvhdl.SemanticalDomains.
 
+Open Scope N_scope.
+
 (** The [DefaultV] relation states that a type is associated 
     to an implicit default value. *)
 
@@ -24,10 +26,10 @@ Inductive DefaultV : type -> value -> Prop :=
 | DefaultVArray :
     forall t l u v,
       (* Proof that (u - l) + 1 is greater than zero *)
-      let plus1_gt_O := (gt_Sn_O (u - l)) in
+      let plus1_gt_O := (N.add_pos_r (u - l) 1 N.lt_0_1) in
       WFType (Tarray t l u) ->
       DefaultV t v ->
-      DefaultV (Tarray t l u) (Varr (create_arr (S (u - l)) v plus1_gt_O)).
+      DefaultV (Tarray t l u) (Varr (create_arr ((u - l) + 1) v plus1_gt_O)).
 
 #[export] Hint Constructors DefaultV : hvhdl.
 
@@ -43,7 +45,7 @@ Fixpoint defaultv (t : type) {struct t} : optionE value :=
   | Tnat l u => if WFType_dec t then Ret (Vnat l) else Err "defaultv: found ill-formed nat type"
   | Tarray ta l u =>
       if WFType_dec t then
-        do v <- defaultv ta; Ret (Varr (create_arr (S (u - l)) v (gt_Sn_O (u - l))))
+        do v <- defaultv ta; Ret (Varr (create_arr ((u - l) + 1) v (N.add_pos_r (u - l) 1 N.lt_0_1)))
       else Err "defaultv: found ill-formed array type"
   end.
 

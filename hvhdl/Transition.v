@@ -1,7 +1,7 @@
 (** * Definition of the HILECOP's Transition design in H-VHDL abstract syntax. *)
 
 (** Defines the Transition design used in the generation of
-    VHDL listing from SITPNs.
+   H-VHDL designs from SITPNs.
  *)
 
 Require Import common.CoqLib.
@@ -16,12 +16,13 @@ Require Import hvhdl.HVhdlTypes.
 
 Open Scope natset_scope.
 Open Scope abss_scope.
+Open Scope N_scope.
 
 Include HVhdlSsNotations.
 Include HVhdlCsNotations.
 
-Local Definition i := 50.
-Local Definition local_var_ffid := 51.
+Local Definition i : ident := 50%nat.
+Local Definition local_var_ffid : ident := 51%nat.
 
 (** ** Entity part of the Transition design. *)
 
@@ -32,10 +33,10 @@ Local Definition local_var_ffid := 51.
     Begins the identifier with 1, since 0 is reserved for the clock
     input port. *)
 
-Definition transition_type      : ident := 1.
-Definition input_arcs_number    : ident := 2.
-Definition conditions_number    : ident := 3.
-Definition maximal_time_counter : ident := 4.
+Definition transition_type      : ident := 1%nat.
+Definition input_arcs_number    : ident := 2%nat.
+Definition conditions_number    : ident := 3%nat.
+Definition maximal_time_counter : ident := 4%nat.
 
 (** Defines the generic clause of the Transition design. *)
 
@@ -49,16 +50,16 @@ Definition transition_gens : list gdecl :=
 
 (** Input ports identifiers. *)
 
-Definition input_conditions        : ident := 5.
-Definition time_A_value            : ident := 6.
-Definition time_B_value            : ident := 7.
-Definition input_arcs_valid        : ident := 8.
-Definition reinit_time             : ident := 9.
-Definition priority_authorizations : ident := 10.
+Definition input_conditions        : ident := 5%nat.
+Definition time_A_value            : ident := 6%nat.
+Definition time_B_value            : ident := 7%nat.
+Definition input_arcs_valid        : ident := 8%nat.
+Definition reinit_time             : ident := 9%nat.
+Definition priority_authorizations : ident := 10%nat.
 
 (** Output ports identifiers. *)
 
-Definition fired                   : ident := 11.
+Definition fired                   : ident := 11%nat.
 
 (** Port clause of the Transition design. *)
 
@@ -83,13 +84,13 @@ Definition transition_ports : list pdecl :=
 
 (** Declared signal identifiers. *)
 
-Definition s_condition_combination : ident := 12. 
-Definition s_enabled : ident := 13.
-Definition s_firable : ident := 14. 
-Definition s_firing_condition : ident := 16.
-Definition s_priority_combination : ident := 17.
-Definition s_reinit_time_counter : ident := 18.
-Definition s_time_counter : ident := 19.
+Definition s_condition_combination : ident := 12%nat. 
+Definition s_enabled : ident := 13%nat.
+Definition s_firable : ident := 14%nat. 
+Definition s_firing_condition : ident := 16%nat.
+Definition s_priority_combination : ident := 17%nat.
+Definition s_reinit_time_counter : ident := 18%nat.
+Definition s_time_counter : ident := 19%nat.
 
 (** Architecture declaration list. *)
 
@@ -112,11 +113,11 @@ Definition transition_sigs : list sdecl :=
 (** Process "condition_evaluation". *)
 
 (* Process id. *)
-Definition condition_evaluation : ident := 20.
+Definition condition_evaluation : ident := 20%nat.
 
 (* Process "condition_evaluation" declarative part. *)
 
-Definition v_internal_condition : ident := local_var_ffid.
+Definition v_internal_condition : ident := local_var_ffid%nat.
 
 (* Process "conditio_evaluation" declaration. *)
 
@@ -141,7 +142,7 @@ Definition condition_evaluation_ps :=
 (** Process "enable_evaluation". *)
 
 (* Process id. *)
-Definition enable_evaluation : ident := 21.
+Definition enable_evaluation : ident := 21%nat.
 
 (* Process "enable_evaluation" declarative part. *)
 
@@ -170,7 +171,7 @@ Definition enable_evaluation_ps :=
 (** Process "reinit_time_counter_evaluation". *)
 
 (* Process id. *)
-Definition reinit_time_counter_evaluation : ident := 22.
+Definition reinit_time_counter_evaluation : ident := 22%nat.
 
 (* Process "reinit_time_counter_evaluation" declarative part. *)
 
@@ -199,7 +200,7 @@ Definition reinit_time_counter_evaluation_ps :=
 (** Process "time_counter". *)
 
 (* Process id. *)
-Definition time_counter : ident := 23.
+Definition time_counter : ident := 23%nat.
 
 (* Process "time_counter" declaration. *)
 
@@ -228,7 +229,7 @@ Definition time_counter_ps :=
 (** Process "firing_condition_evaluation". *)
 
 (* Process id. *)
-Definition firing_condition_evaluation : ident := 24.
+Definition firing_condition_evaluation : ident := 24%nat.
 
 (* Process "firing_condition_evaluation" declaration. *)
 
@@ -284,7 +285,7 @@ Definition firing_condition_evaluation_ps :=
 (** Process "priority_authorization_evaluation". *)
 
 (* Process id. *)
-Definition priority_authorization_evaluation : ident := 25.
+Definition priority_authorization_evaluation : ident := 25%nat.
 
 (* Process "priority_authorization_evaluation" declarative part. *)
 
@@ -315,7 +316,7 @@ Definition priority_authorization_evaluation_ps :=
 (** Process "firable". *)
 
 (* Process id. *)
-Definition firable : ident := 26.
+Definition firable : ident := 26%nat.
 
 (* Process "firable" declaration. *)
 
@@ -338,7 +339,7 @@ Definition firable_ps :=
 (** Process "fired_evaluation". *)
 
 (* Process id. *)
-Definition fired_evaluation : ident := 27.
+Definition fired_evaluation : ident := 27%nat.
 
 (* Process "fired_evaluation" declaration. *)
 

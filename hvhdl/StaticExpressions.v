@@ -24,7 +24,7 @@ Section LStaticExpr.
    *)
 
   Inductive IsLStaticExpr : expr -> Prop :=
-  | IsLStaticNat (n : nat) : IsLStaticExpr (e_nat n)
+  | IsLStaticNat (n : N) : IsLStaticExpr (e_nat n)
   | IsLStaticBool (b : bool) : IsLStaticExpr (e_bool b)
   | IsLStaticNot (e : expr) : IsLStaticExpr e -> IsLStaticExpr (e_not e)
   | IsLStaticBinOp (e e' : expr) (bop : binop) :

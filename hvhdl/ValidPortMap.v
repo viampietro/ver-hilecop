@@ -15,7 +15,7 @@ Require Import hvhdl.ExpressionEvaluation.
 Require Import hvhdl.StaticExpressions.
 Require Import hvhdl.HVhdlTypes.
 
-Local Open Scope nat_scope.
+Open Scope N_scope.
 
 (** ** Valid port map for "in" mode ports. *)
 
@@ -40,8 +40,8 @@ Local Open Scope nat_scope.
 
  *)
 
-Inductive listipm (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * option nat)) :
-  list associp -> list (ident * option nat) -> Prop :=
+Inductive listipm (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * option N)) :
+  list associp -> list (ident * option N) -> Prop :=
   
 (** An empty list of port associations does not change the [formals] list. *)
 | ListIPMNil : listipm Δ Δ__c σ formals [] formals
@@ -55,8 +55,8 @@ Inductive listipm (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * o
 
 (** Defines the relation that checks the validity of a single
     association present in an "in" port map. *)
-with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * option nat)) :
-  associp -> list (ident * option nat) -> Prop :=
+with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * option N)) :
+  associp -> list (ident * option N) -> Prop :=
 
 (** Checks an association with a simple port identifier (no index). *)
 | EAssocipSimple :
@@ -98,7 +98,7 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
 (** Defines the predicate that checks the [formals] list (built by the
     [listipm] relation) against the component environment [Δ__c].  *)
 
-Definition checkformals (Δ__c : ElDesign) (formals : list (ident * option nat)) : Prop :=
+Definition checkformals (Δ__c : ElDesign) (formals : list (ident * option N)) : Prop :=
   forall (id : ident) (t : type),
     MapsTo id (Input t) Δ__c ->
     match t with
@@ -109,7 +109,7 @@ Definition checkformals (Δ__c : ElDesign) (formals : list (ident * option nat))
 (** Defines the predicate stating that an "in" port map is valid. *)
 
 Inductive validipm (Δ Δ__c : ElDesign) (σ : DState) (i : list associp) : Prop :=
-| ValidIpm (formals : list (ident * option nat)) :  
+| ValidIpm (formals : list (ident * option N)) :  
   listipm Δ Δ__c σ [] i formals ->
   checkformals Δ__c formals ->
   validipm Δ Δ__c σ i.
@@ -119,8 +119,8 @@ Inductive validipm (Δ Δ__c : ElDesign) (σ : DState) (i : list associp) : Prop
 (** Defines the relation that lists and checks the port identifiers
     present in an "out" port map. *)
 
-Inductive listopm (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)) :
-  list assocop -> list (ident * option nat) -> list (ident * option nat) -> Prop :=
+Inductive listopm (Δ Δ__c : ElDesign) (formals actuals : list (ident * option N)) :
+  list assocop -> list (ident * option N) -> list (ident * option N) -> Prop :=
 
 (** An empty list of port associations does not change the [formals]
     and [actuals] list. *)
@@ -137,8 +137,8 @@ Inductive listopm (Δ Δ__c : ElDesign) (formals actuals : list (ident * option 
     present in an "out" port map.
  *)
 
-with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)) :
-  assocop -> list (ident * option nat) -> list (ident * option nat) -> Prop :=
+with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option N)) :
+  assocop -> list (ident * option N) -> list (ident * option N) -> Prop :=
 
 (** Checks an "out" port map association of the form "idf => ida",
     where [ida] refers to a declared signal or an output port
@@ -253,7 +253,7 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option nat)
     map. *)
 
 Inductive validopm (Δ Δ__c : ElDesign) (o : list assocop) : Prop :=
-| ValidOpm (formals actuals : list (ident * option nat)) :  
+| ValidOpm (formals actuals : list (ident * option N)) :  
   listopm Δ Δ__c [] [] o formals actuals ->
   validopm Δ Δ__c o.
     
