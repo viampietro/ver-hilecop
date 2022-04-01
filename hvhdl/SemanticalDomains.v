@@ -52,44 +52,46 @@ Section Values.
     than the list length.
    *)
 
-  Fixpoint oget_at (i : N) (aofv : arrofvalues) {struct aofv} : option value :=
+  Fixpoint oget_at (i : nat) (aofv : arrofvalues) {struct aofv} : option value :=
     match i, aofv with
     (* Error, index out of bounds. *)
-    | Npos _, Arr_one v => None
-    | N0, Arr_one v => Some v
-    | N0, Arr_cons v aofv' => Some v
-    | Npos _, Arr_cons a aofv' => oget_at (i - 1) aofv'
+    | S _, Arr_one v => None
+    | 0%nat, Arr_one v => Some v
+    | 0%nat, Arr_cons v aofv' => Some v
+    | S j, Arr_cons a aofv' => oget_at j aofv'
     end.
-
+  
   (** Given a proof that index [i] is strictly less than the size of
-    arrofvalues [aofv], accesses the value at position [i] in [aofv].
+      arrofvalues [aofv], accesses the value at position [i] in [aofv].
    *)
 
-  Fixpoint get_at (i : N) (aofv : arrofvalues) {struct aofv} : i < (N.of_nat (List.length aofv)) -> value.
+  Fixpoint get_at (i : nat) (aofv : arrofvalues) {struct aofv} : (i < List.length aofv)%nat -> value.
     refine (
         match i, aofv with
         (* Error, index out of bounds. *)
-        | Npos _, Arr_one v => fun _ => _
-        | N0, Arr_one v => fun _ => v
-        | N0, Arr_cons v aofv' => fun pf => v
-        | (Npos j), Arr_cons a aofv' => fun pf => get_at ((Npos j) - 1) aofv' _
-        end); [ cbn in l; lia | cbn in pf; lia ].
+        | S _, Arr_one v => fun _ => _
+        | 0%nat, Arr_one v => fun _ => v
+        | 0%nat, Arr_cons v aofv' => fun pf => v
+        | (S j), Arr_cons a aofv' => fun pf => get_at j aofv' _
+        end);
+      [apply lt_S_n in l; apply Nat.nlt_0_r in l; contradiction
+      | apply (lt_S_n j (List.length aofv') pf)].
   Defined.
 
   (** Stores value [v] at position [i] in list of values [lofv]. 
     
-    Returns an error (i.e, None) if the index is greater than 
-    the list length. *)
+      Returns an error (i.e, None) if the index is greater than 
+      the list length. *)
 
-  Fixpoint oset_at (v : value) (i : N) (aofv : arrofvalues) {struct aofv} : option arrofvalues :=
+  Fixpoint oset_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : option arrofvalues :=
     match i, aofv with
     (* Error, index out of bounds. *)
-    | Npos _, Arr_one _ => None
-    | N0, Arr_one v' => Some (Arr_one v)
-    | N0, Arr_cons v' tl => Some (Arr_cons v tl)
-    | (Npos _), Arr_cons v' tl =>
+    | S j, Arr_one _ => None
+    | 0%nat, Arr_one v' => Some (Arr_one v)
+    | 0%nat, Arr_cons v' tl => Some (Arr_cons v tl)
+    | (S j), Arr_cons v' tl =>
         (* Inductive step. *)
-        match oset_at v (i - 1) tl with
+        match oset_at v j tl with
         | Some aofv' => Some (Arr_cons v' aofv')
         | None => None
         end
@@ -99,35 +101,43 @@ Section Values.
     [aofv], stores value [v] at position [i] in [aofv], and returns
     the new [arrofvalues].  *)
 
-  Fixpoint set_at (v : value) (i : N) (aofv : arrofvalues) {struct aofv} : i < (N.of_nat (List.length aofv)) -> arrofvalues.
+  Fixpoint set_at (v : value) (i : nat) (aofv : arrofvalues) {struct i} : (i < List.length aofv)%nat -> arrofvalues.
     refine (match i, aofv with
             (* Error, index out of bounds. *)
-            | Npos _, Arr_one _ => fun _ => _
-            | N0, Arr_one _ => fun _ => Arr_one v
-            | N0, Arr_cons _ tl => fun _ => Arr_cons v tl
-            | Npos j, Arr_cons v' tl => fun _ => Arr_cons v' (set_at v ((Npos j) - 1) tl _)
-            end); [ cbn in l; lia | cbn in l; lia ].
+            | S j, Arr_one _ => fun _ => _
+            | 0%nat, Arr_one _ => fun _ => Arr_one v
+            | 0%nat, Arr_cons _ tl => fun _ => Arr_cons v tl
+            | (S j), Arr_cons v' tl => fun _ => Arr_cons v' (set_at v j tl _)
+            end).
+    apply lt_pred in l; simpl in l; apply Nat.nlt_0_r in l; contradiction.
+    apply (lt_S_n j (List.length tl) l).
   Defined.
+
+  Functional Scheme set_at_ind := Induction for set_at Sort Prop.
 
   (** Given a proof that [n > 0], returns an arrofvalues of length [n]
     filled with value [v]. *)
 
-  Definition create_arr_aux (n : N) (v : value) : arrofvalues :=
-    N.recursion (Arr_one v) (fun m aofv => Arr_cons v aofv) n.
-
-  Definition create_arr (n : N) (v : value) : 0 < n -> arrofvalues :=
-    match n as n0 return (0 < n0 -> arrofvalues) with
+  Definition create_arr (n : nat) (v : value) : (n > 0)%nat -> arrofvalues :=
+    match n as n0 return ((n0 > 0)%nat -> arrofvalues) with
     (* Absurd case, 0 > 0. *)
-    | N0 => fun H : N0 < N0 => False_rect arrofvalues (N.nlt_0_r 0 H)
+    | 0%nat => fun H : (0 > 0)%nat => False_rect arrofvalues (Nat.nlt_0_r 0 H)
     (* Case n > 0 *)
-    | Npos _ => fun _ => create_arr_aux (n - 1) v
+    | S m =>
+        fun _ =>
+          (* Internal fixpoint definition, returns [Arr_one v] when size
+         is zero. *)
+          let fix create_arrm (m : nat) (v : value) {struct m} :=
+            match m return arrofvalues with
+            | 0%nat => Arr_one v
+            | S o => Arr_cons v (create_arrm o v)
+            end
+          in create_arrm m v
     end.  
-
+  
 End Values.
 
 (** ** Semantic type *)
-
-
 
 Section Types.
 
@@ -185,7 +195,7 @@ Section Types.
   | IsArrOfT (l u : N) :
     forall (aofv : arrofvalues) (t : type),
       WFType (Tarray t l u) ->
-      ArrIsOfType aofv ((u - l) + 1) t ->
+      ArrIsOfType aofv (S (N.to_nat (u - l))) t ->
       IsOfType (Varr aofv) (Tarray t l u)
                
   (** Defines the typing relation over array of values. 
@@ -193,13 +203,13 @@ Section Types.
     By construction, checks that the array size
     is equal to the second argument (of type [nat]). *)
                
-  with ArrIsOfType: arrofvalues -> N -> type -> Prop :=
+  with ArrIsOfType: arrofvalues -> nat -> type -> Prop :=
   | ArrIsOfTypeOne : forall t v, IsOfType v t -> ArrIsOfType (Arr_one v) 1 t
   | ArrIsOfTypeCons :
     forall aofv size t v,
       IsOfType v t ->
       ArrIsOfType aofv size t ->
-      ArrIsOfType (Arr_cons v aofv) (size + 1) t.
+      ArrIsOfType (Arr_cons v aofv) (S size) t.
 
   Scheme IsOfType_ind_mut := Induction for IsOfType Sort Prop
       with ArrIsOfType_ind_mut := Induction for ArrIsOfType Sort Prop.
@@ -393,59 +403,60 @@ End ValueEq.
 
 (** ** Index Iterator for [arrofvalues] *)
 
-(* Section ArrOfV_Iterator. *)
+Section ArrOfV_Iterator.
 
-(*   (** An array is a least of length [1]; it has at least one *)
-(*       element. *) *)
-
-(*   Lemma length_aofv_gt_O : forall aofv : arrofvalues, 0 < (N.of_nat (List.length aofv)).  *)
-(*     destruct aofv; cbn; lia.  *)
-(*   Defined. *)
-
-(*   (** Generates a contiguous sequence of natural numbers corresponding *)
-(*       the available indexes of the [aofv] arrofvalues; i.e, the *)
-(*       sequence ranges from [0] to [length aofv - 1], and for each *)
-(*       index [i] there is a proof that [i < length aofv]. *) *)
+  (** An array is a least of length [1]; it has at least one
+      element. *)
   
-(*   Definition arrofv_idxs (aofv : arrofvalues) : list { i | i < (N.of_nat (List.length aofv)) } := *)
-(*     seqd 0 (List.length aofv) (length_aofv_gt_O aofv). *)
+  Lemma length_aofv_gt_O : forall aofv : arrofvalues, (0 < List.length aofv)%nat.
+    destruct aofv; cbn; eapply Nat.lt_0_succ; eauto.
+  Defined.
 
-(*   (** [BProd_ArrOfV aofv bprod ≡ ∏i=0 to (length aofv -1), aofv[i] *)
-(*       ].  If [ aofv[i] ] is not a boolean value, then [true] is passed *)
-(*       to the product. *) *)
+  (** Generates a contiguous sequence of natural numbers corresponding
+      the available indexes of the [aofv] arrofvalues; i.e, the
+      sequence ranges from [0] to [length aofv - 1], and for each
+      index [i] there is a proof that [i < length aofv]. *)
+  
+  Definition arrofv_idxs (aofv : arrofvalues) : list { i | (i < List.length aofv)%nat } :=
+    seqd 0 (List.length aofv) (length_aofv_gt_O aofv).
 
-(*   Definition get_bool_at (aofv : arrofvalues) (i : nat) : bool := *)
-(*     match oget_at i aofv with *)
-(*     | Some (Vbool b) => b *)
-(*     | _ => true *)
-(*     end. *)
-  
-(*   Definition BProd_ArrOfV (aofv : arrofvalues) (bprod : bool) := *)
-(*     let f_bprod := *)
-(*         fun i => *)
-(*           match oget_at i aofv with *)
-(*           | Some (Vbool b) => b *)
-(*           | _ => true *)
-(*           end *)
-(*     in *)
-(*     BProd f_bprod (seq 0 (List.length aofv)) bprod. *)
+  (** [BProd_ArrOfV aofv bprod ≡ ∏i=0 to (length aofv -1), aofv[i]
+      ].  If [ aofv[i] ] is not a boolean value, then [true] is passed
+      to the product. *)
 
-(*   (** Dependently-typed version of [BProd_ArrOfV] where there is a *)
-(*       proof that each index [i] in the generated sequence verifies [i *)
-(*       < length aofv]. Therefore, we are able to use the error-free *)
-(*       [get_at] function to access element of [aofv] through their *)
-(*       index. *) *)
+  Definition get_bool_at (aofv : arrofvalues) (i : nat) : bool :=
+    match oget_at i aofv with
+    | Some (Vbool b) => b
+    | _ => true
+    end.
   
-(*   Definition DepBProd_ArrOfV (aofv : arrofvalues) (bprod : bool) := *)
-(*     let f_bprod := *)
-(*         fun (i : { n | n < 0 + List.length aofv}) => *)
-(*           match get_at (proj1_sig i) aofv (proj2_sig i) with *)
-(*           | Vbool b => b *)
-(*           | _ => true *)
-(*           end *)
-(*     in *)
-(*     BProd f_bprod (arrofv_idxs aofv) bprod. *)
+  Definition BProd_ArrOfV (aofv : arrofvalues) (bprod : bool) :=
+    let f_bprod :=
+      fun i =>
+        match oget_at i aofv with
+        | Some (Vbool b) => b
+        | _ => true
+        end
+    in
+    BProd f_bprod (seq 0 (List.length aofv)) bprod.
+
+  (** Dependently-typed version of [BProd_ArrOfV] where there is a
+      proof that each index [i] in the generated sequence verifies [i
+      < length aofv]. Therefore, we are able to use the error-free
+      [get_at] function to access element of [aofv] through their
+      index. *)
   
-(* End ArrOfV_Iterator. *)
+  Definition DepBProd_ArrOfV (aofv : arrofvalues) (bprod : bool) :=
+    let f_bprod :=
+      fun (i : { n | (n < 0 + List.length aofv)%nat }) =>
+        match get_at (proj1_sig i) aofv (proj2_sig i) with
+        | Vbool b => b
+        | _ => true
+        end
+    in
+    BProd f_bprod (arrofv_idxs aofv) bprod.
+  
+End ArrOfV_Iterator.
+
 
 

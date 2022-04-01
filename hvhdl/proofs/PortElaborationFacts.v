@@ -153,7 +153,7 @@ Proof.
   inversion_clear H0 in H1.
   inversion_clear H1; unfold sstore_add.
   cbn [sigstore].
-  exists (create_arr (S (n' - n)) v0 plus1_gt_O).
+  exists (create_arr (S size) v0 (Nat.lt_0_succ size)).
   eauto with mapsto.
 Qed.
 

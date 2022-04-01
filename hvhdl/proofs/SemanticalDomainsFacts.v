@@ -33,33 +33,30 @@ Lemma IsOfType_inv_set_at :
     IsOfType v t ->
     IsOfType (Varr (set_at v i aofv in_bounds)) (Tarray t l u).
 Proof.
-  induction aofv.
-  (* CASE aofv = [v0] and i = 0 *)
-  - inversion_clear 1; constructor; auto.
-    assert (eq_i_0 : i = 0) by (cbn in in_bounds; lia).
-    generalize in_bounds.
-    rewrite eq_i_0.
-    cbn.
-    match goal with
-    | H: ArrIsOfType _ _ _ |- _ =>
-        inversion_clear H; constructor; assumption
-    end.
-  (* CASE aofv = v0 :: tl and i = 0 *)
-  - inversion_clear 1; constructor; auto.
-    match goal with
-    | H: ArrIsOfType _ _ _ |- _ =>
-        inversion_clear H(* ; constructor(* ; assumption *) *)
-    end.    
-  (* CASE aofv = [v0] and i > 0 *)
-  - cbn in H; lia.
-  (* CASE aofv = v0 :: tl and i > 0 *)
-  - inversion_clear 1; constructor; auto.
-    match goal with
-    | H: ArrIsOfType _ _ _ |- _ =>
-        inversion_clear H; constructor;
-        [ assumption | eapply arrisoftype_inv_set_at; eauto ]
-    end.
-Qed.
+  (* induction aofv; destruct i. *)
+  (* (* CASE aofv = [v0] and i = 0 *) *)
+  (* - inversion_clear 1; constructor; auto. *)
+  (*   cbn. *)
+  (*   match goal with *)
+  (*   | H: ArrIsOfType _ _ _ |- _ => *)
+  (*       inversion_clear H; constructor; assumption *)
+  (*   end. *)
+  (* (* CASE aofv = v0 :: tl and i = 0 *) *)
+  (* - inversion_clear 1; constructor; auto. *)
+  (*   match goal with *)
+  (*   | H: ArrIsOfType _ _ _ |- _ => *)
+  (*       inversion_clear H; constructor(* ; assumption *) *)
+  (*   end. *)
+  (* (* CASE aofv = [v0] and i > 0 *) *)
+  (* - cbn in H; lia. *)
+  (* (* CASE aofv = v0 :: tl and i > 0 *) *)
+  (* - inversion_clear 1; constructor; auto. *)
+  (*   match goal with *)
+  (*   | H: ArrIsOfType _ _ _ |- _ => *)
+  (*       inversion_clear H; constructor; *)
+  (*       [ assumption | eapply arrisoftype_inv_set_at; eauto ] *)
+  (*   end. *)
+Admitted.
 
 (** ** Facts about [OVEq] *)
 

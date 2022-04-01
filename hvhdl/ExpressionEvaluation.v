@@ -86,28 +86,31 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 (** Evaluates an indexed out port identifier. *)
   
 | VExprIdxOut (id : ident) (ei : expr):
-    forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues)
-           (idx_in_bounds : i - l < (N.of_nat (length aofv))),
 
-      (* Premises *)
-      VExpr Δ σ Λ true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
-      IsOfType (Vnat i) (Tnat l u) ->
-      
-      (* Side conditions *)
+  forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues),
+    let idx := (N.to_nat (i - l)) in 
+    forall (idx_in_bounds : (idx < length aofv)%nat),
 
-      (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
-      (MapsTo id (Output (Tarray t l u)) Δ) ->
-      ~NatMap.In id Λ ->                       (* id ∉ Λ *)
-      MapsTo id (Varr aofv) (sigstore σ) ->    (* id ∈ σ and σ(id) = aofv *)
+    (* Premises *)
+    VExpr Δ σ Λ true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
+    IsOfType (Vnat i) (Tnat l u) ->
+    
+    (* Side conditions *)
 
-      (* Conclusion *)
-      VExpr Δ σ Λ true (id [[ei]]) (get_at (i - l) aofv idx_in_bounds)
+    (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
+    (MapsTo id (Output (Tarray t l u)) Δ) ->
+    ~NatMap.In id Λ ->                       (* id ∉ Λ *)
+    MapsTo id (Varr aofv) (sigstore σ) ->    (* id ∈ σ and σ(id) = aofv *)
+
+    (* Conclusion *)
+    VExpr Δ σ Λ true (id [[ei]]) (get_at idx aofv idx_in_bounds)
 
 (** Evaluates an indexed declared signal identifier. *)
           
 | VExprIdxSig (outmode : bool) (id : ident) (ei : expr):
-    forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues)
-           (idx_in_bounds : i - l < (N.of_nat (length aofv))),
+  forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues),
+    let idx := (N.to_nat (i - l)) in
+    forall (idx_in_bounds : (idx < (length aofv))%nat),
 
       (* Premises *)
       VExpr Δ σ Λ outmode ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
@@ -121,13 +124,14 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       MapsTo id (Varr aofv) (sigstore σ) -> (* id ∈ σ and σ(id) = aofv *)
 
       (* Conclusion *)
-      VExpr Δ σ Λ outmode (id [[ei]]) (get_at (i - l) aofv idx_in_bounds)
+      VExpr Δ σ Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
 
 (** Evaluates an indexed variable identifier. *)
 
 | VExprIdxVar (outmode : bool) (id : ident) (ei : expr):
-    forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues)
-           (idx_in_bounds : i - l < (N.of_nat (length aofv))),
+  forall (t : type) (i l u : N) (v : value) (aofv : arrofvalues),
+    let idx := N.to_nat (i - l) in
+    forall (idx_in_bounds : (idx < length aofv)%nat),
 
       (* Premises *)
       VExpr Δ σ Λ outmode ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
@@ -138,7 +142,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       ~NatMap.In id Δ ->                           (* id ∉ Δ *)
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (id [[ei]]) (get_at (i - l) aofv idx_in_bounds)
+      VExpr Δ σ Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
 
 (** Evaluates expression with addition operator. 
     
@@ -396,8 +400,8 @@ Definition read_at (v__a v__i : value) : optionE value :=
   | Varr aofv => 
       match v__i with
       | Vnat i =>
-          match N_lt_dec i (N.of_nat (List.length aofv)) with
-          | left lt_i_lgth => Ret (get_at i aofv lt_i_lgth)
+          match lt_dec (N.to_nat i) (List.length aofv) with
+          | left lt_i_lgth => Ret (get_at (N.to_nat i) aofv lt_i_lgth)
           | _ => Err "read_at: index out of bounds"
           end
       | _ =>   Err "read_at: index value is not a natural number"

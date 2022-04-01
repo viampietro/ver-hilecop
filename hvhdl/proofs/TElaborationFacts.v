@@ -199,7 +199,7 @@ Lemma elab_TCI_σ_rt_2 :
     MapsTo id__t σ__te (compstore σ__e) ->
     MapsTo id__t (Component Δ__t) Δ ->
     MapsTo Transition.input_arcs_number (Generic t (Vnat n)) Δ__t ->
-    MapsTo Transition.reinit_time (Varr (create_arr (S ((n - 1) - 0)) (Vbool false) (gt_Sn_O ((n - 1) - 0)))) (sigstore σ__te).
+    MapsTo Transition.reinit_time (Varr (create_arr (S (((N.to_nat n) - 1) - 0)) (Vbool false) (gt_Sn_O (((N.to_nat n) - 1) - 0)))) (sigstore σ__te).
 Proof.
   
 Admitted.

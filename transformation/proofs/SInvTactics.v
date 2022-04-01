@@ -43,7 +43,7 @@ Lemma get_comp_aux_inv_state :
     get_comp_aux sitpn id__c cstmt s = OK v s' -> s = s'.
 Proof.
   intro; induction cstmt; intros*; cbn; try (solve [inversion 1; subst; reflexivity]).
-  destruct (id__c0 =? id__c); intros e; monadInv e; reflexivity.
+  destruct ((id__c0 =? id__c)%nat); intros e; monadInv e; reflexivity.
   intros e; monadInv e.
   transitivity s0; eauto.
   transitivity s1; eauto.
@@ -65,7 +65,7 @@ Lemma put_comp_aux_inv_state :
 Proof.
   induction cstmt; intros *; simpl;
     intros e; try (monadInv e; reflexivity).
-  destruct (id__c0 =? id__c) in e; monadInv e; reflexivity.
+  destruct ((id__c0 =? id__c)%nat) in e; monadInv e; reflexivity.
   monadInv e.
   rewrite (get_comp_aux_inv_state EQ).
   destruct x in EQ0; monadInv EQ0; eauto.

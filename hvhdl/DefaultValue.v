@@ -24,12 +24,11 @@ Inductive DefaultV : type -> value -> Prop :=
 | DefaultVBool : DefaultV Tbool (Vbool false)
 | DefaultVNat : forall l u, WFType (Tnat l u) -> DefaultV (Tnat l u) (Vnat l)
 | DefaultVArray :
-    forall t l u v,
-      (* Proof that (u - l) + 1 is greater than zero *)
-      let plus1_gt_O := (N.add_pos_r (u - l) 1 N.lt_0_1) in
-      WFType (Tarray t l u) ->
-      DefaultV t v ->
-      DefaultV (Tarray t l u) (Varr (create_arr ((u - l) + 1) v plus1_gt_O)).
+  forall t l u v,
+    let size := (N.to_nat (u - l)) in
+    WFType (Tarray t l u) ->
+    DefaultV t v ->
+    DefaultV (Tarray t l u) (Varr (create_arr (S size) v (Nat.lt_0_succ size))).
 
 #[export] Hint Constructors DefaultV : hvhdl.
 
@@ -44,8 +43,9 @@ Fixpoint defaultv (t : type) {struct t} : optionE value :=
   | Tbool => Ret (Vbool false)
   | Tnat l u => if WFType_dec t then Ret (Vnat l) else Err "defaultv: found ill-formed nat type"
   | Tarray ta l u =>
+      let size := N.to_nat (u - l) in
       if WFType_dec t then
-        do v <- defaultv ta; Ret (Varr (create_arr ((u - l) + 1) v (N.add_pos_r (u - l) 1 N.lt_0_1)))
+        do v <- defaultv ta; Ret (Varr (create_arr (S size) v (Nat.lt_0_succ size)))
       else Err "defaultv: found ill-formed array type"
   end.
 

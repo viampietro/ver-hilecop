@@ -252,7 +252,7 @@ Section PInit.
         MapsTo id__p σ__p0 (compstore σ0) ->
         MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0) ->
         List.In (assocop_idx reinit_transitions_time (e_nat i) ($id)) o__p ->
-        get_bool_at aofv i = b ->
+        get_bool_at aofv (N.to_nat i) = b ->
         MapsTo id (Vbool b) (sigstore σ0).
   Admitted.
   
@@ -266,7 +266,7 @@ Section PInit.
         MapsTo id__p σ__p0 (compstore σ0) ->
         MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0) ->
         0 <= i < n ->
-        get_bool_at aofv i = false.
+        get_bool_at aofv (N.to_nat i) = false.
   Admitted.
   
 End PInit.

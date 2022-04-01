@@ -59,7 +59,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
 | VAssocipPartialEvent :
     forall id e ei v i t l u aofv idx_in_bounds,
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ σ EmptyLEnv false e v ->
@@ -165,7 +165,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 | VAssocopSimpleToPartialEvent :
     forall id__f id__a ei newv i t l u aofv idx_in_bounds aofv' sigstore' events' σ',
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
@@ -203,7 +203,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 | VAssocopSimpleToPartialNoEvent :
     forall id__f id__a ei newv i t l u aofv idx_in_bounds,
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
@@ -233,7 +233,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 | VAssocopPartialToPartialEvent :
     forall id__f id__a e'__i ei newv i t l u aofv idx_in_bounds aofv' sigstore' events' σ',
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e'__i]])) newv ->
@@ -272,7 +272,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 | VAssocopPartialToPartialNoEvent :
     forall id__f id__a e__i e__i' newv i t l u aofv idx_in_bounds,
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->

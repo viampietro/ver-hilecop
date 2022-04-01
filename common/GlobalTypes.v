@@ -31,6 +31,9 @@ Definition tenns := exist _ 10 (gt_Sn_O 9).
 
 (** ** Properties on N  *)
 
+Coercion N.to_nat : N >-> nat.
+Coercion N.of_nat : nat >-> N.
+
 Definition N_nleb_nle (n m : N) : ((n <=? m) = false <-> ~n <= m)%N.
   split.
   intros. intro. rewrite ((proj2 (N.leb_le n m)) H0) in H.
@@ -62,6 +65,17 @@ Definition N_lt_dec (n m : N) : ({n < m} + {~n < m})%N.
   exact (left ((proj1 (N.ltb_lt n m)) eq_le_bool)).
   exact (right ((proj1 (N_nltb_nlt n m)) eq_le_bool)).
 Defined.
+
+Lemma nlt_Npos_1 : forall p, (~Npos p < 1)%N.
+  destruct p; inversion 1.
+Defined.
+
+Lemma N_lt_succ_lt_pred :
+  forall i j,
+    (Npos i < N.succ (Npos j))%N ->
+    (N.pred (Npos i) < Npos j)%N.
+  intros; lia.
+Defined.  
 
 (** ** Definitions and Facts about strict orders and boolean functions *)
 

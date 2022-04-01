@@ -5,6 +5,7 @@ Require Import common.NatMap.
 Require Import common.proofs.NatMapTactics.
 Require Import common.NatSet.
 Require Import common.ListLib.
+Require Import common.GlobalTypes.
 
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.proofs.HVhdlCoreFactsLib.
@@ -150,7 +151,7 @@ Section TVRunInit.
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
         forall aofv b,
           MapsTo Transition.reinit_time (Varr aofv) (sigstore σ) ->
-          BProd (get_bool_at aofv) (seq 0 n) b ->
+          BProd (get_bool_at aofv) (seq 0 (N.to_nat n)) b ->
           MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ').
   Admitted.
 

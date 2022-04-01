@@ -30,14 +30,14 @@ Section Sitpn2HVhdlUtils.
 
    *)
   
-  Definition get_max_index_imap (m : inputmap) (id : ident) : CompileTimeState (option nat) :=
+  Definition get_max_index_imap (m : inputmap) (id : ident) : CompileTimeState (option N) :=
     let check_max_index :=
       fun currmax ai =>
         match ai with
         (* If we have found an association of the form (id'(j), _),
            then tests if [id = id']. *)
         | (associp_ (n_xid id' (e_nat j)) _) =>
-            if id =? id' then
+            if (id =? id')%nat then
               match currmax with
               | None => Ret (Some j)
               | Some k => if k <? j then Ret (Some j) else Ret currmax
@@ -67,14 +67,14 @@ Section Sitpn2HVhdlUtils.
 
    *)
   
-  Definition get_max_index_omap (m : outputmap) (id : ident) : CompileTimeState (option nat) :=
+  Definition get_max_index_omap (m : outputmap) (id : ident) : CompileTimeState (option N) :=
     let check_max_index :=
       fun currmax ao =>
         match ao with
         (* If we have found an association of the form (id'(j), _);
            then, checks that [id = id'] *)
         | (assocop_idx id' (e_nat j) _) =>
-            if id =? id' then
+            if (id =? id')%nat then
               match currmax with
               | None => Ret (Some j)
               | Some k => if k <? j then Ret (Some j) else Ret currmax
@@ -105,7 +105,7 @@ Section Sitpn2HVhdlUtils.
 
   Definition actual_aux (id : ident) (m : outputmap) : CompileTimeState (option assocop) :=
     ListMonad.find (fun aop => match aop with
-                               | assocop_simpl id' a => Ret (id =? id')
+                               | assocop_simpl id' a => Ret (id =? id')%nat
                                | _ => Ret false
                                end) m.
   
@@ -128,7 +128,7 @@ Section Sitpn2HVhdlUtils.
 
   Definition connect (o : outputmap) (i : inputmap)
              (id__o : ident)
-             (idx : nat)
+             (idx : N)
              (id__i : ident) :
     CompileTimeState (outputmap * inputmap) :=
     do id__s <- get_nextid;
@@ -154,7 +154,7 @@ Section Sitpn2HVhdlUtils.
     CompileTimeState (option (ident * genmap * inputmap * outputmap)) :=
     match cstmt with
     | cs_comp id__c' id__e g i o =>
-        if id__c =? id__c' then Ret (Some (id__e, g, i, o)) else Ret None
+        if (id__c =? id__c')%nat then Ret (Some (id__e, g, i, o)) else Ret None
     | cs_par cstmt' cstmt'' =>
         do optcomp' <- get_comp_aux id__c cstmt';
         do optcomp'' <- get_comp_aux id__c cstmt'';
@@ -197,7 +197,7 @@ Section Sitpn2HVhdlUtils.
            (cstmt : cs) {struct cstmt} : CompileTimeState cs :=
   match cstmt with
   | cs_comp id__c' _ _ _ _ =>
-      if id__c =? id__c' then Ret (cs_comp id__c id__e g i o)
+      if (id__c =? id__c')%nat then Ret (cs_comp id__c id__e g i o)
       else Ret (cstmt // (cs_comp id__c id__e g i o))
   | cstmt1 // cstmt2 =>
       do optcomp <- get_comp_aux id__c cstmt1;

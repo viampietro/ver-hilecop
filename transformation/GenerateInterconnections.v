@@ -55,7 +55,7 @@ Section GenInter.
     match a with
     | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
     | Some n =>
-        Ret (i__p ++ [associp_ (Place.input_transitions_fired $[[idx]]) (e_name n)], idx + 1)
+        Ret (i__p ++ [associp_ (Place.input_transitions_fired $[[idx]]) (e_name n)], (idx + 1)%nat)
     end.
 
   (** Iterates and calls the [connect_to_input_tci] function over the
@@ -65,7 +65,7 @@ Section GenInter.
              (pinfo : PlaceInfo sitpn)
              (i__p : inputmap) :
     CompileTimeState inputmap :=
-    do iidx <- ListMonad.fold_left (fun '(i, idx) => connect_to_input_tci i idx) (tinputs pinfo) (i__p, 0);
+    do iidx <- ListMonad.fold_left (fun '(i, idx) => connect_to_input_tci i idx) (tinputs pinfo) (i__p, 0%nat);
     Ret (fst iidx).
 
   (** Parameters:
@@ -111,7 +111,7 @@ Section GenInter.
     match a with
     | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
     | Some n =>
-        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, idx + 1)
+        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, (idx + 1)%nat)
     end.
 
   (** Parameters:
@@ -167,7 +167,7 @@ Section GenInter.
     match a with
     | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
     | Some n =>
-        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, idx + 1)
+        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, (idx + 1)%nat)
     end.
   
   (** Iterates and calls the [connect_to_input_tci] function over the
@@ -177,7 +177,7 @@ Section GenInter.
              (pinfo : PlaceInfo sitpn)
              (i__p : inputmap) (o__p : outputmap) :
     CompileTimeState (inputmap * outputmap) :=
-    do ioidx <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_confl_tci i o idx) (tconflict pinfo) (i__p, o__p, 0);
+    do ioidx <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_confl_tci i o idx) (tconflict pinfo) (i__p, o__p, 0%nat);
     let '(i__p1, o__p1, idx) := ioidx in
     do ioidx1 <- ListMonad.fold_left (fun '(i, o, idx) => connect_to_nconfl_tci i o idx) (toutputs pinfo) (i__p1, o__p1, idx);
     Ret (fst ioidx1).

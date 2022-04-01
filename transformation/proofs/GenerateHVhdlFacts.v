@@ -2,6 +2,7 @@
 
 Require Import String.
 Require Import common.CoqLib.
+Require Import common.GlobalTypes.
 Require Import common.GlobalFacts.
 Require Import common.StateAndErrorMonad.
 Require Import common.proofs.StateAndErrorMonadTactics.

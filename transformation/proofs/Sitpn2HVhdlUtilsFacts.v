@@ -32,7 +32,7 @@ Section GetCompFacts.
   Proof.
     induction cstmt; try (intros *; intros e; monadInv e).
     (* comp *)
-    intros *; cbn; destruct (id__c0 =? id__c) eqn: eq_idc; intros e; monadInv e.
+    intros *; cbn; destruct (id__c0 =? id__c)%nat eqn: eq_idc; intros e; monadInv e.
     f_equal; apply beq_nat_true; auto.
     (* par *)
     destruct x; destruct x0; monadInv EQ2;
@@ -57,7 +57,7 @@ Section GetCompFacts.
     induction cstmt.
     1, 4: (destruct 2 as [ id__e [ g [ i [ o InCs_ ] ] ] ]; inversion InCs_).
     (* comp *)
-    - intros *; cbn; destruct (id__c0 =? id__c) eqn: eq_idc; intros e; monadInv e.
+    - intros *; cbn; destruct (id__c0 =? id__c)%nat eqn: eq_idc; intros e; monadInv e.
       destruct 1 as [ id__e0 [ g0 [ i0 [ o0 eq_comp ] ] ] ]; injection eq_comp; intros.
       eapply beq_nat_false; eauto.
     (* par *)
@@ -120,7 +120,7 @@ Section PutCompFacts.
   Proof.
     induction cstmt.
     intros *; cbn; intros e; monadInv e; simpl; right; reflexivity.
-    intros *; cbn; intros e; destruct (id__c0 =? id__c); monadInv e;
+    intros *; cbn; intros e; destruct (id__c0 =? id__c)%nat; monadInv e;
       [ constructor | simpl; right; reflexivity ].
     intros *; cbn; intros e; monadInv e;
       destruct x; monadInv EQ0; simpl; [ left | right ]; eauto.
@@ -138,7 +138,7 @@ Section PutCompFacts.
         InCs (cs_comp id__c' id__e' g' i' o') cstmt ->
         InCs (cs_comp id__c' id__e' g' i' o') v.
   Proof. induction cstmt; intros *; simpl; try (solve [inversion 3]).
-         - case_eq (id__c0 =? id__c); intros e EQ; monadInv EQ.
+         - case_eq (id__c0 =? id__c)%nat; intros e EQ; monadInv EQ.
            + inversion 2; subst; rewrite Nat.eqb_eq in e; congruence.
            + inversion_clear 2; do 2 constructor.
          - intros EQ; monadInv EQ.
@@ -156,7 +156,7 @@ Section PutCompFacts.
   Proof.
     induction cstmt; intros *; cbn; intros e.
     1,4: (monadInv e; simpl; destruct 1 as [ g0 [ i0 [ o0 eq_comp ] ] ]; inversion eq_comp).
-    destruct (id__c0 =? id__c); destruct 1 as [ g1 [ i1 [ o1 eq_comp ] ] ]; inversion eq_comp; subst;
+    destruct (id__c0 =? id__c)%nat; destruct 1 as [ g1 [ i1 [ o1 eq_comp ] ] ]; inversion eq_comp; subst;
       monadInv e; do 3 eexists; [econstructor | cbn; left; econstructor].
     monadInv e.
     destruct x;
@@ -232,7 +232,7 @@ Section PutCompFacts.
     induction cstmt.
     1, 4: (intros *; intros e; monadInv e; cbn; intros id__c' [ eq_ | ] neq_; congruence).
     (* comp *)
-    intros *; intros e; cbn in e; destruct (id__c0 =? id__c) eqn: eq_idc.
+    intros *; intros e; cbn in e; destruct (id__c0 =? id__c)%nat eqn: eq_idc.
     monadInv e; cbn; intros id__c' [ eq_idc0 | ] neq_; auto.
     monadInv e; cbn; intros id__c' [ eq_cc' | [ eq_c0c' | ] ] neq_; auto.
     (* par *)
@@ -251,7 +251,7 @@ Section PutCompFacts.
     (* process and null *) 
     1, 4: (monadInv e; cbn; eauto ).
     - (* comp *)
-      case_eq (id__c0 =? id__c); intros eqb; rewrite eqb in e; monadInv e.
+      case_eq (id__c0 =? id__c)%nat; intros eqb; rewrite eqb in e; monadInv e.
       erewrite Nat.eqb_eq in eqb; eauto.
       rewrite eqb; cbn; eauto.
       cbn; constructor; eauto; edestruct 1; eauto.

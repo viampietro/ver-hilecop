@@ -88,7 +88,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
            (curraofv newaofv : arrofvalues)
            idx_in_bounds,
       
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (*  * Premises * *)
       VExpr Δ σ Λ false e newv ->
@@ -127,7 +127,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
 | VSeqIdxSigAssignNoEvent :
     forall flag id e ei newv i t l u curraofv idx_in_bounds,
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ σ Λ false e newv ->
@@ -174,7 +174,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
 | VSeqIdxVarAssign :
     forall flag id e ei newv i t l u curraofv newaofv idx_in_bounds,
 
-      let idx := i - l in
+      let idx := (N.to_nat (i - l)) in
       
       (* * Premises * *)
       VExpr Δ σ Λ false e newv ->
@@ -189,7 +189,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* id ∈ Λ and Λ(id) = (array(t, l, u), curraofv) *)
       NatMap.MapsTo id (Tarray t l u, (Varr curraofv)) Λ ->
-      set_at newv i curraofv idx_in_bounds = newaofv ->
+      set_at newv idx curraofv idx_in_bounds = newaofv ->
       
       (* * Conclusion * *)
       vseq Δ σ σ__w Λ flag (id $[[ei]] @:= e) σ__w (NatMap.add id (Tarray t l u, (Varr newaofv)) Λ)

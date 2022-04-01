@@ -79,7 +79,7 @@ Section ListIPM.
   Lemma eassocip_inv_formals :
     forall {Δ Δ__c σ formals asip formals'},
       eassocip Δ Δ__c σ formals asip formals' ->
-      forall {f : ident * option nat},
+      forall {f : ident * option N},
         List.In f formals ->
         List.In f formals'.
   Proof. inversion 1; auto with datatypes. Qed.
