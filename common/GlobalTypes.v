@@ -155,12 +155,12 @@ Definition arct_eqb (a a' : ArcT) : bool :=
 
 Definition ArcT_in_nat (a : ArcT) :=
   match a with
-  | basic => 0
-  | test => 1
-  | inhibitor => 2
+  | basic => 0%N
+  | test => 1%N
+  | inhibitor => 2%N
   end.
 
-Coercion ArcT_in_nat : ArcT >-> nat.
+Coercion ArcT_in_nat : ArcT >-> N.
 
 (** Cast from ArcT to N. *)
 
@@ -182,13 +182,13 @@ Inductive TransitionT : Type := not_temporal | temporal_a_b |
 
 Definition TransitionT_in_nat (t : TransitionT) :=
   match t with
-  | not_temporal => 0
-  | temporal_a_b => 1
-  | temporal_a_a => 2
-  | temporal_a_inf => 3
+  | not_temporal => 0%N
+  | temporal_a_b => 1%N
+  | temporal_a_a => 2%N
+  | temporal_a_inf => 3%N
   end.
 
-Coercion TransitionT_in_nat : TransitionT >-> nat.
+Coercion TransitionT_in_nat : TransitionT >-> N.
 
 (** Cast from TransitionT to N. *)
 

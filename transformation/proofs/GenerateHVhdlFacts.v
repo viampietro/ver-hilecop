@@ -318,13 +318,13 @@ Section Sitpn2HVhdl.
 
   (* Lemma sitpn2hvhdl_nodup_t2tci : *)
   (*   forall {sitpn id__ent id__arch mm d γ},     *)
-  (*     sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) -> *)
+  (*     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) -> *)
   (*     IsWellDefined sitpn -> *)
   (*     NoDupA Teq (fs (t2tci γ)). *)
   (* Proof. *)
   (*   intros until mm;   *)
-  (*     functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) *)
-  (*                using sitpn_to_hvhdl_ind; (try (solve [inversion 1])). *)
+  (*     functional induction (sitpn2hvhdl sitpn id__ent id__arch mm) *)
+  (*                using sitpn2hvhdl_ind; (try (solve [inversion 1])). *)
   (*   intros *; intros e1 IWD; monadInv e. *)
   (*   minv EQ4; inversion_clear e1.     *)
   (*   eapply gen_comp_insts_nodup_t2tci; eauto. *)
@@ -340,13 +340,13 @@ Section Sitpn2HVhdl.
   (* Lemma sitpn2hvhdl_nodup_p2pci : *)
   (*   forall {sitpn id__ent id__arch mm d γ},     *)
   (*     (* [sitpn] translates into [(d, γ)]. *) *)
-  (*     sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) -> *)
+  (*     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) -> *)
   (*     IsWellDefined sitpn -> *)
   (*     NoDupA Peq (fs (p2pci γ)). *)
   (* Proof. *)
   (*   intros until mm;   *)
-  (*     functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) *)
-  (*                using sitpn_to_hvhdl_ind.   *)
+  (*     functional induction (sitpn2hvhdl sitpn id__ent id__arch mm) *)
+  (*                using sitpn2hvhdl_ind.   *)
   (*   (* Error *) *)
   (*   inversion 1. *)
   (*   (* OK *) *)
@@ -367,14 +367,14 @@ Section Sitpn2HVhdl.
   
   Lemma sitpn2hvhdl_pci_ex :
     forall {sitpn id__e id__a mm d γ},
-      sitpn_to_hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall p, exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci γ)
           /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (behavior d).
   Proof.
     intros. 
-    functional induction (sitpn_to_hvhdl sitpn id__e id__a mm) using sitpn_to_hvhdl_ind.
+    functional induction (sitpn2hvhdl sitpn id__e id__a mm) using sitpn2hvhdl_ind.
     
     (* Error *)
     lazymatch goal with
@@ -402,14 +402,14 @@ Section Sitpn2HVhdl.
 
   Lemma sitpn2hvhdl_t_comp :
     forall {sitpn id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t, exists id__t gm ipm opm,
           InA Tkeq (t, id__t) (t2tci γ)
           /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d).
   Proof.
     (*   intros *.  *)
-    (*   functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) using sitpn_to_hvhdl_ind. *)
+    (*   functional induction (sitpn2hvhdl sitpn id__ent id__arch mm) using sitpn2hvhdl_ind. *)
 
     (*   (* ERROR CASE *) *)
     (*   inversion 1. *)
@@ -429,7 +429,7 @@ Section Sitpn2HVhdl.
   Lemma sitpn2hvhdl_bind_init_marking :
     forall {sitpn id__ent id__arch mm d γ},
       (* [sitpn] translates into [(d, γ)]. *)
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall p id__p gm ipm opm,
         InA Pkeq (p, id__p) (p2pci γ) ->
@@ -437,8 +437,8 @@ Section Sitpn2HVhdl.
         List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
   Proof.
     (*   intros until mm;   *)
-    (*     functional induction (sitpn_to_hvhdl sitpn id__ent id__arch mm) *)
-    (*                using sitpn_to_hvhdl_ind. *)
+    (*     functional induction (sitpn2hvhdl sitpn id__ent id__arch mm) *)
+    (*                using sitpn2hvhdl_ind. *)
     
     (*   (* Error *) *)
     (*   inversion 1. *)
@@ -508,7 +508,7 @@ Section Sitpn2HVhdl.
   
   Lemma sitpn2hvhdl_emp_pinputs_rt :
     forall {sitpn id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm,
         InA Tkeq (t, id__t) (t2tci γ) ->
@@ -519,7 +519,7 @@ Section Sitpn2HVhdl.
 
   Lemma sitpn2hvhdl_emp_pinputs_in_arcs_nb :
     forall {sitpn id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm,
         InA Tkeq (t, id__t) (t2tci γ) ->
@@ -530,7 +530,7 @@ Section Sitpn2HVhdl.
 
   Lemma sitpn2hvhdl_connect_rtt_rt :
     forall {sitpn id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm__t ipm__t opm__t p id__p gm__p ipm__p opm__p pinputs_of_t toutputs_of_p,
         @pre sitpn p t <> None ->
@@ -549,7 +549,7 @@ Section Sitpn2HVhdl.
 
   Lemma sitpn2hvhdl_nemp_pinputs_in_arcs_nb :
     forall {sitpn id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm pinputs_of_t,
         InA Tkeq (t, id__t) (t2tci γ) ->
@@ -561,7 +561,7 @@ Section Sitpn2HVhdl.
 
   Lemma sitpn2hvhdl_nemp_toutputs_out_arcs_nb :
     forall {sitpn id__ent id__arch mm d γ},
-      sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+      sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
       IsWellDefined sitpn ->
       forall p id__p gm ipm opm toutputs_of_p,
         InA Pkeq (p, id__p) (p2pci γ) ->

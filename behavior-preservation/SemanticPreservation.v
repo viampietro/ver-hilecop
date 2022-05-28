@@ -59,7 +59,7 @@ Axiom sitpn2hvhdl_elab_ex :
     IsWellDefined sitpn ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* there exists an elaborated version [Δ] of [d], with a default state [σ__e] *)
     exists Δ σ__e, edesign hdstore (NatMap.empty value) d Δ σ__e.
@@ -78,7 +78,7 @@ Axiom sitpn2vhdl_init_state_ex :
     IsWellDefined sitpn ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -116,7 +116,7 @@ Axiom sitpn2vhdl_sim_ex :
     @BoundedSitpn sitpn b ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -141,24 +141,21 @@ Theorem sitpn2vhdl_semantic_preservation :
     @BoundedSitpn sitpn b ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
     
     (* SITPN [sitpn] yields execution trace [θ__s] after [τ] execution cycles. *)
     
     @SitpnFullExec sitpn E__c τ θ__s ->    
 
-    exists Δ,
     forall E__p,
-      (* Simulation environment [E__p] is well-defined. *)
-      IsWellDefinedSimEnv Δ E__p ->
-
+      
       (* Environments are similar. *)
       SimEnv sitpn γ E__c E__p ->
       
       exists θ__σ,
         
         (* Design [d] yields simulation trace [θ__σ] after [τ] simulation cycles. *)
-        hfullsim E__p τ Δ d θ__σ /\
+        hfullsim E__p τ d θ__σ /\
         
         (* Traces are fully similar. *)
         FullSimTrace γ θ__s θ__σ.

@@ -78,13 +78,12 @@ Definition IsOverrUnion (ovridden ovriding ovunion : IdMap value) :=
 
 (** ** Local Environment *)
 
-(** Defines a local environment of a process
-    as a map from id to couples (type * value).
- *)
+(** Defines a process local variable environment as a map from local
+    variable identifiers to couples (type * value).  *)
 
 Definition LEnv := IdMap (type * value).
 
-(** Defines an empty local environment. *)
+(** Defines an empty process local variable environment. *)
 
 Definition EmptyLEnv := NatMap.empty (type * value).
 
@@ -101,165 +100,170 @@ Local Unset Positivity Checking.
     environment. *)
 
 Inductive SemanticObject : Type :=
-| Generic (t : type) (v : value)
-| Input (t : type)
-| Output (t : type)
-| Declared (t : type)
-| Process (lenv : LEnv)
-| Component (Δ__c : IdMap SemanticObject).
+| G (t : type) (v : value)
+| I (t : type)
+| O (t : type)
+| S (t : type)
+| P (lenv : LEnv)
+| C (Δ__c : IdMap SemanticObject).
 
-(** Macro definition for the design environment type. 
-    Mapping from identifiers to [SemanticObject]. *)
+(** Defines an elaborated design as a mapping from identifiers to
+    [SemanticObject]. *)
 
 Definition ElDesign := IdMap SemanticObject.
 
-(** Defines an empty design environment. *)
+(** Defines a bare elaborated design. *)
 
 Definition EmptyElDesign := NatMap.empty SemanticObject.
 
 (** *** Identifiers Qualification *)
 
 Definition GenericOf (Δ : ElDesign) id :=
-  exists t v, MapsTo id (Generic t v) Δ.
+  exists t v, MapsTo id (G t v) Δ.
 
 Definition InputOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (Input t) Δ.
+  exists t, MapsTo id (I t) Δ.
 
 Definition OutputOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (Output t) Δ.
+  exists t, MapsTo id (O t) Δ.
 
-Definition DeclaredOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (Declared t) Δ.
+Definition InternalOf (Δ : ElDesign) id :=
+  exists t, MapsTo id (S t) Δ.
 
 Definition ProcessOf (Δ : ElDesign) id :=
-  exists Λ, MapsTo id (Process Λ) Δ.
+  exists Λ, MapsTo id (P Λ) Δ.
 
 Definition CompOf (Δ : ElDesign) id :=
-  exists Δ__c, MapsTo id (Component Δ__c) Δ.
+  exists Δ__c, MapsTo id (C Δ__c) Δ.
 
 (** ** Design State *)
 
-(** Defines the structure of design state. *)
+(** Defines the structure of design state composed of a signal store
+    [sstore], and a design instance store [cstore]. *)
 
 Inductive DState : Type :=
   MkDState {
-      sigstore  : IdMap value;
-      compstore : IdMap DState;
-      events    : IdSet;
+      sstore  : IdMap value;
+      cstore : IdMap DState;
     }.
 
 (** Defines an empty design state. *)
 
 Definition EmptyDState := MkDState (NatMap.empty value)
-                                   (NatMap.empty DState)
-                                   (NatSet.empty).
+                                   (NatMap.empty DState).
 
-(** Returns a DState with an empty event set, i.e, a record
-    <S,C,∅>. *)
-
-Definition NoEvDState (σ : DState) :=
-  MkDState (sigstore σ)
-           (compstore σ)
-           (NatSet.empty).
-
-(** Macro to add a new mapping id ⇒ value in the [sigstore] of the
-    design state [σ].  *)
+(** Macro to add, or to override, a mapping [id ⇒ value] in the
+    [sstore] of the design state [σ].  *)
 
 Definition sstore_add (id : ident) (v : value) (σ : DState) : DState :=
-  MkDState (NatMap.add id v (sigstore σ)) (compstore σ) (events σ).
+  MkDState (NatMap.add id v (sstore σ)) (cstore σ).
 
-(** Macro to add a new mapping [id__c ⇒ σ__c] in the [compstore] of the
-    design state [σ].  *)
+(** Macro to add, or to override, a mapping [id__c ⇒ σ__c] in the [cstore]
+    of the design state [σ].  *)
 
 Definition cstore_add (id__c : ident) (σ__c : DState) (σ : DState) : DState :=
-  MkDState (sigstore σ) (NatMap.add id__c σ__c (compstore σ)) (events σ).
+  MkDState (sstore σ) (NatMap.add id__c σ__c (cstore σ)).
 
-(** Returns a new DState where identifier [id] has been added to
-    the [events] field.
- *)
+(** Defines the [InSStore] predicate that states that [id] is mapped
+    to a value in the [sstore] of design state [σ].
 
-Definition events_add (id : ident) (σ : DState) :=
-  MkDState (sigstore σ) (compstore σ) (NatSet.add id (events σ)).
-
-(** Defines the [InSStore] predicate that states that
-    [id] is mapped in the [sigstore] of design state [σ].
-
-    Wrapper around the [In] predicate.
- *)
+    Wrapper around the [In] predicate.  *)
 
 Definition InSStore (id : ident) (σ : DState) :=
-  NatMap.In id (sigstore σ).
+  NatMap.In id (sstore σ).
 
 (** Useful function to create a merged [DState] *)
 
-Definition merge_natmap {A : Type} (s : NatSet.t) (m1 m2 : NatMap.t A) : NatMap.t A :=
-  let f := fun k m =>
-             match find k m1 with
-             | Some a => NatMap.add k a m
-             | _ => m
-             end
-  in NatSet.fold f s m2.
+Definition merge_natmap {A : Type}
+           (Aeq : A -> A -> Prop)
+           (Aeq_dec : forall x y, {Aeq x y} + {~Aeq x y})
+           (m0 m1 m2 : NatMap.t A) : NatMap.t A := m0.
 
-Definition merge_sstore (σ__o σ σ' : DState) : IdMap value :=
-  merge_natmap (events σ) (sigstore σ) (merge_natmap (events σ') (sigstore σ') (sigstore σ__o)).
+(** Design state equality relation *)
 
-Definition merge_cstore (σ__o σ σ' : DState) : IdMap DState :=
-  merge_natmap (events σ) (compstore σ) (merge_natmap (events σ') (compstore σ') (compstore σ__o)).
+Inductive DStateEq (σ1 σ2 : DState) : Prop :=
+  DSEq {
+      sstore_eq :
+      forall id v1 v2,
+        NatMap.MapsTo id v1 (sstore σ1) ->
+        NatMap.MapsTo id v2 (sstore σ2) ->
+        VEq v1 v2;
+
+      cstore_eq :
+      forall id σ__c1 σ__c2,
+        NatMap.MapsTo id σ__c1 (cstore σ1) ->
+        NatMap.MapsTo id σ__c2 (cstore σ2) ->
+        DStateEq σ__c1 σ__c2
+    }.
 
 (** Predicate stating that a DState [σ__m] results from the
     interleaving of an origin DState [σ__o], and two DState
     [σ'] and [σ''].
 
     To understand the predicate, one can consider that the states
-    [σ'] and [σ''] result from the interpretation of two
-    different concurrent statements in the context of [σ__o].  *)
+    [σ'] and [σ''] result from the parallel execution of two
+    concurrent statements in the context of [σ__o].  
 
-Definition IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
+*)
 
-  (* The definition domains of [sigstore] and [compstore] must be
-     the same between the original state and the other states. *)
-  
-  EqualDom (sigstore σ__o) (sigstore σ__m) /\
-  EqualDom (compstore σ__o) (compstore σ__m) /\
-  EqualDom (sigstore σ__o) (sigstore σ') /\
-  EqualDom (compstore σ__o) (compstore σ') /\
-  EqualDom (sigstore σ__o) (sigstore σ'') /\
-  EqualDom (compstore σ__o) (compstore σ'') /\
-  
-  (* Describes the content of [(sigstore σ__m)] *)
+Record IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
+  IMDS {
 
-  (forall id v, NatSet.In id (events σ') ->
-                NatMap.MapsTo id v (sigstore σ') <->
-                NatMap.MapsTo id v (sigstore σ__m)) /\
-  (forall id v, NatSet.In id (events σ'') ->
-                NatMap.MapsTo id v (sigstore σ'') <->
-                NatMap.MapsTo id v (sigstore σ__m)) /\
-  (forall id v,
-      ~NatSet.In id ((events σ') U (events σ'')) ->
-      NatMap.MapsTo id v (sigstore σ__o) <->
-      NatMap.MapsTo id v (sigstore σ__m)) /\
+      (* Describes the content of [(sstore σ__m)] *)
+      sstore1 :
+      forall id v1 v2,
+        NatMap.MapsTo id v1 (sstore σ') ->
+        NatMap.MapsTo id v2 (sstore σ__o) ->
+        ~VEq v1 v2 ->
+        NatMap.MapsTo id v1 (sstore σ__m);
 
-  (* Describes the content of [(compstore σ__m)] *)
+      sstore2 :
+      forall id v1 v2,
+        NatMap.MapsTo id v1 (sstore σ'') ->
+        NatMap.MapsTo id v2 (sstore σ__o) ->
+        ~VEq v1 v2 ->
+        NatMap.MapsTo id v1 (sstore σ__m);
 
-  (forall id σ__c, NatSet.In id (events σ') ->
-                 NatMap.MapsTo id σ__c (compstore σ') <->
-                 NatMap.MapsTo id σ__c (compstore σ__m)) /\
-  (forall id σ__c, NatSet.In id (events σ'') ->
-                 NatMap.MapsTo id σ__c (compstore σ'') <->
-                 NatMap.MapsTo id σ__c (compstore σ__m)) /\
-  (forall id σ__c,
-      ~NatSet.In id ((events σ') U (events σ'')) ->
-      NatMap.MapsTo id σ__c (compstore σ__o) <->
-      NatMap.MapsTo id σ__c (compstore σ__m)) /\
+      sstore__o :
+      forall id v__o v1 v2,
+        NatMap.MapsTo id v__o (sstore σ__o) ->
+        NatMap.MapsTo id v1 (sstore σ') ->
+        NatMap.MapsTo id v2 (sstore σ'') ->
+        VEq v__o v1 ->
+        VEq v__o v2 ->
+        NatMap.MapsTo id v__o (sstore σ__m);
 
-  (* Describes the content of [(events σ__m)] *)
-  
-  NatSet.Equal (events σ__m) ((events σ') U (events σ'')).
+      (* Describes the content of [(cstore σ__m)] *)
+      cstore1 :
+      forall id σ__c1 σ__c2,
+        NatMap.MapsTo id σ__c1 (cstore σ') ->
+        NatMap.MapsTo id σ__c2 (cstore σ__o) ->
+        ~DStateEq σ__c1 σ__c2 ->
+        NatMap.MapsTo id σ__c1 (cstore σ__m);
+
+      cstore2 :
+      forall id σ__c1 σ__c2,
+        NatMap.MapsTo id σ__c1 (cstore σ'') ->
+        NatMap.MapsTo id σ__c2 (cstore σ__o) ->
+        ~DStateEq σ__c1 σ__c2 ->
+        NatMap.MapsTo id σ__c1 (cstore σ__m);
+
+      cstore__o :
+      forall id σ__co σ__c1 σ__c2,
+        NatMap.MapsTo id σ__co (cstore σ__o) ->
+        NatMap.MapsTo id σ__c1 (cstore σ') ->
+        NatMap.MapsTo id σ__c2 (cstore σ'') ->
+        DStateEq σ__co σ__c1 ->
+        DStateEq σ__co σ__c2 ->
+        NatMap.MapsTo id σ__co (cstore σ__m)
+                      
+    }.
+
 
 (** Defines the relation stating that a design state [σ__i] is the
     result of the "injection" of the values of map [m] in the
-    [sigstore] of design state [σ__o]. *)
+    [sstore] of design state [σ__o]. *)
 
 Definition IsInjectedDState (σ__o : DState) (m : IdMap value) (σ__i : DState) : Prop :=
-  IsOverrUnion (sigstore σ__o) m (sigstore σ__i).
+  IsOverrUnion (sstore σ__o) m (sstore σ__i).
 

@@ -41,7 +41,7 @@ Section Sitpn2HVhdl.
   Definition generate_design_and_binder (id__e id__a : ident) : CompileTimeState (design * Sitpn2HVhdlMap sitpn):=
     do s <- Get; Ret ((design_ id__e id__a [] (ports s) (sigs s) (beh s)), (γ s)).
     
-  Definition sitpn_to_hvhdl (id__e id__a : ident) (b : P sitpn -> nat) :
+  Definition sitpn2hvhdl (id__e id__a : ident) (b : P sitpn -> nat) :
     (design * Sitpn2HVhdlMap sitpn) + string :=
     RedV 
       ((do _ <- generate_sitpn_infos sitpn;
@@ -54,7 +54,7 @@ End Sitpn2HVhdl.
 
 Require Import FunInd.
 
-Functional Scheme sitpn_to_hvhdl_ind := Induction for sitpn_to_hvhdl Sort Prop.
+Functional Scheme sitpn2hvhdl_ind := Induction for sitpn2hvhdl Sort Prop.
 
 
 

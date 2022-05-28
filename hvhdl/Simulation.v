@@ -137,11 +137,10 @@ Inductive fullsim
           (Mg : IdMap value)
           (E__p : nat -> IdMap value)
           (τ : nat)
-          (Δ : ElDesign) 
           (d : design) : list DState -> Prop :=
   
 | FullSim :
-    forall σ__e σ0 θ,
+    forall Δ σ__e σ0 θ,
       
       (* * Premises * *)
 
@@ -150,7 +149,7 @@ Inductive fullsim
       simloop D__s E__p Δ σ0 (behavior d) τ θ -> (* Simulation loop *)
                     
       (* * Conclusion * *)
-      fullsim D__s Mg E__p τ Δ d (σ0 :: θ).
+      fullsim D__s Mg E__p τ d (σ0 :: θ).
 
 #[export] Hint Constructors fullsim : hvhdl.
 
@@ -165,8 +164,7 @@ Inductive fullsim
 Definition hfullsim
           (E__p : nat -> IdMap value)
           (τ : nat)
-          (Δ : ElDesign)
           (d : design)
           (θ__σ : list DState) : Prop :=
-  fullsim hdstore (NatMap.empty value) E__p τ Δ d θ__σ.
+  fullsim hdstore (NatMap.empty value) E__p τ d θ__σ.
 

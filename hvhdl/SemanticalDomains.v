@@ -1,6 +1,7 @@
-(** * Semantical domains for H-VHDL. *)
+(** * Semantical domains for H-VHDL *)
 
-(** Module defining the semantics domains used in H-VHDL semantics. *)
+(** Module defining the semantical domains used in H-VHDL
+    simulation semantics. *)
 
 Require Import common.CoqLib.
 Require Import common.GlobalTypes.
@@ -149,9 +150,10 @@ Section Types.
       range type, for instance [Tnat 10 2]. *)
   
   Inductive type : Type :=
-  | Tbool                                  (** Boolean *)
-  | Tnat (l : N) (u : N)               (** Constrained natural. *)
-  | Tarray (t : type) (l : N) (u : N). (** Fixed-size array. *)
+  | Tbool                              (** Boolean type *)
+  | Tnat (l : N) (u : N)               (** Natural range from l to u *)
+  | Tarray (t : type) (l : N) (u : N). (** Array of t with index range
+                                           from l to u *)
 
   (** Well-formed type predicate *)
 

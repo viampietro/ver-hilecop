@@ -20,6 +20,10 @@ Inductive binop : Set :=
   bo_lt | bo_le | bo_gt | bo_ge |
   bo_add | bo_sub.
 
+(** Set of unary operators. *)
+
+Inductive uop : Set := uo_not.
+
 (** ** Expressions: *)
 
 (** An expression is either: 
@@ -29,17 +33,18 @@ Inductive binop : Set :=
     - an identifier
     - an identifier with index (e.g "myvar(3)")
     - an aggregate, i.e a non-empty list of expressions
-    - e op e'    
-    - not e   
+    - e1 binop e2
+    - uop e   
  *)
 
 Inductive expr : Type :=
+| e_name : name -> expr (** Read a signal, a local variable or a
+                            generic constant value *)
 | e_nat : N -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
-| e_name : name -> expr (** Name constant *)
-| e_aggreg : agofexprs -> expr (** Aggregate of expressions *)
-| e_binop : binop -> expr -> expr -> expr (** Binary operator expression *)
-| e_not : expr -> expr (** Not expression *)
+| e_binop : binop -> expr -> expr -> expr (** Binary operation *)
+| e_uop : uop -> expr (** Unary operation *)
+| e_aggreg : agofexprs -> expr (** Aggregate expression *)
 
 (** Aggregate of expressions (non-empty list of expressions) *)
 
@@ -100,23 +105,22 @@ Coercion agofe2list : agofexprs >-> list.
     signal s : natural(0,255); constant c : boolean := false; *)
 
 Inductive tind : Type :=
-| tind_boolean                                           (** Boolean type indication. *)
-| tind_natural (rlower : expr) (rupper : expr)           (** Natural with range constraint. *)
-| tind_array (t : tind) (ilower : expr) (iupper : expr). (** Array of [t] with index constraint. *)
+| tind_boolean                                           (** Boolean type indication *)
+| tind_natural (rlower : expr) (rupper : expr)           (** Natural with range constraint *)
+| tind_array (t : tind) (ilower : expr) (iupper : expr). (** Array of [t] with index constraint *)
 
 (** ** Sequential statements. *)
 
 Inductive ss : Type :=
-| ss_sig (signame : name) (e : expr)                      (** Signal assignment statement. *)
-| ss_var (varname : name) (e : expr)                      (** Variable assignment statement. *)
-| ss_if (e : expr) (stmt : ss)                            (** If statement. *)
-| ss_ifelse (e : expr) (stmt : ss) (stmt' : ss)           (** If then else statement. *)
-| ss_loop (id : ident) (e : expr) (e' : expr) (stmt : ss) (** Loop statement. *)
-| ss_falling (stmt : ss)                                  (** Falling edge block statement. *)
-| ss_rising (stmt : ss)                                   (** Rising edge block statement. *)
-| ss_rst (stmt : ss) (stmt' : ss)                         (** Reset blocks *)
-| ss_seq (stmt : ss) (stmt' : ss)                         (** Composition of seq. statements. *)
-| ss_null.                                                (** Null statement. *)
+| ss_sig (signame : name) (e : expr)              (** Assignment to a signal *)
+| ss_var (varname : name) (e : expr)              (** Assignment to a local variable *)
+| ss_ifelse (e : expr) (stmt1 : ss) (stmt2 : ss)  (** Conditional *)
+| ss_loop (id : ident) (e1 e2 : expr) (stmt : ss) (** Range loop *)
+| ss_falling (stmt : ss)                          (** Falling edge block *)
+| ss_rising (stmt : ss)                           (** Rising edge block *)
+| ss_rst (stmt1 stmt2 : ss)                       (** Reset conditional *)
+| ss_seq (stmt1 stmt2 : ss)                       (** Sequence *)
+| ss_null.                                        (** No operation *)
 
 (** Notations for sequential statements. *)
 
@@ -124,11 +128,6 @@ Module HVhdlSsNotations.
 
   Infix "@<==" := ss_sig (at level 100) : abss_scope.
   Infix "@:=" := ss_var (at level 100) : abss_scope.
-
-  Notation "'If' c 'Then' e " :=
-    (ss_if c e)
-      (at level 200, right associativity,
-        format "'[v' 'If'  c '//' 'Then'  e ']'") : abss_scope.
 
   Notation "'If' c 'Then' x 'Else' y" :=
     (ss_ifelse c x y)
@@ -161,7 +160,7 @@ Import HVhdlSsNotations.
 Inductive vdecl : Type :=
   vdecl_ (vid : ident) (τ : tind).
 
-(** Generic map entry; e.g:
+(** Generic constant association; e.g:
 
     - Concrete syntax = "g ⇒ 1"
     - Abstract syntax = "assocg_ g (e_nat 1)"
@@ -170,70 +169,68 @@ Inductive vdecl : Type :=
 Inductive assocg : Type :=
   assocg_ (id : ident) (e : expr).
 
-(** Type of generic map. *)
+(** A generic map is a list of generic constant associations. *)
 
 Definition genmap := list assocg.
 
-(** Port map entry ("in" mode port). *)
+(** Input port association. *)
 
-Inductive associp : Type :=
-  associp_ (n : name) (e : expr).
+Inductive ipassoc : Type :=
+  ipa (n : name) (e : expr).
 
-(** Type of input port map. *)
+(** An input port map is a list of input port associations. *)
 
-Definition inputmap := list associp.
+Definition inputmap := list ipassoc.
 
-(** Port map entry ("out" mode port). 
-    [None] represents the [open] port keyword
-    in the actual part of the output port association.
+(** Output port association.
 
-    We forbid the association of an indexed formal part
-    with the open keyword, i.e:
-    "myport(0) ⇒ open"
- *)
+    [None] represents the [open] port keyword in the actual part of
+    the output port association.
 
-Inductive assocop : Type :=
-| assocop_simpl :  ident -> option name -> assocop
-| assocop_idx   : ident -> expr -> name -> assocop. 
+    We forbid the association of an indexed formal part with the open
+    keyword, i.e: "myport(0) ⇒ open" *)
+
+Inductive opassoc : Type :=
+| opa_simpl :  ident -> option name -> opassoc
+| opa_idx   : ident -> expr -> name -> opassoc. 
 
 (** Type of output port map. *)
 
-Definition outputmap := list assocop.
+Definition outputmap := list opassoc.
 
 (** Concurrent statement. *)
 
 Inductive cs : Type :=
 
-(** Process statement. *)
-| cs_ps (id__p : ident)       (** Process id *)
-        (sl : IdSet)        (** Sensitivity list *)
+(** Process statement *)
+| cs_ps (id__p : ident)       (** Process identifier *)
         (vars : list vdecl) (** Variable declaration list *)
-        (stmt : ss)         (** Sequential statement block *)
+        (body : ss)         (** Sequential statement block *)
       
-(** Component instantiation statement. *)
-| cs_comp (id__c : ident)   (** Component id *)
-          (id__e : ident)   (** Instantiated design label *)
+(** Design instantiation statement *)
+| cs_comp (id__c : ident)   (** Design instance identifier *)
+          (id__e : ident)   (** Design entity identifier *)
           (g : genmap)    (** Generic map *)
-          (i : inputmap)  (** In port map *)
-          (o : outputmap) (** Out port map *)
+          (i : inputmap)  (** Input port map *)
+          (o : outputmap) (** Output port map *)
 
-(** Composition of concurrent statements. *)
-| cs_par (cstmt : cs) (cstmt' : cs)
+(** Parallel composition *)
+| cs_par (cstmt1 cstmt2 : cs)
 
-(** Null statement *)
+(** No operation *)
 | cs_null.
 
 Module HVhdlCsNotations.
 
   Notation " x // y // .. // z " := (cs_par .. (cs_par x y) .. z)
                                       (right associativity, at level 100) : abss_scope.
-  Notation "id__p ':' 'Process' sl vars 'Begin' stmt" :=
-    (cs_ps id__p sl vars stmt)
+  Notation "id__p ':' 'Process' vars 'Begin' stmt" :=
+    (cs_ps id__p vars stmt)
       (at level 200(* , *)
        (* format "'[v' id__p  ':'  'Process'  sl '/' '['   vars ']' '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
 
-  Notation "id__p ':' 'Process' sl 'Begin' stmt" :=
-    (cs_ps id__p sl [] stmt)
+  Notation "id__p ':' 'Process' 'Begin' stmt" :=
+    (cs_ps id__p [] stmt)
       (at level 200(* , *)
        (* format "'[v' id__p  ':'  'Process'  sl '/' 'Begin' '/' '['   stmt ']' ']'" *)) : abss_scope.
   
@@ -243,21 +240,21 @@ Import HVhdlCsNotations.
 
 (** ** Design declaration. *)
 
-(** Generic constant declaration. *)
+(** Generic constant declaration *)
 
 Inductive gdecl : Type :=
-  gdecl_ (genid : ident) (τ : tind) (e : expr).
+  gdecl_ (id : ident) (τ : tind) (e : expr).
                                    
-(** Port declarations. *)
+(** Port declarations *)
 
 Inductive pdecl : Type :=
-| pdecl_in (portid : ident) (τ : tind)  (** Declaration of port in "in" mode. *)
-| pdecl_out (portid : ident) (τ : tind). (** Declaration of port in "out" mode. *)
+| pdecl_in (id : ident) (τ : tind)  (** Declaration of an input port *)
+| pdecl_out (id : ident) (τ : tind). (** Declaration of an output port *)
             
-(** Signal declaration. *)
+(** Internal signal declaration *)
 
 Inductive sdecl : Type :=
-  sdecl_ (sigid : ident) (τ : tind).
+  sdecl_ (id : ident) (τ : tind).
 
 (** Design declaration, i.e the entity-architecture couple; e.g:
     
@@ -271,18 +268,16 @@ Inductive sdecl : Type :=
        [behavior] 
      end [id__a];" 
 
-   - Abstract syntax = "[design_ id__e id__a gens ports sigs behavior]"
+   - Abstract syntax = "[design_ gens ports sigs behavior]"
 
 *)
 
 Record design : Type :=
   design_ {
-      id__e      : ident;      (** Entity id *)
-      id__a      : ident;      (** Architecture id *)
-      gens     : list gdecl; (** Generic constant clause *)
-      ports    : list pdecl; (** Port clause *)
-      sigs     : list sdecl; (** Architecture declarative part *)
-      behavior : cs
+      gens  : list gdecl; (** Generic constants *)
+      ports : list pdecl; (** Input and output ports *)
+      sigs  : list sdecl; (** Internal signals *)
+      beh   : cs          (** Design behavior *)
     }.
 
 (** ** Misc. Definitions for the H-VHDL Abstract Syntax *)
@@ -292,8 +287,8 @@ Record design : Type :=
 Inductive FoldLCs {A : Type} (f : A -> cs -> A) : cs -> A -> A -> Prop :=
 | FoldLCs_null : forall a, FoldLCs f cs_null a (f a cs_null)
 | FoldLCs_ps :
-  forall id__p sl vars body a,
-    FoldLCs f (cs_ps id__p sl vars body) a (f a (cs_ps id__p sl vars body))
+  forall id__p vars body a,
+    FoldLCs f (cs_ps id__p vars body) a (f a (cs_ps id__p vars body))
 | FoldLCs_comp :
   forall id__c id__e gm ipm opm a,
     FoldLCs f (cs_comp id__c id__e gm ipm opm) a (f a (cs_comp id__c id__e gm ipm opm))
@@ -322,12 +317,12 @@ Inductive FlattenCs : cs -> list cs -> Prop :=
       FlattenCs cstmt l ->
       FlattenCs (cs_null // cstmt) l
 | FlattenCs_ps_singl :
-    forall id__p sl vars body,
-      FlattenCs (cs_ps id__p sl vars body) [cs_ps id__p sl vars body]
+    forall id__p vars body,
+      FlattenCs (cs_ps id__p vars body) [cs_ps id__p vars body]
 | FlattenCs_ps_hd :
-    forall id__p sl vars body cstmt l,
+    forall id__p vars body cstmt l,
       FlattenCs cstmt l ->
-      FlattenCs ((cs_ps id__p sl vars body) // cstmt) ((cs_ps id__p sl vars body) :: l)
+      FlattenCs ((cs_ps id__p vars body) // cstmt) ((cs_ps id__p vars body) :: l)
 | FlattenCs_comp_singl :
     forall id__c id__e gm ipm opm,
       FlattenCs (cs_comp id__c id__e gm ipm opm) [cs_comp id__c id__e gm ipm opm]
@@ -350,7 +345,7 @@ Definition cs_to_list (cstmt : cs) : list cs :=
 
 Fixpoint InCs (cstmt cstmt' : cs) {struct cstmt'} : Prop :=
   match cstmt' with
-  | cs_null | cs_ps _ _ _ _ | cs_comp _ _ _ _ _ => cstmt = cstmt'
+  | cs_null | cs_ps _ _ _ | cs_comp _ _ _ _ _ => cstmt = cstmt'
   | cstmt1 // cstmt2 =>
     InCs cstmt cstmt1 \/ InCs cstmt cstmt2
   end.
@@ -379,7 +374,7 @@ Definition get_cids (cstmt : cs) : list ident :=
   foldl_cs comp2id cstmt [].
 
 Definition AreCsPIds (cstmt : cs) (pids : list ident) : Prop :=
-  let ps2id := fun psids cstmt => match cstmt with cs_ps id _ _ _ => psids ++ [id] | _ => psids end in
+  let ps2id := fun psids cstmt => match cstmt with cs_ps id _ _ => psids ++ [id] | _ => psids end in
   FoldLCs ps2id cstmt [] pids.
 
 Definition AreDeclPartIds (d : design) (genids portids sigids : list ident) : Prop :=
@@ -388,7 +383,7 @@ Definition AreDeclPartIds (d : design) (genids portids sigids : list ident) : Pr
   /\ AreSigIds (sigs d) sigids.
 
 Definition AreBehPartIds (d : design) (compids pids : list ident) : Prop :=
-  AreCsCompIds (behavior d) compids /\ AreCsPIds (behavior d) pids.
+  AreCsCompIds (beh d) compids /\ AreCsPIds (beh d) pids.
 
 Definition AreVarIds (vars : list vdecl) (varids : list ident) : Prop :=
   let var2id := (fun vd : vdecl => let '(vdecl_ id _) := vd in id) in
@@ -400,15 +395,15 @@ Definition AreVarIds (vars : list vdecl) (varids : list ident) : Prop :=
 Fixpoint AssignedInOPM (id : ident) (opm : outputmap) :=
   match opm with
   | [] => False
-  | (assocop_simpl _ (Some (n_id id__a | n_xid id__a _)) | assocop_idx _ _ (n_id id__a | n_xid id__a _)) :: tl =>
+  | (opa_simpl _ (Some (n_id id__a | n_xid id__a _)) | opa_idx _ _ (n_id id__a | n_xid id__a _)) :: tl =>
     id = id__a \/ AssignedInOPM id tl
-  | (assocop_simpl _ None) :: tl => AssignedInOPM id tl
+  | (opa_simpl _ None) :: tl => AssignedInOPM id tl
   end.
 
 Fixpoint AssignedInSS (id : ident) (stmt : ss) :=
   match stmt with
   | ss_sig ((n_id id__s) | (n_xid id__s _)) _ => id = id__s
-  | (ss_if _ stmt1 | ss_loop _ _ _ stmt1 | ss_falling stmt1 | ss_rising stmt1) =>
+  | (ss_loop _ _ _ stmt1 | ss_falling stmt1 | ss_rising stmt1) =>
     AssignedInSS id stmt1
   | (ss_ifelse _ stmt1 stmt2 | ss_rst stmt1 stmt2 | ss_seq stmt1 stmt2) =>
     AssignedInSS id stmt1 \/ AssignedInSS id stmt2
@@ -418,7 +413,7 @@ Fixpoint AssignedInSS (id : ident) (stmt : ss) :=
 Fixpoint AssignedInCs (id : ident) (cstmt : cs) :=
   match cstmt with
   | cs_comp id__c id__e gm ipm opm => AssignedInOPM id opm
-  | cs_ps id__p sl vars body => AssignedInSS id body
+  | cs_ps id__p vars body => AssignedInSS id body
   | cs_null => False
   | cs_par cstmt' cstmt'' =>
     AssignedInCs id cstmt' \/ AssignedInCs id cstmt''

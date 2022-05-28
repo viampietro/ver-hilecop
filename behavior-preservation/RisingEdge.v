@@ -23,7 +23,7 @@ Lemma rising_edge_full :
   forall sitpn id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__i σ__r σ',
 
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->
@@ -52,7 +52,7 @@ Lemma rising_edge :
   forall sitpn id__ent id__arch mm d γ E__c E__p Δ σ__e s σ τ s' σ__i σ__r σ',
 
     (* sitpn translates into (d, γ). *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->

@@ -48,10 +48,12 @@ Inductive stabilize (D__s : IdMap design) (Δ : ElDesign) (σ : DState) (behavio
       
       (* Some events are registered in σ. *)
       events σ <> NatSet.empty ->
-
-      (* σ'' is a quiet state (i.e, no events) *)
-      events σ'' = NatSet.empty ->
       
       (* * Conclusion * *)
       stabilize D__s Δ σ behavior σ''.
 
+Lemma stabilize_empty_events :
+  forall D__s Δ σ behavior σ',
+    stabilize D__s Δ σ behavior σ' ->
+    events σ' = NatSet.empty.
+Proof. induction 1; trivial. Qed.

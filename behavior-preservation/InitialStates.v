@@ -41,7 +41,7 @@ Lemma init_states_eq_marking :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -119,7 +119,7 @@ Lemma init_states_eq_time_counters :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -204,7 +204,7 @@ Lemma init_states_eq_reset_orders :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -396,7 +396,7 @@ Lemma init_states_eq_actions :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -416,7 +416,7 @@ Lemma init_states_eq_functions :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -436,7 +436,7 @@ Lemma init_states_eq_conditions :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
@@ -458,7 +458,7 @@ Lemma sim_init_states :
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn_to_hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
