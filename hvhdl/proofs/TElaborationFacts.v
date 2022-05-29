@@ -145,35 +145,35 @@ Qed.
 Lemma elab_T_σ_rt :
   forall {M__g Δ σ__e},
     edesign hdstore M__g transition_design Δ σ__e ->
-    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__e).
+    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ__e).
 Proof.
   inversion 1; subst.
   edestruct @eports_T_σ_rt with (Δ := Δ0) as (aofv, MapsTo_σ); eauto.
   exists aofv.
-  eapply ebeh_inv_sigstore; eauto.
-  eapply edecls_inv_sigstore; eauto.
+  eapply ebeh_inv_sstore; eauto.
+  eapply edecls_inv_sstore; eauto.
 Qed.
 
 Lemma ebeh_TCI_σ_rt : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm σ'__t},
     ebeh hdstore Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-    MapsTo id__t σ'__t (compstore σ') ->
-    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ'__t).
+    MapsTo id__t σ'__t (cstore σ') ->
+    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ'__t).
 Proof.
   induction 1; inversion 1.
 
   (* CASE comp *)
   - subst; subst_transition_design.
     assert (e : σ'__t = σ__c) by
-        (eapply @MapsTo_add_eqv with (x := id__c) (m := compstore σ); eauto).
+        (eapply @MapsTo_add_eqv with (x := id__c) (m := cstore σ); eauto).
     inject_left e.
     eapply @elab_T_σ_rt; eauto.
     
   (* CASE left of || *)
   - intros.
-    edestruct @ebeh_compid_in_compstore with (D__s := hdstore) (behavior := cstmt) as (σ'__t0, MapsTo_σ'__t0); eauto.
-    assert (MapsTo id__t σ'__t0 (compstore σ'')) by (eapply ebeh_inv_compstore; eauto).
+    edestruct @ebeh_compid_in_cstore with (D__s := hdstore) (behavior := cstmt) as (σ'__t0, MapsTo_σ'__t0); eauto.
+    assert (MapsTo id__t σ'__t0 (cstore σ'')) by (eapply ebeh_inv_cstore; eauto).
     assert (e : σ'__t0 = σ'__t) by (eapply MapsTo_fun; eauto).
     inject_left e; apply IHebeh1; auto.
     
@@ -185,8 +185,8 @@ Lemma elab_TCI_σ_rt :
   forall {d Δ σ__e id__t gm ipm opm σ__te},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
-    MapsTo id__t σ__te (compstore σ__e) ->
-    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__te).
+    MapsTo id__t σ__te (cstore σ__e) ->
+    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ__te).
 Proof.
   inversion 1.
   eapply ebeh_TCI_σ_rt; eauto.
@@ -196,10 +196,10 @@ Lemma elab_TCI_σ_rt_2 :
   forall {d Δ σ__e id__t gm ipm opm σ__te Δ__t t n},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
-    MapsTo id__t σ__te (compstore σ__e) ->
+    MapsTo id__t σ__te (cstore σ__e) ->
     MapsTo id__t (Component Δ__t) Δ ->
     MapsTo Transition.input_arcs_number (Generic t (Vnat n)) Δ__t ->
-    MapsTo Transition.reinit_time (Varr (create_arr (S (((N.to_nat n) - 1) - 0)) (Vbool false) (gt_Sn_O (((N.to_nat n) - 1) - 0)))) (sigstore σ__te).
+    MapsTo Transition.reinit_time (Varr (create_arr (S (((N.to_nat n) - 1) - 0)) (Vbool false) (gt_Sn_O (((N.to_nat n) - 1) - 0)))) (sstore σ__te).
 Proof.
   
 Admitted.

@@ -14,11 +14,11 @@ Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.proofs.HVhdlSimulationFactsLib.
 Require Import hvhdl.proofs.CombinationalEvaluationTactics.
 
-Lemma vcomb_tc_ps_inv_sigstore :
+Lemma vcomb_tc_ps_inv_sstore :
   forall {D__s Δ σ σ' id v},
     vcomb D__s Δ σ time_counter_ps σ' ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ) ->
+    MapsTo id v (sstore σ').
 Proof.
   unfold time_counter_ps.
   inversion 1; auto.
@@ -45,8 +45,8 @@ Lemma vcomb_transition_inv_s_tc :
   forall {Δ σ σ' v},
     vcomb hdstore Δ σ transition_behavior σ' ->
     DeclaredOf Δ s_time_counter ->
-    MapsTo s_time_counter v (sigstore σ) ->
-    MapsTo s_time_counter v (sigstore σ').
+    MapsTo s_time_counter v (sstore σ) ->
+    MapsTo s_time_counter v (sstore σ').
 Proof.
   intros *; unfold transition_behavior.
 
@@ -77,10 +77,10 @@ Lemma vcomb_inv_s_tc :
       CsHasUniqueCompIds behavior compids -> 
       MapsTo id__t (Component Δ__t) Δ ->
       DeclaredOf Δ__t s_time_counter ->
-      MapsTo id__t σ__t (compstore σ) ->
-      MapsTo s_time_counter v (sigstore σ__t) ->
-      MapsTo id__t σ__t' (compstore σ') ->
-      MapsTo s_time_counter v (sigstore σ__t').
+      MapsTo id__t σ__t (cstore σ) ->
+      MapsTo s_time_counter v (sstore σ__t) ->
+      MapsTo id__t σ__t' (cstore σ') ->
+      MapsTo s_time_counter v (sstore σ__t').
 Proof.
   induction 1; try (solve [inversion 1]).
 
@@ -92,14 +92,14 @@ Proof.
     assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
     inject_left e; eauto.
     eapply vcomb_transition_inv_s_tc; eauto.
-    eapply mapip_inv_sigstore; eauto.
+    eapply mapip_inv_sstore; eauto.
     unfold InputOf; destruct 1; unfold DeclaredOf in *.
     mapsto_discriminate.
     
   (* CASE component with no events. *)
   - inversion 1.
     intros; erewrite @MapsTo_fun with (e := σ__t') (e' := σ__t); eauto.
-    eapply mapop_inv_compstore; eauto.
+    eapply mapop_inv_cstore; eauto.
 
   (* CASE || *)
   - inversion_clear 1;

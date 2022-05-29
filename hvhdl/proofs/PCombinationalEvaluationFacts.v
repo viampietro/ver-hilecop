@@ -14,11 +14,11 @@ Require Import hvhdl.HVhdlSimulationLib.
 Require Import hvhdl.proofs.HVhdlSimulationFactsLib.
 Require Import hvhdl.proofs.CombinationalEvaluationTactics.
 
-Lemma vcomb_marking_ps_inv_sigstore :
+Lemma vcomb_marking_ps_inv_sstore :
   forall {D__s Δ σ σ' id v},
     vcomb D__s Δ σ marking_ps σ' ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ) ->
+    MapsTo id v (sstore σ').
 Proof.
   unfold marking_ps.
   inversion 1; auto.
@@ -45,8 +45,8 @@ Lemma vcomb_place_inv_s_marking :
   forall {Δ σ σ' v m},
     vcomb hdstore Δ σ place_behavior σ' ->
     MapsTo s_marking (Declared (Tnat 0 m)) Δ ->
-    MapsTo s_marking v (sigstore σ) ->
-    MapsTo s_marking v (sigstore σ').
+    MapsTo s_marking v (sstore σ) ->
+    MapsTo s_marking v (sstore σ').
 Proof.
   intros *; unfold place_behavior.
   do 2 (rewrite vcomb_par_comm; rewrite <- vcomb_par_assoc);
@@ -78,30 +78,30 @@ Lemma vcomb_inv_s_marking :
       MapsTo id__p (Component Δ__p) Δ ->
       AreCsCompIds behavior compids -> 
       List.NoDup compids ->
-      MapsTo id__p σ__p (compstore σ) ->
-      MapsTo s_marking v (sigstore σ__p) ->
+      MapsTo id__p σ__p (cstore σ) ->
+      MapsTo s_marking v (sstore σ__p) ->
       MapsTo s_marking (Declared (Tnat 0 mm)) Δ__p -> 
-      MapsTo id__p σ__p' (compstore σ') ->
-      MapsTo s_marking v (sigstore σ__p').
+      MapsTo id__p σ__p' (cstore σ') ->
+      MapsTo s_marking v (sstore σ__p').
 Proof.
   induction 1; inversion 1; intros.
 
   (* CASE component with events. *)
   - subst; subst_place_design.
     match goal with
-    | [ H: MapsTo _ _ (compstore (cstore_add _ _ _)) |- _ ] => simpl in H
+    | [ H: MapsTo _ _ (cstore (cstore_add _ _ _)) |- _ ] => simpl in H
     end.
     erewrite @MapsTo_add_eqv with (e' := σ__c'') (e := σ__p'); eauto.    
     erewrite @MapsTo_fun with (x := id__c) (e := σ__p) (e' := σ__c) in *; eauto.
     assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
     inject_left e; eauto.
     eapply vcomb_place_inv_s_marking; eauto.    
-    eapply mapip_inv_sigstore; eauto.
+    eapply mapip_inv_sstore; eauto.
     unfold InputOf; destruct 1; mapsto_discriminate.
 
   (* CASE component with no events. *)
   - erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-    eapply mapop_inv_compstore; eauto.    
+    eapply mapop_inv_cstore; eauto.    
 
   (* CASE in left of || *)
   - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).

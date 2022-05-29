@@ -307,6 +307,7 @@ Section ValueEq.
   (** Wrapper around the [OVEq] relation *)
 
   Definition VEq x y := OVEq x y (Some true).
+  Definition VNEq x y := OVEq x y (Some false).
 
   Definition VEq_refl : forall x, VEq x x.
   Proof. unfold VEq.

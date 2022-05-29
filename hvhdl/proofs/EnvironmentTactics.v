@@ -169,8 +169,8 @@ Ltac gen_eq_cstate_from_IMDS Heq :=
   match goal with
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
-    MapsTo_σ: MapsTo ?id__c ?σ__c (compstore ?σ),
-    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (compstore ?σ__m),
+    MapsTo_σ: MapsTo ?id__c ?σ__c (cstore ?σ),
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m),
     nIn_ev': ~NatSet.In ?id__c (events ?σ'),
     nIn_ev'' : ~NatSet.In ?id__c (events ?σ'')        
     |- _
@@ -180,8 +180,8 @@ Ltac gen_eq_cstate_from_IMDS Heq :=
                                 eauto; eapply not_in_union; eauto)
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
-    MapsTo_σ': MapsTo ?id__c ?σ__c (compstore ?σ'),
-    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (compstore ?σ__m),
+    MapsTo_σ': MapsTo ?id__c ?σ__c (cstore ?σ'),
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m),
     In_ev': NatSet.In ?id__c (events ?σ')
     |- _
   ] =>
@@ -191,8 +191,8 @@ Ltac gen_eq_cstate_from_IMDS Heq :=
           eauto)
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
-    MapsTo_σ'': MapsTo ?id__c ?σ__c (compstore ?σ''),
-    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (compstore ?σ__m),
+    MapsTo_σ'': MapsTo ?id__c ?σ__c (cstore ?σ''),
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m),
     In_ev'': NatSet.In ?id__c (events ?σ'')
     |- _
   ] =>
@@ -206,8 +206,8 @@ Ltac gen_eq_val_from_IMDS Heq :=
   match goal with
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
-    MapsTo_σ: MapsTo ?id ?v (sigstore ?σ),
-    MapsTo_σ__m: MapsTo ?id ?v__m (sigstore ?σ__m),
+    MapsTo_σ: MapsTo ?id ?v (sstore ?σ),
+    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m),
     nIn_ev': ~NatSet.In ?id (events ?σ'),
     nIn_ev'' : ~NatSet.In ?id (events ?σ'')        
     |- _
@@ -217,8 +217,8 @@ Ltac gen_eq_val_from_IMDS Heq :=
                               eauto; eapply not_in_union; eauto)
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
-    MapsTo_σ': MapsTo ?id ?v' (sigstore ?σ'),
-    MapsTo_σ__m: MapsTo ?id ?v__m (sigstore ?σ__m),
+    MapsTo_σ': MapsTo ?id ?v' (sstore ?σ'),
+    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m),
     In_ev': NatSet.In ?id (events ?σ')
     |- _
   ] =>
@@ -228,8 +228,8 @@ Ltac gen_eq_val_from_IMDS Heq :=
           eauto)
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
-    MapsTo_σ'': MapsTo ?id ?v'' (sigstore ?σ''),
-    MapsTo_σ__m: MapsTo ?id ?v__m (sigstore ?σ__m),
+    MapsTo_σ'': MapsTo ?id ?v'' (sstore ?σ''),
+    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m),
     In_ev'': NatSet.In ?id (events ?σ'')
     |- _
   ] =>

@@ -43,7 +43,7 @@ Inductive expr : Type :=
 | e_nat : N -> expr (** Natural constant *)
 | e_bool : bool -> expr (** Boolean constant *)
 | e_binop : binop -> expr -> expr -> expr (** Binary operation *)
-| e_uop : uop -> expr (** Unary operation *)
+| e_uop : uop -> expr -> expr (** Unary operation *)
 | e_aggreg : agofexprs -> expr (** Aggregate expression *)
 
 (** Aggregate of expressions (non-empty list of expressions) *)
@@ -390,32 +390,4 @@ Definition AreVarIds (vars : list vdecl) (varids : list ident) : Prop :=
   Map var2id vars varids.
 
 
-(** ** Signal Assignment Look-up *)
-
-Fixpoint AssignedInOPM (id : ident) (opm : outputmap) :=
-  match opm with
-  | [] => False
-  | (opa_simpl _ (Some (n_id id__a | n_xid id__a _)) | opa_idx _ _ (n_id id__a | n_xid id__a _)) :: tl =>
-    id = id__a \/ AssignedInOPM id tl
-  | (opa_simpl _ None) :: tl => AssignedInOPM id tl
-  end.
-
-Fixpoint AssignedInSS (id : ident) (stmt : ss) :=
-  match stmt with
-  | ss_sig ((n_id id__s) | (n_xid id__s _)) _ => id = id__s
-  | (ss_loop _ _ _ stmt1 | ss_falling stmt1 | ss_rising stmt1) =>
-    AssignedInSS id stmt1
-  | (ss_ifelse _ stmt1 stmt2 | ss_rst stmt1 stmt2 | ss_seq stmt1 stmt2) =>
-    AssignedInSS id stmt1 \/ AssignedInSS id stmt2
-  | _ => False
-  end.
-
-Fixpoint AssignedInCs (id : ident) (cstmt : cs) :=
-  match cstmt with
-  | cs_comp id__c id__e gm ipm opm => AssignedInOPM id opm
-  | cs_ps id__p vars body => AssignedInSS id body
-  | cs_null => False
-  | cs_par cstmt' cstmt'' =>
-    AssignedInCs id cstmt' \/ AssignedInCs id cstmt''
-  end.
 

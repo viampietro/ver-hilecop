@@ -73,18 +73,18 @@ Proof.
   end.
 Qed.
 
-Lemma ebeh_inv_sigstore :
+Lemma ebeh_inv_sstore :
   forall D__s Δ σ beh Δ' σ' id v,
     ebeh D__s Δ σ beh Δ' σ' ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ) ->
+    MapsTo id v (sstore σ').
 Proof. induction 1; intros; auto. Defined.
 
-Lemma ebeh_inv_compstore :
+Lemma ebeh_inv_cstore :
   forall {D__s Δ σ behavior Δ' σ' id σ__c},
     ebeh D__s Δ σ behavior Δ' σ' ->
-    MapsTo id σ__c (compstore σ) ->
-    MapsTo id σ__c (compstore σ').
+    MapsTo id σ__c (cstore σ) ->
+    MapsTo id σ__c (cstore σ').
 Proof.
   induction 1; intros; auto; simpl.
   match goal with
@@ -108,16 +108,16 @@ Proof.
   - eapply IHebeh2; eauto.
 Qed.
 
-Lemma ebeh_compid_in_compstore :
+Lemma ebeh_compid_in_cstore :
   forall {D__s Δ σ behavior Δ' σ' id__c id__e gm ipm opm},
     ebeh D__s Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-    exists σ__c, MapsTo id__c σ__c (compstore σ').
+    exists σ__c, MapsTo id__c σ__c (cstore σ').
 Proof.
   induction 1; inversion 1.
   exists σ__c; apply add_1; auto.
   - edestruct IHebeh1 as (σ__c, MapsTo_σ'); eauto; exists σ__c.
-    eapply ebeh_inv_compstore; eauto.
+    eapply ebeh_inv_cstore; eauto.
   - eapply IHebeh2; eauto.
 Qed.
 
@@ -125,12 +125,12 @@ Lemma ebeh_compid_is_unique :
   forall {D__s Δ σ behavior Δ' σ' id__c id__e gm ipm opm},
     ebeh D__s Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-    ~NatMap.In id__c Δ /\ ~NatMap.In id__c (compstore σ).
+    ~NatMap.In id__c Δ /\ ~NatMap.In id__c (cstore σ).
 Proof.
   induction 1; inversion 1; auto.
   edestruct (IHebeh2) as (nIn_Δ, nIn_cstore); eauto; split; destruct 1.
   - apply nIn_Δ; eexists; eapply ebeh_inv_Δ; eauto.
-  - apply nIn_cstore; eexists; eapply ebeh_inv_compstore; eauto.
+  - apply nIn_cstore; eexists; eapply ebeh_inv_cstore; eauto.
 Qed.
 
 Lemma ebeh_nodup_compids :
@@ -179,14 +179,14 @@ Proof.
   eapply ebeh_compid_in_comps; eauto.
 Qed.
 
-Lemma elab_compid_in_compstore :
+Lemma elab_compid_in_cstore :
   forall {D__s M__g d Δ σ__e id__c id__e gm ipm opm},
     edesign D__s M__g d Δ σ__e ->
     InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
-    exists σ__c, MapsTo id__c σ__c (compstore σ__e).
+    exists σ__c, MapsTo id__c σ__c (cstore σ__e).
 Proof.
   inversion 1.
-  eapply ebeh_compid_in_compstore; eauto.
+  eapply ebeh_compid_in_cstore; eauto.
 Qed.
 
 Lemma elab_nodup_compids :
@@ -216,7 +216,7 @@ Lemma ebeh_empty_events_for_comps:
     ebeh D__s Δ σ behavior Δ' σ' ->
     forall { id__c id__e gm ipm opm σ__c'},
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-      MapsTo id__c σ__c' (compstore σ') ->
+      MapsTo id__c σ__c' (cstore σ') ->
       NatSet.Equal (events σ__c') {[]}.
 Proof.
   induction 1; try (solve [inversion 1]).
@@ -230,11 +230,11 @@ Proof.
   - inversion_clear 1; simpl; intros.
     (* SUBCASE comp ∈ cstmt *)
     eapply IHebeh1; eauto.
-    edestruct @ebeh_compid_in_compstore
+    edestruct @ebeh_compid_in_cstore
       with (D__s := D__s) (behavior := cstmt)
       as (σ__c0', MapsTo_σ'); eauto.
-    assert (MapsTo id__c σ__c0' (compstore σ''))
-      by (eapply ebeh_inv_compstore; eauto).
+    assert (MapsTo id__c σ__c0' (cstore σ''))
+      by (eapply ebeh_inv_cstore; eauto).
     erewrite MapsTo_fun with (e := σ__c'); eauto.
     (* SUBCASE comp ∈ cstmt' *)
     eapply IHebeh2; eauto.
@@ -245,7 +245,7 @@ Lemma elab_empty_events_for_comps:
     edesign D__s M__g d Δ σ__e ->
     forall {id__c id__e gm ipm opm σ__ce},
       InCs (cs_comp id__c id__e gm ipm opm) (behavior d) ->
-      MapsTo id__c σ__ce (compstore σ__e) ->
+      MapsTo id__c σ__ce (cstore σ__e) ->
       NatSet.Equal (events σ__ce) {[]}.
 Proof.
   inversion 1.
@@ -437,11 +437,11 @@ Lemma ebeh_inv_well_typed_values_in_sstore :
     ebeh D__s Δ σ behavior Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ) ->
+        MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
-      MapsTo id v (sigstore σ') ->
+      MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
   intros *; intros ebeh_ WT; intros *; intros MapsTo_or MapsTo_sstore.
@@ -459,7 +459,7 @@ Lemma elab_well_typed_values_in_sstore :
     edesign D__s M__g d Δ σ__e ->
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-      MapsTo id v (sigstore σ__e) ->
+      MapsTo id v (sstore σ__e) ->
       IsOfType v t.
 Proof.
   inversion 1.
@@ -474,17 +474,17 @@ Lemma ebeh_inv_well_typed_values_in_sstore_of_comp :
     ebeh D__s Δ σ behavior Δ' σ' ->
     (forall {id__c Δ__c σ__c},
         MapsTo id__c (Component Δ__c) Δ ->
-        MapsTo id__c σ__c (compstore σ) ->
+        MapsTo id__c σ__c (cstore σ) ->
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
+          MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
     forall {id__c Δ'__c σ'__c},
       MapsTo id__c (Component Δ'__c) Δ' ->
-      MapsTo id__c σ'__c (compstore σ') ->
+      MapsTo id__c σ'__c (cstore σ') ->
       forall {id t v},
         (MapsTo id (Declared t) Δ'__c \/ MapsTo id (Input t) Δ'__c \/ MapsTo id (Output t) Δ'__c) ->
-        MapsTo id v (sigstore σ'__c) ->
+        MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
 Proof.
   induction 1.
@@ -524,10 +524,10 @@ Lemma elab_well_typed_values_in_sstore_of_comp :
     edesign D__s M__g d Δ σ__e ->
     forall {id__c Δ__c σ__ce},
       MapsTo id__c (Component Δ__c) Δ ->
-      MapsTo id__c σ__ce (compstore σ__e) ->
+      MapsTo id__c σ__ce (cstore σ__e) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-        MapsTo id v (sigstore σ__ce) ->
+        MapsTo id v (sstore σ__ce) ->
         IsOfType v t.
 Proof.
   inversion 1.

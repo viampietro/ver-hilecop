@@ -56,11 +56,11 @@ Lemma init_states_eq_marking :
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
-      MapsTo id__p σ__p0 (compstore σ0) ->
+      MapsTo id__p σ__p0 (cstore σ0) ->
 
       (* Marking of place [p] at state [s] equals value of signal
          [s_marking] at state [σ__p]. *)
-      MapsTo Place.s_marking (Vnat (M (s0 sitpn) p)) (sigstore σ__p0).
+      MapsTo Place.s_marking (Vnat (M (s0 sitpn) p)) (sstore σ__p0).
 Proof.
   intros.
 
@@ -76,8 +76,8 @@ Proof.
   (* Builds [id__p' ∈ Comps(Δ)] *)
   edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto.
 
-  (* Builds [id__p' ∈ (compstore σ__e)] *)
-  edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
+  (* Builds [id__p' ∈ (cstore σ__e)] *)
+  edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
 
   (* Builds [Δ__p("s_marking") = Declared (Tnat 0 n)] *)
   edestruct @elab_PCI_Δ_s_marking as (n, MapsTo_smarking); eauto.
@@ -129,12 +129,12 @@ Lemma init_states_eq_time_counters :
     
     forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
       InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
-      MapsTo id__t σ__t0 (compstore σ0) ->
-      (upper t = i+ /\ TcLeLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t0)) /\
-      (upper t = i+ /\ TcGtLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (lower t)) (sigstore σ__t0)) /\
+      MapsTo id__t σ__t0 (cstore σ0) ->
+      (upper t = i+ /\ TcLeLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sstore σ__t0)) /\
+      (upper t = i+ /\ TcGtLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (lower t)) (sstore σ__t0)) /\
       (forall pf : upper t <> i+, TcGtUpper (s0 sitpn) t ->
-                   MapsTo Transition.s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sigstore σ__t0)) /\
-      (upper t <> i+ /\ TcLeUpper (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sigstore σ__t0)).
+                   MapsTo Transition.s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sstore σ__t0)) /\
+      (upper t <> i+ /\ TcLeUpper (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sstore σ__t0)).
 Proof.
   (* intros *; intros IWD e Helab Hinit; intros t id__t σ__t0; intros InA_γ Mapsto_σ0. *)
   (* cbn; split_and. *)
@@ -153,8 +153,8 @@ Proof.
   (*     (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
   (*     destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_); *)
       
-  (*     (* Builds [id__t' ∈ (compstore σ__e)] *) *)
-  (*     edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto; *)
+  (*     (* Builds [id__t' ∈ (cstore σ__e)] *) *)
+  (*     edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto; *)
 
   (*       (* Builds [id__t' ∈ Comps(Δ)] *) *)
   (*       edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto; *)
@@ -214,8 +214,8 @@ Lemma init_states_eq_reset_orders :
     
     (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
         InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
-        MapsTo id__t σ__t0 (compstore σ0) ->
-        MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sigstore σ__t0)).
+        MapsTo id__t σ__t0 (cstore σ0) ->
+        MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sstore σ__t0)).
 Proof.
   (* intros *; intros IWD e elab_ init_ t id__t σ__t0; intros. *)
   (* cbn; unfold nullb. *)
@@ -240,13 +240,13 @@ Proof.
   (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__t, MapsTo_Δ__t); eauto. *)
   
   (* (* Builds [σ__e(id__t) = σ__te] *) *)
-  (* edestruct @elab_compid_in_compstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto. *)
+  (* edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto. *)
 
   (* (* Builds [Δ__t("in_arcs_nb") = (t, n)] *) *)
   (* edestruct @elab_TCI_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto. *)
   
   (* (* Builds [σ__t0("rt") = aofv] *) *)
-  (* assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0)). *)
+  (* assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ__t0)). *)
   (* { edestruct @elab_TCI_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto. *)
   (*   assert (MapsTo reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t) by *)
   (*       (eapply elab_TCI_Δ_rt; eauto). *)
@@ -336,14 +336,14 @@ Proof.
   (*   (* Then, show [σ0("id__ji") = false] *) *)
 
   (*   (* Builds [σ__p0] and [σ__p0("rtt") = Varr aofv']. *) *)
-  (*   edestruct @elab_compid_in_compstore *)
+  (*   edestruct @elab_compid_in_cstore *)
   (*       with (D__s := hdstore) (id__c := id__p) *)
   (*       as (σ__pe, MapsTo_σ__pe); eauto. *)
-  (*   edestruct @init_maps_compstore_id with (D__s := hdstore) *)
+  (*   edestruct @init_maps_cstore_id with (D__s := hdstore) *)
   (*     as (σ__p0, MapsTo_σ__p0); eauto. *)
   (*   edestruct @elab_PCI_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e); *)
   (*     eauto. *)
-  (*   assert (MapsTo_rtt0_ex: exists aofv, MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0)). *)
+  (*   assert (MapsTo_rtt0_ex: exists aofv, MapsTo reinit_transitions_time (Varr aofv) (sstore σ__p0)). *)
   (*   { edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1. *)
   (*     edestruct @elab_PCI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
   (*     assert (MapsTo reinit_transitions_time (Output (Tarray Tbool 0 (m - 1))) Δ__p) by *)
@@ -406,7 +406,7 @@ Lemma init_states_eq_actions :
 
     forall (a : A sitpn) (id__a : ident),
       InA Akeq (a, id__a) (a2out γ) ->
-      MapsTo id__a (Vbool (ex (s0 sitpn) (inl a))) (sigstore σ0).
+      MapsTo id__a (Vbool (ex (s0 sitpn) (inl a))) (sstore σ0).
 Admitted.
 
 Lemma init_states_eq_functions :
@@ -426,7 +426,7 @@ Lemma init_states_eq_functions :
 
     forall (f : F sitpn) (id__f : ident),
       InA Fkeq (f, id__f) (f2out γ) ->
-      MapsTo id__f (Vbool (ex (s0 sitpn) (inr f))) (sigstore σ0).
+      MapsTo id__f (Vbool (ex (s0 sitpn) (inr f))) (sstore σ0).
 Admitted.
 
 Lemma init_states_eq_conditions :
@@ -446,7 +446,7 @@ Lemma init_states_eq_conditions :
 
     forall (c : C sitpn) (id__c : ident),
       InA Ckeq (c, id__c) (c2in γ) ->
-      MapsTo id__c (Vbool (cond (s0 sitpn) c)) (sigstore σ0).
+      MapsTo id__c (Vbool (cond (s0 sitpn) c)) (sstore σ0).
 Admitted.
 
 (** ** Similar Initial States Lemma *)

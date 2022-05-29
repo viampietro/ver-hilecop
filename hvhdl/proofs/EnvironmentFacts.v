@@ -184,11 +184,11 @@ Definition EqComps (Δ Δ' : ElDesign) :=
 
 Definition EqSStore (σ σ' : DState) :=
   forall id v,
-    MapsTo id v (sigstore σ) <-> MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ) <-> MapsTo id v (sstore σ').
 
 Definition EqSStore_refl : forall (σ : DState), EqSStore σ σ. firstorder. Defined.
 Definition EqSStore_trans : forall (σ σ' σ'' : DState), EqSStore σ σ' -> EqSStore σ' σ'' -> EqSStore σ σ''.
-  unfold EqSStore; intros; transitivity (MapsTo id v (sigstore σ')); auto.
+  unfold EqSStore; intros; transitivity (MapsTo id v (sstore σ')); auto.
 Defined.
 Definition EqSStore_sym : forall (σ σ' : DState), EqSStore σ σ' -> EqSStore σ' σ.
   unfold EqSStore; symmetry; auto.
@@ -200,10 +200,10 @@ Add Parametric Relation : (DState) (EqSStore)
     transitivity proved by EqSStore_trans
       as EqSStore_rel.
 
-(** Enable rewriting [MapsTo id v (sigstore σ1)] into  
-    [MapsTo id v (sigstore σ2)] if [EqSStore σ1 σ2]. *)
+(** Enable rewriting [MapsTo id v (sstore σ1)] into  
+    [MapsTo id v (sstore σ2)] if [EqSStore σ1 σ2]. *)
 
-Add Parametric Morphism (id : ident) (v : value) : (fun σ => MapsTo id v (sigstore σ)) 
+Add Parametric Morphism (id : ident) (v : value) : (fun σ => MapsTo id v (sstore σ)) 
     with signature (@EqSStore ==> impl) as eqsstore_mapsto_mor.
 Proof. intros x y H; unfold EqSStore in H; erewrite H; unfold impl; eauto. Qed.
 
@@ -211,11 +211,11 @@ Proof. intros x y H; unfold EqSStore in H; erewrite H; unfold impl; eauto. Qed.
 
 Definition EqCStore (σ σ' : DState) :=
   forall id σ__c,
-    MapsTo id σ__c (compstore σ) <-> MapsTo id σ__c (compstore σ').
+    MapsTo id σ__c (cstore σ) <-> MapsTo id σ__c (cstore σ').
 
 Definition EqCStore_refl : forall (σ : DState), EqCStore σ σ. firstorder. Defined.
 Definition EqCStore_trans : forall (σ σ' σ'' : DState), EqCStore σ σ' -> EqCStore σ' σ'' -> EqCStore σ σ''.
-  unfold EqCStore; intros; transitivity (MapsTo id σ__c (compstore σ')); auto.
+  unfold EqCStore; intros; transitivity (MapsTo id σ__c (cstore σ')); auto.
 Defined.
 Definition EqCStore_sym : forall (σ σ' : DState), EqCStore σ σ' -> EqCStore σ' σ.
   unfold EqCStore; symmetry; auto.
@@ -227,10 +227,10 @@ Add Parametric Relation : (DState) (EqCStore)
     transitivity proved by EqCStore_trans
       as EqCStore_rel.
 
-(** Enable rewriting [MapsTo id v (compstore σ1)] into  
-    [MapsTo id v (compstore σ2)] if [EqSStore σ1 σ2]. *)
+(** Enable rewriting [MapsTo id v (cstore σ1)] into  
+    [MapsTo id v (cstore σ2)] if [EqSStore σ1 σ2]. *)
 
-Add Parametric Morphism (id : ident) (σ__c : DState) : (fun σ => MapsTo id σ__c (compstore σ)) 
+Add Parametric Morphism (id : ident) (σ__c : DState) : (fun σ => MapsTo id σ__c (cstore σ)) 
     with signature (@EqCStore ==> impl) as eqcstore_mapsto_mor.
 Proof. intros x y H; unfold EqCStore in H; erewrite H; unfold impl; eauto. Qed.
 
@@ -281,17 +281,17 @@ Add Parametric Relation : (DState) (EqDState)
     transitivity proved by EqDState_trans
       as EqDState_rel.
 
-(** Enable rewriting [MapsTo id v (sigstore σ1)] into  
-    [MapsTo id v (sigstore σ2)] if [EqDState σ1 σ2]. *)
+(** Enable rewriting [MapsTo id v (sstore σ1)] into  
+    [MapsTo id v (sstore σ2)] if [EqDState σ1 σ2]. *)
 
-Add Parametric Morphism (id : ident) (v : value) : (fun σ => MapsTo id v (sigstore σ)) 
+Add Parametric Morphism (id : ident) (v : value) : (fun σ => MapsTo id v (sstore σ)) 
     with signature (@EqDState ==> impl) as eqdstate_mapsto_sstore_mor.
 Proof. intros x y H; apply proj1 in H; intro; pattern y; rewrite <- H; auto. Qed.
 
-(** Enable rewriting [MapsTo id σ__c (compstore σ1)] into  
-    [MapsTo id σ__c (compstore σ2)] if [EqDState σ1 σ2]. *)
+(** Enable rewriting [MapsTo id σ__c (cstore σ1)] into  
+    [MapsTo id σ__c (cstore σ2)] if [EqDState σ1 σ2]. *)
 
-Add Parametric Morphism (id : ident) (σ__c : DState) : (fun σ => MapsTo id σ__c (compstore σ)) 
+Add Parametric Morphism (id : ident) (σ__c : DState) : (fun σ => MapsTo id σ__c (cstore σ)) 
     with signature (@EqDState ==> impl) as eqdstate_mapsto_cstore_mor.
 Proof. intros x y H; apply proj2, proj1 in H; intro; pattern y; rewrite <- H; auto. Qed.
 
@@ -535,7 +535,7 @@ Qed.
 Lemma merge_sstore_compl_1 :
   forall {id v σ__o σ σ'},
     In id (events σ) ->
-    MapsTo id v (sigstore σ) ->
+    MapsTo id v (sstore σ) ->
     MapsTo id v (merge_sstore σ__o σ σ').
 Proof.
   unfold merge_sstore; intros.
@@ -546,7 +546,7 @@ Lemma merge_sstore_compl_2 :
   forall {id v σ__o σ σ'},
     ~In id (events σ) ->
     In id (events σ') ->
-    MapsTo id v (sigstore σ') ->
+    MapsTo id v (sstore σ') ->
     MapsTo id v (merge_sstore σ__o σ σ').
 Proof.
   unfold merge_sstore; intros.
@@ -557,7 +557,7 @@ Qed.
 Lemma merge_sstore_compl_3 :
   forall {id v σ__o σ σ'},
     ~In id (events σ U events σ') ->
-    MapsTo id v (sigstore σ__o) ->
+    MapsTo id v (sstore σ__o) ->
     MapsTo id v (merge_sstore σ__o σ σ').
 Proof.
   intros; eapply merge_natmap_compl_2; eauto.
@@ -568,11 +568,11 @@ Qed.
 
 Lemma merge_sstore_sound_1 :
   forall {id v σ__o σ σ'},
-    EqualDom (sigstore σ__o) (sigstore σ) ->
-    EqualDom (sigstore σ__o) (sigstore σ') ->
+    EqualDom (sstore σ__o) (sstore σ) ->
+    EqualDom (sstore σ__o) (sstore σ') ->
     In id (events σ) ->
     MapsTo id v (merge_sstore σ__o σ σ') ->
-    MapsTo id v (sigstore σ).
+    MapsTo id v (sstore σ).
 Proof.
   intros; eapply merge_natmap_sound_1; eauto.
   eapply merge_natmap_EqualDom_1; eauto.
@@ -580,14 +580,14 @@ Qed.
 
 Lemma merge_sstore_sound_2 :
   forall {id v σ__o σ σ'},
-    EqualDom (sigstore σ__o) (sigstore σ) ->
-    EqualDom (sigstore σ__o) (sigstore σ') ->
+    EqualDom (sstore σ__o) (sstore σ) ->
+    EqualDom (sstore σ__o) (sstore σ') ->
     In id (events σ') ->
     ~In id (events σ) ->
     MapsTo id v (merge_sstore σ__o σ σ') ->
-    MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ').
 Proof.
-  intros; eapply merge_natmap_sound_1 with (m2 := (sigstore σ__o)); eauto.
+  intros; eapply merge_natmap_sound_1 with (m2 := (sstore σ__o)); eauto.
   symmetry; auto.
   eapply merge_natmap_sound_2; eauto.
   eapply merge_natmap_EqualDom_1; eauto.
@@ -595,17 +595,17 @@ Qed.
 
 Lemma merge_sstore_sound_3 :
   forall {id v σ__o σ σ'},
-    EqualDom (sigstore σ__o) (sigstore σ) ->
-    EqualDom (sigstore σ__o) (sigstore σ') ->
+    EqualDom (sstore σ__o) (sstore σ) ->
+    EqualDom (sstore σ__o) (sstore σ') ->
     ~In id (events σ U events σ') ->
     MapsTo id v (merge_sstore σ__o σ σ') ->
-    MapsTo id v (sigstore σ__o).
+    MapsTo id v (sstore σ__o).
 Proof.
   unfold merge_sstore; intros.
-  eapply merge_natmap_sound_2 with (s := events σ') (m1 := sigstore σ'); eauto.
+  eapply merge_natmap_sound_2 with (s := events σ') (m1 := sstore σ'); eauto.
   eapply not_in_union_2; eauto.
   symmetry; assumption.
-  eapply merge_natmap_sound_2 with (s := events σ) (m1 := sigstore σ); eauto.
+  eapply merge_natmap_sound_2 with (s := events σ) (m1 := sstore σ); eauto.
   eapply not_in_union_2 with (s := events σ) (s' := events σ'); eauto.
   eapply merge_natmap_EqualDom_1; eauto.
 Qed.
@@ -613,7 +613,7 @@ Qed.
 Lemma merge_cstore_compl_1 :
   forall {id v σ__o σ σ'},
     In id (events σ) ->
-    MapsTo id v (compstore σ) ->
+    MapsTo id v (cstore σ) ->
     MapsTo id v (merge_cstore σ__o σ σ').
 Proof.
   intros; eapply merge_natmap_compl_1; eauto.
@@ -623,7 +623,7 @@ Lemma merge_cstore_compl_2 :
   forall {id v σ__o σ σ'},
     ~In id (events σ) ->
     In id (events σ') ->
-    MapsTo id v (compstore σ') ->
+    MapsTo id v (cstore σ') ->
     MapsTo id v (merge_cstore σ__o σ σ').
 Proof.
   intros; eapply merge_natmap_compl_2; eauto.
@@ -633,7 +633,7 @@ Qed.
 Lemma merge_cstore_compl_3 :
   forall {id v σ__o σ σ'},
     ~In id (events σ U events σ') ->
-    MapsTo id v (compstore σ__o) ->
+    MapsTo id v (cstore σ__o) ->
     MapsTo id v (merge_cstore σ__o σ σ').
 Proof.
   intros; eapply merge_natmap_compl_2; eauto.
@@ -644,11 +644,11 @@ Qed.
 
 Lemma merge_cstore_sound_1 :
   forall {id v σ__o σ σ'},
-    EqualDom (compstore σ__o) (compstore σ) ->
-    EqualDom (compstore σ__o) (compstore σ') ->
+    EqualDom (cstore σ__o) (cstore σ) ->
+    EqualDom (cstore σ__o) (cstore σ') ->
     In id (events σ) ->
     MapsTo id v (merge_cstore σ__o σ σ') ->
-    MapsTo id v (compstore σ).
+    MapsTo id v (cstore σ).
 Proof.
   intros; eapply merge_natmap_sound_1; eauto.
   eapply merge_natmap_EqualDom_1; eauto.
@@ -656,15 +656,15 @@ Qed.
 
 Lemma merge_cstore_sound_2 :
   forall {id v σ__o σ σ'},
-    EqualDom (compstore σ__o) (compstore σ) ->
-    EqualDom (compstore σ__o) (compstore σ') ->
+    EqualDom (cstore σ__o) (cstore σ) ->
+    EqualDom (cstore σ__o) (cstore σ') ->
     In id (events σ') ->
     ~In id (events σ) ->
     MapsTo id v (merge_cstore σ__o σ σ') ->
-    MapsTo id v (compstore σ').
+    MapsTo id v (cstore σ').
 Proof.
   unfold merge_sstore; intros.
-  eapply merge_natmap_sound_1 with (m2 := (compstore σ__o)); eauto.
+  eapply merge_natmap_sound_1 with (m2 := (cstore σ__o)); eauto.
   symmetry; auto.
   eapply merge_natmap_sound_2; eauto.
   eapply merge_natmap_EqualDom_1; eauto.
@@ -672,17 +672,17 @@ Qed.
 
 Lemma merge_cstore_sound_3 :
   forall {id v σ__o σ σ'},
-    EqualDom (compstore σ__o) (compstore σ) ->
-    EqualDom (compstore σ__o) (compstore σ') ->
+    EqualDom (cstore σ__o) (cstore σ) ->
+    EqualDom (cstore σ__o) (cstore σ') ->
     ~In id (events σ U events σ') ->
     MapsTo id v (merge_cstore σ__o σ σ') ->
-    MapsTo id v (compstore σ__o).
+    MapsTo id v (cstore σ__o).
 Proof.
   unfold merge_sstore; intros.
-  eapply merge_natmap_sound_2 with (s := events σ') (m1 := compstore σ'); eauto.
+  eapply merge_natmap_sound_2 with (s := events σ') (m1 := cstore σ'); eauto.
   eapply not_in_union_2; eauto.
   symmetry; assumption.
-  eapply merge_natmap_sound_2 with (s := events σ) (m1 := compstore σ); eauto.
+  eapply merge_natmap_sound_2 with (s := events σ) (m1 := cstore σ); eauto.
   eapply not_in_union_2 with (s := events σ) (s' := events σ'); eauto.
   eapply merge_natmap_EqualDom_1; eauto.
 Qed.
@@ -723,10 +723,10 @@ Qed.
 
 Lemma IsMergedDState_ex :
   forall {σ__o σ σ'},
-    EqualDom (sigstore σ__o) (sigstore σ) ->
-    EqualDom (sigstore σ__o) (sigstore σ') ->
-    EqualDom (compstore σ__o) (compstore σ) ->
-    EqualDom (compstore σ__o) (compstore σ') ->
+    EqualDom (sstore σ__o) (sstore σ) ->
+    EqualDom (sstore σ__o) (sstore σ') ->
+    EqualDom (cstore σ__o) (cstore σ) ->
+    EqualDom (cstore σ__o) (cstore σ') ->
     Equal (inter (events σ) (events σ')) {[]} -> 
     exists σ__m, IsMergedDState σ__o σ σ' σ__m.
 Proof.
@@ -769,7 +769,7 @@ Proof.
         | _ => auto
         end in solve_imds.
 
-        (* [∀ id ∈ (events σ01) -> (sigstore σ01) (id) = (sigstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ01) -> (sstore σ01) (id) = (sstore σ012) (id)] *)
         - intros;
             match goal with
             | [ H: Equal (events ?σ) (_ U _), H': NatSet.In _ (_ ?σ) |- MapsTo _ _ (_ ?σ) <-> _ ] =>
@@ -777,25 +777,25 @@ Proof.
             end.
 
           (* CASE [id ∈ (events σ0)] *)
-          transitivity (MapsTo id v (sigstore σ0)); rw_mapsto.
+          transitivity (MapsTo id v (sstore σ0)); rw_mapsto.
           
           (* CASE [id ∈ (events σ1) ] *)
-          transitivity (MapsTo id v (sigstore σ1)); [rw_mapsto | auto].
-          transitivity (MapsTo id v (sigstore σ12)); rw_mapsto;
+          transitivity (MapsTo id v (sstore σ1)); [rw_mapsto | auto].
+          transitivity (MapsTo id v (sstore σ12)); rw_mapsto;
             match goal with
             | [ H: Equal (events ?σ12) _ |- NatSet.In _ (events ?σ12) ] =>
               rewrite H; auto with set
             end.
 
-        (* [∀ id ∈ (events σ2) -> (sigstore σ2) (id) = (sigstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ2) -> (sstore σ2) (id) = (sstore σ012) (id)] *)
         - intros;
-            transitivity (MapsTo id v (sigstore σ12)); rw_mapsto;
+            transitivity (MapsTo id v (sstore σ12)); rw_mapsto;
               match goal with
               | [ H: Equal (events ?σ12) _ |- NatSet.In _ (events ?σ12) ] =>
                 rewrite H; auto with set
               end.
 
-        (* [∀ id ∉ (events σ01) U (events σ2) -> (sigstore σ) (id) = (sigstore σ012) (id)] *)
+        (* [∀ id ∉ (events σ01) U (events σ2) -> (sstore σ) (id) = (sstore σ012) (id)] *)
         - intros id v; intros; rw_mapsto.
           match goal with
           | [ H: Equal (events ?σ12) _, H': Equal (events ?σ01) _, H'': ~NatSet.In _ (events ?σ01 U _)
@@ -803,7 +803,7 @@ Proof.
             rewrite H' in H''; rewrite H; erewrite <- union_assoc; eauto
           end.
 
-        (* [∀ id ∈ (events σ01) -> (compstore σ01) (id) = (compstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ01) -> (cstore σ01) (id) = (cstore σ012) (id)] *)
         - intros id v; intros;
             match goal with
             | [ H: Equal (events ?σ) (_ U _), H': NatSet.In _ (_ ?σ) |- MapsTo _ _ (_ ?σ) <-> _ ] =>
@@ -811,25 +811,25 @@ Proof.
             end.
 
           (* CASE [id ∈ (events σ0)] *)
-          transitivity (MapsTo id v (compstore σ0)); rw_mapsto.
+          transitivity (MapsTo id v (cstore σ0)); rw_mapsto.
           
           (* CASE [id ∈ (events σ1) ] *)
-          transitivity (MapsTo id v (compstore σ1)); [rw_mapsto | auto].
-          transitivity (MapsTo id v (compstore σ12)); rw_mapsto;
+          transitivity (MapsTo id v (cstore σ1)); [rw_mapsto | auto].
+          transitivity (MapsTo id v (cstore σ12)); rw_mapsto;
             match goal with
             | [ H: Equal (events ?σ12) _ |- NatSet.In _ (events ?σ12) ] =>
               rewrite H; auto with set
             end.
 
-        (* [∀ id ∈ (events σ2) -> (compstore σ2) (id) = (compstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ2) -> (cstore σ2) (id) = (cstore σ012) (id)] *)
         - intros id v; intros;
-            transitivity (MapsTo id v (compstore σ12)); rw_mapsto;
+            transitivity (MapsTo id v (cstore σ12)); rw_mapsto;
               match goal with
               | [ H: Equal (events ?σ12) _ |- NatSet.In _ (events ?σ12) ] =>
                 rewrite H; auto with set
               end.
 
-        (* [∀ id ∉ (events σ01) U (events σ2) -> (compstore σ) (id) = (compstore σ012) (id)] *)
+        (* [∀ id ∉ (events σ01) U (events σ2) -> (cstore σ) (id) = (cstore σ012) (id)] *)
         - intros id v; intros; rw_mapsto.
           match goal with
           | [ H: Equal (events ?σ12) _, H': Equal (events ?σ01) _, H'': ~NatSet.In _ (events ?σ01 U _)
@@ -860,15 +860,15 @@ Proof.
         | _ => auto
         end in solve_imds.
 
-        (* [∀ id ∈ (events σ0) -> (sigstore σ0) (id) = (sigstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ0) -> (sstore σ0) (id) = (sstore σ012) (id)] *)
         - intros;
-            transitivity (MapsTo id v (sigstore σ01)); rw_mapsto;
+            transitivity (MapsTo id v (sstore σ01)); rw_mapsto;
               match goal with
               | [ H: Equal (events ?σ01) _ |- NatSet.In _ (events ?σ01) ] =>
                 rewrite H; auto with set
               end.
         
-        (* [∀ id ∈ (events σ12) -> (sigstore σ12) (id) = (sigstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ12) -> (sstore σ12) (id) = (sstore σ012) (id)] *)
         - intros;
           match goal with
           | [ H: Equal (events ?σ) (_ U _), H': NatSet.In _ (_ ?σ) |- MapsTo _ _ (_ ?σ) <-> _ ] =>
@@ -876,17 +876,17 @@ Proof.
           end.
 
           (* CASE [id ∈ (events σ1)] *)
-          transitivity (MapsTo id v (sigstore σ1)); [ rw_mapsto | auto].
-          transitivity (MapsTo id v (sigstore σ01)); rw_mapsto;
+          transitivity (MapsTo id v (sstore σ1)); [ rw_mapsto | auto].
+          transitivity (MapsTo id v (sstore σ01)); rw_mapsto;
             match goal with
             | [ H: Equal (events ?σ12) _ |- NatSet.In _ (events ?σ12) ] =>
               rewrite H; auto with set
             end.
           
           (* CASE [id ∈ (events σ2) ] *)
-          transitivity (MapsTo id v (sigstore σ2)); rw_mapsto.
+          transitivity (MapsTo id v (sstore σ2)); rw_mapsto.
           
-        (* [∀ id ∉ (events σ0) U (events σ12) -> (sigstore σ) (id) = (sigstore σ012) (id)] *)
+        (* [∀ id ∉ (events σ0) U (events σ12) -> (sstore σ) (id) = (sstore σ012) (id)] *)
         - intros id v; intros; rw_mapsto.
           match goal with
           | [ H: Equal (events ?σ01) _, H': Equal (events ?σ12) _, H'': ~NatSet.In _ (_ U events ?σ12)
@@ -894,15 +894,15 @@ Proof.
             rewrite H' in H''; rewrite H; erewrite union_assoc; eauto
           end.
 
-        (* [∀ id ∈ (events σ0) -> (compstore σ0) (id) = (compstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ0) -> (cstore σ0) (id) = (cstore σ012) (id)] *)
         - intros id v; intros;
-            transitivity (MapsTo id v (compstore σ01)); rw_mapsto;
+            transitivity (MapsTo id v (cstore σ01)); rw_mapsto;
               match goal with
               | [ H: Equal (events ?σ01) _ |- NatSet.In _ (events ?σ01) ] =>
                 rewrite H; auto with set
               end.
           
-        (* [∀ id ∈ (events σ12) -> (compstore σ12) (id) = (compstore σ012) (id)] *)
+        (* [∀ id ∈ (events σ12) -> (cstore σ12) (id) = (cstore σ012) (id)] *)
         - intros id v; intros;
             match goal with
             | [ H: Equal (events ?σ) (_ U _), H': NatSet.In _ (_ ?σ) |- MapsTo _ _ (_ ?σ) <-> _ ] =>
@@ -910,17 +910,17 @@ Proof.
             end.
 
           (* CASE [id ∈ (events σ1)] *)
-          transitivity (MapsTo id v (compstore σ1)); [ rw_mapsto | auto].
-          transitivity (MapsTo id v (compstore σ01)); rw_mapsto;
+          transitivity (MapsTo id v (cstore σ1)); [ rw_mapsto | auto].
+          transitivity (MapsTo id v (cstore σ01)); rw_mapsto;
             match goal with
             | [ H: Equal (events ?σ12) _ |- NatSet.In _ (events ?σ12) ] =>
               rewrite H; auto with set
             end.
           
           (* CASE [id ∈ (events σ2) ] *)
-          transitivity (MapsTo id v (compstore σ2)); rw_mapsto.
+          transitivity (MapsTo id v (cstore σ2)); rw_mapsto.
           
-        (* [∀ id ∉ (events σ0) U (events σ12) -> (compstore σ) (id) = (compstore σ012) (id)] *)
+        (* [∀ id ∉ (events σ0) U (events σ12) -> (cstore σ) (id) = (cstore σ012) (id)] *)
         - intros id v; intros; rw_mapsto.
           match goal with
           | [ H: Equal (events ?σ01) _, H': Equal (events ?σ12) _, H'': ~NatSet.In _ (_ U events ?σ12)

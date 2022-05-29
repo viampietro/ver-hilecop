@@ -87,54 +87,57 @@ Definition LEnv := IdMap (type * value).
 
 Definition EmptyLEnv := NatMap.empty (type * value).
 
-(* Needed because [SemanticObject] as a recurvise definition that
-   does not respect the strict positivity requirement.
+
+(** ** Elaborated Design *)
+
+(** Elaborated design attributes *)
+
+(* Needed because the inductive definition of the [DesignAttribute]
+   type does not respect the strict positivity requirement.
    
    However, I am almost sure that it is not dangerous to do so. *)
 
 Local Unset Positivity Checking.
 
-(** ** Elaborated Design *)
-
-(** Type of semantical objects that populate the design
-    environment. *)
-
-Inductive SemanticObject : Type :=
-| G (t : type) (v : value)
-| I (t : type)
-| O (t : type)
-| S (t : type)
-| P (lenv : LEnv)
-| C (Δ__c : IdMap SemanticObject).
-
 (** Defines an elaborated design as a mapping from identifiers to
-    [SemanticObject]. *)
+    [DesignAttribute]. *)
 
-Definition ElDesign := IdMap SemanticObject.
+Inductive ElDesign : Type :=
+| MkElDesign : NatMap.t DesignAttribute -> ElDesign
+with DesignAttribute  :=
+| Generic (t : type) (v : value)
+| Input (t : type)
+| Output (t : type)
+| Declared (t : type)
+| Process (lenv : LEnv)
+| Component (Δ__c : ElDesign).
+
+Coercion ElDesign_to_IdMap (Δ : ElDesign) :=
+  match Δ with MkElDesign m => m end.
 
 (** Defines a bare elaborated design. *)
 
-Definition EmptyElDesign := NatMap.empty SemanticObject.
+Definition EmptyElDesign := MkElDesign (NatMap.empty DesignAttribute).
 
-(** *** Identifiers Qualification *)
+(** *** Identifiers qualification *)
 
 Definition GenericOf (Δ : ElDesign) id :=
-  exists t v, MapsTo id (G t v) Δ.
+  exists t v, MapsTo id (Generic t v) Δ.
 
 Definition InputOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (I t) Δ.
+  exists t, MapsTo id (Input t) Δ.
 
 Definition OutputOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (O t) Δ.
+  exists t, MapsTo id (Output t) Δ.
 
 Definition InternalOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (S t) Δ.
+  exists t, MapsTo id (Declared t) Δ.
 
 Definition ProcessOf (Δ : ElDesign) id :=
-  exists Λ, MapsTo id (P Λ) Δ.
+  exists Λ, MapsTo id (Process Λ) Δ.
 
 Definition CompOf (Δ : ElDesign) id :=
-  exists Δ__c, MapsTo id (C Δ__c) Δ.
+  exists Δ__c, MapsTo id (Component Δ__c) Δ.
 
 (** ** Design State *)
 
@@ -214,14 +217,14 @@ Record IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
       forall id v1 v2,
         NatMap.MapsTo id v1 (sstore σ') ->
         NatMap.MapsTo id v2 (sstore σ__o) ->
-        ~VEq v1 v2 ->
+        VNEq v1 v2 ->
         NatMap.MapsTo id v1 (sstore σ__m);
 
       sstore2 :
       forall id v1 v2,
         NatMap.MapsTo id v1 (sstore σ'') ->
         NatMap.MapsTo id v2 (sstore σ__o) ->
-        ~VEq v1 v2 ->
+        VNEq v1 v2 ->
         NatMap.MapsTo id v1 (sstore σ__m);
 
       sstore__o :
@@ -258,7 +261,6 @@ Record IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
         NatMap.MapsTo id σ__co (cstore σ__m)
                       
     }.
-
 
 (** Defines the relation stating that a design state [σ__i] is the
     result of the "injection" of the values of map [m] in the

@@ -1,12 +1,10 @@
 (** * Default values of types. *)
 
-(** Defines the relation yielding the implicit default value 
-    associated to a type. 
+(** Defines the relation that associates an implicit default value to
+    a given type.
     
-    This relation is useful to determine the default value
-    associated to declared signals and variables during the
-    elaboration phase.
- 
+    This relation is useful to determine the default value associated
+    to declared signals and variables during the elaboration phase. 
  *)
 
 Require Import common.CoqLib.

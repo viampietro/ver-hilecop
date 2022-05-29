@@ -48,11 +48,11 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
-      MapsTo id__p σ__p (compstore σ) ->
+      MapsTo id__p σ__p (cstore σ) ->
 
       (* Marking of place [p] at state [s] equals value of signal
          [s_marking] at state [σ__p]. *)
-      MapsTo s_marking (Vnat (M s p)) (sigstore σ__p))
+      MapsTo s_marking (Vnat (M s p)) (sstore σ__p))
 
   (* Time counters are similar *)
   /\ (forall (t : Ti sitpn) id__t σ__t,
@@ -62,13 +62,13 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Then, time counter similarity is: *)
-         (upper t = i+ /\ TcLeLower s t -> MapsTo s_time_counter (Vnat (I s t)) (sigstore σ__t)) /\
-         (upper t = i+ /\ TcGtLower s t -> MapsTo s_time_counter (Vnat (lower t)) (sigstore σ__t)) /\
-         (forall pf : upper t <> i+, TcGtUpper s t -> MapsTo s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sigstore σ__t)) /\
-         (upper t <> i+ /\ TcLeUpper s t -> MapsTo s_time_counter (Vnat (I s t)) (sigstore σ__t)))
+         (upper t = i+ /\ TcLeLower s t -> MapsTo s_time_counter (Vnat (I s t)) (sstore σ__t)) /\
+         (upper t = i+ /\ TcGtLower s t -> MapsTo s_time_counter (Vnat (lower t)) (sstore σ__t)) /\
+         (forall pf : upper t <> i+, TcGtUpper s t -> MapsTo s_time_counter (Vnat (natinf_to_natstar (upper t) pf)) (sstore σ__t)) /\
+         (upper t <> i+ /\ TcLeUpper s t -> MapsTo s_time_counter (Vnat (I s t)) (sstore σ__t)))
 
 
   (* Action executions are similar. *)
@@ -78,7 +78,7 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
          InA Akeq (a, id__a) (a2out γ) ->
          
          (* Output port [id__a] equals [ex s (inl a)] at state [σ] *)
-         MapsTo id__a (Vbool (ex s (inl a))) (sigstore σ))
+         MapsTo id__a (Vbool (ex s (inl a))) (sstore σ))
 
   (* Function executions are similar. *)
   /\ (forall f id__f,
@@ -87,7 +87,7 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
          InA Fkeq (f, id__f) (f2out γ) ->
          
          (* Output port [id__f] equals [ex s (inr f)] at state [σ] *)
-         MapsTo id__f (Vbool (ex s (inr f))) (sigstore σ)).
+         MapsTo id__f (Vbool (ex s (inr f))) (sstore σ)).
 
 (** Defines the general state similarity relation between an SITPN
     state and a H-VHDL design state, with similarity of condition
@@ -104,10 +104,10 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Signal ["s_reinit_time_counter"] equals [reset s t] at state [σ__t] *)
-         MapsTo s_reinit_time_counter (Vbool (reset s t)) (sigstore σ__t))
+         MapsTo s_reinit_time_counter (Vbool (reset s t)) (sstore σ__t))
                   
   (* Condition values are similar. *)
   /\ (forall c id__c,
@@ -116,7 +116,7 @@ Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ
          InA Ckeq (c, id__c) (c2in γ) ->
          
          (* Input port [id__c] equals [cond s c] at state [σ] *)
-         MapsTo id__c (Vbool (cond s c)) (sigstore σ)).
+         MapsTo id__c (Vbool (cond s c)) (sstore σ)).
 
 Notation "γ ⊢ s '∼' σ" := (SimState _ γ s σ) (at level 50).
 
@@ -138,10 +138,10 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Signal ["s_reinit_time_counter"] equals [reset s t] at state [σ__t] *)
-         MapsTo s_reinit_time_counter (Vbool (reset s t)) (sigstore σ__t)).
+         MapsTo s_reinit_time_counter (Vbool (reset s t)) (sstore σ__t)).
 
 (** Defines the full state similarity relation, after a rising edge,
     between an SITPN state and a H-VHDL design state.  *)
@@ -163,10 +163,10 @@ Definition FullSimStateAfterRE sitpn
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Signal ["s_enabled"] equals [true] is equivalent to t ∈ Sens(M). *)
-         Sens (M s) t <-> MapsTo s_enabled (Vbool true) (sigstore σ__t))
+         Sens (M s) t <-> MapsTo s_enabled (Vbool true) (sstore σ__t))
        
   /\ (forall t id__t σ__t,
          (* [id__t] is the identifier of the T component associated with
@@ -175,10 +175,10 @@ Definition FullSimStateAfterRE sitpn
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Signal ["s_enabled"] equals [false] is equivalent to t ∉ Sens(M). *)
-         ~Sens (M s) t <-> MapsTo s_enabled (Vbool false) (sigstore σ__t))
+         ~Sens (M s) t <-> MapsTo s_enabled (Vbool false) (sstore σ__t))
        
   (* Condition combination is equal to signal [s_condition_combination]. *)
   /\ (forall t id__t σ__t conds_of_t bprod,
@@ -188,7 +188,7 @@ Definition FullSimStateAfterRE sitpn
          
          (* [σ__t] is the current state of TCI [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Signal [s_condition_combination] is equal the Boolean
             product of value of conditions attached to transition
@@ -202,7 +202,7 @@ Definition FullSimStateAfterRE sitpn
          
          @Sig_in_List (C sitpn) (fun c => has_C t c = one \/ has_C t c = mone) conds_of_t ->
          BProd cond_val_fun conds_of_t bprod ->
-         MapsTo s_condition_combination (Vbool bprod) (sigstore σ__t))
+         MapsTo s_condition_combination (Vbool bprod) (sstore σ__t))
        
   (* Condition input port values are equal to condition values at
      clock count [τ]. *)
@@ -213,7 +213,7 @@ Definition FullSimStateAfterRE sitpn
          InA Ckeq (c, id__c) (c2in γ) ->
          
          (* Value of input port [id__c] at state [σ] equals [E τ c]. *)
-         MapsTo id__c (Vbool (E τ c)) (sigstore σ)).
+         MapsTo id__c (Vbool (E τ c)) (sstore σ)).
 
 (** Defines the state similarity relation, after a falling edge,
     between an SITPN state and a H-VHDL design state. This relation is
@@ -233,7 +233,7 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
          InA Ckeq (c, id__c) (c2in γ) ->
          
          (* Input port [id__c] equals [cond s c] at state [σ] *)
-         MapsTo id__c (Vbool (cond s c)) (sigstore σ)).
+         MapsTo id__c (Vbool (cond s c)) (sstore σ)).
 
 (** Defines the full state similarity relation, after a falling edge,
     between an SITPN state and a H-VHDL design state.  *)
@@ -251,11 +251,11 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Output port ["fired"] equals [true] is equivalent to t ∈ Fired(s,fired). *)
-         (Fired s fired t <-> MapsTo Transition.fired (Vbool true) (sigstore σ__t))
-         /\ (~Fired s fired t <-> MapsTo Transition.fired (Vbool false) (sigstore σ__t)))
+         (Fired s fired t <-> MapsTo Transition.fired (Vbool true) (sstore σ__t))
+         /\ (~Fired s fired t <-> MapsTo Transition.fired (Vbool false) (sstore σ__t)))
 
   (* Firable are similar. *)
   /\ (forall t id__t σ__t,
@@ -265,11 +265,11 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
          
          (* [σ__t] is the current state of T component [id__t] is the global
             design state [σ]. *)
-         MapsTo id__t σ__t (compstore σ) ->
+         MapsTo id__t σ__t (cstore σ) ->
 
          (* Output port ["firable"] equals [true] is equivalent to t ∈ Firable(s). *)
-         (Firable s t <-> MapsTo Transition.firable (Vbool true) (sigstore σ__t))
-         /\ (~Firable s t <-> MapsTo Transition.firable (Vbool false) (sigstore σ__t)))
+         (Firable s t <-> MapsTo Transition.firable (Vbool true) (sstore σ__t))
+         /\ (~Firable s t <-> MapsTo Transition.firable (Vbool false) (sstore σ__t)))
        
   (* Pre sum are similar. *)
   /\ (forall p id__p σ__p fired pre__sum,
@@ -279,13 +279,13 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
 
          (* [σ__p] is the current state of component [id__p] is the global
             design state [σ]. *)
-         MapsTo id__p σ__p (compstore σ) ->
+         MapsTo id__p σ__p (cstore σ) ->
 
          (* ∑ pre(p,t), for all t ∈ Fired(s). *)
          PreSum p (Fired s fired) pre__sum -> 
            
          (* [∑ pre(p,t) = σ__p("s_output_token_sum")]. *)
-         MapsTo s_output_token_sum (Vnat pre__sum) (sigstore σ__p))
+         MapsTo s_output_token_sum (Vnat pre__sum) (sstore σ__p))
 
   (* Post sum are similar. *)
   /\ (forall p id__p σ__p fired post__sum,
@@ -295,13 +295,13 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
 
          (* [σ__p] is the current state of component [id__p] is the global
             design state [σ]. *)
-         MapsTo id__p σ__p (compstore σ) ->
+         MapsTo id__p σ__p (cstore σ) ->
 
          (* ∑ post(t,p), for all t ∈ Fired(s). *)
          PostSum p (Fired s fired) post__sum -> 
          
          (* [∑ pre(p,t) = σ__p("s_input_token_sum")]. *)
-         MapsTo s_input_token_sum (Vnat post__sum) (sigstore σ__p)).
+         MapsTo s_input_token_sum (Vnat post__sum) (sstore σ__p)).
 
 (** Defines the relation stating that an SITPN execution environment
     and a H-VHDL design execution environment described the same

@@ -52,7 +52,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
 | VExprSig (outmode : bool) (id : ident) (t : type) (v : value) :
     (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ) -> (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = t *)
     ~NatMap.In id Λ ->                                     (* id ∉ Λ *)
-    MapsTo id v (sigstore σ) ->   (* id ∈ σ and σ(id) = v *)
+    MapsTo id v (sstore σ) ->   (* id ∈ σ and σ(id) = v *)
     VExpr Δ σ Λ outmode (#id) v
 
 (** Evaluates a simple out port identifier. 
@@ -64,7 +64,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     (* * Side conditions * *)
     MapsTo id (Output t) Δ ->   (* id ∈ Outs(Δ) and Δ(id) = t *)
     ~NatMap.In id Λ ->          (* id ∉ Λ *)
-    MapsTo id v (sigstore σ) -> (* id ∈ σ and σ(id) = v *)
+    MapsTo id v (sstore σ) -> (* id ∈ σ and σ(id) = v *)
       
     (* * Conclusion * *)
     VExpr Δ σ Λ true (#id) v
@@ -100,7 +100,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
     (MapsTo id (Output (Tarray t l u)) Δ) ->
     ~NatMap.In id Λ ->                       (* id ∉ Λ *)
-    MapsTo id (Varr aofv) (sigstore σ) ->    (* id ∈ σ and σ(id) = aofv *)
+    MapsTo id (Varr aofv) (sstore σ) ->    (* id ∈ σ and σ(id) = aofv *)
 
     (* Conclusion *)
     VExpr Δ σ Λ true (id [[ei]]) (get_at idx aofv idx_in_bounds)
@@ -121,7 +121,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = array(t, l, u) *)
       (MapsTo id (Declared (Tarray t l u)) Δ \/ MapsTo id (Input (Tarray t l u)) Δ) ->
       ~NatMap.In id Λ ->                    (* id ∉ Λ *)
-      MapsTo id (Varr aofv) (sigstore σ) -> (* id ∈ σ and σ(id) = aofv *)
+      MapsTo id (Varr aofv) (sstore σ) -> (* id ∈ σ and σ(id) = aofv *)
 
       (* Conclusion *)
       VExpr Δ σ Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
@@ -266,7 +266,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       VExpr Δ σ Λ outmode e (Vbool b) ->
             
       (* Conclusion. *)
-      VExpr Δ σ Λ outmode (e_not e) (Vbool (negb b))
+      VExpr Δ σ Λ outmode (e_uop uo_not e) (Vbool (negb b))
             
 (** Evaluates expression with the equality operator (bool). *)
             
@@ -370,7 +370,7 @@ Definition vbinop (bop : binop) (v1 v2 : value) : optionE value :=
 
 Definition read (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
            (id : ident) : optionE value :=
-  match find id Λ, find id (sigstore σ), find id (compstore σ), find id Δ with
+  match find id Λ, find id (sstore σ), find id (cstore σ), find id Δ with
   (* [id] is a local variable identifier *)
   | Some (_, v), None, None, None => Ret v
   (* [id] is a input signal or an declared signal identifier. *)
@@ -426,7 +426,7 @@ Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
       do v2 <- vexpr Δ σ Λ outmode e2;
       vbinop bop v1 v2
   (** Evaluates Boolean negation operation *)
-  | e_not e1 =>
+  | e_uop uo_not e1 =>
       do v1 <- vexpr Δ σ Λ outmode e1;
       match v1 with
       | Vbool b => Ret (Vbool (negb b))

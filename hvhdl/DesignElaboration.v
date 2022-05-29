@@ -145,8 +145,8 @@ with ebeh (D__s : IdMap design) : ElDesign -> DState -> cs -> ElDesign -> DState
       
       (* Side conditions *)
       ~NatMap.In id__c Δ ->
-      ~NatMap.In id__c (compstore σ) ->
-      ~NatMap.In id__c (sigstore σ) ->
+      ~NatMap.In id__c (cstore σ) ->
+      ~NatMap.In id__c (sstore σ) ->
       MapsTo id__e cdesign D__s ->
       (forall id__g, NatMap.In id__g M__g -> exists t v, MapsTo id__g (Generic t v) Δ__c) ->
       

@@ -26,7 +26,7 @@ Section TVRunInit.
   Lemma vruninit_tc_ps_assign_s_tc :
     forall {Δ σ σ'},
       vruninit hdstore Δ σ time_counter_ps σ' ->
-      MapsTo s_time_counter (Vnat 0) (sigstore σ').
+      MapsTo s_time_counter (Vnat 0) (sstore σ').
   Proof.
     inversion_clear 1; intros.
     vseqinv_cl; [contradiction | ].
@@ -42,7 +42,7 @@ Section TVRunInit.
     forall {Δ σ σ'},
       vruninit hdstore Δ σ time_counter_ps σ' ->
       ~NatSet.In s_time_counter (events σ') ->
-      MapsTo s_time_counter (Vnat 0) (sigstore σ).
+      MapsTo s_time_counter (Vnat 0) (sstore σ).
   Proof.
     inversion_clear 1; intros.
     vseqinv_cl; [contradiction | ].
@@ -59,7 +59,7 @@ Section TVRunInit.
       vruninit hdstore Δ σ transition_behavior σ' ->
       ~NatSet.In s_time_counter (events σ) ->
       DeclaredOf Δ s_time_counter ->
-      MapsTo s_time_counter (Vnat 0) (sigstore σ').
+      MapsTo s_time_counter (Vnat 0) (sstore σ').
   Proof.
     intros *; unfold transition_behavior.
     rewrite vruninit_par_comm, <- vruninit_par_assoc.
@@ -93,10 +93,10 @@ Section TVRunInit.
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
         DeclaredOf Δ__t s_time_counter ->
-        MapsTo id__t σ__t (compstore σ) ->
+        MapsTo id__t σ__t (cstore σ) ->
         ~NatSet.In s_time_counter (events σ__t) ->
-        NatMap.MapsTo id__t σ__t' (compstore σ') ->
-        NatMap.MapsTo s_time_counter (Vnat 0) (sigstore σ__t').
+        NatMap.MapsTo id__t σ__t' (cstore σ') ->
+        NatMap.MapsTo s_time_counter (Vnat 0) (sstore σ__t').
   Proof.
     induction 1; try (solve [inversion 1]).
 
@@ -115,7 +115,7 @@ Section TVRunInit.
     - inversion 1; subst; subst_transition_design.
       clear IHvruninit; simpl in *.
       erewrite @MapsTo_fun with (e := σ__t') (e' := σ__c); eauto;
-        [ | eapply mapop_inv_compstore; eauto].
+        [ | eapply mapop_inv_cstore; eauto].
       (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
       (* erewrite mapip_eq_state_if_no_events; eauto; *)
       (*   [ pattern σ__c'; erewrite vruninit_eq_state_if_no_events; eauto *)
@@ -150,16 +150,16 @@ Section TVRunInit.
       forall t n,
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
         forall aofv b,
-          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ) ->
+          MapsTo Transition.reinit_time (Varr aofv) (sstore σ) ->
           BProd (get_bool_at aofv) (seq 0 (N.to_nat n)) b ->
-          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ').
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sstore σ').
   Admitted.
 
   Lemma vruninit_inv_if_input :
     forall D__s Δ σ cstmt σ',
       vruninit D__s Δ σ cstmt σ' ->
       forall id, InputOf Δ id ->
-                 forall v, MapsTo id v (sigstore σ) <-> MapsTo id v (sigstore σ').
+                 forall v, MapsTo id v (sstore σ) <-> MapsTo id v (sstore σ').
   Admitted.
   
   Lemma vruninit_T_s_rtc_eq_bprod_of_rt :
@@ -168,9 +168,9 @@ Section TVRunInit.
       forall t n,
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
         forall aofv b,
-          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ') ->
+          MapsTo Transition.reinit_time (Varr aofv) (sstore σ') ->
           BProd (get_bool_at aofv) (seq 0 n) b ->
-          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ').
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sstore σ').
   Proof.
     intros *; unfold transition_behavior.
     rewrite vruninit_par_comm, <- vruninit_par_assoc,
@@ -205,10 +205,10 @@ Section TVRunInit.
         MapsTo id__t (Component Δ__t) Δ ->
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
         forall σ__t' aofv b,
-          MapsTo id__t σ__t' (compstore σ') ->
-          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t') ->
+          MapsTo id__t σ__t' (cstore σ') ->
+          MapsTo Transition.reinit_time (Varr aofv) (sstore σ__t') ->
           BProd (get_bool_at aofv) (seq 0 n) b ->
-          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t').
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sstore σ__t').
   Proof.
     induction 1; try (solve [inversion 1]).
 
@@ -232,7 +232,7 @@ Section TVRunInit.
       (*   erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto. } *)
       (* [σ__c = σ__t'] *)
       (* erewrite @MapsTo_fun with (e := σ__t') (e' := σ__c) in *; eauto; *)
-      (*   try (solve [eapply mapop_inv_compstore; eauto | assumption]). *)
+      (*   try (solve [eapply mapop_inv_cstore; eauto | assumption]). *)
       (* pattern σ__c; rewrite eq_σ. *)
       
       (* With no events, [s_rtc ⇐ ∏ rt(i)] happened,
@@ -272,16 +272,16 @@ Section TInit.
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
         DeclaredOf Δ__t s_time_counter ->
-        MapsTo id__t σ__t (compstore σ) ->
+        MapsTo id__t σ__t (cstore σ) ->
         ~NatSet.In s_time_counter (events σ__t) ->
-        MapsTo id__t σ__t0 (compstore σ0) ->
-        MapsTo Transition.s_time_counter (Vnat 0) (sigstore σ__t0).
+        MapsTo id__t σ__t0 (cstore σ0) ->
+        MapsTo Transition.s_time_counter (Vnat 0) (sstore σ__t0).
   Proof.
     inversion_clear 1.
     intros *; intros.
 
     (* Builds [σ'(id__t) = σ'__t] *)
-    edestruct (@vruninit_maps_compstore_id hdstore) as (σ'__t, MapsTo_cstore');
+    edestruct (@vruninit_maps_cstore_id hdstore) as (σ'__t, MapsTo_cstore');
       eauto.
     
     (* [s_tc] value stays the same during stabilization. *)
@@ -302,10 +302,10 @@ Section TInit.
         MapsTo id__t (Component Δ__t) Δ ->
         MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
         forall σ__t0 aofv b,
-          MapsTo id__t σ__t0 (compstore σ0) ->
-          MapsTo Transition.reinit_time (Varr aofv) (sigstore σ__t0) ->
+          MapsTo id__t σ__t0 (cstore σ0) ->
+          MapsTo Transition.reinit_time (Varr aofv) (sstore σ__t0) ->
           BProd (get_bool_at aofv) (seq 0 n) b ->
-          MapsTo Transition.s_reinit_time_counter (Vbool b) (sigstore σ__t0).
+          MapsTo Transition.s_reinit_time_counter (Vbool b) (sstore σ__t0).
   Proof.
     inversion_clear 1.
     intros *; do 5 intro.
@@ -319,8 +319,8 @@ Section TInit.
       init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-        MapsTo id__t σ__t0 (compstore σ0) ->
-        MapsTo reinit_time (Varr aofv) (sigstore σ__t0) ->
+        MapsTo id__t σ__t0 (cstore σ0) ->
+        MapsTo reinit_time (Varr aofv) (sstore σ__t0) ->
         List.In (associp_ (reinit_time $[[0]]) false) ipm ->
         get_bool_at aofv 0 = false.
   Admitted.
@@ -330,9 +330,9 @@ Section TInit.
       init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv id i b ,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
-        MapsTo id__t σ__t0 (compstore σ0) ->
-        MapsTo reinit_time (Varr aofv) (sigstore σ__t0) ->
-        MapsTo id (Vbool b) (sigstore σ0) ->
+        MapsTo id__t σ__t0 (cstore σ0) ->
+        MapsTo reinit_time (Varr aofv) (sstore σ__t0) ->
+        MapsTo id (Vbool b) (sstore σ0) ->
         List.In (associp_ (reinit_time $[[ (e_nat i) ]]) (#id)) ipm ->
         get_bool_at aofv i = b.
   Admitted.

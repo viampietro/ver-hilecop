@@ -23,12 +23,12 @@ Require Import hvhdl.proofs.ValidPortMapFacts.
 
 Section IPMap.
 
-  Lemma vassocip_inv_sigstore :
+  Lemma vassocip_inv_sstore :
     forall {Δ Δ__c σ σ__c asip σ__c' id v},
       vassocip Δ Δ__c σ σ__c asip σ__c' -> 
       ~InputOf Δ__c id ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id v (sigstore σ__c').
+      MapsTo id v (sstore σ__c) ->
+      MapsTo id v (sstore σ__c').
   Proof.
     inversion 1; subst; simpl; auto; intros.
     all :
@@ -61,7 +61,7 @@ Section IPMap.
     forall {Δ Δ__c σ σ__c σ__c'} {id : ident} {e},
       vassocip Δ Δ__c σ σ__c (associp_ id e) σ__c' ->
       exists v, VExpr Δ σ EmptyLEnv false e v /\
-                MapsTo id v (sigstore σ__c').
+                MapsTo id v (sstore σ__c').
   Proof. inversion 1.
          subst; simpl; exists v; auto with mapsto.
   Qed.
@@ -72,8 +72,8 @@ Section IPMap.
       forall {id__i : ident} {v},
         ~(exists e, (associp_ id__i e) = asip) ->
         ~(exists e e__i, (associp_ (n_xid id__i e__i) e) = asip) ->
-        MapsTo id__i v (sigstore σ__c) ->
-        MapsTo id__i v (sigstore σ__c').
+        MapsTo id__i v (sstore σ__c) ->
+        MapsTo id__i v (sstore σ__c').
   Proof.
     inversion 1; subst; simpl; auto.
     all : intros id__i v' nex_1 nex_2; intros.
@@ -108,8 +108,8 @@ Section IPMap.
   Lemma vassocip_maps_sstore :
     forall {Δ Δ__c σ σ__c asip σ__c' id v},
       vassocip Δ Δ__c σ σ__c asip σ__c' -> 
-      MapsTo id v (sigstore σ__c) ->
-      exists v', MapsTo id v' (sigstore σ__c').
+      MapsTo id v (sstore σ__c) ->
+      exists v', MapsTo id v' (sstore σ__c').
   Proof.
     inversion_clear 1; subst; cbn;
       destruct (Nat.eq_dec id id0) as [eq_ | neq_ ].
@@ -124,11 +124,11 @@ Section IPMap.
       vassocip Δ Δ__c σ σ__c asip σ'__c ->
       (forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
+          MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-        MapsTo id v (sigstore σ'__c) ->
+        MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
   Proof.
     induction 1; try (solve [eauto]).
@@ -152,33 +152,33 @@ Section IPMap.
         intro; eapply WT; eauto with mapsto ].
   Qed.
   
-  Lemma mapip_inv_sigstore :
+  Lemma mapip_inv_sstore :
     forall {Δ Δ__c σ σ__c ipm σ__c' id v},
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
       ~InputOf Δ__c id ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id v (sigstore σ__c').
+      MapsTo id v (sstore σ__c) ->
+      MapsTo id v (sstore σ__c').
   Proof.
     induction 1; intros; auto.
     apply IHmapip; auto.
-    eapply vassocip_inv_sigstore; eauto.
+    eapply vassocip_inv_sstore; eauto.
   Qed.
 
-  Lemma mapip_inv_compstore :
+  Lemma mapip_inv_cstore :
     forall {Δ Δ__c σ σ__c ipm σ__c' id σ__c0},
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
-      MapsTo id σ__c0 (compstore σ__c) ->
-      MapsTo id σ__c0 (compstore σ__c').
+      MapsTo id σ__c0 (cstore σ__c) ->
+      MapsTo id σ__c0 (cstore σ__c').
   Proof.
     induction 1; try subst; auto.
     induction H; try subst; auto.
   Qed.
 
-  Lemma mapip_inv_compstore_2 :
+  Lemma mapip_inv_cstore_2 :
     forall {Δ Δ__c σ σ__c ipm σ__c' id σ__c0},
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
-      MapsTo id σ__c0 (compstore σ__c') ->
-      MapsTo id σ__c0 (compstore σ__c).
+      MapsTo id σ__c0 (cstore σ__c') ->
+      MapsTo id σ__c0 (cstore σ__c).
   Proof.
     induction 1; try subst; auto.
     induction H; try subst; auto.
@@ -202,8 +202,8 @@ Section IPMap.
       forall {id__i : ident} {v},
       ~(exists e, List.In (associp_ id__i e) ipm) ->
       ~(exists e e__i, List.In (associp_ (n_xid id__i e__i) e) ipm) ->
-      MapsTo id__i v (sigstore σ__c) ->
-      MapsTo id__i v (sigstore σ__c').
+      MapsTo id__i v (sstore σ__c) ->
+      MapsTo id__i v (sstore σ__c').
   Proof.
     induction 1; auto.
     intros id__i v nex_1 nex_2; intros.
@@ -226,7 +226,7 @@ Section IPMap.
         List.In (associp_ id__i e) ipm ->
         listipm Δ Δ__c σ formals ipm formals' ->
         exists v, VExpr Δ σ EmptyLEnv false e v /\
-                  MapsTo id__i v (sigstore σ__c').
+                  MapsTo id__i v (sstore σ__c').
   Proof.
     induction 1; try (solve [inversion 1]).
     inversion 1; subst; auto.
@@ -269,8 +269,8 @@ Section IPMap.
     forall {Δ Δ__c σ σ__c ipm σ__c' },
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
       forall {id v},
-        MapsTo id v (sigstore σ__c) ->
-        exists v', MapsTo id v' (sigstore σ__c').
+        MapsTo id v (sstore σ__c) ->
+        exists v', MapsTo id v' (sstore σ__c').
   Proof.
     induction 1; intros; auto.
     exists v; assumption.
@@ -282,11 +282,11 @@ Section IPMap.
       mapip Δ Δ__c σ σ__c ipm σ__c' ->
       (forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
+          MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-        MapsTo id v (sigstore σ__c') ->
+        MapsTo id v (sstore σ__c') ->
         IsOfType v t.
   Proof.
     induction 1; try (solve [trivial]).
@@ -304,11 +304,11 @@ Section OPMap.
     forall {Δ Δ__c σ σ__c asop σ'},
       vassocop Δ Δ__c σ σ__c asop σ' ->
       forall {id v},
-        MapsTo id v (sigstore σ) ->
-        exists v', MapsTo id v' (sigstore σ').
+        MapsTo id v (sstore σ) ->
+        exists v', MapsTo id v' (sstore σ').
   Proof.
     induction 1; try (solve [intros; exists v; auto]).
-    all : subst σ'; subst sigstore'; cbn;
+    all : subst σ'; subst sstore'; cbn;
       intros id v MapsTo_; destruct (Nat.eq_dec id id__a); 
         [ subst id; eauto with mapsto
         | exists v; eauto with mapsto ].
@@ -365,18 +365,18 @@ Section OPMap.
       vassocop Δ Δ__c σ σ__c asop σ' ->
       (forall {id t v},
           (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-          MapsTo id v (sigstore σ) ->
+          MapsTo id v (sstore σ) ->
           IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ') ->
+        MapsTo id v (sstore σ') ->
         IsOfType v t.
   Proof.
     induction 1; try (solve [eauto]).
     (* CASE [id__f ⇒ id__a] and [id__f(j) ⇒ id__a] *)
     1,4 :
       intros WT; intros *; intros MapsTo_Δ;
-      subst σ'; subst sigstore'; cbn;
+      subst σ'; subst sstore'; cbn;
         destruct (Nat.eq_dec id__a id) as [eq_ | neq_ ];
         [(* CASE [id__a = id] *)
           rewrite eq_ in *;
@@ -389,7 +389,7 @@ Section OPMap.
     (* CASE [id__f ⇒ id__a(i)] and [id__f(j) ⇒ id__a(i)] *)
     all:
       intros WT; intros *; intros MapsTo_Δ;
-      subst σ'; subst sigstore'; subst aofv'; cbn;
+      subst σ'; subst sstore'; subst aofv'; cbn;
         destruct (Nat.eq_dec id__a id) as [eq_ | neq_ ];
         [(* CASE [id__a = id] *)
           rewrite eq_ in *;
@@ -414,21 +414,21 @@ Section OPMap.
     eapply IHmapop; eapply vassocop_inv_in_events; eauto.
   Qed.
   
-  Lemma mapop_inv_compstore :
+  Lemma mapop_inv_cstore :
     forall {Δ Δ__c σ σ__c1 opmap σ' id__c σ__c2},
       mapop Δ Δ__c σ σ__c1 opmap σ' ->
-      MapsTo id__c σ__c2 (compstore σ) ->
-      MapsTo id__c σ__c2 (compstore σ').
+      MapsTo id__c σ__c2 (cstore σ) ->
+      MapsTo id__c σ__c2 (cstore σ').
   Proof.
     induction 1; try subst; auto.
     induction H; try subst; auto.
   Qed.
 
-  Lemma mapop_inv_compstore_2 :
+  Lemma mapop_inv_cstore_2 :
     forall {Δ Δ__c σ σ__c1 opmap σ' id__c σ__c2},
       mapop Δ Δ__c σ σ__c1 opmap σ' ->
-      MapsTo id__c σ__c2 (compstore σ') ->
-      MapsTo id__c σ__c2 (compstore σ).
+      MapsTo id__c σ__c2 (cstore σ') ->
+      MapsTo id__c σ__c2 (cstore σ).
   Proof.
     induction 1; try subst; auto.
     induction H; try subst; auto.
@@ -438,8 +438,8 @@ Section OPMap.
     forall {Δ Δ__c σ σ__c opmap σ'},
       mapop Δ Δ__c σ σ__c opmap σ' ->
       forall {id v},
-        MapsTo id v (sigstore σ) ->
-        exists v', MapsTo id v' (sigstore σ').
+        MapsTo id v (sstore σ) ->
+        exists v', MapsTo id v' (sstore σ').
   Proof.
     induction 1.
     intros; exists v; assumption.
@@ -489,11 +489,11 @@ Section OPMap.
       mapop Δ Δ__c σ σ__c opmap σ' ->
       (forall {id t v},
           (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-          MapsTo id v (sigstore σ) ->
+          MapsTo id v (sstore σ) ->
           IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ') ->
+        MapsTo id v (sstore σ') ->
         IsOfType v t.
   Proof.
     induction 1; try (solve [trivial]).

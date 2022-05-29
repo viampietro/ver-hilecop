@@ -26,16 +26,16 @@ Proof.
   induction 1; assumption.
 Qed.
 
-Lemma stab_maps_compstore_id :
+Lemma stab_maps_cstore_id :
   forall {D__s Δ σ behavior σ'},
     stabilize D__s Δ σ behavior σ' ->
     forall {id__c σ__c},
-    MapsTo id__c σ__c (compstore σ) ->
-    exists σ__c', MapsTo id__c σ__c' (compstore σ').
+    MapsTo id__c σ__c (cstore σ) ->
+    exists σ__c', MapsTo id__c σ__c' (cstore σ').
 Proof.
   induction 1; intros.
   exists σ__c; assumption.
-  edestruct @vcomb_maps_compstore_id with (D__s := D__s); eauto.
+  edestruct @vcomb_maps_cstore_id with (D__s := D__s); eauto.
 Qed.
 
 Lemma stab_maps_sstore_of_comp :
@@ -43,10 +43,10 @@ Lemma stab_maps_sstore_of_comp :
     stabilize D__s Δ σ behavior σ' ->
     forall {id__c id__e gm ipm opm σ__c σ'__c id v},
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-      MapsTo id__c σ__c (compstore σ) ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id__c σ'__c (compstore σ') ->
-      exists v', MapsTo id v' (sigstore σ'__c).
+      MapsTo id__c σ__c (cstore σ) ->
+      MapsTo id v (sstore σ__c) ->
+      MapsTo id__c σ'__c (cstore σ') ->
+      exists v', MapsTo id v' (sstore σ'__c).
 Proof.
   induction 1.
 
@@ -56,7 +56,7 @@ Proof.
 
   (* CASE loop *)
   - intros.
-    edestruct @vcomb_maps_compstore_id; eauto.
+    edestruct @vcomb_maps_cstore_id; eauto.
     edestruct @vcomb_maps_sstore_of_comp with (D__s := D__s); eauto.
 Qed.
 
@@ -65,17 +65,17 @@ Lemma stab_inv_well_typed_values_in_sstore_of_comp :
     stabilize D__s Δ σ behavior σ' ->
     (forall {id__c Δ__c σ__c},
         MapsTo id__c (Component Δ__c) Δ ->
-        MapsTo id__c σ__c (compstore σ) ->
+        MapsTo id__c σ__c (cstore σ) ->
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
+          MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
     forall {id__c Δ__c σ'__c},
       MapsTo id__c (Component Δ__c) Δ ->
-      MapsTo id__c σ'__c (compstore σ') ->
+      MapsTo id__c σ'__c (cstore σ') ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-        MapsTo id v (sigstore σ'__c) ->
+        MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
 Proof.
   induction 1; try (solve [trivial]).

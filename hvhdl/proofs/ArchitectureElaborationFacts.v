@@ -14,8 +14,8 @@ Lemma edecls_elab_idle_sigma :
     edecls Δ σ sigs Δ' σ' ->
     forall id v,
     (~exists τ, List.In (sdecl_ id τ) sigs) ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ) ->
+    MapsTo id v (sstore σ').
 Proof.
   induction 1; auto.
   intros; apply IHedecls.
@@ -91,11 +91,11 @@ Proof.
   apply IHedecls; eapply edecl_inv_Δ; eauto.
 Qed.
 
-Lemma edecl_inv_sigstore : 
+Lemma edecl_inv_sstore : 
   forall {Δ σ Δ' ad σ' id v},
     edecl Δ σ ad Δ' σ' ->
-    MapsTo id v (sigstore σ) ->
-    MapsTo id v (sigstore σ').
+    MapsTo id v (sstore σ) ->
+    MapsTo id v (sstore σ').
 Proof.
   inversion_clear 1; intros; auto.
   destruct (Nat.eq_dec id id0) as [e | ne]; try subst.
@@ -103,15 +103,15 @@ Proof.
   apply add_2; auto.
 Qed.
 
-Lemma edecls_inv_sigstore :
+Lemma edecls_inv_sstore :
   forall Δ σ sigs Δ' σ',
     edecls Δ σ sigs Δ' σ' ->
     forall id v,
-      MapsTo id v (sigstore σ) ->
-      MapsTo id v (sigstore σ').
+      MapsTo id v (sstore σ) ->
+      MapsTo id v (sstore σ').
 Proof.
   induction 1; intros; auto.
-  apply IHedecls; eapply edecl_inv_sigstore; eauto.
+  apply IHedecls; eapply edecl_inv_sstore; eauto.
 Qed.
 
 Lemma edecl_inv_events :
@@ -154,11 +154,11 @@ Lemma edecl_inv_well_typed_values_in_sstore :
     edecl Δ σ ad Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ) ->
+        MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
-      MapsTo id v (sigstore σ') ->
+      MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
   inversion_clear 1.
@@ -194,11 +194,11 @@ Lemma edecls_inv_well_typed_values_in_sstore :
     edecls Δ σ sigs Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ) ->
+        MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
-      MapsTo id v (sigstore σ') ->
+      MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
   induction 1; try (solve [auto]).

@@ -27,26 +27,26 @@ Require Import hvhdl.proofs.EnvironmentTactics.
 
 (** ** Facts about [vcomb] *)
 
-Lemma vcomb_maps_compstore_id :
+Lemma vcomb_maps_cstore_id :
   forall {D__s Δ σ behavior σ' id__c σ__c},
     vcomb D__s Δ σ behavior σ' ->
-    MapsTo id__c σ__c (compstore σ) ->
-    exists σ__c', MapsTo id__c σ__c' (compstore σ').
+    MapsTo id__c σ__c (cstore σ) ->
+    exists σ__c', MapsTo id__c σ__c' (cstore σ').
 Proof.
   induction 1; try (simpl; exists σ__c; assumption).
   
   (* CASE process evaluation, no events in sl *)
-  - exists σ__c; eapply vseq_inv_compstore; simpl; eauto.
+  - exists σ__c; eapply vseq_inv_cstore; simpl; eauto.
     
   (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
   - simpl; destruct (Nat.eq_dec id__c0 id__c).
     + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
     + exists σ__c; apply NatMap.add_2; auto.
-      eapply mapop_inv_compstore; eauto.
+      eapply mapop_inv_cstore; eauto.
 
   (* CASE comp evaluation with no events. *)
-  - exists σ__c; eapply mapop_inv_compstore; eauto.
+  - exists σ__c; eapply mapop_inv_cstore; eauto.
 
   (* CASE par *)
   - unfold IsMergedDState in H2; apply proj2, proj1 in H2.
@@ -193,26 +193,26 @@ Qed.
 Lemma vcomb_inv_cstate :
   forall {D__s Δ σ behavior σ' id__c σ__c},
     vcomb D__s Δ σ behavior σ' ->
-    MapsTo id__c σ__c (compstore σ) ->
+    MapsTo id__c σ__c (cstore σ) ->
     ~NatSet.In id__c (events σ') ->
-    MapsTo id__c σ__c (compstore σ').
+    MapsTo id__c σ__c (cstore σ').
 Proof.
   induction 1; auto.
 
   (* CASE eventful process *)
-  - intros; eapply vseq_inv_compstore; eauto.
+  - intros; eapply vseq_inv_cstore; eauto.
 
   (* CASE eventful component *)
   - simpl; intros.
     erewrite NatMap.add_neq_mapsto_iff; eauto.
-    eapply mapop_inv_compstore; eauto.
+    eapply mapop_inv_cstore; eauto.
     intro; subst;
     match goal with
     | [ H: ~NatSet.In _ _ |- _ ] => apply H; auto with set
     end.
 
   (* CASE eventless component *)
-  - intros; eapply mapop_inv_compstore; eauto.
+  - intros; eapply mapop_inv_cstore; eauto.
 
   (* CASE || *)
   - intros;
@@ -268,8 +268,8 @@ Lemma vcomb_maps_sstore :
   forall {D__s Δ σ cstmt σ'},
     vcomb D__s Δ σ cstmt σ' ->
     forall {id v},
-      MapsTo id v (sigstore σ) ->
-      exists v', MapsTo id v' (sigstore σ').
+      MapsTo id v (sstore σ) ->
+      exists v', MapsTo id v' (sstore σ').
 Proof.
   induction 1.
       
@@ -364,10 +364,10 @@ Lemma vcomb_maps_sstore_of_comp :
     vcomb D__s Δ σ cstmt σ' ->
     forall {id__c id__e gm ipm opm σ__c σ'__c id v},
       InCs (cs_comp id__c id__e gm ipm opm) cstmt ->
-      MapsTo id__c σ__c (compstore σ) ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id__c σ'__c (compstore σ') ->
-      exists v', MapsTo id v' (sigstore σ'__c).
+      MapsTo id__c σ__c (cstore σ) ->
+      MapsTo id v (sstore σ__c) ->
+      MapsTo id__c σ'__c (cstore σ') ->
+      exists v', MapsTo id v' (sstore σ'__c).
 Proof.
   induction 1; try (solve [inversion 1]).
   (* CASE comp evaluation with events.*)
@@ -379,8 +379,8 @@ Proof.
   (* CASE comp evaluation with no events.*)
   - inversion_clear 1; cbn; intros.
     exists v.
-    assert (MapsTo id__c σ__c (compstore σ'))
-      by (eapply mapop_inv_compstore; eauto).      
+    assert (MapsTo id__c σ__c (cstore σ'))
+      by (eapply mapop_inv_cstore; eauto).      
     erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
     erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
   (* CASE || *)
@@ -446,11 +446,11 @@ Lemma vcomb_inv_well_typed_values_in_sstore :
     vcomb D__s Δ σ cstmt σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ) ->
+        MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-      MapsTo id v (sigstore σ') ->
+      MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
   induction 1; intros WT; try (solve [trivial]).
@@ -486,23 +486,23 @@ Lemma vcomb_inv_well_typed_values_in_sstore_of_comp :
     vcomb D__s Δ σ cstmt σ' ->
     (forall {id__c Δ__c σ__c},
         MapsTo id__c (Component Δ__c) Δ ->
-        MapsTo id__c σ__c (compstore σ) ->
+        MapsTo id__c σ__c (cstore σ) ->
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c) ->
+          MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
     forall {id__c Δ__c σ'__c},
       MapsTo id__c (Component Δ__c) Δ ->
-      MapsTo id__c σ'__c (compstore σ') ->
+      MapsTo id__c σ'__c (cstore σ') ->
       forall {id t v},
         (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-        MapsTo id v (sigstore σ'__c) ->
+        MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
 Proof.
   induction 1; intros WT; trivial.
   (* CASE process *)
   - intros; eapply WT; eauto.
-    eapply @vseq_inv_compstore_2 with (σ__w := NoEvDState σ); eauto.
+    eapply @vseq_inv_cstore_2 with (σ__w := NoEvDState σ); eauto.
   (* CASE eventful component *)
   - cbn; do 5 intro.
     (* 2 CASES: [id__c = compid] or [id__c ≠ compid] *)
@@ -515,13 +515,13 @@ Proof.
       eapply mapip_inv_well_typed_values_in_sstore; eauto.
       erewrite <- @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
     (* CASE [id__c ≠ id__c0] *)
-    + assert (MapsTo id__c0 σ'__c (compstore σ)) by
-        (eapply @mapop_inv_compstore_2 with (σ := NoEvDState σ); eauto with mapsto).
+    + assert (MapsTo id__c0 σ'__c (cstore σ)) by
+        (eapply @mapop_inv_cstore_2 with (σ := NoEvDState σ); eauto with mapsto).
       eapply WT; eauto.
   (* CASE eventless component *)
   - cbn; do 5 intro.
-    assert (MapsTo id__c0 σ'__c (compstore σ)) by
-        (eapply @mapop_inv_compstore_2 with (σ := NoEvDState σ); eauto with mapsto).
+    assert (MapsTo id__c0 σ'__c (cstore σ)) by
+        (eapply @mapop_inv_cstore_2 with (σ := NoEvDState σ); eauto with mapsto).
     eapply WT; eauto.
   (* CASE || *)
   - specialize (IHvcomb1 WT); specialize (IHvcomb2 WT).

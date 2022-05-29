@@ -87,13 +87,13 @@ Lemma fe_equal_fired_aux :
       (* Extra. Hypothesis. *)
       (forall t' id__t' σ'__t',
           InA Tkeq (t', id__t') (t2tci γ) ->
-          MapsTo id__t' σ'__t' (compstore σ') ->
-          (InA Teq t' F -> MapsTo Transition.fired (Vbool true) (sigstore σ'__t'))
-          /\ (MapsTo Transition.fired (Vbool true) (sigstore σ'__t') -> InA Teq t' F \/ InA Teq t' T__s)) ->
+          MapsTo id__t' σ'__t' (cstore σ') ->
+          (InA Teq t' F -> MapsTo Transition.fired (Vbool true) (sstore σ'__t'))
+          /\ (MapsTo Transition.fired (Vbool true) (sstore σ'__t') -> InA Teq t' F \/ InA Teq t' T__s)) ->
       forall t id__t σ'__t,
         InA Tkeq (t, id__t) (t2tci γ) ->
-        MapsTo id__t σ'__t (compstore σ') ->
-        InA Teq t Flist <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+        MapsTo id__t σ'__t (cstore σ') ->
+        InA Teq t Flist <-> MapsTo Transition.fired (Vbool true) (sstore σ'__t).
 Proof.
   intros until T__s; induction 1.
 
@@ -154,10 +154,10 @@ Lemma fe_equal_fired :
 
     forall t id__t σ'__t,
       InA Tkeq (t, id__t) (t2tci γ) ->
-      MapsTo id__t σ'__t (compstore σ') ->
+      MapsTo id__t σ'__t (cstore σ') ->
       forall Flist,
         IsFiredList s' Flist ->
-        InA Teq t Flist <-> MapsTo Transition.fired (Vbool true) (sigstore σ'__t).
+        InA Teq t Flist <-> MapsTo Transition.fired (Vbool true) (sstore σ'__t).
 Proof.
   intros until Flist; inversion 1.
   eapply fe_equal_fired_aux; eauto.

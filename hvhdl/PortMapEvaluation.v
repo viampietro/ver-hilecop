@@ -71,7 +71,7 @@ with vassocip (Δ Δ__c : ElDesign) (σ σ__c : DState) : associp -> DState -> P
         
       (* * Side conditions * *)
       NatMap.MapsTo id (Input (Tarray t l u)) Δ__c -> (* id ∈ Ins(Δc) and Δc(id) = array(t,l,u) *)
-      NatMap.MapsTo id (Varr aofv) (sigstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
+      NatMap.MapsTo id (Varr aofv) (sstore σ__c) -> (* id ∈ σ and σ(id) = v' *)
       
       (* * Conclusion * *)
       vassocip Δ Δ__c σ σ__c (associp_ (id $[[ei]]) e) (sstore_add id (Varr (set_at v idx aofv idx_in_bounds)) σ__c).
@@ -113,7 +113,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     for the considered signal). *)
 
 | VAssocopSimpleToSimpleEvent :
-    forall id__f id__a newv t currv sigstore' events' σ',
+    forall id__f id__a newv t currv sstore' events' σ',
       
       (* * Premises * *)
       VExpr Δ__c σ__c EmptyLEnv true (e_name ($id__f)) newv ->
@@ -123,12 +123,12 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = t] *)
       (MapsTo id__a (Declared t) Δ \/ MapsTo id__a (Output t) Δ) -> 
-      MapsTo id__a currv (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
+      MapsTo id__a currv (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
       
       OVEq newv currv (Some false) -> (* new value <> current value *)
-      sigstore' = NatMap.add id__a newv (sigstore σ) -> (* S' = S(id) ← newv *)
+      sstore' = NatMap.add id__a newv (sstore σ) -> (* S' = S(id) ← newv *)
       events' = NatSet.add id__a (events σ) -> (* E' = E ∪ {id} *)
-      σ' = (MkDState sigstore' (compstore σ) events') -> (* σ' = <S',C,E'> *)
+      σ' = (MkDState sstore' (cstore σ) events') -> (* σ' = <S',C,E'> *)
       
       (* * Conclusion * *)
       vassocop Δ Δ__c σ σ__c (assocop_simpl id__f (Some ($id__a))) σ'
@@ -149,7 +149,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = t] *)
       (MapsTo id__a (Declared t) Δ \/ MapsTo id__a (Output t) Δ) -> 
-      MapsTo id__a currv (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
+      MapsTo id__a currv (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
       
       OVEq newv currv (Some true) -> (* new value = current value *)
       
@@ -163,7 +163,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     value for the considered signal.  *)
   
 | VAssocopSimpleToPartialEvent :
-    forall id__f id__a ei newv i t l u aofv idx_in_bounds aofv' sigstore' events' σ',
+    forall id__f id__a ei newv i t l u aofv idx_in_bounds aofv' sstore' events' σ',
 
       let idx := (N.to_nat (i - l)) in
       
@@ -179,17 +179,17 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = array(t,l,u)] *)
       (MapsTo id__a (Declared (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) -> 
-      MapsTo id__a (Varr aofv) (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
+      MapsTo id__a (Varr aofv) (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value <> current value *)
       events' = NatSet.add id__a (events σ) ->                    (* [E' = E ∪ {id__a}] *)
       
       (* [S' = S(id__a) ← set_at(v, i, aofv)] *)
       set_at newv idx aofv idx_in_bounds = aofv' ->
-      sigstore' = NatMap.add id__a (Varr aofv') (sigstore σ) ->
+      sstore' = NatMap.add id__a (Varr aofv') (sstore σ) ->
 
       (* σ' = <S',C,E'> *)
-      σ' = MkDState sigstore' (compstore σ) events' ->
+      σ' = MkDState sstore' (cstore σ) events' ->
       
       (* * Conclusion * *)
       vassocop Δ Δ__c σ σ__c (assocop_simpl id__f (Some (id__a $[[ei]]))) σ'
@@ -216,7 +216,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       (* * Side conditions * *)
       (* [id__a ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id__a) = array(t,l,u)] *)
       (MapsTo id__a (Declared (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) ->
-      MapsTo id__a (Varr aofv) (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
+      MapsTo id__a (Varr aofv) (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some true) -> (* new value = current value *)
             
@@ -231,7 +231,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     value for the considered signal.  *)
                
 | VAssocopPartialToPartialEvent :
-    forall id__f id__a e'__i ei newv i t l u aofv idx_in_bounds aofv' sigstore' events' σ',
+    forall id__f id__a e'__i ei newv i t l u aofv idx_in_bounds aofv' sstore' events' σ',
 
       let idx := (N.to_nat (i - l)) in
       
@@ -247,17 +247,17 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = array(t,l,u)] *)
       (MapsTo id__a (Declared (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) -> 
-      MapsTo id__a (Varr aofv) (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
+      MapsTo id__a (Varr aofv) (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some false) -> (* new value <> current value *)
       events' = NatSet.add id__a (events σ) ->                    (* [E' = E ∪ {id__a}] *)
       
       (* [S' = S(id__a) ← set_at(v, i, aofv)] *)
       set_at newv idx aofv idx_in_bounds = aofv' ->
-      sigstore' = NatMap.add id__a (Varr aofv') (sigstore σ) ->
+      sstore' = NatMap.add id__a (Varr aofv') (sstore σ) ->
 
       (* σ' = <S',C,E'> *)
-      σ' = MkDState sigstore' (compstore σ) events' ->
+      σ' = MkDState sstore' (cstore σ) events' ->
       
       (* * Conclusion * *)
       vassocop Δ Δ__c σ σ__c (assocop_idx id__f e'__i (id__a $[[ei]])) σ'
@@ -285,7 +285,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
       (* * Side conditions * *)
       (* [id__a ∈ Sigs(Δ) ∨ Outs(Δ) and Δ(id__a) = array(t,l,u)] *)
       (MapsTo id__a (Declared (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) ->
-      MapsTo id__a (Varr aofv) (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
+      MapsTo id__a (Varr aofv) (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = aofv] *)
 
       OVEq newv (get_at idx aofv idx_in_bounds) (Some true) -> (* new value = current value *)
       
@@ -300,7 +300,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
     for the considered signal). *)
 
 | VAssocopPartialToSimpleEvent :
-    forall id__f id__a e__i newv t currv sigstore' events' σ',
+    forall id__f id__a e__i newv t currv sstore' events' σ',
       
       (* * Premises * *)
       VExpr Δ__c σ__c EmptyLEnv true (e_name (id__f $[[e__i]])) newv ->
@@ -310,12 +310,12 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = t] *)
       (MapsTo id__a (Declared t) Δ \/ MapsTo id__a (Output t) Δ) -> 
-      MapsTo id__a currv (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
+      MapsTo id__a currv (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
       
       OVEq newv currv (Some false) -> (* new value <> current value *)
-      sigstore' = NatMap.add id__a newv (sigstore σ) -> (* S' = S(id) ← newv *)
+      sstore' = NatMap.add id__a newv (sstore σ) -> (* S' = S(id) ← newv *)
       events' = NatSet.add id__a (events σ) -> (* E' = E ∪ {id} *)
-      σ' = (MkDState sigstore' (compstore σ) events') -> (* σ' = <S',C,E'> *)
+      σ' = (MkDState sstore' (cstore σ) events') -> (* σ' = <S',C,E'> *)
       
       (* * Conclusion * *)
       vassocop Δ Δ__c σ σ__c (assocop_idx id__f e__i ($id__a)) σ'
@@ -337,7 +337,7 @@ with vassocop (Δ Δ__c : ElDesign) (σ σ__c : DState) : assocop -> DState -> P
 
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = t] *)
       (MapsTo id__a (Declared t) Δ \/ MapsTo id__a (Output t) Δ) -> 
-      MapsTo id__a currv (sigstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
+      MapsTo id__a currv (sstore σ) -> (* [id__a ∈ σ and σ(id__a) = currv] *)
       
       OVEq newv currv (Some true) -> (* new value = current value *)
       

@@ -16,26 +16,26 @@ Require Import hvhdl.proofs.SemanticalDomainsFacts.
 
 Open Scope abss_scope.
 
-Lemma vseq_inv_compstore :
+Lemma vseq_inv_cstore :
   forall {Δ σ σ__w Λ flag stmt σ' Λ' id__c σ__c},
     vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
-    MapsTo id__c σ__c (compstore σ__w) ->
-    MapsTo id__c σ__c (compstore σ').
+    MapsTo id__c σ__c (cstore σ__w) ->
+    MapsTo id__c σ__c (cstore σ').
 Proof. induction 1; try subst; auto. Qed.
 
-Lemma vseq_inv_compstore_2 :
+Lemma vseq_inv_cstore_2 :
   forall {Δ σ σ__w Λ flag stmt σ' Λ' id__c σ__c},
     vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
-    MapsTo id__c σ__c (compstore σ') ->
-    MapsTo id__c σ__c (compstore σ__w).
+    MapsTo id__c σ__c (cstore σ') ->
+    MapsTo id__c σ__c (cstore σ__w).
 Proof. induction 1; try subst; auto. Qed.
 
 Lemma vseq_maps_sstore :
   forall {Δ σ σ__w Λ flag stmt σ' Λ'},
     vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     forall {id v},
-      MapsTo id v (sigstore σ__w) ->
-      exists v', MapsTo id v' (sigstore σ').
+      MapsTo id v (sstore σ__w) ->
+      exists v', MapsTo id v' (sstore σ').
 Proof.
   induction 1; try (solve [do 2 intro; exists v; assumption]); auto.
   1, 2:
@@ -109,11 +109,11 @@ Lemma vseq_inv_well_typed_values_in_sstore :
     vseq Δ σ σ__w Λ flag stmt σ' Λ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ__w) ->
+        MapsTo id v (sstore σ__w) ->
         IsOfType v t) ->
     forall {id t v},
       (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-      MapsTo id v (sigstore σ') ->
+      MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
   induction 1; try (solve [auto]).

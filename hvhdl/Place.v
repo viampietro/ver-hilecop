@@ -137,9 +137,6 @@ Definition v_internal_input_token_sum : ident := local_var_ffid%nat.
 
 Definition input_tokens_sum_ps :=
   cs_ps input_tokens_sum
-
-        (* Sensitivity list. *)
-        {[input_transitions_fired, input_arcs_weights]}
         
         (* Local variables. *)
         [vdecl_ v_internal_input_token_sum local_weight_t]
@@ -150,7 +147,8 @@ Definition input_tokens_sum_ps :=
 
           (For i InR 0 To (#input_arcs_number @- 1) Loop
                (If (input_transitions_fired[[ #i ]] @= true) Then
-                   $v_internal_input_token_sum @:= (#v_internal_input_token_sum @+ (input_arcs_weights[[ #i ]])))
+                   ($v_internal_input_token_sum @:= (#v_internal_input_token_sum @+ (input_arcs_weights[[ #i ]])))
+                Else ss_null)
           );;
          
           ($s_input_token_sum @<== #v_internal_input_token_sum)
@@ -170,9 +168,6 @@ Definition v_internal_output_token_sum : ident := local_var_ffid.
 Definition output_tokens_sum_ps :=
   cs_ps output_tokens_sum
         
-        (* Sensitivity list. *)
-        {[output_arcs_types, output_arcs_weights, output_transitions_fired]}
-
         (* Local variables. *)
         [vdecl_ v_internal_output_token_sum local_weight_t]
         
@@ -182,7 +177,8 @@ Definition output_tokens_sum_ps :=
 
           (For i InR 0 To (#output_arcs_number @- 1) Loop 
                (If ((output_transitions_fired[[ #i ]] @= true) @&& (output_arcs_types[[ #i ]] @= basic)) Then
-                   $v_internal_output_token_sum @:= (#v_internal_output_token_sum @+ (output_arcs_weights[[ #i ]])))
+                   ($v_internal_output_token_sum @:= (#v_internal_output_token_sum @+ (output_arcs_weights[[ #i ]])))
+                Else ss_null)
           );;
          
           ($s_output_token_sum @<== #v_internal_output_token_sum)
@@ -198,9 +194,6 @@ Definition marking : ident := 19%nat.
 Definition marking_ps :=
   cs_ps marking
         
-        (* Sensitivity list. *)
-        {[clk, initial_marking]}
-
         (* Local variables. *)
         []
 
@@ -222,9 +215,6 @@ Definition determine_marked : ident := 20%nat.
 Definition determine_marked_ps :=
   cs_ps determine_marked
         
-        (* Sensitivity list. *)
-        {[s_marking]}
-
         (* Local variables. *)
         []
 
@@ -240,9 +230,6 @@ Definition marking_validation_evaluation := 21%nat.
 Definition marking_validation_evaluation_ps :=
   cs_ps marking_validation_evaluation
         
-        (* Sensitivity list *)
-        {[output_arcs_types, output_arcs_weights, s_marking]} 
-
         (* Local variables. *)
         []
 
@@ -268,10 +255,7 @@ Definition v_saved_output_token_sum : ident := local_var_ffid.
 Definition priority_evaluation_ps :=
   cs_ps
     priority_evaluation
-    
-    (* Sensitivity list. *)
-    {[output_arcs_types, output_arcs_weights, output_transitions_fired, s_marking]}
-    
+        
     (* Local variables. *)
     [vdecl_ v_saved_output_token_sum local_weight_t]
     
@@ -284,7 +268,8 @@ Definition priority_evaluation_ps :=
                Else (priority_authorizations $[[ #i ]] @<== false));;
            
            (If ((output_transitions_fired[[ #i ]] @= true) @&& (output_arcs_types[[ #i ]] @= basic))
-               Then ($v_saved_output_token_sum @:= (#v_saved_output_token_sum @+ (output_arcs_weights[[ #i ]]))))))).
+               Then ($v_saved_output_token_sum @:= (#v_saved_output_token_sum @+ (output_arcs_weights[[ #i ]])))
+               Else ss_null)))).
 
 (** Process "reinit_transitions_time_evaluation". *)
 
@@ -297,9 +282,6 @@ Definition reinit_transitions_time_evaluation_ps :=
   cs_ps
     reinit_transitions_time_evaluation
     
-    (* Sensitivity list. *)
-    {[clk]}
-
     (* Local variables. *)
     []
 
@@ -328,9 +310,7 @@ Definition place_behavior : cs :=
 (** ** Declaration of the Place design. *)
 
 Definition place_design : design :=
-  design_ place_entid
-          place_archid
-          place_gens
+  design_ place_gens
           place_ports
           place_sigs
           place_behavior.

@@ -26,7 +26,7 @@ Section LStaticExpr.
   Inductive IsLStaticExpr : expr -> Prop :=
   | IsLStaticNat (n : N) : IsLStaticExpr (e_nat n)
   | IsLStaticBool (b : bool) : IsLStaticExpr (e_bool b)
-  | IsLStaticNot (e : expr) : IsLStaticExpr e -> IsLStaticExpr (e_not e)
+  | IsLStaticNot (e : expr) : IsLStaticExpr e -> IsLStaticExpr (e_uop uo_not e)
   | IsLStaticBinOp (e e' : expr) (bop : binop) :
     IsLStaticExpr e -> IsLStaticExpr e' -> IsLStaticExpr (e_binop bop e e').
 
@@ -36,7 +36,7 @@ Section LStaticExpr.
   Fixpoint is_lstatic_expr (e : expr) {struct e} : bool :=
     match e with
     | e_nat _ | e_bool _ => true
-    | e_not e1 => is_lstatic_expr e1
+    | e_uop _ e1 => is_lstatic_expr e1
     | e_binop _ e1 e2 => is_lstatic_expr e1 && is_lstatic_expr e2
     | _ => false
     end.

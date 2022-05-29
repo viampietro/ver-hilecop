@@ -41,7 +41,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
       (NatMap.MapsTo id (Declared t) Δ \/ NatMap.MapsTo id (Output t) Δ) -> 
-      NatMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = currv *)
+      NatMap.MapsTo id currv (sstore σ) -> (* id ∈ σ and σ(id) = currv *)
 
       (* new value <> current value, then an event must be registered on signal [id] *)
       OVEq newv currv (Some false) -> 
@@ -70,7 +70,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
 
       (* id ∈ Sigs(Δ) ∨ id ∈ Outs(Δ) and Δ(id) = t *)
       (NatMap.MapsTo id (Declared t) Δ \/ NatMap.MapsTo id (Output t) Δ) ->
-      NatMap.MapsTo id currv (sigstore σ) -> (* id ∈ σ and σ(id) = currv *)
+      NatMap.MapsTo id currv (sstore σ) -> (* id ∈ σ and σ(id) = currv *)
       OVEq newv currv (Some true) -> (* new value = current value *)
       
       (* * Conclusion * *)
@@ -105,7 +105,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       (NatMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) ->
       
       (* id ∈ σ and σ(id) = curraofv *)
-      NatMap.MapsTo id (Varr curraofv) (sigstore σ) ->
+      NatMap.MapsTo id (Varr curraofv) (sstore σ) ->
 
       (* new value <> current value *)
       OVEq newv (get_at idx curraofv idx_in_bounds) (Some false) -> 
@@ -142,7 +142,7 @@ Inductive vseq (Δ : ElDesign) (σ σ__w : DState) (Λ : LEnv) : seqflag -> ss -
       
       (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t,l,u) *)
       (NatMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) -> 
-      NatMap.MapsTo id (Varr curraofv) (sigstore σ) -> (* id ∈ σ and σ(id) = curraofv *)
+      NatMap.MapsTo id (Varr curraofv) (sstore σ) -> (* id ∈ σ and σ(id) = curraofv *)
 
       OVEq newv (get_at idx curraofv idx_in_bounds) (Some true) -> (* new value = current value *)
             

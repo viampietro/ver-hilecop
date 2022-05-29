@@ -24,26 +24,26 @@ Require Import hvhdl.proofs.EnvironmentTactics.
 
 Section VRunInit.
              
-  Lemma vruninit_maps_compstore_id :
+  Lemma vruninit_maps_cstore_id :
     forall {D__s Δ σ behavior σ' id__c σ__c},
       vruninit D__s Δ σ behavior σ' ->
-      MapsTo id__c σ__c (compstore σ) ->
-      exists σ__c', MapsTo id__c σ__c' (compstore σ').
+      MapsTo id__c σ__c (cstore σ) ->
+      exists σ__c', MapsTo id__c σ__c' (cstore σ').
   Proof.
     induction 1.
     
     (* CASE process evaluation *)
-    - exists σ__c; eapply vseq_inv_compstore; eauto.
+    - exists σ__c; eapply vseq_inv_cstore; eauto.
       
     (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
     - simpl; destruct (Nat.eq_dec compid id__c).
       + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
       + exists σ__c; apply NatMap.add_2; auto.
-        eapply mapop_inv_compstore; eauto.
+        eapply mapop_inv_cstore; eauto.
 
     (* CASE comp evaluation with no events. *)
-    - exists σ__c; eapply mapop_inv_compstore; eauto.
+    - exists σ__c; eapply mapop_inv_cstore; eauto.
 
     (* CASE null *)
     - exists σ__c; assumption.
@@ -57,8 +57,8 @@ Section VRunInit.
     forall {D__s Δ σ behavior σ'},
       vruninit D__s Δ σ behavior σ' ->
       forall {id v},
-        MapsTo id v (sigstore σ) ->
-        exists v', MapsTo id v' (sigstore σ').
+        MapsTo id v (sstore σ) ->
+        exists v', MapsTo id v' (sstore σ').
   Proof.
     induction 1.
     
@@ -177,10 +177,10 @@ Section VRunInit.
       vruninit D__s Δ σ behavior σ' ->
       forall {id__c id__e gm ipm opm σ__c σ'__c id v},
         InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-        MapsTo id__c σ__c (compstore σ) ->
-        MapsTo id v (sigstore σ__c) ->
-        MapsTo id__c σ'__c (compstore σ') ->
-        exists v', MapsTo id v' (sigstore σ'__c).
+        MapsTo id__c σ__c (cstore σ) ->
+        MapsTo id v (sstore σ__c) ->
+        MapsTo id__c σ'__c (cstore σ') ->
+        exists v', MapsTo id v' (sstore σ'__c).
   Proof.
     induction 1; try (solve [inversion 1]).
     (* CASE comp evaluation with events.*)
@@ -192,8 +192,8 @@ Section VRunInit.
     (* CASE comp evaluation with no events.*)
     - inversion_clear 1; cbn; intros.
       exists v.
-      assert (MapsTo compid σ__c (compstore σ'))
-        by (eapply mapop_inv_compstore; eauto).      
+      assert (MapsTo compid σ__c (cstore σ'))
+        by (eapply mapop_inv_cstore; eauto).      
       erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
       erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
     (* CASE || *)
@@ -288,19 +288,19 @@ Section VRunInit.
   Lemma vruninit_inv_cstate :
     forall {D__s Δ σ cstmt σ' id__c σ__c},
       vruninit D__s Δ σ cstmt σ' ->
-      MapsTo id__c σ__c (compstore σ) ->
+      MapsTo id__c σ__c (cstore σ) ->
       ~NatSet.In id__c (events σ') ->
-      MapsTo id__c σ__c (compstore σ').
+      MapsTo id__c σ__c (cstore σ').
   Proof.
     induction 1; auto; simpl.
     (* CASE process *)
-    intros; eapply vseq_inv_compstore; eauto.
+    intros; eapply vseq_inv_cstore; eauto.
     (* CASE eventful comp *)
     intros; eapply NatMap.add_2; eauto.
     intro; subst; contrad_not_in_add.
-    eapply mapop_inv_compstore; eauto.
+    eapply mapop_inv_cstore; eauto.
     (* CASE eventless comp *)
-    intros; eapply mapop_inv_compstore; eauto.
+    intros; eapply mapop_inv_cstore; eauto.
     (* CASE || *)
     rename H2 into IMDS; intros.
     erw_IMDS_cstore_m <- IMDS; auto.
@@ -384,11 +384,11 @@ Section VRunInit.
       vruninit D__s Δ σ behavior σ' ->
       (forall {id t v},
           (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-          MapsTo id v (sigstore σ) ->
+          MapsTo id v (sstore σ) ->
           IsOfType v t) ->
       forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
-        MapsTo id v (sigstore σ') ->
+        MapsTo id v (sstore σ') ->
         IsOfType v t.
   Proof.
     induction 1; intros WT; try (solve [trivial]).
@@ -424,23 +424,23 @@ Section VRunInit.
       vruninit D__s Δ σ behavior σ' ->
       (forall {id__c Δ__c σ__c},
           MapsTo id__c (Component Δ__c) Δ ->
-          MapsTo id__c σ__c (compstore σ) ->
+          MapsTo id__c σ__c (cstore σ) ->
           forall {id t v},
             (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-            MapsTo id v (sigstore σ__c) ->
+            MapsTo id v (sstore σ__c) ->
             IsOfType v t) ->
       forall {id__c Δ__c σ'__c},
         MapsTo id__c (Component Δ__c) Δ ->
-        MapsTo id__c σ'__c (compstore σ') ->
+        MapsTo id__c σ'__c (cstore σ') ->
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ'__c) ->
+          MapsTo id v (sstore σ'__c) ->
           IsOfType v t.
   Proof.
     induction 1; intros WT; trivial.
     (* CASE process *)
     - intros; eapply WT; eauto.
-      eapply vseq_inv_compstore_2; eauto.
+      eapply vseq_inv_cstore_2; eauto.
     (* CASE eventful component *)
     - cbn; do 5 intro.
       (* 2 CASES: [id__c = compid] or [id__c ≠ compid] *)
@@ -453,13 +453,13 @@ Section VRunInit.
         eapply mapip_inv_well_typed_values_in_sstore; eauto.
         erewrite <- @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
       (* CASE [id__c ≠ compid] *)
-      + assert (MapsTo id__c σ'__c (compstore σ)) by
-         (eapply mapop_inv_compstore_2; eauto with mapsto).
+      + assert (MapsTo id__c σ'__c (cstore σ)) by
+         (eapply mapop_inv_cstore_2; eauto with mapsto).
         eapply WT; eauto.
     (* CASE eventless component *)
     - cbn; do 5 intro.
-      assert (MapsTo id__c σ'__c (compstore σ)) by
-          (eapply mapop_inv_compstore_2; eauto with mapsto).
+      assert (MapsTo id__c σ'__c (cstore σ)) by
+          (eapply mapop_inv_cstore_2; eauto with mapsto).
       eapply WT; eauto.
     (* CASE || *)
     - specialize (IHvruninit1 WT); specialize (IHvruninit2 WT).
@@ -597,28 +597,28 @@ End VRunInit.
 
 Section Init.
 
-  Lemma init_maps_compstore_id :
+  Lemma init_maps_cstore_id :
     forall {D__s Δ σ behavior σ' id__c σ__c},
       init D__s Δ σ behavior σ' ->
-      MapsTo id__c σ__c (compstore σ) ->
-      exists σ__c', MapsTo id__c σ__c' (compstore σ').
+      MapsTo id__c σ__c (cstore σ) ->
+      exists σ__c', MapsTo id__c σ__c' (cstore σ').
   Proof.
     inversion 1; intro.
-    edestruct @vruninit_maps_compstore_id with (D__s := D__s); eauto.
-    eapply @stab_maps_compstore_id; eauto.
+    edestruct @vruninit_maps_cstore_id with (D__s := D__s); eauto.
+    eapply @stab_maps_cstore_id; eauto.
   Qed.
   
   Lemma init_maps_sstore_of_comp :
     forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id v},
       init D__s Δ σ behavior σ0 ->
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
-      MapsTo id__c σ__c (compstore σ) ->
-      MapsTo id v (sigstore σ__c) ->
-      MapsTo id__c σ__c0 (compstore σ0) ->
-      exists v', MapsTo id v' (sigstore σ__c0).
+      MapsTo id__c σ__c (cstore σ) ->
+      MapsTo id v (sstore σ__c) ->
+      MapsTo id__c σ__c0 (cstore σ0) ->
+      exists v', MapsTo id v' (sstore σ__c0).
   Proof.
     inversion_clear 1; intros.
-    edestruct @vruninit_maps_compstore_id with (D__s := D__s); eauto.
+    edestruct @vruninit_maps_cstore_id with (D__s := D__s); eauto.
     edestruct @vruninit_maps_sstore_of_comp with (D__s := D__s); eauto.
     eapply stab_maps_sstore_of_comp; eauto.    
   Qed.
@@ -628,17 +628,17 @@ Section Init.
       init D__s Δ σ behavior σ0 ->
       (forall {id__c Δ__c σ__c},
           MapsTo id__c (Component Δ__c) Δ ->
-          MapsTo id__c σ__c (compstore σ) ->
+          MapsTo id__c σ__c (cstore σ) ->
           forall {id t v},
             (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-            MapsTo id v (sigstore σ__c) ->
+            MapsTo id v (sstore σ__c) ->
             IsOfType v t) ->
       forall {id__c Δ__c σ__c0},
         MapsTo id__c (Component Δ__c) Δ ->
-        MapsTo id__c σ__c0 (compstore σ0) ->
+        MapsTo id__c σ__c0 (cstore σ0) ->
         forall {id t v},
           (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
-          MapsTo id v (sigstore σ__c0) ->
+          MapsTo id v (sstore σ__c0) ->
           IsOfType v t.
   Proof.
     inversion 1; intros WT.

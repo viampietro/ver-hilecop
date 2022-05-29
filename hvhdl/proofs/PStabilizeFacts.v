@@ -28,11 +28,11 @@ Lemma stab_inv_s_marking :
       MapsTo id__p (Component Δ__p) Δ ->
       AreCsCompIds behavior compids ->
       List.NoDup compids ->
-      MapsTo id__p σ__p (compstore σ) ->
-      MapsTo s_marking v (sigstore σ__p) ->
+      MapsTo id__p σ__p (cstore σ) ->
+      MapsTo s_marking v (sstore σ__p) ->
       MapsTo s_marking (Declared (Tnat 0 mm)) Δ__p ->
-      MapsTo id__p σ__p' (compstore σ') ->
-      MapsTo s_marking v (sigstore σ__p').
+      MapsTo id__p σ__p' (cstore σ') ->
+      MapsTo s_marking v (sstore σ__p').
 Proof.
   induction 1; intros.
 
@@ -40,7 +40,7 @@ Proof.
   - erewrite <- MapsTo_fun with (e := σ__p) (e' := σ__p'); eauto.
 
   (* CASE Events *)
-  - edestruct @vcomb_maps_compstore_id with (Δ := Δ) as (σ__pi, MapsTo_σ__pi); eauto.
+  - edestruct @vcomb_maps_cstore_id with (Δ := Δ) as (σ__pi, MapsTo_σ__pi); eauto.
     eapply IHstabilize; eauto.
     eapply vcomb_inv_s_marking; eauto.
 Qed.

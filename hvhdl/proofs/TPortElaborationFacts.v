@@ -16,13 +16,13 @@ Require Import hvhdl.proofs.HVhdlElaborationTacticsLib.
 Lemma eport_σ_rt :
   forall {Δ σ Δ' σ'},
     eport Δ σ (pdecl_in reinit_time (bool_vector_t 0 (# input_arcs_number @- 1))) Δ' σ' ->
-    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ').
-Proof. intros; eapply eport_Varr_in_sigstore; eauto. Qed.
+    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ').
+Proof. intros; eapply eport_Varr_in_sstore; eauto. Qed.
 
 Lemma eports_T_σ_rt :
   forall {Δ σ Δ' σ'},
     eports Δ σ transition_ports Δ' σ' ->
-    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sigstore σ').
+    exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ').
 Proof.
   inversion_clear 1.
   do 5 (match goal with
@@ -30,7 +30,7 @@ Proof.
           inversion_clear H
         end).
   edestruct @eport_σ_rt with (Δ := Δ'4) as (aofv, MapsTo_rt); eauto.
-  exists aofv; eapply eports_inv_sigstore; eauto.
+  exists aofv; eapply eports_inv_sstore; eauto.
 Qed.
 
 Lemma eport_Δ_rt :

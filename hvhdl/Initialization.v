@@ -80,7 +80,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
       NatMap.MapsTo compid (Component Δ__c) Δ ->
       
       (* [compid ∈ σ and σ(compid) = σ__c] *)
-      NatMap.MapsTo compid σ__c (compstore σ) ->
+      NatMap.MapsTo compid σ__c (cstore σ) ->
 
       (* Events registered in σc''. *)
       ~Equal (events σ__c'') NatSet.empty ->
@@ -114,7 +114,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
       NatMap.MapsTo compid (Component Δ__c) Δ ->
       
       (* compid ∈ σ and σ(compid) = [σ__c] *)
-      NatMap.MapsTo compid σ__c (compstore σ) ->
+      NatMap.MapsTo compid σ__c (cstore σ) ->
 
       (* No event registered in [σ__c'']. *)
       Equal (events σ__c'') NatSet.empty ->

@@ -30,8 +30,8 @@ Section PVRunInit.
     forall {Δ σ σ' n},
       vruninit hdstore Δ σ marking_ps σ' ->
       InputOf Δ initial_marking ->
-      MapsTo initial_marking (Vnat n) (sigstore σ) ->
-      MapsTo s_marking (Vnat n) (sigstore σ').
+      MapsTo initial_marking (Vnat n) (sstore σ) ->
+      MapsTo s_marking (Vnat n) (sstore σ').
   Proof.
     inversion_clear 1; intros.
     vseqinv_cl; [ contradiction | ].
@@ -74,9 +74,9 @@ Section PVRunInit.
     forall {Δ σ σ' n},
       vruninit hdstore Δ σ marking_ps σ' ->
       InputOf Δ initial_marking ->
-      MapsTo initial_marking (Vnat n) (sigstore σ) ->
+      MapsTo initial_marking (Vnat n) (sstore σ) ->
       ~NatSet.In s_marking (events σ') ->
-      MapsTo s_marking (Vnat n) (sigstore σ).
+      MapsTo s_marking (Vnat n) (sstore σ).
   Proof.
     inversion_clear 1; intros.
     vseqinv_cl; [contradiction |].
@@ -113,8 +113,8 @@ Section PVRunInit.
       ~NatSet.In s_marking (events σ) ->
       InputOf Δ initial_marking ->
       MapsTo s_marking (Declared (Tnat 0 m)) Δ ->
-      MapsTo initial_marking (Vnat n) (sigstore σ) ->
-      MapsTo s_marking (Vnat n) (sigstore σ').
+      MapsTo initial_marking (Vnat n) (sstore σ) ->
+      MapsTo s_marking (Vnat n) (sstore σ').
   Proof.
     intros *; unfold place_behavior.
     do 2 (rewrite vruninit_par_comm; rewrite <- vruninit_par_assoc);
@@ -148,13 +148,13 @@ Section PVRunInit.
         List.In (associp_ ($initial_marking) (e_nat n)) i__p ->
         Equal (events σ) {[]} ->
         MapsTo id__p (Component Δ__p) Δ ->
-        MapsTo id__p σ__p (compstore σ) ->
-        NatMap.MapsTo id__p σ__p' (compstore σ') ->
+        MapsTo id__p σ__p (cstore σ) ->
+        NatMap.MapsTo id__p σ__p' (cstore σ') ->
         listipm Δ Δ__p σ [] i__p formals ->
         InputOf Δ__p initial_marking ->
         MapsTo s_marking (Declared (Tnat 0 m)) Δ__p ->
         ~NatSet.In s_marking (events σ__p) ->
-        NatMap.MapsTo Place.s_marking (Vnat n) (sigstore σ__p').
+        NatMap.MapsTo Place.s_marking (Vnat n) (sstore σ__p').
   Proof.
     induction 1; try (solve [inversion 1]).
 
@@ -175,7 +175,7 @@ Section PVRunInit.
     - inversion 1; subst; subst_place_design.
       clear IHvruninit; simpl in *.
       erewrite @MapsTo_fun with (e := σ__p') (e' := σ__c); eauto;
-        [ | eapply mapop_inv_compstore; eauto ].
+        [ | eapply mapop_inv_cstore; eauto ].
       (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
       (* erewrite mapip_eq_state_if_no_events; eauto; *)
       (* [ pattern σ__c'; erewrite vruninit_eq_state_if_no_events; eauto *)
@@ -216,16 +216,16 @@ Section PInit.
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
         Equal (events σ) {[]} ->
         MapsTo id__p (Component Δ__p) Δ ->
-        MapsTo id__p σ__p (compstore σ) ->
+        MapsTo id__p σ__p (cstore σ) ->
         AreCsCompIds behavior cids ->
         List.NoDup cids ->
         listipm Δ Δ__p σ [] i__p formals ->
         List.In (associp_ ($initial_marking) (e_nat n)) i__p ->
         InputOf Δ__p initial_marking ->
-        MapsTo id__p σ__p0 (compstore σ0) ->
+        MapsTo id__p σ__p0 (cstore σ0) ->
         ~NatSet.In s_marking (events σ__p) ->
         MapsTo Place.s_marking (Declared (Tnat 0 mm)) Δ__p ->
-        MapsTo Place.s_marking (Vnat n) (sigstore σ__p0).
+        MapsTo Place.s_marking (Vnat n) (sstore σ__p0).
   Proof.
     inversion 1.
     intros.
@@ -233,7 +233,7 @@ Section PInit.
     (* [∃ σ__p s.t. σ(id__p) = σ__p] *)
     match goal with
     | [ MapsTo_σ__p: MapsTo id__p σ__p _, Hvr: vruninit _ _ _ _ _ |- _ ] =>
-      specialize (vruninit_maps_compstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
+      specialize (vruninit_maps_cstore_id Hvr MapsTo_σ__p) as ex_MapsTo_σp';
         inversion ex_MapsTo_σp' as (σ__p', MapsTo_σ__p'); clear ex_MapsTo_σp'
     end.
     
@@ -249,11 +249,11 @@ Section PInit.
       init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 aofv id i b ,
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
-        MapsTo id__p σ__p0 (compstore σ0) ->
-        MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0) ->
+        MapsTo id__p σ__p0 (cstore σ0) ->
+        MapsTo reinit_transitions_time (Varr aofv) (sstore σ__p0) ->
         List.In (assocop_idx reinit_transitions_time (e_nat i) ($id)) o__p ->
         get_bool_at aofv (N.to_nat i) = b ->
-        MapsTo id (Vbool b) (sigstore σ0).
+        MapsTo id (Vbool b) (sstore σ0).
   Admitted.
   
   Lemma init_PCI_rtt_eq_false :
@@ -263,8 +263,8 @@ Section PInit.
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo output_arcs_number (Generic t (Vnat n)) Δ__p ->
-        MapsTo id__p σ__p0 (compstore σ0) ->
-        MapsTo reinit_transitions_time (Varr aofv) (sigstore σ__p0) ->
+        MapsTo id__p σ__p0 (cstore σ0) ->
+        MapsTo reinit_transitions_time (Varr aofv) (sstore σ__p0) ->
         0 <= i < n ->
         get_bool_at aofv (N.to_nat i) = false.
   Admitted.

@@ -53,7 +53,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
       NatMap.MapsTo id__c (Component Δ__c) Δ ->
       
       (* [id__c ∈ σ and σ(id__c) = σ__c] *)
-      NatMap.MapsTo id__c σ__c (compstore σ) ->
+      NatMap.MapsTo id__c σ__c (cstore σ) ->
 
       (* [Events registered in σ__c''.] *)
       (events σ__c'') <> NatSet.empty ->
@@ -88,7 +88,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
       NatMap.MapsTo id__c (Component Δ__c) Δ ->
       
       (* [id__c ∈ σ] and [σ(id__c) = σ__c] *)
-      NatMap.MapsTo id__c σ__c (compstore σ) ->
+      NatMap.MapsTo id__c σ__c (cstore σ) ->
 
       (* No event registered in [σ__c'']. *)
       (events σ__c'') = NatSet.empty ->

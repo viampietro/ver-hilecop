@@ -107,8 +107,8 @@ Lemma elab_PCI_σ_rtt :
   forall {d Δ σ__e id__p gm ipm opm σ__pe},
     edesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
-    MapsTo id__p σ__pe (compstore σ__e) ->
-    exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sigstore σ__pe).
+    MapsTo id__p σ__pe (cstore σ__e) ->
+    exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sstore σ__pe).
 Admitted.
 
 Lemma elab_PCI_Δ_rtt : 
