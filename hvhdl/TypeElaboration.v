@@ -1,4 +1,4 @@
-(** Defines the etype relation checks the well-formedness of a type
+(** Defines the EType relation checks the well-formedness of a type
     indication τ, and transforms it into a semantical type *)
 
 Require Import Environment.
@@ -8,29 +8,29 @@ Require Import ConstraintElaboration.
 
 (** The type elaboration relation (general definition). *)
 
-Inductive etype (Δ : ElDesign) : tind -> type -> Prop :=
-| ETypeBool : etype Δ tind_boolean Tbool
+Inductive EType (Δ : ElDesign) : tind -> type -> Prop :=
+| ETypeBool : EType Δ tind_boolean Tbool
 | ETypeNat :
     forall {e e' n n'},
       EConstr Δ e e' n n' ->
-      etype Δ (tind_natural e e') (Tnat n n')
+      EType Δ (tind_natural e e') (Tnat n n')
 | ETypeArray :
     forall {tau t e e' n n'},
-      etype Δ tau t ->
+      EType Δ tau t ->
       EConstr Δ e e' n n' ->
-      etype Δ (tind_array tau e e') (Tarray t n n').
+      EType Δ (tind_array tau e e') (Tarray t n n').
 
 (** The type elaboration relation for generic constant type
     indication. *)
 
-Inductive etypeg : tind -> type -> Prop :=
-| ETypeGBool : etypeg tind_boolean Tbool
+Inductive ETypeg : tind -> type -> Prop :=
+| ETypeGBool : ETypeg tind_boolean Tbool
 | ETypeGNat :
     forall {e e' n n'},
       EConstrG e e' n n' ->
-      etypeg (tind_natural e e') (Tnat n n').
+      ETypeg (tind_natural e e') (Tnat n n').
 
-(** Hints for etype and etypeg *)
+(** Hints for EType and ETypeg *)
 
-#[export] Hint Constructors etype : hvhdl.
-#[export] Hint Constructors etypeg : hvhdl.
+#[export] Hint Constructors EType : hvhdl.
+#[export] Hint Constructors ETypeg : hvhdl.

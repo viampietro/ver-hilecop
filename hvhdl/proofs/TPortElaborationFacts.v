@@ -13,36 +13,36 @@ Require Import hvhdl.proofs.HVhdlElaborationTacticsLib.
 
 (** ** Facts about the [reinit_time] input port *)
 
-Lemma eport_σ_rt :
+Lemma EPort_σ_rt :
   forall {Δ σ Δ' σ'},
-    eport Δ σ (pdecl_in reinit_time (bool_vector_t 0 (# input_arcs_number @- 1))) Δ' σ' ->
+    EPort Δ σ (pdecl_in reinit_time (bool_vector_t 0 (# input_arcs_number @- 1))) Δ' σ' ->
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ').
-Proof. intros; eapply eport_Varr_in_sstore; eauto. Qed.
+Proof. intros; eapply EPort_Varr_in_sstore; eauto. Qed.
 
-Lemma eports_T_σ_rt :
+Lemma EPorts_T_σ_rt :
   forall {Δ σ Δ' σ'},
-    eports Δ σ transition_ports Δ' σ' ->
+    EPorts Δ σ transition_ports Δ' σ' ->
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ').
 Proof.
   inversion_clear 1.
   do 5 (match goal with
-        | [ H: eports _ _ _ _ _ |- _ ] =>
+        | [ H: EPorts _ _ _ _ _ |- _ ] =>
           inversion_clear H
         end).
-  edestruct @eport_σ_rt with (Δ := Δ'4) as (aofv, MapsTo_rt); eauto.
-  exists aofv; eapply eports_inv_sstore; eauto.
+  edestruct @EPort_σ_rt with (Δ := Δ'4) as (aofv, MapsTo_rt); eauto.
+  exists aofv; eapply EPorts_inv_sstore; eauto.
 Qed.
 
-Lemma eport_Δ_rt :
+Lemma EPort_Δ_rt :
   forall {Δ σ Δ' σ' t n},
-    eport Δ σ (pdecl_in reinit_time (bool_vector_t 0 (# input_arcs_number @- 1))) Δ' σ' ->
+    EPort Δ σ (pdecl_in reinit_time (bool_vector_t 0 (# input_arcs_number @- 1))) Δ' σ' ->
     MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
     MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ'.
 Proof.
   inversion_clear 1.
   intros MapsTo_ian.
   eapply MapsTo_add_eqv_2; eauto.
-  do 2 etypeinv_cl.
+  do 2 ETypeinv_cl.
   econstrinv_cl.
   repeat vexprinv_cl.
   mapsto_discriminate.
@@ -52,21 +52,21 @@ Proof.
   inject_left eq_gen; reflexivity.
 Qed.
 
-Lemma eports_T_Δ_rt :
+Lemma EPorts_T_Δ_rt :
   forall {Δ σ Δ' σ'},
-    eports Δ σ transition_ports Δ' σ' ->
+    EPorts Δ σ transition_ports Δ' σ' ->
     forall {t n},
       MapsTo input_arcs_number (Generic t (Vnat n)) Δ ->
       MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ'.
 Proof.
   inversion_clear 1.
   do 5 (match goal with
-        | [ H: eports _ _ _ _ _ |- _ ] =>
+        | [ H: EPorts _ _ _ _ _ |- _ ] =>
           inversion_clear H
         end).
   intros t n MapsTo_ian.
-  eapply eports_inv_Δ; eauto.
-  eapply eport_Δ_rt; eauto.
-  do 5 (eapply eport_inv_Δ; eauto).
+  eapply EPorts_inv_Δ; eauto.
+  eapply EPort_Δ_rt; eauto.
+  do 5 (eapply EPort_inv_Δ; eauto).
 Qed.
 

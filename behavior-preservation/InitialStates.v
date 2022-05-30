@@ -44,7 +44,7 @@ Lemma init_states_eq_marking :
     sitpn2hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -83,7 +83,7 @@ Proof.
   edestruct @elab_PCI_Δ_s_marking as (n, MapsTo_smarking); eauto.
 
   (* Builds proof that [ipm] is well-formed *)
-  edestruct @elab_validipm as (formals, (listipm_ipm, checkformals_ipm)); eauto.
+  edestruct @elab_ValidIPM as (formals, (ListIPM_ipm, CheckFormals_ipm)); eauto.
   
   (* To prove [σ__p0("s_marking") = M0(p)] *)
   eapply init_s_marking_eq_nat; eauto.
@@ -122,7 +122,7 @@ Lemma init_states_eq_time_counters :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -207,7 +207,7 @@ Lemma init_states_eq_reset_orders :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -399,7 +399,7 @@ Lemma init_states_eq_actions :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -419,7 +419,7 @@ Lemma init_states_eq_functions :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -439,7 +439,7 @@ Lemma init_states_eq_conditions :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -461,7 +461,7 @@ Lemma sim_init_states :
     sitpn2hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
     init hdstore Δ σ__e (behavior d) σ0 ->

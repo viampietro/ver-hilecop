@@ -543,7 +543,7 @@ Section Sitpn2HVhdl.
         exists i j id__ji,
           0 <= i < length pinputs_of_t
           /\ 0 <= j < length toutputs_of_p
-          /\ List.In (assocop_idx Place.reinit_transitions_time (e_nat j) ($id__ji)) opm__p
+          /\ List.In (opassoc_idx Place.reinit_transitions_time (e_nat j) ($id__ji)) opm__p
           /\ List.In (associp_ (Transition.reinit_time $[[(e_nat i)]]) (#id__ji)) ipm__t.    
   Admitted.
 

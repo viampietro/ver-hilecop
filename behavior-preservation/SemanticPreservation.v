@@ -62,7 +62,7 @@ Axiom sitpn2hvhdl_elab_ex :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* there exists an elaborated version [Δ] of [d], with a default state [σ__e] *)
-    exists Δ σ__e, edesign hdstore (NatMap.empty value) d Δ σ__e.
+    exists Δ σ__e, EDesign hdstore (NatMap.empty value) d Δ σ__e.
 
 (** ** Initialization theorem *)
 
@@ -81,7 +81,7 @@ Axiom sitpn2vhdl_init_state_ex :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* There exists an initial state [σ0] of [d]. *)
     exists σ0, init hdstore Δ σ__e (behavior d) σ0. 
@@ -119,7 +119,7 @@ Axiom sitpn2vhdl_sim_ex :
     sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
 
     (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* An initial state [σ0] of [d]. *)
     init hdstore Δ σ__e (behavior d) σ0 ->

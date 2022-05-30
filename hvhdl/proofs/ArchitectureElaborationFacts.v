@@ -9,20 +9,20 @@ Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.proofs.DefaultValueFacts.
 Require Import hvhdl.proofs.EnvironmentFacts.
 
-Lemma edecls_elab_idle_sigma :
+Lemma EDecls_elab_idle_sigma :
   forall Δ σ sigs Δ' σ',
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     forall id v,
     (~exists τ, List.In (sdecl_ id τ) sigs) ->
     MapsTo id v (sstore σ) ->
     MapsTo id v (sstore σ').
 Proof.
   induction 1; auto.
-  intros; apply IHedecls.
+  intros; apply IHEDecls.
   firstorder.
   lazymatch goal with
-  | [ Hedecl: edecl _ _ _ _ _ |- _ ] =>
-    destruct ad; inversion_clear Hedecl
+  | [ HEDecl: EDecl _ _ _ _ _ |- _ ] =>
+    destruct ad; inversion_clear HEDecl
   end.
   specialize (Nat.eq_dec id sigid) as Hsum_id.
   inversion_clear Hsum_id as [Heq_id | Hneq_id].
@@ -32,9 +32,9 @@ Proof.
   - simpl; apply add_2; auto.          
 Qed.
 
-Lemma edecl_idle_gens :
+Lemma EDecl_idle_gens :
   forall {Δ σ sd Δ' σ'},
-    edecl Δ σ sd Δ' σ' ->
+    EDecl Δ σ sd Δ' σ' ->
     EqGens Δ Δ'.
 Proof.
   inversion_clear 1; unfold EqGens; intros.
@@ -57,19 +57,19 @@ Proof.
   - split; intros Hmap; [ apply (add_2 (Declared t0) Hneq_id Hmap) | apply (add_3 Hneq_id Hmap) ].
 Qed.
 
-#[export] Hint Resolve edecl_idle_gens : hvhdl.
+#[export] Hint Resolve EDecl_idle_gens : hvhdl.
 
-Lemma edecls_inv_gens :
+Lemma EDecls_inv_gens :
   forall {Δ σ sigs Δ' σ'},
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     EqGens Δ Δ'.
 Proof. induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl]. Qed.
 
-#[export] Hint Resolve edecls_inv_gens : hvhdl.
+#[export] Hint Resolve EDecls_inv_gens : hvhdl.
 
-Lemma edecl_inv_Δ : 
+Lemma EDecl_inv_Δ : 
   forall {Δ σ Δ' ad σ' id sobj},
-    edecl Δ σ ad Δ' σ' ->
+    EDecl Δ σ ad Δ' σ' ->
     MapsTo id sobj Δ ->
     MapsTo id sobj Δ'.
 Proof.
@@ -81,19 +81,19 @@ Proof.
   apply add_2; auto.
 Qed.
 
-Lemma edecls_inv_Δ : 
+Lemma EDecls_inv_Δ : 
   forall {Δ σ sigs Δ' σ' id sobj},
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     MapsTo id sobj Δ ->
     MapsTo id sobj Δ'.
 Proof.
   induction 1; intros; auto.
-  apply IHedecls; eapply edecl_inv_Δ; eauto.
+  apply IHEDecls; eapply EDecl_inv_Δ; eauto.
 Qed.
 
-Lemma edecl_inv_sstore : 
+Lemma EDecl_inv_sstore : 
   forall {Δ σ Δ' ad σ' id v},
-    edecl Δ σ ad Δ' σ' ->
+    EDecl Δ σ ad Δ' σ' ->
     MapsTo id v (sstore σ) ->
     MapsTo id v (sstore σ').
 Proof.
@@ -103,55 +103,55 @@ Proof.
   apply add_2; auto.
 Qed.
 
-Lemma edecls_inv_sstore :
+Lemma EDecls_inv_sstore :
   forall Δ σ sigs Δ' σ',
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     forall id v,
       MapsTo id v (sstore σ) ->
       MapsTo id v (sstore σ').
 Proof.
   induction 1; intros; auto.
-  apply IHedecls; eapply edecl_inv_sstore; eauto.
+  apply IHEDecls; eapply EDecl_inv_sstore; eauto.
 Qed.
 
-Lemma edecl_inv_events :
+Lemma EDecl_inv_events :
   forall {Δ σ ad Δ' σ'},
-    edecl Δ σ ad Δ' σ' ->
+    EDecl Δ σ ad Δ' σ' ->
     NatSet.Equal (events σ) (events σ').
 Proof. induction 1; auto with set. Qed.
 
-Lemma edecls_inv_events : 
+Lemma EDecls_inv_events : 
   forall {Δ σ sigs Δ' σ'},
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     NatSet.Equal (events σ) (events σ').
 Proof.
   induction 1; auto with set.
   transitivity (events σ'); [
-    eapply edecl_inv_events; eauto | auto].
+    eapply EDecl_inv_events; eauto | auto].
 Qed.
 
-Lemma edecl_decl :
+Lemma EDecl_decl :
   forall {Δ σ Δ' σ' id τ},
-    edecl Δ σ (sdecl_ id τ) Δ' σ' ->
+    EDecl Δ σ (sdecl_ id τ) Δ' σ' ->
     DeclaredOf Δ' id.
 Proof. inversion 1; exists t0; auto with mapsto. Qed.
 
-Lemma edecls_decl :
+Lemma EDecls_decl :
   forall {Δ σ sigs Δ' σ' id τ},
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     List.In (sdecl_ id τ) sigs ->
     DeclaredOf Δ' id.
 Proof.
   induction 1; try (solve [inversion 1]).
   inversion 1.
-  subst; edestruct @edecl_decl; eauto;
-    exists x; eapply edecls_inv_Δ; eauto.
-  eapply IHedecls; eauto.
+  subst; edestruct @EDecl_decl; eauto;
+    exists x; eapply EDecls_inv_Δ; eauto.
+  eapply IHEDecls; eauto.
 Qed.
 
-Lemma edecl_inv_well_typed_values_in_sstore : 
+Lemma EDecl_inv_well_typed_values_in_sstore : 
   forall {Δ σ ad Δ' σ'},
-    edecl Δ σ ad Δ' σ' ->
+    EDecl Δ σ ad Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
@@ -189,9 +189,9 @@ Proof.
         | right; right; eauto with mapsto ] ].
 Qed.
 
-Lemma edecls_inv_well_typed_values_in_sstore : 
+Lemma EDecls_inv_well_typed_values_in_sstore : 
   forall {Δ σ sigs Δ' σ'},
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
@@ -202,18 +202,18 @@ Lemma edecls_inv_well_typed_values_in_sstore :
       IsOfType v t.
 Proof.
   induction 1; try (solve [auto]).
-  intros WT; intros; eapply IHedecls; eauto.
-  eapply edecl_inv_well_typed_values_in_sstore; eauto.
+  intros WT; intros; eapply IHEDecls; eauto.
+  eapply EDecl_inv_well_typed_values_in_sstore; eauto.
 Qed.
 
-Lemma edecl_inv_Δ_if_not_decl : 
+Lemma EDecl_inv_Δ_if_not_decl : 
   forall {Δ σ ad Δ' σ'},
-    edecl Δ σ ad Δ' σ' ->
+    EDecl Δ σ ad Δ' σ' ->
     forall {id sobj},
       (~exists t, sobj = Declared t) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
-  split; [ | eapply edecl_inv_Δ; eauto].
+  split; [ | eapply EDecl_inv_Δ; eauto].
   induction H.
   destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
     [ rewrite eq_; intros; exfalso;
@@ -224,13 +224,13 @@ Proof.
     | eauto with mapsto ].
 Qed.
 
-Lemma edecls_inv_Δ_if_not_decl : 
+Lemma EDecls_inv_Δ_if_not_decl : 
   forall {Δ σ sigs Δ' σ'},
-    edecls Δ σ sigs Δ' σ' ->
+    EDecls Δ σ sigs Δ' σ' ->
     forall {id sobj},
       (~exists t, sobj = Declared t) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
   induction 1; try (solve [reflexivity]).
-  intros; erewrite <- @edecl_inv_Δ_if_not_decl with (Δ := Δ); eauto.
+  intros; erewrite <- @EDecl_inv_Δ_if_not_decl with (Δ := Δ); eauto.
 Qed.

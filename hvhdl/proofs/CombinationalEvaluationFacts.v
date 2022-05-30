@@ -36,17 +36,17 @@ Proof.
   induction 1; try (simpl; exists σ__c; assumption).
   
   (* CASE process evaluation, no events in sl *)
-  - exists σ__c; eapply vseq_inv_cstore; simpl; eauto.
+  - exists σ__c; eapply VSeq_inv_cstore; simpl; eauto.
     
   (* CASE comp evaluation with events.
        2 subcases, [id__c = compid] or [id__c ≠ compid] *)
   - simpl; destruct (Nat.eq_dec id__c0 id__c).
     + exists σ__c''; rewrite e; apply NatMap.add_1; auto.
     + exists σ__c; apply NatMap.add_2; auto.
-      eapply mapop_inv_cstore; eauto.
+      eapply MOP_inv_cstore; eauto.
 
   (* CASE comp evaluation with no events. *)
-  - exists σ__c; eapply mapop_inv_cstore; eauto.
+  - exists σ__c; eapply MOP_inv_cstore; eauto.
 
   (* CASE par *)
   - unfold IsMergedDState in H2; apply proj2, proj1 in H2.
@@ -169,7 +169,7 @@ Proof.
   induction 1; (try (solve [simpl; auto with set])).
   
   (* CASE eventful process *)
-  - simpl; intros; eapply vseq_not_in_events_if_not_assigned; eauto with set.
+  - simpl; intros; eapply VSeq_not_in_events_if_not_assigned; eauto with set.
 
   (* CASE eventful component *)
   - simpl; intros.
@@ -178,11 +178,11 @@ Proof.
                | [ H: ~CompOf _ _ |- _ ] =>
                  apply H; exists Δ__c; auto
                end
-      | eapply mapop_not_in_events_if_not_assigned; eauto with set].
+      | eapply MOP_not_in_events_if_not_assigned; eauto with set].
 
   (* CASE eventless component *)
   - simpl; intros;
-      eapply mapop_not_in_events_if_not_assigned; eauto with set.
+      eapply MOP_not_in_events_if_not_assigned; eauto with set.
 
   (* CASE || *)
   - simpl; intros.
@@ -200,19 +200,19 @@ Proof.
   induction 1; auto.
 
   (* CASE eventful process *)
-  - intros; eapply vseq_inv_cstore; eauto.
+  - intros; eapply VSeq_inv_cstore; eauto.
 
   (* CASE eventful component *)
   - simpl; intros.
     erewrite NatMap.add_neq_mapsto_iff; eauto.
-    eapply mapop_inv_cstore; eauto.
+    eapply MOP_inv_cstore; eauto.
     intro; subst;
     match goal with
     | [ H: ~NatSet.In _ _ |- _ ] => apply H; auto with set
     end.
 
   (* CASE eventless component *)
-  - intros; eapply mapop_inv_cstore; eauto.
+  - intros; eapply MOP_inv_cstore; eauto.
 
   (* CASE || *)
   - intros;
@@ -235,7 +235,7 @@ Proof.
   induction 1; auto with set.
 
   (* CASE eventful process *)
-  - intros; eapply vseq_not_in_events_if_not_sig; simpl.
+  - intros; eapply VSeq_not_in_events_if_not_sig; simpl.
     1, 2: eauto with set.
     1, 2: destruct 1; mapsto_discriminate.
 
@@ -246,11 +246,11 @@ Proof.
     | [ H: ~List.In _ _ |- _ ] =>
       apply H; firstorder
     end.
-    eapply mapop_not_in_events_if_not_sig; eauto with set;
+    eapply MOP_not_in_events_if_not_sig; eauto with set;
       destruct 1; mapsto_discriminate.
     
   (* CASE eventless component *)
-  - intros; eapply mapop_not_in_events_if_not_sig; eauto with set;
+  - intros; eapply MOP_not_in_events_if_not_sig; eauto with set;
     destruct 1; mapsto_discriminate.
 
   (* CASE || *)
@@ -274,13 +274,13 @@ Proof.
   induction 1.
       
   (* CASE active process *)
-  - eapply @vseq_maps_sstore with (σ__w := NoEvDState σ); eauto.
+  - eapply @VSeq_maps_sstore with (σ__w := NoEvDState σ); eauto.
     
   (* CASE comp evaluation with events. *)
-  - cbn; eapply @mapop_maps_sstore with (σ := NoEvDState σ); eauto.
+  - cbn; eapply @MOP_maps_sstore with (σ := NoEvDState σ); eauto.
 
   (* CASE comp evaluation with no events. *)
-  - cbn; eapply @mapop_maps_sstore with (σ := NoEvDState σ); eauto.
+  - cbn; eapply @MOP_maps_sstore with (σ := NoEvDState σ); eauto.
 
   (* CASE null *)
   - intros; exists v; assumption.
@@ -304,7 +304,7 @@ Proof.
 
   (* CASE active process *)
   - intros id__c CompOf_; intros; exfalso.
-    eapply vseq_not_in_events_if_not_sig; eauto.
+    eapply VSeq_not_in_events_if_not_sig; eauto.
     cbn; eauto with set.
     destruct 1; destruct CompOf_; mapsto_discriminate.
     destruct 1; destruct CompOf_; mapsto_discriminate.
@@ -314,7 +314,7 @@ Proof.
     rewrite add_iff; inversion 1.
     subst id__c; exists id__e, g, i, o; reflexivity.
     exfalso.
-    eapply mapop_not_in_events_if_not_sig; eauto.
+    eapply MOP_not_in_events_if_not_sig; eauto.
     cbn; eauto with set.
     destruct 1; destruct CompOf_; mapsto_discriminate.
     destruct 1; destruct CompOf_; mapsto_discriminate.
@@ -322,7 +322,7 @@ Proof.
   (* CASE eventless comp *)
   - cbn; intros * CompOf_; intros.
     exfalso.
-    eapply mapop_not_in_events_if_not_sig; eauto.
+    eapply MOP_not_in_events_if_not_sig; eauto.
     cbn; eauto with set.
     destruct 1; destruct CompOf_; mapsto_discriminate.
     destruct 1; destruct CompOf_; mapsto_discriminate.
@@ -373,14 +373,14 @@ Proof.
   (* CASE comp evaluation with events.*)
   - inversion_clear 1; cbn; intros.
     erewrite @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
-    edestruct @mapip_maps_sstore with (Δ := Δ); eauto.
+    edestruct @MIP_maps_sstore with (Δ := Δ); eauto.
     erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
     eapply vcomb_maps_sstore; eauto.
   (* CASE comp evaluation with no events.*)
   - inversion_clear 1; cbn; intros.
     exists v.
     assert (MapsTo id__c σ__c (cstore σ'))
-      by (eapply mapop_inv_cstore; eauto).      
+      by (eapply MOP_inv_cstore; eauto).      
     erewrite <- MapsTo_fun with (e := σ__c) (e' := σ'__c); eauto.
     erewrite <- MapsTo_fun with (e := σ__c0) (e' := σ__c); eauto.
   (* CASE || *)
@@ -455,11 +455,11 @@ Lemma vcomb_inv_well_typed_values_in_sstore :
 Proof.
   induction 1; intros WT; try (solve [trivial]).
   (* CASE process *)
-  - eapply @vseq_inv_well_typed_values_in_sstore with (σ__w := NoEvDState σ); eauto.
+  - eapply @VSeq_inv_well_typed_values_in_sstore with (σ__w := NoEvDState σ); eauto.
   (* CASE eventful component *)
-  - cbn; eapply @mapop_inv_well_typed_values_in_sstore with (σ := NoEvDState σ); eauto.
+  - cbn; eapply @MOP_inv_well_typed_values_in_sstore with (σ := NoEvDState σ); eauto.
   (* CASE eventless component *)
-  - cbn; eapply @mapop_inv_well_typed_values_in_sstore with (σ := NoEvDState σ); eauto.
+  - cbn; eapply @MOP_inv_well_typed_values_in_sstore with (σ := NoEvDState σ); eauto.
   (* CASE || *)
   - specialize (IHvcomb1 WT); specialize (IHvcomb2 WT).
     intros *; intros MapsTo_Δ MapsTo_sstore_m.
@@ -502,7 +502,7 @@ Proof.
   induction 1; intros WT; trivial.
   (* CASE process *)
   - intros; eapply WT; eauto.
-    eapply @vseq_inv_cstore_2 with (σ__w := NoEvDState σ); eauto.
+    eapply @VSeq_inv_cstore_2 with (σ__w := NoEvDState σ); eauto.
   (* CASE eventful component *)
   - cbn; do 5 intro.
     (* 2 CASES: [id__c = compid] or [id__c ≠ compid] *)
@@ -512,16 +512,16 @@ Proof.
       assert (eq_Δ : Component Δ__c0 = Component Δ__c) by (eauto with mapsto).
       inject_left eq_Δ; eauto.
       eapply vcomb_inv_well_typed_values_in_sstore; eauto.
-      eapply mapip_inv_well_typed_values_in_sstore; eauto.
+      eapply MIP_inv_well_typed_values_in_sstore; eauto.
       erewrite <- @MapsTo_add_eqv with (e := σ'__c) (e' := σ__c''); eauto.
     (* CASE [id__c ≠ id__c0] *)
     + assert (MapsTo id__c0 σ'__c (cstore σ)) by
-        (eapply @mapop_inv_cstore_2 with (σ := NoEvDState σ); eauto with mapsto).
+        (eapply @MOP_inv_cstore_2 with (σ := NoEvDState σ); eauto with mapsto).
       eapply WT; eauto.
   (* CASE eventless component *)
   - cbn; do 5 intro.
     assert (MapsTo id__c0 σ'__c (cstore σ)) by
-        (eapply @mapop_inv_cstore_2 with (σ := NoEvDState σ); eauto with mapsto).
+        (eapply @MOP_inv_cstore_2 with (σ := NoEvDState σ); eauto with mapsto).
     eapply WT; eauto.
   (* CASE || *)
   - specialize (IHvcomb1 WT); specialize (IHvcomb2 WT).

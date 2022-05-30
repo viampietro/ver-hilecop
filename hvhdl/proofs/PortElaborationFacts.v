@@ -9,9 +9,9 @@ Require Import hvhdl.HVhdlElaborationLib.
 Require Import hvhdl.proofs.DefaultValueFacts.
 Require Import hvhdl.proofs.EnvironmentFacts.
 
-Lemma eport_inv_gens :
+Lemma EPort_inv_gens :
   forall {Δ σ pd Δ' σ'},
-    eport Δ σ pd Δ' σ' ->
+    EPort Δ σ pd Δ' σ' ->
     EqGens Δ Δ'.
 Proof.
   inversion_clear 1; unfold EqGens; intros.
@@ -44,21 +44,21 @@ Proof.
     ].
 Qed.
 
-#[export] Hint Resolve eport_inv_gens : hvhdl.
+#[export] Hint Resolve EPort_inv_gens : hvhdl.
 
-Lemma eports_inv_gens :
+Lemma EPorts_inv_gens :
   forall {Δ σ ports Δ' σ'},
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     EqGens Δ Δ'.
 Proof.
   induction 1; [reflexivity | transitivity Δ'; eauto with hvhdl].
 Qed.
 
-#[export] Hint Resolve eports_inv_gens : hvhdl.
+#[export] Hint Resolve EPorts_inv_gens : hvhdl.
 
-Lemma eport_inv_sstore :
+Lemma EPort_inv_sstore :
   forall Δ σ pd Δ' σ' id v,
-    eport Δ σ pd Δ' σ' ->
+    EPort Δ σ pd Δ' σ' ->
     MapsTo id v (sstore σ) ->
     MapsTo id v (sstore σ').
 Proof.
@@ -70,38 +70,38 @@ Proof.
     end.
 Qed.
 
-#[export] Hint Resolve eport_inv_sstore : hvhdl.
+#[export] Hint Resolve EPort_inv_sstore : hvhdl.
 
-Lemma eports_inv_sstore :
+Lemma EPorts_inv_sstore :
   forall Δ σ ports Δ' σ' id v,
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     MapsTo id v (sstore σ) ->
     MapsTo id v (sstore σ').
 Proof.
   induction 1; auto; intros.
-  apply IHeports; eauto with hvhdl.
+  apply IHEPorts; eauto with hvhdl.
 Qed.
 
-Lemma eport_inv_events :
+Lemma EPort_inv_events :
   forall {Δ σ pd Δ' σ'},
-    eport Δ σ pd Δ' σ' ->
+    EPort Δ σ pd Δ' σ' ->
     NatSet.Equal (events σ) (events σ').
 Proof. induction 1; auto with set. Qed.
 
-Lemma eports_inv_events :
+Lemma EPorts_inv_events :
   forall Δ σ ports Δ' σ',
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     NatSet.Equal (events σ) (events σ').
 Proof.
   induction 1; auto with set.
   transitivity (events σ'); [
-    eapply eport_inv_events; eauto
+    eapply EPort_inv_events; eauto
   | auto].
 Qed.
 
-Lemma eport_inv_Δ :
+Lemma EPort_inv_Δ :
   forall Δ σ pd Δ' σ' id sobj,
-    eport Δ σ pd Δ' σ' ->
+    EPort Δ σ pd Δ' σ' ->
     MapsTo id sobj Δ ->
     MapsTo id sobj Δ'.
 Proof.
@@ -113,40 +113,40 @@ Proof.
       end.
 Qed.
 
-#[export] Hint Resolve eport_inv_Δ : hvhdl.
+#[export] Hint Resolve EPort_inv_Δ : hvhdl.
 
-Lemma eports_inv_Δ :
+Lemma EPorts_inv_Δ :
   forall Δ σ ports Δ' σ' id sobj,
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     MapsTo id sobj Δ ->
     MapsTo id sobj Δ'.
 Proof.
   induction 1; auto; intros.
-  apply IHeports; eauto with hvhdl.
+  apply IHEPorts; eauto with hvhdl.
 Qed.
 
-Lemma eport_input :
+Lemma EPort_input :
   forall {Δ σ Δ' σ' id τ},
-    eport Δ σ (pdecl_in id τ) Δ' σ' ->
+    EPort Δ σ (pdecl_in id τ) Δ' σ' ->
     InputOf Δ' id.
 Proof. inversion 1; exists t0; auto with mapsto. Qed.
 
-Lemma eports_input :
+Lemma EPorts_input :
   forall {Δ σ ports Δ' σ' id τ},
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     List.In (pdecl_in id τ) ports ->
     InputOf Δ' id.
 Proof.
   induction 1; try (solve [inversion 1]).
   inversion 1.
-  subst; edestruct @eport_input; eauto;
-    exists x; eapply eports_inv_Δ; eauto.
-  eapply IHeports; eauto.
+  subst; edestruct @EPort_input; eauto;
+    exists x; eapply EPorts_inv_Δ; eauto.
+  eapply IHEPorts; eauto.
 Qed.
 
-Lemma eport_Varr_in_sstore :
+Lemma EPort_Varr_in_sstore :
   forall {Δ σ Δ' σ' id t e e'},
-    eport Δ σ (pdecl_in id (tind_array t e e')) Δ' σ' ->
+    EPort Δ σ (pdecl_in id (tind_array t e e')) Δ' σ' ->
     exists aofv, MapsTo id (Varr aofv) (sstore σ').
 Proof.
   inversion_clear 1.
@@ -157,9 +157,9 @@ Proof.
   eauto with mapsto.
 Qed.
 
-Lemma eport_inv_well_typed_values_in_sstore : 
+Lemma EPort_inv_well_typed_values_in_sstore : 
   forall {Δ σ pd Δ' σ'},
-    eport Δ σ pd Δ' σ' ->
+    EPort Δ σ pd Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
@@ -202,9 +202,9 @@ Proof.
      || mapsto_discriminate) ].
 Qed.
 
-Lemma eports_inv_well_typed_values_in_sstore :
+Lemma EPorts_inv_well_typed_values_in_sstore :
   forall {Δ σ ports Δ' σ'},
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     (forall {id t v},
         (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
@@ -215,18 +215,18 @@ Lemma eports_inv_well_typed_values_in_sstore :
       IsOfType v t.
 Proof.
   induction 1; try (solve [auto]).
-  intros WT; intros; eapply IHeports; eauto.
-  eapply eport_inv_well_typed_values_in_sstore; eauto.
+  intros WT; intros; eapply IHEPorts; eauto.
+  eapply EPort_inv_well_typed_values_in_sstore; eauto.
 Qed.
 
-Lemma eport_inv_Δ_if_not_port :
+Lemma EPort_inv_Δ_if_not_port :
   forall {Δ σ pd Δ' σ'},
-    eport Δ σ pd Δ' σ' ->
+    EPort Δ σ pd Δ' σ' ->
     forall {id sobj},
       (~exists t, sobj = Input t \/ sobj = Output t) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
-  split; [ | eapply eport_inv_Δ; eauto].
+  split; [ | eapply EPort_inv_Δ; eauto].
   induction H.
   all :
     destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
@@ -240,13 +240,13 @@ Proof.
     | eauto with mapsto ].
 Qed.
 
-Lemma eports_inv_Δ_if_not_port :
+Lemma EPorts_inv_Δ_if_not_port :
   forall {Δ σ ports Δ' σ'},
-    eports Δ σ ports Δ' σ' ->
+    EPorts Δ σ ports Δ' σ' ->
     forall {id sobj},
       (~exists t, sobj = Input t \/ sobj = Output t) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
   induction 1; try (solve [reflexivity]).
-  intros; erewrite <- @eport_inv_Δ_if_not_port with (Δ := Δ); eauto.
+  intros; erewrite <- @EPort_inv_Δ_if_not_port with (Δ := Δ); eauto.
 Qed.

@@ -40,7 +40,7 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ σ Λ initl stmt σ' Λ' ->
+      VSeq Δ σ σ Λ initl stmt σ' Λ' ->
       
       (* * Side conditions * *)
       
@@ -63,13 +63,13 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
       (* * Premises * *)
 
       (* Injects input port values into component state *)
-      mapip Δ Δ__c σ σ__c ipmap σ__c' ->
+      MIP Δ Δ__c σ σ__c ipmap σ__c' ->
 
       (* Executes component behavior *)
       vruninit D__s Δ__c σ__c' (behavior d) σ__c'' ->
 
       (* Propagates output port values to embedded design *)
-      mapop Δ Δ__c σ σ__c'' opmap σ' ->
+      MOP Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 
@@ -101,9 +101,9 @@ Inductive vruninit (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
                    Δ__c σ__c σ__c' σ__c'' σ'},
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c ipmap σ__c' ->
+      MIP Δ Δ__c σ σ__c ipmap σ__c' ->
       vruninit D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' opmap σ' ->
+      MOP Δ Δ__c σ σ__c'' opmap σ' ->
       
       (* * Side conditions * *)
 

@@ -1,147 +1,111 @@
-(** * Validss predicate. *)
+(** * Validity check for sequential statements *)
 
-Require Import GlobalTypes.
-Require Import AbstractSyntax.
-Require Import Environment.
-Require Import ExpressionEvaluation.
-Require Import SemanticalDomains.
+Require Import common.GlobalTypes.
+
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.Environment.
+Require Import hvhdl.ExpressionEvaluation.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.HVhdlTypes.
 
 Import NatMap.
 
-(** Defines the validss predicate that states the well-formedness and
-    well-typedness of sequential statements in an H-VHDL program. *)
+(** Defines the [ValidSS] predicate that states the well-formedness
+    and well-typedness of sequential statements in an H-VHDL
+    design. *)
 
-Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
+Inductive ValidSS (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) : ss -> Prop :=
 
-(** Well-typedness of a value assignment to a declared signal. *)
-| ValidSsSigAssignDecl :
-    forall {id e v t},
+(** Well-typedness of a value assignment to a signal (either internal
+    or output port). *)
+| ValidSSSigAssign :
+    forall id e v t,
 
       (* Premises *)
-      VExpr Δ σ Λ false e v ->
+      VExpr Δ sst Λ false e v ->
       IsOfType v t ->
 
       (* Side conditions *)
-      MapsTo id (Declared t) Δ -> (* id ∈ Sigs(Δ) and Δ(id) = t *)
+      (* id ∈ S(Δ) ∪ O(Δ) and Δ(id) = t *)
+      MapsTo id (Declared t) Δ \/ MapsTo id (Output t) Δ -> 
 
       (* Conclusion *)
-      validss Δ σ Λ (ss_sig (n_id id) e)
+      ValidSS Δ sst Λ (ss_sig (n_id id) e)
               
-(** Well-typedness of a value assignment to a port in "out" mode. *)
-| ValidSsSigAssignOut :
-    forall {id e v t},
+(** Well-typedness of a value assignment to a signal identifier
+    (either internal or output port) with index. *)
+| ValidSSIdxSigAssign :
+    forall id e ei v i t l u,
 
       (* Premises *)
-      VExpr Δ σ Λ false e v ->
+      VExpr Δ sst Λ false e v ->
+      VExpr Δ sst Λ false ei (Vnat i) ->
       IsOfType v t ->
-
-      (* Side conditions *)
-      MapsTo id (Output t) Δ -> (* id ∈ Outs(Δ) and Δ(id) = t *)
-
-      (* Conclusion *)
-      validss Δ σ Λ (ss_sig (n_id id) e)
-
-(** Well-typedness of a value assignment to a declared signal
-    identifier with index. *)
-| ValidSsIdxSigAssignDecl :
-    forall {id e ei v vi t l u},
-
-      (* Premises *)
-      VExpr Δ σ Λ false e v ->
-      VExpr Δ σ Λ false ei vi ->
-      IsOfType v t ->
-      IsOfType vi (Tnat l u) ->
+      IsOfType (Vnat i) (Tnat l u) ->
                  
       (* Side conditions *)
-      MapsTo id (Declared (Tarray t l u)) Δ -> (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
+      (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
+      MapsTo id (Declared (Tarray t l u)) Δ
+      \/ MapsTo id (Output (Tarray t l u)) Δ ->
 
       (* Conclusion *)
-      validss Δ σ Λ (ss_sig (n_xid id ei) e)
-
-(** Well-typedness of a value assignment to an "out" port
-    identifier with index. *)
-| ValidSsIdxSigAssignOut :
-    forall {id e ei v vi t l u},
-
-      (* Premises *)
-      VExpr Δ σ Λ false e v ->
-      VExpr Δ σ Λ false ei vi ->
-      IsOfType v t ->
-      IsOfType vi (Tnat l u) ->
-      
-      (* Side conditions *)
-      MapsTo id (Output (Tarray t l u)) Δ -> (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
-
-      (* Conclusion *)
-      validss Δ σ Λ (ss_sig (n_xid id ei) e)
+      ValidSS Δ sst Λ (ss_sig (n_xid id ei) e)
               
 (** Well-typedness of a variable assignment. *)
-| ValidSsVarAssign :
-    forall {id e t v val},
+| ValidSSVarAssign :
+    forall id e t v val,
 
       (* Premises *)
-      VExpr Δ σ Λ false e v ->
+      VExpr Δ sst Λ false e v ->
       IsOfType v t ->
             
       (* Side conditions *)
       MapsTo id (t, val) Λ -> (* id ∈ Λ and Λ(id) = (t, val) *)
       
-      validss Δ σ Λ (ss_var (n_id id) e)
+      ValidSS Δ sst Λ (ss_var (n_id id) e)
 
 (** Well-typedness of a variable assignment, with an indexed
     variable identifier. *)
-| ValidSsIdxVarAssign :
-    forall {id e ei t v vi val l u},
+| ValidSSIdxVarAssign :
+    forall id e ei t v i val l u,
 
       (* Premises *)
-      VExpr Δ σ Λ false e v ->
-      VExpr Δ σ Λ false ei vi ->
+      VExpr Δ sst Λ false e v ->
+      VExpr Δ sst Λ false ei (Vnat i) ->
       IsOfType v t ->
-      IsOfType vi (Tnat l u) ->
+      IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       MapsTo id (Tarray t l u, val) Λ -> (* id ∈ Λ and Λ(id) = (array(t,l,u), val) *)
 
       (* Conclusion *)
-      validss Δ σ Λ (ss_var (n_xid id ei) e)
+      ValidSS Δ sst Λ (ss_var (n_xid id ei) e)
 
-(** Well-typedness of a simple if statement. *)
-| ValidSsIf :
-    forall {e stmt v},
-
-      (* Premises *)
-      VExpr Δ σ Λ false e v ->
-      IsOfType v Tbool ->
-      validss Δ σ Λ stmt ->
-      
-      (* Conclusion *)
-      validss Δ σ Λ (ss_if e stmt)
-
-(** Well-typedness of a if-else statement. *)
-| ValidSsIfElse :
-    forall {e stmt stmt' v},
+(** Well-typedness of a conditional statement. *)
+| ValidSSIfElse :
+    forall e stmt stmt' v,
 
       (* Premises *)
-      VExpr Δ σ Λ false e v ->
+      VExpr Δ sst Λ false e v ->
       IsOfType v Tbool ->
-      validss Δ σ Λ stmt ->
-      validss Δ σ Λ stmt' ->
+      ValidSS Δ sst Λ stmt ->
+      ValidSS Δ sst Λ stmt' ->
       
       (* Conclusion *)
-      validss Δ σ Λ (ss_ifelse e stmt stmt')
+      ValidSS Δ sst Λ (ss_ifelse e stmt stmt')
 
 (** Well-typedness of a loop statement. *)
-| ValidSsLoop :
-    forall {id e e' stmt n n' lenv'},
+| ValidSSLoop :
+    forall id e e' stmt n n' lenv',
 
       (* Premises *)
 
-      (** If [vexpr] interprets [e] and [e'] into [nat] values then it
-         implies [IsOfType (Vnat n) nat(0,NATMAX)] and [IsOfType
-         (Vnat n') nat(0,NATMAX)].  *)
-      VExpr Δ σ Λ false e (Vnat n) ->
-      VExpr Δ σ Λ false e' (Vnat n') ->
-      validss Δ σ lenv' stmt ->
+      (** If [VExpr] interprets [e] and [e'] into [nat] values then it
+         implies [IsOfType (Vnat n) nat(0,NATMAX)] and [IsOfType (Vnat
+         n') nat(0,NATMAX)].  *)
+      VExpr Δ sst Λ false e (Vnat n) ->
+      VExpr Δ sst Λ false e' (Vnat n') ->
+      ValidSS Δ sst lenv' stmt ->
       
       (* Side conditions *)
 
@@ -151,26 +115,26 @@ Inductive validss (Δ : ElDesign) (σ : DState) (Λ : LEnv) : ss -> Prop :=
       lenv' = add id (Tnat n n', Vnat n) Λ ->
       
       (* Conclusion *)
-      validss Δ σ Λ (ss_loop id e e' stmt)
+      ValidSS Δ sst Λ (ss_loop id e e' stmt)
 
 (** Well-typedness of a rising edge block statement. *)
-| ValidSsRising :
-    forall {stmt},
-      validss Δ σ Λ stmt ->
-      validss Δ σ Λ (ss_rising stmt)
+| ValidSSRising :
+    forall stmt,
+      ValidSS Δ sst Λ stmt ->
+      ValidSS Δ sst Λ (ss_rising stmt)
 
 (** Well-typedness of a falling edge block statement. *)
-| ValidSsFalling :
-    forall {stmt},
-      validss Δ σ Λ stmt ->
-      validss Δ σ Λ (ss_falling stmt)
+| ValidSSFalling :
+    forall stmt,
+      ValidSS Δ sst Λ stmt ->
+      ValidSS Δ sst Λ (ss_falling stmt)
 
 (** Well-typedness of a rst block statement *)              
-| ValidSsRst :
+| ValidSSRst :
     forall stmt stmt',
-      validss Δ σ Λ stmt ->
-      validss Δ σ Λ stmt' ->
-      validss Δ σ Λ (ss_rst stmt stmt')
+      ValidSS Δ sst Λ stmt ->
+      ValidSS Δ sst Λ stmt' ->
+      ValidSS Δ sst Λ (ss_rst stmt stmt')
 
 (** Well-typedness of a null statement *)
-| ValidSsNull : validss Δ σ Λ ss_null.
+| ValidSSNull : ValidSS Δ sst Λ ss_null.

@@ -176,7 +176,7 @@ Definition genmap := list assocg.
 (** Input port association. *)
 
 Inductive ipassoc : Type :=
-  ipa (n : name) (e : expr).
+  ipa_ (n : name) (e : expr).
 
 (** An input port map is a list of input port associations. *)
 

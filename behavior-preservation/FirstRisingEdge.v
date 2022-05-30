@@ -21,7 +21,7 @@ Lemma first_rising_edge_full :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* [σ0] is the initial state of [d]. *)
     init hdstore Δ σ__e (behavior d) σ0 ->
@@ -50,7 +50,7 @@ Lemma first_rising_edge :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* [σ0] is the initial state of [d]. *)
     init hdstore Δ σ__e (behavior d) σ0 ->

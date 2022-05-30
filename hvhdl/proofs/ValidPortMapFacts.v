@@ -16,22 +16,22 @@ Require Import hvhdl.proofs.ExpressionEvaluationFacts.
 Require Import hvhdl.proofs.StaticExpressionsFacts.
 Require Import hvhdl.proofs.EnvironmentFacts.
 
-(** ** Facts about [listipm] *)
+(** ** Facts about [ListIPM] *)
 
 Section ListIPM.
   
-  Lemma eassocip_eq_iff_eq_sigs :
+  Lemma EIPAssoc_eq_iff_eq_sigs :
     forall {Δ1 Δ__c σ1 asip formals formals' Δ2 σ2},
       EqGens Δ1 Δ2 /\ EqSigs Δ1 Δ2 ->
       EqSStore σ1 σ2 ->
-      eassocip Δ1 Δ__c σ1 formals asip formals' <->
-      eassocip Δ2 Δ__c σ2 formals asip formals'.
+      EIPAssoc Δ1 Δ__c σ1 formals asip formals' <->
+      EIPAssoc Δ2 Δ__c σ2 formals asip formals'.
   Proof.
     split; induction 1.
-    1,3: eapply EAssocipSimple; eauto;
+    1,3: eapply EIPAssocSimple; eauto;
       erewrite vexpr_eq_iff_eq_sigs; eauto;
         try ((split; symmetry; firstorder) || (symmetry; eauto)).
-    all: eapply EAssocipPartial with (t := t0); eauto;
+    all: eapply EIPAssocPartial with (t := t0); eauto;
       [ erewrite IGStaticExpr_eq_iff_eq_gens; eauto;
         try ((symmetry; firstorder) || firstorder)
       | erewrite vexpr_eq_iff_eq_sigs; eauto;
@@ -41,22 +41,22 @@ Section ListIPM.
       ].
   Qed.
   
-  Lemma listipm_eq_iff_eq_sigs :
+  Lemma ListIPM_eq_iff_eq_sigs :
     forall {Δ1 Δ__c σ1 ipm formals formals' Δ2 σ2},
       EqGens Δ1 Δ2 /\ EqSigs Δ1 Δ2 ->
       EqSStore σ1 σ2 ->
-      listipm Δ1 Δ__c σ1 formals ipm formals' <->
-      listipm Δ2 Δ__c σ2 formals ipm formals'.
+      ListIPM Δ1 Δ__c σ1 formals ipm formals' <->
+      ListIPM Δ2 Δ__c σ2 formals ipm formals'.
   Proof.
     split; induction 1; auto with hvhdl;
       eapply ListIPMCons; eauto;
-        erewrite eassocip_eq_iff_eq_sigs; eauto;
+        erewrite EIPAssoc_eq_iff_eq_sigs; eauto;
           [split; symmetry; firstorder | symmetry; auto].
   Qed.
 
-  Lemma eassocip_unique_simpl_associp :
+  Lemma EIPAssoc_unique_simpl_associp :
     forall {Δ Δ__c σ formals asip formals'},
-      eassocip Δ Δ__c σ formals asip formals' ->
+      EIPAssoc Δ Δ__c σ formals asip formals' ->
       forall {id__i : ident},
         List.In (id__i, None) formals ->
         (~(exists e, (associp_ id__i e) = asip) /\
@@ -76,17 +76,17 @@ Section ListIPM.
     destruct 1 as (e0, (e__i, e1)); inject_left e1; contradiction.
   Qed.
 
-  Lemma eassocip_inv_formals :
+  Lemma EIPAssoc_inv_formals :
     forall {Δ Δ__c σ formals asip formals'},
-      eassocip Δ Δ__c σ formals asip formals' ->
+      EIPAssoc Δ Δ__c σ formals asip formals' ->
       forall {f : ident * option N},
         List.In f formals ->
         List.In f formals'.
   Proof. inversion 1; auto with datatypes. Qed.
   
-  Lemma listipm_unique_simpl_associp :
+  Lemma ListIPM_unique_simpl_associp :
     forall {Δ Δ__c σ ipm formals formals'},
-      listipm Δ Δ__c σ formals ipm formals' ->
+      ListIPM Δ Δ__c σ formals ipm formals' ->
       forall {id__i : ident},
       List.In (id__i, None) formals ->
       (~(exists e, List.In (associp_ id__i e) ipm) /\
@@ -96,13 +96,13 @@ Section ListIPM.
     destruct 1 as (e, In_nil); inversion In_nil.
     destruct 1 as (e, (e__i, In_nil)); inversion In_nil.
     destruct 1 as (e, [eq1 | In_lofasips]).
-    edestruct @eassocip_unique_simpl_associp with (Δ := Δ) as (nex_1, nex_2); eauto.
-    edestruct @IHlistipm as (nex_1, nex_2); eauto.
-    eapply eassocip_inv_formals; eauto.
+    edestruct @EIPAssoc_unique_simpl_associp with (Δ := Δ) as (nex_1, nex_2); eauto.
+    edestruct @IHListIPM as (nex_1, nex_2); eauto.
+    eapply EIPAssoc_inv_formals; eauto.
     destruct 1 as (e, (e__i, [eq1 | In_lofasips])).
-    edestruct @eassocip_unique_simpl_associp with (Δ := Δ) as (nex_1, nex_2); eauto.
-    edestruct @IHlistipm as (nex_1, nex_2); eauto.
-    eapply eassocip_inv_formals; eauto.
+    edestruct @EIPAssoc_unique_simpl_associp with (Δ := Δ) as (nex_1, nex_2); eauto.
+    edestruct @IHListIPM as (nex_1, nex_2); eauto.
+    eapply EIPAssoc_inv_formals; eauto.
   Qed.
 
 End ListIPM.

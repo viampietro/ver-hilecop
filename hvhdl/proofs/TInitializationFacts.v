@@ -29,8 +29,8 @@ Section TVRunInit.
       MapsTo s_time_counter (Vnat 0) (sstore σ').
   Proof.
     inversion_clear 1; intros.
-    vseqinv_cl; [contradiction | ].
-    vseqinv_cl; subst; cbn.
+    VSeqinv_cl; [contradiction | ].
+    VSeqinv_cl; subst; cbn.
     vexprinv_cl; eauto with mapsto.
     match goal with
     | [ H: VExpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
@@ -45,8 +45,8 @@ Section TVRunInit.
       MapsTo s_time_counter (Vnat 0) (sstore σ).
   Proof.
     inversion_clear 1; intros.
-    vseqinv_cl; [contradiction | ].
-    vseqinv_cl; subst; cbn.
+    VSeqinv_cl; [contradiction | ].
+    VSeqinv_cl; subst; cbn.
     cbn in H; contrad_not_in_add.
     match goal with
     | [ H: VExpr _ _ _ _ _ _, H': OVEq _ _ _, H'': MapsTo _ currv _ |- _ ] =>
@@ -108,16 +108,16 @@ Section TVRunInit.
       assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
       inject_left e.
       eapply vruninit_T_s_tc_eq_O; eauto.
-      eapply mapip_not_in_events_if_not_input; eauto.
+      eapply MIP_not_in_events_if_not_input; eauto.
       destruct 1; unfold DeclaredOf in *; mapsto_discriminate.
 
     (* CASE eventless component *)
     - inversion 1; subst; subst_transition_design.
       clear IHvruninit; simpl in *.
       erewrite @MapsTo_fun with (e := σ__t') (e' := σ__c); eauto;
-        [ | eapply mapop_inv_cstore; eauto].
+        [ | eapply MOP_inv_cstore; eauto].
       (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
-      (* erewrite mapip_eq_state_if_no_events; eauto; *)
+      (* erewrite MIP_eq_state_if_no_events; eauto; *)
       (*   [ pattern σ__c'; erewrite vruninit_eq_state_if_no_events; eauto *)
       (*   | erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto ]. *)
       (* With no events, s_marking ⇐ initial_marking happened,
@@ -125,7 +125,7 @@ Section TVRunInit.
       (* assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto). *)
       (* inject_left e. *)
       (* eapply vruninit_T_s_tc_eq_O; eauto. *)
-      (* eapply mapip_not_in_events_if_not_input; eauto. *)
+      (* eapply MIP_not_in_events_if_not_input; eauto. *)
       (* destruct 1; unfold DeclaredOf in *; mapsto_discriminate. *)
       (* erewrite <- @MapsTo_fun with (e := σ__t) (e' := σ__c); eauto. *)
       admit.
@@ -226,13 +226,13 @@ Section TVRunInit.
 
       (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
       (* assert (eq_σ : EqDState σ__c σ__c''). *)
-      (* { erewrite @mapip_eq_state_if_no_events with (σ__c := σ__c) (σ__c' := σ__c'); eauto. *)
+      (* { erewrite @MIP_eq_state_if_no_events with (σ__c := σ__c) (σ__c' := σ__c'); eauto. *)
       (*   erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto. *)
       (*   reflexivity. *)
       (*   erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto. } *)
       (* [σ__c = σ__t'] *)
       (* erewrite @MapsTo_fun with (e := σ__t') (e' := σ__c) in *; eauto; *)
-      (*   try (solve [eapply mapop_inv_cstore; eauto | assumption]). *)
+      (*   try (solve [eapply MOP_inv_cstore; eauto | assumption]). *)
       (* pattern σ__c; rewrite eq_σ. *)
       
       (* With no events, [s_rtc ⇐ ∏ rt(i)] happened,

@@ -18,25 +18,25 @@ Require Import hvhdl.proofs.DesignElaborationFacts.
 
 (** ** Place Declared Signal Elaboration *)
 
-Lemma edecl_s_marking :
+Lemma EDecl_s_marking :
   forall {Δ σ Δ' σ'},
-    edecl Δ σ (sdecl_ s_marking local_weight_t) Δ' σ' ->
+    EDecl Δ σ (sdecl_ s_marking local_weight_t) Δ' σ' ->
     exists n, MapsTo s_marking (Declared (Tnat 0 n)) Δ'.
 Proof.
   inversion 1.
-  match goal with | [ H: etype _ _ _ |- _ ] => inversion H end.
+  match goal with | [ H: EType _ _ _ |- _ ] => inversion H end.
   match goal with | [ H: EConstr _ _ _ _ _ |- _ ] => inversion H end.
   match goal with | [ H: VExpr _ _ _ _ _ (Vnat n) |- _ ] => inversion H end.
   exists n'; apply add_1; auto.
 Qed.
 
-Lemma edecls_P_Δ_s_marking :
+Lemma EDecls_P_Δ_s_marking :
   forall {Δ σ Δ' σ'},
-    edecls Δ σ place_sigs Δ' σ' ->
+    EDecls Δ σ place_sigs Δ' σ' ->
     exists n, MapsTo s_marking (Declared (Tnat 0 n)) Δ'.
 Proof.
   inversion_clear 1.
   inversion_clear H1.
-  edestruct @edecl_s_marking with (Δ := Δ'0); eauto.
-  exists x; eapply edecls_inv_Δ; eauto.
+  edestruct @EDecl_s_marking with (Δ := Δ'0); eauto.
+  exists x; eapply EDecls_inv_Δ; eauto.
 Qed.

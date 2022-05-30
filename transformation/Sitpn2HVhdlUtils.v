@@ -73,7 +73,7 @@ Section Sitpn2HVhdlUtils.
         match ao with
         (* If we have found an association of the form (id'(j), _);
            then, checks that [id = id'] *)
-        | (assocop_idx id' (e_nat j) _) =>
+        | (opassoc_idx id' (e_nat j) _) =>
             if (id =? id')%nat then
               match currmax with
               | None => Ret (Some j)
@@ -92,20 +92,20 @@ Section Sitpn2HVhdlUtils.
     CompileTimeState outputmap :=
     do optj <- get_max_index_omap m id;
     match optj with
-    | None => Ret (m ++ [(assocop_idx id (e_nat 0) n)])
-    | Some j => Ret (m ++ [(assocop_idx id (e_nat (j + 1)) n)])
+    | None => Ret (m ++ [(opassoc_idx id (e_nat 0) n)])
+    | Some j => Ret (m ++ [(opassoc_idx id (e_nat (j + 1)) n)])
     end.
 
-  (** Returns [a] if [(assocop_simpl id a)] is in the output map [m].
+  (** Returns [a] if [(opassoc_simpl id a)] is in the output map [m].
 
       Raises an error if [id] is not a formal part in [m].
       
       As [id] is a simple identifier the actual part associated with
       [id] in [m] is of type [option name]. *)
 
-  Definition actual_aux (id : ident) (m : outputmap) : CompileTimeState (option assocop) :=
+  Definition actual_aux (id : ident) (m : outputmap) : CompileTimeState (option opassoc) :=
     ListMonad.find (fun aop => match aop with
-                               | assocop_simpl id' a => Ret (id =? id')%nat
+                               | opassoc_simpl id' a => Ret (id =? id')%nat
                                | _ => Ret false
                                end) m.
   
@@ -114,7 +114,7 @@ Section Sitpn2HVhdlUtils.
     match opt_aop with
     | None => Err ("actual: found no actual part matching the given identifier")
     | Some aop => match aop with
-                  | assocop_simpl _ a => Ret a
+                  | opassoc_simpl _ a => Ret a
                   | _ => Err ("actual: impossible case")
                   end
     end.
@@ -134,7 +134,7 @@ Section Sitpn2HVhdlUtils.
     do id__s <- get_nextid;
     do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
     do i' <- cassoc_imap i id__i (#id__s);
-    Ret ((o ++ [assocop_idx id__o idx ($id__s)]), i').
+    Ret ((o ++ [opassoc_idx id__o idx ($id__s)]), i').
   
   (** The [get_comp_aux] function looks up [cstmt] for a component
       instantiation statement labelled with [id__c] as a component

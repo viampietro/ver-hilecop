@@ -144,7 +144,7 @@ Inductive fullsim
       
       (* * Premises * *)
 
-      edesign D__s Mg d Δ σ__e ->                (* Elaboration *)
+      EDesign D__s Mg d Δ σ__e ->                (* Elaboration *)
       init D__s Δ σ__e (behavior d) σ0 ->        (* Initialization *)
       simloop D__s E__p Δ σ0 (behavior d) τ θ -> (* Simulation loop *)
                     

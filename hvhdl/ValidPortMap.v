@@ -17,17 +17,21 @@ Require Import hvhdl.HVhdlTypes.
 
 Open Scope N_scope.
 
-(** ** Valid port map for "in" mode ports. *)
+(** ** Valid check for input port maps *)
 
 (** Defines the relation that lists the connection of ports in a given
-    "in" port map, i.e a port map where all formal parts of the
+    input port map, i.e a port map where all formal parts of the
     associations corresponds to input port identifiers.
     
-    - [Δ] is the embedding design environment; remember that a port
-      map appears in a component instantiation statement that is part
-      of the behavior description for a higher-level design.
+    - [Δ] represents the embedding design in its elaborated version;
+      remember that a port map appears in a design instantiation
+      statement that is part of the behavior description for a
+      embedding design.
 
-    - [Δ__c] is the design environment of the component instance.
+    - [Δ__c] is the design instance in its elaborated version.
+
+    - [sst] is the signal store of the default design state being
+      constructed by the elaboration phase.
 
     - [formals] lists the port identifiers that appears in the formal
       part of a port map.
@@ -36,34 +40,33 @@ Open Scope N_scope.
       as a formal part of the port map.
       
       If a couple [(id, Some v)] appears in [formals], then [id(v)]
-      appears as formal part of the port map.
+      appears as formal part of the port map.  *)
 
- *)
-
-Inductive listipm (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * option N)) :
-  list associp -> list (ident * option N) -> Prop :=
+Inductive ListIPM (Δ Δ__c : ElDesign) (sst : IdMap value) (formals : list (ident * option N)) :
+  list ipassoc -> list (ident * option N) -> Prop :=
   
 (** An empty list of port associations does not change the [formals] list. *)
-| ListIPMNil : listipm Δ Δ__c σ formals [] formals
+| ListIPMNil : ListIPM Δ Δ__c sst formals [] formals
 
 (** Lists an non-empty list of port associations. *)
 | ListIPMCons :
-    forall asip lofasips formals' formals'',
-      eassocip Δ Δ__c σ formals asip formals' ->
-      listipm Δ Δ__c σ formals' lofasips formals'' ->
-      listipm Δ Δ__c σ formals (asip :: lofasips) formals''
+    forall ipa lofipas formals' formals'',
+      EIPAssoc Δ Δ__c sst formals ipa formals' ->
+      ListIPM Δ Δ__c sst formals' lofipas formals'' ->
+      ListIPM Δ Δ__c sst formals (ipa :: lofipas) formals''
 
-(** Defines the relation that checks the validity of a single
-    association present in an "in" port map. *)
-with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * option N)) :
-  associp -> list (ident * option N) -> Prop :=
+(** Defines the relation that checks the validity of a single input
+    port map association. *)
+              
+with EIPAssoc (Δ Δ__c : ElDesign) (sst : IdMap value) (formals : list (ident * option N)) :
+  ipassoc -> list (ident * option N) -> Prop :=
 
 (** Checks an association with a simple port identifier (no index). *)
-| EAssocipSimple :
+| EIPAssocSimple :
     forall id e v t,
 
       (* Premises *)
-      VExpr Δ σ EmptyLEnv false e v ->
+      VExpr Δ sst EmptyLEnv false e v ->
       IsOfType v t ->
 
       (* Side conditions *)
@@ -71,34 +74,40 @@ with eassocip (Δ Δ__c : ElDesign) (σ : DState) (formals : list (ident * optio
       MapsTo id (Input t) Δ__c -> (* [id ∈ Ins(Δ__c) and Δ__c(id) = t] *)
 
       (* Conclusion *)
-      eassocip Δ Δ__c σ formals (associp_ (n_id id) e) (formals ++ [(id, None)])
+      EIPAssoc Δ Δ__c sst formals (ipa_ (n_id id) e) (formals ++ [(id, None)])
 
 (** Checks an association with a partial port identifier (with index). *)
-| EAssocipPartial :
+| EIPAssocPartial :
     forall id ei e v i t l u,
 
       (* Premises *)
       IGStaticExpr Δ ei ->
-      VExpr Δ σ EmptyLEnv false e v ->
-      VExpr Δ σ EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ sst EmptyLEnv false e v ->
+      VExpr Δ sst EmptyLEnv false ei (Vnat i) ->
       IsOfType v t ->
       IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       ~List.In (id, None) formals -> (* (id, None) ∉ formals *)
-      ~List.In (id, Some i) formals ->
+      ~List.In (id, Some i) formals -> (* (id, Some i) ∉ formals *)
       MapsTo id (Input (Tarray t l u)) Δ__c ->  (* [id ∈ Ins(Δ__c) and Δ__c(id) = array(t,l,u)] *)
 
       (* Conclusion *)
-      eassocip Δ Δ__c σ formals (associp_ (n_xid id ei) e) (formals ++ [(id, Some i)]).
+      EIPAssoc Δ Δ__c sst formals (ipa_ (n_xid id ei) e) (formals ++ [(id, Some i)]).
 
-#[export] Hint Constructors listipm : hvhdl.
-#[export] Hint Constructors eassocip : hvhdl.
+#[export] Hint Constructors ListIPM : hvhdl.
+#[export] Hint Constructors EIPAssoc : hvhdl.
 
 (** Defines the predicate that checks the [formals] list (built by the
-    [listipm] relation) against the component environment [Δ__c].  *)
+    [ListIPM] relation) against the component environment [Δ__c].
 
-Definition checkformals (Δ__c : ElDesign) (formals : list (ident * option N)) : Prop :=
+    For all input port identifier declared in the elaborated design
+    [Δ__c], the identifier must appear as a left part of a couple in the
+    [formals] list. If the input port identifier is of the array type,
+    then all its subelements must appear as a left part of a couple in
+    the [formals] list. *)
+
+Definition CheckFormals (Δ__c : ElDesign) (formals : list (ident * option N)) : Prop :=
   forall (id : ident) (t : type),
     MapsTo id (Input t) Δ__c ->
     match t with
@@ -106,49 +115,47 @@ Definition checkformals (Δ__c : ElDesign) (formals : list (ident * option N)) :
     | Tarray t' l u => List.In (id, None) formals \/ forall i, l <= i <= u -> List.In (id, Some i) formals
     end.
 
-(** Defines the predicate stating that an "in" port map is valid. *)
+(** Defines the predicate stating that an input port map is valid. *)
 
-Inductive validipm (Δ Δ__c : ElDesign) (σ : DState) (i : list associp) : Prop :=
-| ValidIpm (formals : list (ident * option N)) :  
-  listipm Δ Δ__c σ [] i formals ->
-  checkformals Δ__c formals ->
-  validipm Δ Δ__c σ i.
+Inductive ValidIPM (Δ Δ__c : ElDesign) (sst : IdMap value) (i : inputmap) : Prop :=
+| ValidIPM_ (formals : list (ident * option N)) :  
+  ListIPM Δ Δ__c sst [] i formals ->
+  CheckFormals Δ__c formals ->
+  ValidIPM Δ Δ__c sst i.
 
-(** ** Valid port map for "out" mode ports. *)
+(** ** Validity check for output port maps. *)
 
 (** Defines the relation that lists and checks the port identifiers
-    present in an "out" port map. *)
+    present in an output port map. *)
 
-Inductive listopm (Δ Δ__c : ElDesign) (formals actuals : list (ident * option N)) :
-  list assocop -> list (ident * option N) -> list (ident * option N) -> Prop :=
+Inductive ListOPM (Δ Δ__c : ElDesign) (formals : list (ident * option N)) :
+  list opassoc -> list (ident * option N) -> Prop :=
 
 (** An empty list of port associations does not change the [formals]
-    and [actuals] list. *)
-| ListOPMNil : listopm Δ Δ__c formals actuals [] formals actuals
+    list. *)
+| ListOPMNil : ListOPM Δ Δ__c formals [] formals
 
 (** Lists an non-empty list of port associations. *)
 | ListOPMCons :
-    forall aspo lofaspos formals' actuals' formals'' actuals'',
-      eassocop Δ Δ__c formals actuals aspo formals' actuals' ->
-      listopm Δ Δ__c formals' actuals' lofaspos formals'' actuals'' ->
-      listopm Δ Δ__c formals actuals (aspo :: lofaspos) formals'' actuals''
+    forall opa lofopas formals' formals'',
+      EOPAssoc Δ Δ__c formals opa formals' ->
+      ListOPM Δ Δ__c formals' lofopas formals'' ->
+      ListOPM Δ Δ__c formals (opa :: lofopas) formals''
 
-(** Defines the relation that checks the validity of an association 
-    present in an "out" port map.
- *)
+(** Defines the relation that checks the validity of an output port
+    map association.  *)
 
-with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option N)) :
-  assocop -> list (ident * option N) -> list (ident * option N) -> Prop :=
+with EOPAssoc (Δ Δ__c : ElDesign) (formals : list (ident * option N)) :
+  opassoc -> list (ident * option N) -> Prop :=
 
-(** Checks an "out" port map association of the form "idf => ida",
+(** Checks an output port map association of the form [idf ⇒ ida],
     where [ida] refers to a declared signal or an output port
     identifier of the embedding elaborated design.  *)
-| EAssocopSimpleToSimple :
+| EOPAssocSimpleToSimple :
     forall idf ida t,
       
       (* Side conditions *)
       (forall optv, ~List.In (idf, optv) formals) -> 
-      (forall optv, ~List.In (ida, optv) actuals) ->
 
       (* idf and ida have the same type. *)
       MapsTo idf (Output t) Δ__c -> (* [idf ∈ Outs(Δ__c)] *)
@@ -156,37 +163,32 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option N)) 
       MapsTo ida (Declared t) Δ \/ MapsTo ida (Output t) Δ ->
 
       (* Conclusion *)
-      eassocop Δ Δ__c formals actuals
-               (assocop_simpl idf (Some (n_id ida)))
-               (formals ++ [(idf, None)]) (actuals ++ [(ida, None)])
+      EOPAssoc Δ Δ__c formals (opa_simpl idf (Some (n_id ida))) (formals ++ [(idf, None)])
 
-(** Checks an "out" port map association of the form "idf => ida(ei)", where 
-    the actual part refers to a declared signal identifier.
- *)
-| EAssocopSimpleToPartial :
+(** Checks an output port map association of the form [idf ⇒ ida(ei)],
+    where the actual part refers to a composite declared signal or
+    output port identifier .  *)
+               
+| EOPAssocSimpleToPartial :
     forall idf ida ei i t l u,
 
       (* Premises *)
       IGStaticExpr Δ ei ->
-      VExpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ EmptySStore EmptyLEnv false ei (Vnat i) ->
       IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       (forall optv, ~List.In (idf, optv) formals) -> 
-      ~List.In (ida, None) actuals ->
-      ~List.In (ida, Some i) actuals ->
 
       (* idf and ida(ei) have the same type. *)
       MapsTo idf (Output t) Δ__c ->
       MapsTo ida (Declared (Tarray t l u)) Δ \/ MapsTo ida (Output (Tarray t l u)) Δ ->
 
       (* Conclusion *)
-      eassocop Δ Δ__c formals actuals
-               (assocop_simpl idf (Some (n_xid ida ei)))
-               (formals ++ [(idf, None)]) (actuals ++ [(ida, Some i)])
+      EOPAssoc Δ Δ__c formals (opa_simpl idf (Some (n_xid ida ei))) (formals ++ [(idf, None)])
 
-(** Checks an "out" port map association of the form "idf => open". *)
-| EAssocopSimpleToOpen :
+(** Checks an output port map association of the form [idf ⇒ open]. *)
+| EOPAssocSimpleToOpen :
     forall idf t,
       
       (* Side conditions *)
@@ -194,68 +196,62 @@ with eassocop (Δ Δ__c : ElDesign) (formals actuals : list (ident * option N)) 
       MapsTo idf (Output t) Δ__c ->
 
       (* Conclusion *)
-      eassocop Δ Δ__c formals actuals
-               (assocop_simpl idf None)
-               (formals ++ [(idf,None)]) actuals
+      EOPAssoc Δ Δ__c formals (opa_simpl idf None) (formals ++ [(idf,None)])
 
-(** Checks an "out" port map association of the form "idf(ei) => ida",
-    where [ida] refers to a declared signal or an output port identifier. *)
-| EAssocopPartialToSimple :
+(** Checks an output port map association of the form [idf(ei) ⇒ ida],
+    where [ida] refers to a declared signal or an output port
+    identifier. *)
+| EOPAssocPartialToSimple :
     forall idf ei ida i t l u,
 
       (* Premises *)
       IGStaticExpr Δ ei ->
-      VExpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ EmptySStore EmptyLEnv false ei (Vnat i) ->
       IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
       ~List.In (idf, None) formals ->
       ~List.In (idf, Some i) formals ->
-      (forall optv, ~List.In (ida, optv) actuals) ->
       MapsTo idf (Output (Tarray t l u)) Δ__c ->
       MapsTo ida (Declared t) Δ \/ MapsTo ida (Output t) Δ ->
 
       (* Conclusion *)
-      eassocop Δ Δ__c formals actuals
-               (assocop_idx idf ei ($ida))
-               (formals ++ [(idf, Some i)]) (actuals ++ [(ida, None)])
+      EOPAssoc Δ Δ__c formals (opa_idx idf ei ($ida)) (formals ++ [(idf, Some i)])
                
-(** Checks an "out" port map association of the form "idf(ei) => ida(ei')",
-    where [ida] refers to a declared signal or an output port identifier. *)
-| EAssocopPartialToPartial :
+(** Checks an output port map association of the form [idf(ei) =>
+    ida(ei')], where [ida] refers to a declared signal or an output
+    port identifier. *)
+               
+| EOPAssocPartialToPartial :
     forall idf ei ida ei' i i' t l u l' u',
 
       (* Premises *)
       IGStaticExpr Δ ei ->
       IGStaticExpr Δ ei' ->
-      VExpr Δ EmptyDState EmptyLEnv false ei (Vnat i) ->
-      VExpr Δ EmptyDState EmptyLEnv false ei' (Vnat i') ->
+      VExpr Δ EmptySStore EmptyLEnv false ei (Vnat i) ->
+      VExpr Δ EmptySStore EmptyLEnv false ei' (Vnat i') ->
       IsOfType (Vnat i) (Tnat l u) ->
       IsOfType (Vnat i') (Tnat l' u') ->
       
       (* Side conditions *)
       ~List.In (idf, None) formals ->
       ~List.In (idf, Some i) formals ->
-      ~List.In (ida, None) actuals ->
-      ~List.In (ida, Some i') actuals ->
       MapsTo idf (Output (Tarray t l u)) Δ__c ->
       MapsTo ida (Declared (Tarray t l' u')) Δ \/ MapsTo ida (Output (Tarray t l' u')) Δ ->
 
       (* Conclusion *)
-      eassocop Δ Δ__c formals actuals
-               (assocop_idx idf ei (ida$[[ei']]))
-               (formals ++ [(idf, Some i)]) (actuals ++ [(ida, Some i')]).
+      EOPAssoc Δ Δ__c formals (opa_idx idf ei (ida$[[ei']])) (formals ++ [(idf, Some i)]).
 
-#[export] Hint Constructors listopm : hvhdl.
-#[export] Hint Constructors eassocop : hvhdl.
+#[export] Hint Constructors ListOPM : hvhdl.
+#[export] Hint Constructors EOPAssoc : hvhdl.
 
-(** Defines the relation that checks the validity of an "out" port
+(** Defines the relation that checks the validity of an output port
     map. *)
 
-Inductive validopm (Δ Δ__c : ElDesign) (o : list assocop) : Prop :=
-| ValidOpm (formals actuals : list (ident * option N)) :  
-  listopm Δ Δ__c [] [] o formals actuals ->
-  validopm Δ Δ__c o.
+Inductive ValidOPM (Δ Δ__c : ElDesign) (o : list opassoc) : Prop :=
+| ValidOPM_ (formals : list (ident * option N)) :  
+  ListOPM Δ Δ__c [] o formals ->
+  ValidOPM Δ Δ__c o.
     
 
 

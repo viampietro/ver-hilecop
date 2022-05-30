@@ -39,14 +39,14 @@ Inductive vrising (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DS
 (** Evaluates a process statement that is sensitive to the clock
     signal.
     
-    Then, the process body is evaluated leveraging the [vseq] relation
+    Then, the process body is evaluated leveraging the [VSeq] relation
     with the [re] flag.  *)
   
 | VRisingPsClk :
     forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ σ Λ re stmt σ' Λ' ->
+      VSeq Δ σ σ Λ re stmt σ' Λ' ->
       
       (* * Side conditions * *)
       NatSet.In clk sl ->
@@ -65,9 +65,9 @@ Inductive vrising (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DS
     forall id__c id__e g i o d Δ__c σ__c σ__c' σ__c'' σ',
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c i σ__c' ->
+      MIP Δ Δ__c σ σ__c i σ__c' ->
       vrising D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' o σ' ->
+      MOP Δ Δ__c σ σ__c'' o σ' ->
       
       (* * Side conditions * *)
 
@@ -100,9 +100,9 @@ Inductive vrising (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DS
     forall id__c id__e g i o d Δ__c σ__c σ__c' σ__c'' σ',
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c i σ__c' ->
+      MIP Δ Δ__c σ σ__c i σ__c' ->
       vrising D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' o σ' ->
+      MOP Δ Δ__c σ σ__c'' o σ' ->
       
       (* * Side conditions * *)
 
@@ -168,7 +168,7 @@ Inductive vfalling (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
 (** Evaluates a process statement that is sensitive to the clock
     signal.
     
-    Then, the process body is evaluated leveraging the [vseqre]
+    Then, the process body is evaluated leveraging the [VSeqre]
     relation.
  *)
   
@@ -176,7 +176,7 @@ Inductive vfalling (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ σ Λ fe stmt σ' Λ' ->
+      VSeq Δ σ σ Λ fe stmt σ' Λ' ->
       
       (* * Side conditions * *)
       NatSet.In clk sl ->
@@ -193,9 +193,9 @@ Inductive vfalling (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     forall id__c id__e g i o d Δ__c σ__c σ__c' σ__c'' σ',
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c i σ__c' ->
+      MIP Δ Δ__c σ σ__c i σ__c' ->
       vfalling D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' o σ' ->
+      MOP Δ Δ__c σ σ__c'' o σ' ->
       
       (* * Side conditions * *)
       
@@ -228,9 +228,9 @@ Inductive vfalling (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     forall id__c id__e g i o d Δ__c σ__c σ__c' σ__c'' σ',
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c i σ__c' ->
+      MIP Δ Δ__c σ σ__c i σ__c' ->
       vfalling D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c σ σ__c'' o σ' ->
+      MOP Δ Δ__c σ σ__c'' o σ' ->
       
       (* * Side conditions * *)
       

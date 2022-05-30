@@ -24,7 +24,7 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
     forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      vseq Δ σ (NoEvDState σ) Λ stab stmt σ' Λ' ->
+      VSeq Δ σ (NoEvDState σ) Λ stab stmt σ' Λ' ->
       
       (* * Side conditions * *)
       NatMap.MapsTo id__p (Process Λ) Δ -> (* [id__p ∈ Δ and Δ(id__p) = Λ] *)
@@ -40,9 +40,9 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
     forall id__c id__e g i o d Δ__c σ__c σ__c' σ__c'' σ',
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c i σ__c' ->
+      MIP Δ Δ__c σ σ__c i σ__c' ->
       vcomb D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c (NoEvDState σ) σ__c'' o σ' ->
+      MOP Δ Δ__c (NoEvDState σ) σ__c'' o σ' ->
       
       (* * Side conditions * *)
 
@@ -75,9 +75,9 @@ Inductive vcomb (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DSta
     forall id__c id__e g i o d Δ__c σ__c σ__c' σ__c'' σ',
       
       (* * Premises * *)
-      mapip Δ Δ__c σ σ__c i σ__c' ->
+      MIP Δ Δ__c σ σ__c i σ__c' ->
       vcomb D__s Δ__c σ__c' (behavior d) σ__c'' ->
-      mapop Δ Δ__c (NoEvDState σ) σ__c'' o σ' ->
+      MOP Δ Δ__c (NoEvDState σ) σ__c'' o σ' ->
       
       (* * Side conditions * *)
       

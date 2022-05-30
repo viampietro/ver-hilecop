@@ -23,7 +23,7 @@ Proof.
   unfold marking_ps.
   inversion 1; auto.
   do 2 (match goal with
-        | [ H: vseq _ _ _ _ _ _ _ _ |- _ ] =>
+        | [ H: VSeq _ _ _ _ _ _ _ _ |- _ ] =>
           inversion H
         end); simpl; auto.
 Qed.
@@ -36,7 +36,7 @@ Proof.
   unfold marking_ps.
   inversion 1; auto; simpl; try reflexivity.
   do 2 (match goal with
-        | [ H: vseq _ _ _ _ _ _ _ _ |- _ ] =>
+        | [ H: VSeq _ _ _ _ _ _ _ _ |- _ ] =>
           inversion H
         end); simpl; auto; try reflexivity.
 Qed.
@@ -96,12 +96,12 @@ Proof.
     assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
     inject_left e; eauto.
     eapply vcomb_place_inv_s_marking; eauto.    
-    eapply mapip_inv_sstore; eauto.
+    eapply MIP_inv_sstore; eauto.
     unfold InputOf; destruct 1; mapsto_discriminate.
 
   (* CASE component with no events. *)
   - erewrite @MapsTo_fun with (e := σ__p') (e' := σ__p); eauto.
-    eapply mapop_inv_cstore; eauto.    
+    eapply MOP_inv_cstore; eauto.    
 
   (* CASE in left of || *)
   - destruct (AreCsCompIds_ex cstmt) as (compids1, HAreCsCompIds1).

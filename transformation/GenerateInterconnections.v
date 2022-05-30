@@ -157,7 +157,7 @@ Section GenInter.
        unconnected internal signal [id__s] in output port map [o__p2]. *)
     do id__s <- get_nextid;
     do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
-    do o__p3 <- Ret (o__p2 ++ [assocop_idx Place.priority_authorizations idx ($id__s)]);
+    do o__p3 <- Ret (o__p2 ++ [opassoc_idx Place.priority_authorizations idx ($id__s)]);
 
     (* Replaces TCI [id__t] by a new TCI in the compile-time state's behavior. *)
     do _ <- put_comp id__t id__e g__t i__t3 o__t;

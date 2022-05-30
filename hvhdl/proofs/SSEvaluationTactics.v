@@ -2,26 +2,26 @@
 
 Require Import hvhdl.SSEvaluation.
 
-Ltac vseqinv_cl1 H :=
+Ltac VSeqinv_cl1 H :=
   match type of H with
-  | vseq _ _ _ _ _ _ _ _ =>
+  | VSeq _ _ _ _ _ _ _ _ =>
     inversion_clear H
   end.
 
-Ltac vseqinv_cl :=
+Ltac VSeqinv_cl :=
   match goal with
-  | [ H: vseq _ _ _ _ _ _ _ _ |- _] =>
-    vseqinv_cl1 H
+  | [ H: VSeq _ _ _ _ _ _ _ _ |- _] =>
+    VSeqinv_cl1 H
   end.
 
-Ltac vseqinv1 H :=
+Ltac VSeqinv1 H :=
   match type of H with
-  | vseq _ _ _ _ _ _ _ _ =>
+  | VSeq _ _ _ _ _ _ _ _ =>
     inversion H
   end.
 
-Ltac vseqinv :=
+Ltac VSeqinv :=
   match goal with
-  | [ H: vseq _ _ _ _ _ _ _ _ |- _] =>
-    vseqinv1 H
+  | [ H: VSeq _ _ _ _ _ _ _ _ |- _] =>
+    VSeqinv1 H
   end.

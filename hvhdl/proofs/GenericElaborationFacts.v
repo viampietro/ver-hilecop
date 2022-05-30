@@ -8,9 +8,9 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.Environment.
 Require Import hvhdl.HVhdlElaborationLib.
 
-Lemma egen_inv_Δ : 
+Lemma EGen_inv_Δ : 
   forall {Δ M__g gd Δ' id sobj},
-    egen Δ M__g gd Δ' ->
+    EGen Δ M__g gd Δ' ->
     MapsTo id sobj Δ ->
     MapsTo id sobj Δ'.
 Proof.
@@ -20,24 +20,24 @@ Proof.
        | mapsto_not_in_contrad | apply add_2; auto ].
 Qed.
 
-Lemma egens_inv_Δ : 
+Lemma EGens_inv_Δ : 
   forall {Δ M__g gens Δ' id sobj},
-    egens Δ M__g gens Δ' ->
+    EGens Δ M__g gens Δ' ->
     MapsTo id sobj Δ ->
     MapsTo id sobj Δ'.
 Proof.
   induction 1; intros; auto.
-  apply IHegens; eapply egen_inv_Δ; eauto.
+  apply IHEGens; eapply EGen_inv_Δ; eauto.
 Qed.
 
-Lemma egen_inv_Δ_if_not_gen : 
+Lemma EGen_inv_Δ_if_not_gen : 
   forall {Δ M__g gd Δ'},
-    egen Δ M__g gd Δ' ->
+    EGen Δ M__g gd Δ' ->
     forall {id sobj},
       (~exists t v, sobj = Generic t v) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
-  split; [ | eapply egen_inv_Δ; eauto].
+  split; [ | eapply EGen_inv_Δ; eauto].
   induction H.
   all : destruct (Nat.eq_dec idg id) as [eq_ | neq_];
     [ rewrite eq_; intros; exfalso;
@@ -48,14 +48,14 @@ Proof.
     | eauto with mapsto ].
 Qed.
 
-Lemma egens_inv_Δ_if_not_gen : 
+Lemma EGens_inv_Δ_if_not_gen : 
   forall {Δ M__g gens Δ'},
-    egens Δ M__g gens Δ' ->
+    EGens Δ M__g gens Δ' ->
     forall {id sobj},
       (~exists t v, sobj = Generic t v) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
   induction 1; try (solve [reflexivity]).
-  intros; erewrite <- @egen_inv_Δ_if_not_gen with (Δ := Δ); eauto.
+  intros; erewrite <- @EGen_inv_Δ_if_not_gen with (Δ := Δ); eauto.
 Qed.
 

@@ -22,7 +22,7 @@ Open Scope N_scope.
     
     The environment is composed of:
     - [Δ], the elaborated design (Δ).
-    - [σ], the design state.
+    - [sst], the signal store.
     - [Λ], a local environment (process environment).
     - [outmode], [true] when output port identifiers
       are allowed to be read (which normally is not the case since
@@ -30,30 +30,30 @@ Open Scope N_scope.
     
  *)
 
-Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
+Inductive VExpr (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) :
   bool -> expr -> value -> Prop :=
 
 (** Evaluates nat constant. *) 
-| VExprNat (outmode : bool) (n : N) : (n <= NATMAX)%N -> VExpr Δ σ Λ outmode (e_nat n) (Vnat n) 
+| VExprNat (outmode : bool) (n : N) : (n <= NATMAX)%N -> VExpr Δ sst Λ outmode (e_nat n) (Vnat n) 
 
 (** Evaluates bool constant. *)
-| VExprBool (outmode : bool) (b : bool) : VExpr Δ σ Λ outmode (e_bool b) (Vbool b)
+| VExprBool (outmode : bool) (b : bool) : VExpr Δ sst Λ outmode (e_bool b) (Vbool b)
                                          
 (** Evaluates aggregate expression.
     
     The aggregate of expressions [agofe] and the array of values
     [arrofvalues] in parameter must be of the same length. *)
 | VExprAggreg (outmode : bool) (agofe : agofexprs) (arrofv : arrofvalues) :
-    VAgOfExprs Δ σ Λ outmode agofe arrofv ->
-    VExpr Δ σ Λ outmode (e_aggreg agofe) (Varr arrofv)
+    VAgOfExprs Δ sst Λ outmode agofe arrofv ->
+    VExpr Δ sst Λ outmode (e_aggreg agofe) (Varr arrofv)
 
 (** Evaluates a declared signal identifier . *)
           
 | VExprSig (outmode : bool) (id : ident) (t : type) (v : value) :
     (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ) -> (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = t *)
     ~NatMap.In id Λ ->                                     (* id ∉ Λ *)
-    MapsTo id v (sstore σ) ->   (* id ∈ σ and σ(id) = v *)
-    VExpr Δ σ Λ outmode (#id) v
+    MapsTo id v sst ->   (* id ∈ sst and sst(id) = v *)
+    VExpr Δ sst Λ outmode (#id) v
 
 (** Evaluates a simple out port identifier. 
     Only possible when outmode is true.
@@ -64,24 +64,24 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     (* * Side conditions * *)
     MapsTo id (Output t) Δ ->   (* id ∈ Outs(Δ) and Δ(id) = t *)
     ~NatMap.In id Λ ->          (* id ∉ Λ *)
-    MapsTo id v (sstore σ) -> (* id ∈ σ and σ(id) = v *)
+    MapsTo id v sst -> (* id ∈ sst and sst(id) = v *)
       
     (* * Conclusion * *)
-    VExpr Δ σ Λ true (#id) v
+    VExpr Δ sst Λ true (#id) v
             
 (** Evaluates a variable identifier. *)
             
 | VExprVar (outmode : bool) (id : ident) (t : type) (v : value) :
     MapsTo id (t, v) Λ ->      (* id ∈ Λ and Λ(id) = (t,v) *)
     ~NatMap.In id Δ ->         (* id ∉ Δ *)
-    VExpr Δ σ Λ outmode (#id) v
+    VExpr Δ sst Λ outmode (#id) v
           
 (** Evaluates a generic constant identifier. *)
           
 | VExprGen (outmode : bool) (id : ident) (t : type) (v : value) :
     MapsTo id (Generic t v) Δ -> (* id ∈ Gens(Δ) and Δ(id) = (t,v) *)
     ~NatMap.In id Λ ->           (* id ∉ Λ *)
-    VExpr Δ σ Λ outmode (#id) v
+    VExpr Δ sst Λ outmode (#id) v
 
 (** Evaluates an indexed out port identifier. *)
   
@@ -92,7 +92,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (idx_in_bounds : (idx < length aofv)%nat),
 
     (* Premises *)
-    VExpr Δ σ Λ true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
+    VExpr Δ sst Λ true ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
     IsOfType (Vnat i) (Tnat l u) ->
     
     (* Side conditions *)
@@ -100,10 +100,10 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     (* id ∈ Outs(Δ) and Δ(id) = array(t, l, u) *)
     (MapsTo id (Output (Tarray t l u)) Δ) ->
     ~NatMap.In id Λ ->                       (* id ∉ Λ *)
-    MapsTo id (Varr aofv) (sstore σ) ->    (* id ∈ σ and σ(id) = aofv *)
+    MapsTo id (Varr aofv) sst ->    (* id ∈ sst and sst(id) = aofv *)
 
     (* Conclusion *)
-    VExpr Δ σ Λ true (id [[ei]]) (get_at idx aofv idx_in_bounds)
+    VExpr Δ sst Λ true (id [[ei]]) (get_at idx aofv idx_in_bounds)
 
 (** Evaluates an indexed declared signal identifier. *)
           
@@ -113,7 +113,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (idx_in_bounds : (idx < (length aofv))%nat),
 
       (* Premises *)
-      VExpr Δ σ Λ outmode ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
+      VExpr Δ sst Λ outmode ei (Vnat i) -> (* index expression [ei] evaluates to [i] *)
       IsOfType (Vnat i) (Tnat l u) ->
       
       (* Side conditions *)
@@ -121,10 +121,10 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = array(t, l, u) *)
       (MapsTo id (Declared (Tarray t l u)) Δ \/ MapsTo id (Input (Tarray t l u)) Δ) ->
       ~NatMap.In id Λ ->                    (* id ∉ Λ *)
-      MapsTo id (Varr aofv) (sstore σ) -> (* id ∈ σ and σ(id) = aofv *)
+      MapsTo id (Varr aofv) sst -> (* id ∈ sst and sst(id) = aofv *)
 
       (* Conclusion *)
-      VExpr Δ σ Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
+      VExpr Δ sst Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
 
 (** Evaluates an indexed variable identifier. *)
 
@@ -134,7 +134,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (idx_in_bounds : (idx < length aofv)%nat),
 
       (* Premises *)
-      VExpr Δ σ Λ outmode ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
+      VExpr Δ sst Λ outmode ei (Vnat i) ->  (* index expression [ei] evaluates to [i] *)
       IsOfType (Vnat i) (Tnat l u) ->   (* index value is in array bounds. *)
       
       (* Side conditions *)
@@ -142,7 +142,7 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
       ~NatMap.In id Δ ->                           (* id ∉ Δ *)
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
+      VExpr Δ sst Λ outmode (id [[ei]]) (get_at idx aofv idx_in_bounds)
 
 (** Evaluates expression with addition operator. 
     
@@ -157,12 +157,12 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
          - Checks that operands evaluate to nat.
          - Checks that the addition does not cause nat overflow.
        *)
-      VExpr Δ σ Λ outmode e (Vnat n) -> 
-      VExpr Δ σ Λ outmode e' (Vnat n') ->
+      VExpr Δ sst Λ outmode e (Vnat n) -> 
+      VExpr Δ sst Λ outmode e' (Vnat n') ->
       n + n' <= NATMAX ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_add e e') (Vnat (n + n'))
+      VExpr Δ sst Λ outmode (e_binop bo_add e e') (Vnat (n + n'))
 
 (** Evaluates expression with substraction operator. 
     
@@ -178,12 +178,12 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
          - Checks that the substraction does not go out of
            nat scope.
        *)
-      VExpr Δ σ Λ outmode e (Vnat n) ->
-      VExpr Δ σ Λ outmode e' (Vnat n') ->
+      VExpr Δ sst Λ outmode e (Vnat n) ->
+      VExpr Δ sst Λ outmode e' (Vnat n') ->
       n' <= n ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_sub e e') (Vnat (n - n'))
+      VExpr Δ sst Λ outmode (e_binop bo_sub e e') (Vnat (n - n'))
 
 (** Evaluates expression with the "less or equal" operator. *)
 
@@ -191,11 +191,11 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
-      VExpr Δ σ Λ outmode e (Vnat n) -> 
-      VExpr Δ σ Λ outmode e' (Vnat n') ->
+      VExpr Δ sst Λ outmode e (Vnat n) -> 
+      VExpr Δ sst Λ outmode e' (Vnat n') ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_le e e') (Vbool (n <=? n'))
+      VExpr Δ sst Λ outmode (e_binop bo_le e e') (Vbool (n <=? n'))
 
 (** Evaluates expression with the "strictly less" operator. *)
 
@@ -203,11 +203,11 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
-      VExpr Δ σ Λ outmode e (Vnat n) -> 
-      VExpr Δ σ Λ outmode e' (Vnat n') ->
+      VExpr Δ sst Λ outmode e (Vnat n) -> 
+      VExpr Δ sst Λ outmode e' (Vnat n') ->
         
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_lt e e') (Vbool (n <? n'))
+      VExpr Δ sst Λ outmode (e_binop bo_lt e e') (Vbool (n <? n'))
 
 (** Evaluates expression with the "greater or equal" operator. *)
 
@@ -215,11 +215,11 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
-      VExpr Δ σ Λ outmode e (Vnat n) -> 
-      VExpr Δ σ Λ outmode e' (Vnat n') ->
+      VExpr Δ sst Λ outmode e (Vnat n) -> 
+      VExpr Δ sst Λ outmode e' (Vnat n') ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_ge e e') (Vbool (n' <=? n))
+      VExpr Δ sst Λ outmode (e_binop bo_ge e e') (Vbool (n' <=? n))
 
 (** Evaluates expression with the "strictly greater" operator. *)
 
@@ -227,11 +227,11 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (n n' : N),
 
       (* Premises: checks that operands evaluate to nat. *)
-      VExpr Δ σ Λ outmode e (Vnat n) -> 
-      VExpr Δ σ Λ outmode e' (Vnat n') ->
+      VExpr Δ sst Λ outmode e (Vnat n) -> 
+      VExpr Δ sst Λ outmode e' (Vnat n') ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_gt e e') (Vbool (n' <? n))
+      VExpr Δ sst Λ outmode (e_binop bo_gt e e') (Vbool (n' <? n))
 
 (** Evaluates expression with the "and" operator. *)
 
@@ -239,11 +239,11 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (b b' : bool),
 
       (* Premises: checks that the operands evaluate to bool. *)
-      VExpr Δ σ Λ outmode e (Vbool b) -> 
-      VExpr Δ σ Λ outmode e' (Vbool b') ->
+      VExpr Δ sst Λ outmode e (Vbool b) -> 
+      VExpr Δ sst Λ outmode e' (Vbool b') ->
             
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_and e e') (Vbool (b && b'))
+      VExpr Δ sst Λ outmode (e_binop bo_and e e') (Vbool (b && b'))
 
 (** Evaluates expression with the or operator. *)
 
@@ -251,11 +251,11 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (b b' : bool),
 
       (* Premises: checks that the operands evaluate to bool. *)
-      VExpr Δ σ Λ outmode e (Vbool b) ->
-      VExpr Δ σ Λ outmode e' (Vbool b') ->
+      VExpr Δ sst Λ outmode e (Vbool b) ->
+      VExpr Δ sst Λ outmode e' (Vbool b') ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_or e e') (Vbool (b || b'))
+      VExpr Δ sst Λ outmode (e_binop bo_or e e') (Vbool (b || b'))
 
 (** Evaluates expression with the not operator. *)
 
@@ -263,10 +263,10 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (b : bool),
 
       (* Premises: checks that the operand evaluates to bool. *)
-      VExpr Δ σ Λ outmode e (Vbool b) ->
+      VExpr Δ sst Λ outmode e (Vbool b) ->
             
       (* Conclusion. *)
-      VExpr Δ σ Λ outmode (e_uop uo_not e) (Vbool (negb b))
+      VExpr Δ sst Λ outmode (e_uop uo_not e) (Vbool (negb b))
             
 (** Evaluates expression with the equality operator (bool). *)
             
@@ -274,23 +274,23 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (v v' : value) (b : bool),
 
       (* Premises *)
-      VExpr Δ σ Λ outmode e v ->
-      VExpr Δ σ Λ outmode e' v' ->
+      VExpr Δ sst Λ outmode e v ->
+      VExpr Δ sst Λ outmode e' v' ->
       VEq v v' ->
       
-      (* Conclusion: Δ,σ,Λ ⊢ e = e' ⇝ b *)      
-      VExpr Δ σ Λ outmode (e_binop bo_eq e e') (Vbool true)
+      (* Conclusion: Δ,sst,Λ ⊢ e = e' ⇝ b *)      
+      VExpr Δ sst Λ outmode (e_binop bo_eq e e') (Vbool true)
 
 | VExprEq_false (outmode : bool) (e e' : expr):
     forall (v v' : value) (b : bool),
 
       (* Premises *)
-      VExpr Δ σ Λ outmode e v ->
-      VExpr Δ σ Λ outmode e' v' ->
+      VExpr Δ sst Λ outmode e v ->
+      VExpr Δ sst Λ outmode e' v' ->
       OVEq v v' (Some false) ->
       
-      (* Conclusion: Δ,σ,Λ ⊢ e = e' ⇝ b *)      
-      VExpr Δ σ Λ outmode (e_binop bo_eq e e') (Vbool false)
+      (* Conclusion: Δ,sst,Λ ⊢ e = e' ⇝ b *)      
+      VExpr Δ sst Λ outmode (e_binop bo_eq e e') (Vbool false)
 
 (** Evaluates expression with difference operator. *)
 
@@ -298,24 +298,24 @@ Inductive VExpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
     forall (b : bool),
 
       (* Premises *)
-      VExpr Δ σ Λ outmode (e_binop bo_eq e e') (Vbool b) ->
+      VExpr Δ sst Λ outmode (e_binop bo_eq e e') (Vbool b) ->
       
       (* Conclusion *)      
-      VExpr Δ σ Λ outmode (e_binop bo_neq e e') (Vbool (negb b))
+      VExpr Δ sst Λ outmode (e_binop bo_neq e e') (Vbool (negb b))
     
 (** Defines the evaluation relation for aggregates of expressions.  *)
             
-with VAgOfExprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) :
+with VAgOfExprs (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) :
   bool -> agofexprs -> arrofvalues -> Prop :=
 | VAgOfExprs_one :
     forall outmode e v,
-      VExpr Δ σ Λ outmode e v ->
-      VAgOfExprs Δ σ Λ outmode (agofe_one e) (Arr_one v) 
+      VExpr Δ sst Λ outmode e v ->
+      VAgOfExprs Δ sst Λ outmode (agofe_one e) (Arr_one v) 
 | VAgOfExprs_cons :
     forall outmode agofe arrofv e v,
-      VExpr Δ σ Λ outmode e v ->
-      VAgOfExprs Δ σ Λ outmode agofe arrofv ->
-      VAgOfExprs Δ σ Λ outmode (agofe_cons e agofe) (Arr_cons v arrofv).
+      VExpr Δ sst Λ outmode e v ->
+      VAgOfExprs Δ sst Λ outmode agofe arrofv ->
+      VAgOfExprs Δ sst Λ outmode (agofe_cons e agofe) (Arr_cons v arrofv).
 
 #[export] Hint Constructors VExpr : hvhdl.
 #[export] Hint Constructors VAgOfExprs : hvhdl.
@@ -355,8 +355,8 @@ Definition vbinop (bop : binop) (v1 v2 : value) : optionE value :=
   end.
 
 (** Returns the value associated with identifier [id] in the
-    environment composed of an elaborated design [Δ], a design state
-    [σ] and a local environment [Λ].
+    environment composed of an elaborated design [Δ], a signal store
+    [sst] and a local environment [Λ].
 
     [id] must either refer to a local variable identifier, a signal
     identifier (possibly an output port if [outmode] is on), or a
@@ -366,28 +366,28 @@ Definition vbinop (bop : binop) (v1 v2 : value) : optionE value :=
     environment, if it identifies another kind of construct than those
     cited above (e.g. [id] refers to a component instance identifier),
     or if the environment is inconsistent (e.g. [id] refers to both a
-    local variable and a declared signal). *)
+    local variable and an internal signal). *)
 
-Definition read (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+Definition read (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) (outmode : bool)
            (id : ident) : optionE value :=
-  match find id Λ, find id (sstore σ), find id (cstore σ), find id Δ with
+  match find id Λ, find id sst, find id Δ with
   (* [id] is a local variable identifier *)
-  | Some (_, v), None, None, None => Ret v
-  (* [id] is a input signal or an declared signal identifier. *)
-  | None, Some v, None, Some (Input _ | Declared _) => Ret v
+  | Some (_, v), None, None => Ret v
+  (* [id] is a input port or an declared signal identifier. *)
+  | None, Some v, Some (Input _ | Declared _) => Ret v
   (* [id] is an output signal identifier, checks that [outmode]
      is on to return the associated value; error otherwise. *)
-  | None, Some v, None, Some (Output _) =>
+  | None, Some v, Some (Output _) =>
       if outmode then Ret v
       else Err "read: trying to read an output signal identifier with outmode off"
-  | None, None, Some _, Some (Component _) =>
+  | None, None, Some (Component _) =>
       Err "read: trying to read a component instance identifier"
-  | None, None, None, Some (Process _) =>
+  | None, None, Some (Process _) =>
       Err "read: trying to read a process identifier"
   (* Error: id is not referenced in Δ, σ or Λ *)
-  | None, None, None, None => Err "read: found an unknown identifier"
+  | None, None, None => Err "read: found an unknown identifier"
   (* Error: inconsistent environment *)
-  | _, _, _, _ => Err "read: found an inconsistent environment"
+  | _, _, _ => Err "read: found an inconsistent environment"
   end.
 
 (** Returns the value read at the index [v__i] in the array [v__a], where
@@ -411,7 +411,7 @@ Definition read_at (v__a v__i : value) : optionE value :=
 
 (** Defines a interpret for H-VHDL expressions. *)
 
-Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+Fixpoint vexpr (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) (outmode : bool)
          (e : expr) {struct e} : optionE value :=
   match e with
   (** Evaluates nat constant. *) 
@@ -419,15 +419,15 @@ Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
   (** Evaluates bool constant. *)
   | e_bool b => Ret (Vbool b)
   (** Evaluates aggregate expression. *)
-  | e_aggreg agofe => do aofv <- vagofexprs Δ σ Λ outmode agofe; Ret (Varr aofv)
+  | e_aggreg agofe => do aofv <- vagofexprs Δ sst Λ outmode agofe; Ret (Varr aofv)
   (** Evaluates binary operation *)
   | e_binop bop e1 e2 =>
-      do v1 <- vexpr Δ σ Λ outmode e1;
-      do v2 <- vexpr Δ σ Λ outmode e2;
+      do v1 <- vexpr Δ sst Λ outmode e1;
+      do v2 <- vexpr Δ sst Λ outmode e2;
       vbinop bop v1 v2
   (** Evaluates Boolean negation operation *)
   | e_uop uo_not e1 =>
-      do v1 <- vexpr Δ σ Λ outmode e1;
+      do v1 <- vexpr Δ sst Λ outmode e1;
       match v1 with
       | Vbool b => Ret (Vbool (negb b))
       | _ => Err "vexpr: negation must be applied to a Boolean expression"
@@ -435,26 +435,26 @@ Fixpoint vexpr (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
         
   (** Evaluates a name that can refer to a generic constant, a signal
       or a local variable identifier, possibly indexed, in the context
-      [Δ, σ, Λ], and given a certain [outmode] flag. *)
-  | e_name n => vname Δ σ Λ outmode n
+      [Δ, sst, Λ], and given a certain [outmode] flag. *)
+  | e_name n => vname Δ sst Λ outmode n
   end
 
-with vname (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+with vname (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) (outmode : bool)
            (n : name) {struct n} : optionE value :=
        match n with
        (** Reads the value associated with the identifier [id]. *)
-       | n_id id => do v <- read Δ σ Λ outmode id; Ret v
+       | n_id id => do v <- read Δ sst Λ outmode id; Ret v
        (** Reads the value of array [v__a] at index [v__i] *)
        | n_xid id e =>
-           do v__i <- vexpr Δ σ Λ outmode e;
-           do v__a <- read Δ σ Λ outmode id;
+           do v__i <- vexpr Δ sst Λ outmode e;
+           do v__a <- read Δ sst Λ outmode id;
            read_at v__a v__i
        end
 
-with vagofexprs (Δ : ElDesign) (σ : DState) (Λ : LEnv) (outmode : bool)
+with vagofexprs (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) (outmode : bool)
                 (agofe : agofexprs) {struct agofe} : optionE arrofvalues :=
        match agofe with
-       | agofe_one e => do v <- vexpr Δ σ Λ outmode e; Ret (Arr_one v)
+       | agofe_one e => do v <- vexpr Δ sst Λ outmode e; Ret (Arr_one v)
        | _ => Ret (Arr_one (Vnat 0))
        end.
 

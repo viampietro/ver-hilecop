@@ -23,7 +23,7 @@ Proof.
   unfold time_counter_ps.
   inversion 1; auto.
   do 2 (match goal with
-        | [ H: vseq _ _ _ _ _ _ _ _ |- _ ] =>
+        | [ H: VSeq _ _ _ _ _ _ _ _ |- _ ] =>
           inversion H
         end); simpl; auto.
 Qed.
@@ -36,7 +36,7 @@ Proof.
   unfold time_counter_ps.
   inversion 1; auto; simpl; try reflexivity.
   do 2 (match goal with
-        | [ H: vseq _ _ _ _ _ _ _ _ |- _ ] =>
+        | [ H: VSeq _ _ _ _ _ _ _ _ |- _ ] =>
           inversion H
         end); simpl; auto; try reflexivity.
 Qed.
@@ -92,14 +92,14 @@ Proof.
     assert (e : Component Δ__t = Component Δ__c) by (eapply MapsTo_fun; eauto).
     inject_left e; eauto.
     eapply vcomb_transition_inv_s_tc; eauto.
-    eapply mapip_inv_sstore; eauto.
+    eapply MIP_inv_sstore; eauto.
     unfold InputOf; destruct 1; unfold DeclaredOf in *.
     mapsto_discriminate.
     
   (* CASE component with no events. *)
   - inversion 1.
     intros; erewrite @MapsTo_fun with (e := σ__t') (e' := σ__t); eauto.
-    eapply mapop_inv_cstore; eauto.
+    eapply MOP_inv_cstore; eauto.
 
   (* CASE || *)
   - inversion_clear 1;

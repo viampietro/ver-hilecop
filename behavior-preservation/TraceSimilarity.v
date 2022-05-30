@@ -55,7 +55,7 @@ Lemma trace_sim :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of d. *)
-    edesign hdstore (NatMap.empty value) d Δ σ__e ->
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* States s and σ are similar (after a fe). *)
     FullSimStateAfterFE sitpn γ s σ ->
@@ -190,7 +190,7 @@ Restart.
         generalize H2 H3 H4; clear H2 H3 H4;
         generalize s θ__s σ θ__σ
     end. 
-    (*  *)
+
     induction τ.
     + (* CASE τ = 0 *)
       intros;

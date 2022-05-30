@@ -1,47 +1,48 @@
-(** Defines the relation that elaborates the architecture declarative
-    part of a design, declared in abstract syntax.
+(** Defines the relation that elaborates the list of internal signal
+    declarations defined in a H-VHDL design.
 
     The result is the addition of entries refering to constant and
-    declared signal declarations in the design environment [ed] (Δ)
-    and the mapping from declared signal id to their default value in
-    the design state [dstate] (σ).  *)
+    declared signal declarations in the elaborated design Δ and the
+    mapping from internal signal id to their default value in the
+    default design state σ.  *)
 
-Require Import CoqLib.
-Require Import GlobalTypes.
-Require Import AbstractSyntax.
-Require Import SemanticalDomains.
-Require Import Environment.
-Require Import ExpressionEvaluation.
-Require Import StaticExpressions.
-Require Import TypeElaboration.
-Require Import DefaultValue.
+Require Import common.CoqLib.
+Require Import common.GlobalTypes.
+
+Require Import hvhdl.AbstractSyntax.
+Require Import hvhdl.SemanticalDomains.
+Require Import hvhdl.Environment.
+Require Import hvhdl.ExpressionEvaluation.
+Require Import hvhdl.StaticExpressions.
+Require Import hvhdl.TypeElaboration.
+Require Import hvhdl.DefaultValue.
 
 Import NatMap.
 
-(** The architecture declarative part elaboration relation. *)
+(** The elaboration relation for internal signal declarations. *)
 
-Inductive edecls (Δ : ElDesign) (σ : DState)  : list sdecl -> ElDesign -> DState -> Prop :=
+Inductive EDecls (Δ : ElDesign) (σ : DState)  : list sdecl -> ElDesign -> DState -> Prop :=
 
 (** Empty list of architecture declarations. *)
-| EDeclsNil : edecls Δ σ [] Δ σ
+| EDeclsNil : EDecls Δ σ [] Δ σ
   
 (** Sequence of architecture declaration. *)
 | EDeclsCons :
-    forall {ad lofsigs Δ' σ' Δ'' σ''},
-      edecl Δ σ ad Δ' σ' ->
-      edecls Δ' σ' lofsigs Δ'' σ'' ->
-      edecls Δ σ (ad :: lofsigs) Δ'' σ''
+    forall sd lofsigs Δ' σ' Δ'' σ'',
+      EDecl Δ σ sd Δ' σ' ->
+      EDecls Δ' σ' lofsigs Δ'' σ'' ->
+      EDecls Δ σ (sd :: lofsigs) Δ'' σ''
 
 (** Defines the elaboration relation for single architecture declaration. *)
-with edecl (Δ : ElDesign) (σ : DState)  : sdecl -> ElDesign -> DState -> Prop :=
+with EDecl (Δ : ElDesign) (σ : DState)  : sdecl -> ElDesign -> DState -> Prop :=
   
 (** Signal declaration elaboration. *)
   
 | EDeclSig :
-    forall {τ t v id},
+    forall τ t v id,
       
       (* Premises. *)
-      etype Δ τ t ->
+      EType Δ τ t ->
       DefaultV t v ->
       
       (* Side conditions. *)
@@ -49,4 +50,4 @@ with edecl (Δ : ElDesign) (σ : DState)  : sdecl -> ElDesign -> DState -> Prop 
       ~InSStore id σ ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      edecl Δ σ (sdecl_ id τ) (add id (Declared t) Δ) (sstore_add id v σ).
+      EDecl Δ σ (sdecl_ id τ) (MkElDesign (add id (Declared t) Δ)) (sstore_add id v σ).

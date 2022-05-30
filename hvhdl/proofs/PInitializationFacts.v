@@ -34,8 +34,8 @@ Section PVRunInit.
       MapsTo s_marking (Vnat n) (sstore σ').
   Proof.
     inversion_clear 1; intros.
-    vseqinv_cl; [ contradiction | ].
-    vseqinv; subst; simpl.
+    VSeqinv_cl; [ contradiction | ].
+    VSeqinv; subst; simpl.
     (* CASE event on s_marking *)
     vexprinv_cl.
     match goal with
@@ -79,8 +79,8 @@ Section PVRunInit.
       MapsTo s_marking (Vnat n) (sstore σ).
   Proof.
     inversion_clear 1; intros.
-    vseqinv_cl; [contradiction |].
-    vseqinv; subst; simpl; [
+    VSeqinv_cl; [contradiction |].
+    VSeqinv; subst; simpl; [
       match goal with
       | [ H: ~NatSet.In _ _ |- _ ] =>
         elimtype False; apply H; simpl; auto with set
@@ -150,7 +150,7 @@ Section PVRunInit.
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo id__p σ__p (cstore σ) ->
         NatMap.MapsTo id__p σ__p' (cstore σ') ->
-        listipm Δ Δ__p σ [] i__p formals ->
+        ListIPM Δ Δ__p σ [] i__p formals ->
         InputOf Δ__p initial_marking ->
         MapsTo s_marking (Declared (Tnat 0 m)) Δ__p ->
         ~NatSet.In s_marking (events σ__p) ->
@@ -166,18 +166,18 @@ Section PVRunInit.
       assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto).
       inject_left e.
       eapply vruninit_P_s_marking_eq_nat; eauto.
-      eapply mapip_not_in_events_if_not_input; eauto.
+      eapply MIP_not_in_events_if_not_input; eauto.
       destruct 1; mapsto_discriminate.
-      edestruct @mapip_eval_simpl_associp with (Δ := Δ) as (v, (vexpr_v, MapsTo_σ__c'));
+      edestruct @MIP_eval_simpl_associp with (Δ := Δ) as (v, (vexpr_v, MapsTo_σ__c'));
         eauto; inversion vexpr_v; subst; try assumption.
 
     (* CASE eventless component *)
     - inversion 1; subst; subst_place_design.
       clear IHvruninit; simpl in *.
       erewrite @MapsTo_fun with (e := σ__p') (e' := σ__c); eauto;
-        [ | eapply mapop_inv_cstore; eauto ].
+        [ | eapply MOP_inv_cstore; eauto ].
       (* [events σ__c'' = ∅ then σ__c = σ__c'' ] *)
-      (* erewrite mapip_eq_state_if_no_events; eauto; *)
+      (* erewrite MIP_eq_state_if_no_events; eauto; *)
       (* [ pattern σ__c'; erewrite vruninit_eq_state_if_no_events; eauto *)
       (* | erewrite @vruninit_eq_state_if_no_events with (σ' := σ__c''); eauto ]. *)
       (* With no events, s_marking ⇐ initial_marking happened,
@@ -185,10 +185,10 @@ Section PVRunInit.
       (* assert (e : Component Δ__p = Component Δ__c) by (eapply MapsTo_fun; eauto). *)
       (* inject_left e. *)
       (* eapply vruninit_P_s_marking_eq_nat; eauto. *)
-      (* eapply mapip_not_in_events_if_not_input; eauto. *)
+      (* eapply MIP_not_in_events_if_not_input; eauto. *)
       (* destruct 1; mapsto_discriminate. *)
       (* erewrite <- @MapsTo_fun with (e := σ__p) (e' := σ__c); eauto. *)
-      (* edestruct @mapip_eval_simpl_associp with (Δ := Δ) as (v, (vexpr_v, MapsTo_σ__c')); *)
+      (* edestruct @MIP_eval_simpl_associp with (Δ := Δ) as (v, (vexpr_v, MapsTo_σ__c')); *)
       (*   eauto; inversion vexpr_v; subst; assumption. *)
       admit.
       
@@ -219,7 +219,7 @@ Section PInit.
         MapsTo id__p σ__p (cstore σ) ->
         AreCsCompIds behavior cids ->
         List.NoDup cids ->
-        listipm Δ Δ__p σ [] i__p formals ->
+        ListIPM Δ Δ__p σ [] i__p formals ->
         List.In (associp_ ($initial_marking) (e_nat n)) i__p ->
         InputOf Δ__p initial_marking ->
         MapsTo id__p σ__p0 (cstore σ0) ->
@@ -251,7 +251,7 @@ Section PInit.
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
         MapsTo id__p σ__p0 (cstore σ0) ->
         MapsTo reinit_transitions_time (Varr aofv) (sstore σ__p0) ->
-        List.In (assocop_idx reinit_transitions_time (e_nat i) ($id)) o__p ->
+        List.In (opassoc_idx reinit_transitions_time (e_nat i) ($id)) o__p ->
         get_bool_at aofv (N.to_nat i) = b ->
         MapsTo id (Vbool b) (sstore σ0).
   Admitted.

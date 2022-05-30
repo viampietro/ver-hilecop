@@ -69,7 +69,7 @@ Lemma fe_equal_fired_aux :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    EDesign hdstore (empty value) d Δ σ__e ->
 
     (* States s and σ are similar (post rising edge). *)
     SimStateAfterRE sitpn γ s σ ->
@@ -139,7 +139,7 @@ Lemma fe_equal_fired :
     SimEnv sitpn γ E__c E__p ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
-    edesign hdstore (empty value) d Δ σ__e ->
+    EDesign hdstore (empty value) d Δ σ__e ->
 
     (* States s and σ are similar (post rising edge). *)
     SimStateAfterRE sitpn γ s σ ->

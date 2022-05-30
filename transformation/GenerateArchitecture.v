@@ -72,9 +72,9 @@ Section GenArch.
         Ret (i ++ [associp_ (Place.output_arcs_weights $[[0]]) 0;
                      associp_ (Place.output_arcs_types $[[0]]) basic;
                      associp_ (Place.output_transitions_fired $[[0]]) false],
-              [assocop_simpl Place.output_arcs_valid None;
-               assocop_simpl Place.priority_authorizations None;
-               assocop_simpl Place.reinit_transitions_time None])
+              [opassoc_simpl Place.output_arcs_valid None;
+               opassoc_simpl Place.priority_authorizations None;
+               opassoc_simpl Place.reinit_transitions_time None])
       else
         let add_oawt_assoc '(im, idx) t :=
           match pre p t with
@@ -95,11 +95,11 @@ Section GenArch.
       CompileTimeState outputmap :=
       (* If the set of actions associated with [p] is empty. *)
       if acts pinfo then
-        Ret (o ++ [assocop_simpl Place.marked None])
+        Ret (o ++ [opassoc_simpl Place.marked None])
       else
         do id__s <- get_nextid;
         do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
-        Ret (o ++ [assocop_simpl Place.marked (Some ($id__s))]).
+        Ret (o ++ [opassoc_simpl Place.marked (Some ($id__s))]).
     
     (** Builds a PCI from a place [p] and its associated informations. *)
 
@@ -261,7 +261,7 @@ Section GenArch.
       do i2 <- if conds tinfo then
                  Ret (i1 ++ [associp_ (Transition.input_conditions $[[0]]) true])
                else Ret i1;
-      Ret (g, i2, [assocop_simpl Transition.fired (Some ($id__s))]).
+      Ret (g, i2, [opassoc_simpl Transition.fired (Some ($id__s))]).
       
     (** Generates a TCI which is a VHDL implementation of transition
         [t] and adds the TCI as a new concurrent statement in the

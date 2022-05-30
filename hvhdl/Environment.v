@@ -103,7 +103,7 @@ Local Unset Positivity Checking.
     [DesignAttribute]. *)
 
 Inductive ElDesign : Type :=
-| MkElDesign : NatMap.t DesignAttribute -> ElDesign
+| MkElDesign :> NatMap.t DesignAttribute -> ElDesign
 with DesignAttribute  :=
 | Generic (t : type) (v : value)
 | Input (t : type)
@@ -112,7 +112,7 @@ with DesignAttribute  :=
 | Process (lenv : LEnv)
 | Component (Δ__c : ElDesign).
 
-Coercion ElDesign_to_IdMap (Δ : ElDesign) :=
+Coercion ElDesign_to_IdMap (Δ : ElDesign) : NatMap.t DesignAttribute :=
   match Δ with MkElDesign m => m end.
 
 (** Defines a bare elaborated design. *)
@@ -154,6 +154,8 @@ Inductive DState : Type :=
 
 Definition EmptyDState := MkDState (NatMap.empty value)
                                    (NatMap.empty DState).
+
+Definition EmptySStore := (NatMap.empty value).
 
 (** Macro to add, or to override, a mapping [id ⇒ value] in the
     [sstore] of the design state [σ].  *)
