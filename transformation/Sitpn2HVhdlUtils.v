@@ -36,7 +36,7 @@ Section Sitpn2HVhdlUtils.
         match ai with
         (* If we have found an association of the form (id'(j), _),
            then tests if [id = id']. *)
-        | (associp_ (n_xid id' (e_nat j)) _) =>
+        | (ipa_ (n_xid id' (e_nat j)) _) =>
             if (id =? id')%nat then
               match currmax with
               | None => Ret (Some j)
@@ -55,8 +55,8 @@ Section Sitpn2HVhdlUtils.
     CompileTimeState inputmap :=
     do optj <- get_max_index_imap m id;
     match optj with
-    | None => Ret (m ++ [(associp_ (n_xid id (e_nat 0)) e)])
-    | Some j => Ret (m ++ [(associp_ (n_xid id (e_nat (j + 1))) e)])
+    | None => Ret (m ++ [(ipa_ (n_xid id (e_nat 0)) e)])
+    | Some j => Ret (m ++ [(ipa_ (n_xid id (e_nat (j + 1))) e)])
     end.
 
   (** Looks up and returns the maximal index [j] such that [id(j)] is
@@ -73,7 +73,7 @@ Section Sitpn2HVhdlUtils.
         match ao with
         (* If we have found an association of the form (id'(j), _);
            then, checks that [id = id'] *)
-        | (opassoc_idx id' (e_nat j) _) =>
+        | (opa_idx id' (e_nat j) _) =>
             if (id =? id')%nat then
               match currmax with
               | None => Ret (Some j)
@@ -92,8 +92,8 @@ Section Sitpn2HVhdlUtils.
     CompileTimeState outputmap :=
     do optj <- get_max_index_omap m id;
     match optj with
-    | None => Ret (m ++ [(opassoc_idx id (e_nat 0) n)])
-    | Some j => Ret (m ++ [(opassoc_idx id (e_nat (j + 1)) n)])
+    | None => Ret (m ++ [(opa_idx id (e_nat 0) n)])
+    | Some j => Ret (m ++ [(opa_idx id (e_nat (j + 1)) n)])
     end.
 
   (** Returns [a] if [(opassoc_simpl id a)] is in the output map [m].
@@ -105,7 +105,7 @@ Section Sitpn2HVhdlUtils.
 
   Definition actual_aux (id : ident) (m : outputmap) : CompileTimeState (option opassoc) :=
     ListMonad.find (fun aop => match aop with
-                               | opassoc_simpl id' a => Ret (id =? id')%nat
+                               | opa_simpl id' a => Ret (id =? id')%nat
                                | _ => Ret false
                                end) m.
   
@@ -114,7 +114,7 @@ Section Sitpn2HVhdlUtils.
     match opt_aop with
     | None => Err ("actual: found no actual part matching the given identifier")
     | Some aop => match aop with
-                  | opassoc_simpl _ a => Ret a
+                  | opa_simpl _ a => Ret a
                   | _ => Err ("actual: impossible case")
                   end
     end.
@@ -134,7 +134,7 @@ Section Sitpn2HVhdlUtils.
     do id__s <- get_nextid;
     do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
     do i' <- cassoc_imap i id__i (#id__s);
-    Ret ((o ++ [opassoc_idx id__o idx ($id__s)]), i').
+    Ret ((o ++ [opa_idx id__o idx ($id__s)]), i').
   
   (** The [get_comp_aux] function looks up [cstmt] for a component
       instantiation statement labelled with [id__c] as a component

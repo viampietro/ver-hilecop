@@ -13,6 +13,7 @@ EOF
 # project.
 
 PROOF_FILES_PATTERN="\(.*/proofs/.*\|.*/behavior-preservation/.*\)"
+EXCLUDED_FILES_PATTERN="\(./hvhdl/SynchronousEvaluation.v\|./hvhdl/CombinationalEvaluation.v\)"
 
 # Parsing the command options.
 
@@ -54,11 +55,16 @@ echo "-R common/ hilecop.common
 # Displays all the Vernacular files (.v) of the project and adds them
 # in the _CoqProject file.
 
-# Filters out all files matching the PROOF_FILES_PATTERN pattern, the
-# "./common/DFMapWeakList.v" or file names beginning with a dot.
+# Filters out all files matching the EXCLUDED_FILES_PATTERN pattern,
+# the PROOF_FILES_PATTERN pattern, the "./common/DFMapWeakList.v" or
+# file names beginning with a dot.
 
 # Do not add to _CoqProject the files under the "test" folder.
-find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" ! -regex ".*/\..+" ! -regex ".*/test/.*" ! -regex "./common/DFMapWeakList.v" >> _CoqProject
+find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" \
+     ! -regex ".*/\..+" \
+     ! -regex "$EXCLUDED_FILES_PATTERN" \
+     ! -regex ".*/test/.*" \
+     ! -regex "./common/DFMapWeakList.v" >> _CoqProject
 
 
 

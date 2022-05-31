@@ -48,12 +48,12 @@ Section GenArch.
       CompileTimeState inputmap := 
       (* If the set of input transitions of [p] is empty. *)
       if (tinputs pinfo) then
-        Ret [(associp_ (Place.input_arcs_weights $[[0]]) 0);
-             (associp_ (Place.input_transitions_fired $[[0]]) false)]
+        Ret [(ipa_ (Place.input_arcs_weights $[[0]]) 0);
+             (ipa_ (Place.input_transitions_fired $[[0]]) false)]
       else
         let add_iaw_assoc '(i, idx) t :=
           match post t p with
-          | Some (exist _ ω _) => Ret (i ++ [associp_ (Place.input_arcs_weights $[[(e_nat idx)]]) ω], idx + 1) 
+          | Some (exist _ ω _) => Ret (i ++ [ipa_ (Place.input_arcs_weights $[[(e_nat idx)]]) ω], idx + 1) 
           | _ => Err ("build_pci: Transition " ++ $$t ++ " is not an input transition of place " ++ $$p)
           end
         in
@@ -69,18 +69,18 @@ Section GenArch.
       
       (* If the set of output transitions of [p] is empty. *)
       if (tconflict pinfo) ++ (toutputs pinfo) then
-        Ret (i ++ [associp_ (Place.output_arcs_weights $[[0]]) 0;
-                     associp_ (Place.output_arcs_types $[[0]]) basic;
-                     associp_ (Place.output_transitions_fired $[[0]]) false],
-              [opassoc_simpl Place.output_arcs_valid None;
-               opassoc_simpl Place.priority_authorizations None;
-               opassoc_simpl Place.reinit_transitions_time None])
+        Ret (i ++ [ipa_ (Place.output_arcs_weights $[[0]]) 0;
+                     ipa_ (Place.output_arcs_types $[[0]]) basic;
+                     ipa_ (Place.output_transitions_fired $[[0]]) false],
+              [opa_simpl Place.output_arcs_valid None;
+               opa_simpl Place.priority_authorizations None;
+               opa_simpl Place.reinit_transitions_time None])
       else
         let add_oawt_assoc '(im, idx) t :=
           match pre p t with
           | Some (a, exist _ ω _) =>
-              Ret (im ++ [associp_ (Place.output_arcs_types $[[(e_nat idx)]]) a;
-                          associp_ (Place.output_arcs_weights $[[(e_nat idx)]]) ω], idx + 1) 
+              Ret (im ++ [ipa_ (Place.output_arcs_types $[[(e_nat idx)]]) a;
+                          ipa_ (Place.output_arcs_weights $[[(e_nat idx)]]) ω], idx + 1) 
           | _ => Err ("build_pci: Transition " ++ $$t ++ " is not an output transition of place " ++ $$p)
           end
         in
@@ -95,11 +95,11 @@ Section GenArch.
       CompileTimeState outputmap :=
       (* If the set of actions associated with [p] is empty. *)
       if acts pinfo then
-        Ret (o ++ [opassoc_simpl Place.marked None])
+        Ret (o ++ [opa_simpl Place.marked None])
       else
         do id__s <- get_nextid;
         do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
-        Ret (o ++ [opassoc_simpl Place.marked (Some ($id__s))]).
+        Ret (o ++ [opa_simpl Place.marked (Some ($id__s))]).
     
     (** Builds a PCI from a place [p] and its associated informations. *)
 
@@ -225,16 +225,16 @@ Section GenArch.
       CompileTimeState inputmap :=      
       match Is t with
       | Some (MkTItval a (ninat b) _) =>
-        Ret [associp_ Transition.time_A_value a;
-             associp_ Transition.time_B_value b]
+        Ret [ipa_ Transition.time_A_value a;
+             ipa_ Transition.time_B_value b]
           
       | Some (MkTItval a i+ _) =>
-        Ret [associp_ Transition.time_A_value a;
-             associp_ Transition.time_B_value 0]
+        Ret [ipa_ Transition.time_A_value a;
+             ipa_ Transition.time_B_value 0]
           
       | None =>
-        Ret [associp_ Transition.time_A_value 0;
-             associp_ Transition.time_B_value 0]
+        Ret [ipa_ Transition.time_A_value 0;
+             ipa_ Transition.time_B_value 0]
       end.
 
     (** Builds a TCI from a transition [t] and its associated informations. *)
@@ -254,14 +254,14 @@ Section GenArch.
       (* Adds new elements to the input port map according to the set
          of input places and conditions of [t]. *)
       do i1 <- if pinputs tinfo then
-                 Ret (i ++ [associp_ (Transition.input_arcs_valid $[[0]]) true;
-                            associp_ (Transition.priority_authorizations $[[0]]) true;
-                            associp_ (Transition.reinit_time $[[0]]) (#id__s)])
+                 Ret (i ++ [ipa_ (Transition.input_arcs_valid $[[0]]) true;
+                            ipa_ (Transition.priority_authorizations $[[0]]) true;
+                            ipa_ (Transition.reinit_time $[[0]]) (#id__s)])
                else Ret i;
       do i2 <- if conds tinfo then
-                 Ret (i1 ++ [associp_ (Transition.input_conditions $[[0]]) true])
+                 Ret (i1 ++ [ipa_ (Transition.input_conditions $[[0]]) true])
                else Ret i1;
-      Ret (g, i2, [opassoc_simpl Transition.fired (Some ($id__s))]).
+      Ret (g, i2, [opa_simpl Transition.fired (Some ($id__s))]).
       
     (** Generates a TCI which is a VHDL implementation of transition
         [t] and adds the TCI as a new concurrent statement in the

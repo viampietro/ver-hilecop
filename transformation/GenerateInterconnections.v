@@ -55,7 +55,7 @@ Section GenInter.
     match a with
     | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
     | Some n =>
-        Ret (i__p ++ [associp_ (Place.input_transitions_fired $[[idx]]) (e_name n)], (idx + 1)%nat)
+        Ret (i__p ++ [ipa_ (Place.input_transitions_fired $[[idx]]) (e_name n)], (idx + 1)%nat)
     end.
 
   (** Iterates and calls the [connect_to_input_tci] function over the
@@ -111,7 +111,7 @@ Section GenInter.
     match a with
     | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
     | Some n =>
-        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, (idx + 1)%nat)
+        Ret (i__p ++ [ipa_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, (idx + 1)%nat)
     end.
 
   (** Parameters:
@@ -157,7 +157,7 @@ Section GenInter.
        unconnected internal signal [id__s] in output port map [o__p2]. *)
     do id__s <- get_nextid;
     do _ <- add_sig_decl (sdecl_ id__s tind_boolean);
-    do o__p3 <- Ret (o__p2 ++ [opassoc_idx Place.priority_authorizations idx ($id__s)]);
+    do o__p3 <- Ret (o__p2 ++ [opa_idx Place.priority_authorizations idx ($id__s)]);
 
     (* Replaces TCI [id__t] by a new TCI in the compile-time state's behavior. *)
     do _ <- put_comp id__t id__e g__t i__t3 o__t;
@@ -167,7 +167,7 @@ Section GenInter.
     match a with
     | None => Err ("connect_to_input_tci: The fired port of TCI " ++ $$id__t ++ " is open.")
     | Some n =>
-        Ret (i__p ++ [associp_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, (idx + 1)%nat)
+        Ret (i__p ++ [ipa_ (Place.output_transitions_fired $[[idx]]) (e_name n)], o__p3, (idx + 1)%nat)
     end.
   
   (** Iterates and calls the [connect_to_input_tci] function over the

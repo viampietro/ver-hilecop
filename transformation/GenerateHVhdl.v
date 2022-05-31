@@ -28,7 +28,7 @@ Section Sitpn2HVhdl.
 
   Variable sitpn : Sitpn.
 
-  (* Alias for the state-and-error monad instantiated with the
+  (* Macro for the state-and-error monad instantiated with the
      compile-time state.  *)
 
   Definition CompileTimeState := @Mon (Sitpn2HVhdlState sitpn).
@@ -38,17 +38,17 @@ Section Sitpn2HVhdl.
   (** Defines the transformation function that generates an H-VHDL design
       from an SITPN. *)
 
-  Definition generate_design_and_binder (id__e id__a : ident) : CompileTimeState (design * Sitpn2HVhdlMap sitpn):=
-    do s <- Get; Ret ((design_ id__e id__a [] (ports s) (sigs s) (beh s)), (γ s)).
+  Definition generate_design_and_binder : CompileTimeState (design * Sitpn2HVhdlMap sitpn):=
+    do s <- Get; Ret ((design_ [] (ports s) (sigs s) (beh s)), (γ s)).
     
-  Definition sitpn2hvhdl (id__e id__a : ident) (b : P sitpn -> nat) :
+  Definition sitpn2hvhdl (b : P sitpn -> nat) :
     (design * Sitpn2HVhdlMap sitpn) + string :=
     RedV 
       ((do _ <- generate_sitpn_infos sitpn;
         do _ <- generate_architecture b;
         do _ <- generate_interconnections;
         do _ <- generate_ports;
-        generate_design_and_binder id__e id__a) (InitS2HState sitpn Petri.ffid)).
+        generate_design_and_binder) (InitS2HState sitpn Petri.ffid)).
   
 End Sitpn2HVhdl.
 

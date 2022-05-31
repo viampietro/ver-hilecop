@@ -23,11 +23,11 @@ Definition CsHasUniqueIds (cstmt : cs) (compids pids : list ident) :=
 
 
 Definition DesignHasUniqueIds (d : design) (genids portids sigids compids pids : list ident) : Prop :=
-  let ids := (id__e d) :: (id__a d) :: genids ++ portids ++ sigids ++ compids ++ pids in
+  let ids := genids ++ portids ++ sigids ++ compids ++ pids in
   AreDeclPartIds d genids portids sigids /\
   AreBehPartIds d compids pids /\
   List.NoDup ids /\
-  (forall id__p sl vars body varids,
-      InCs (cs_ps id__p sl vars body) (behavior d) ->
+  (forall id__p vars body varids,
+      InCs (cs_ps id__p vars body) (beh d) ->
       AreVarIds vars varids ->
       List.NoDup (ids ++ varids)).
