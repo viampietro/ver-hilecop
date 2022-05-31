@@ -27,7 +27,7 @@ Inductive ValidSS (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) : ss -> Prop :
 
       (* Side conditions *)
       (* id ∈ S(Δ) ∪ O(Δ) and Δ(id) = t *)
-      MapsTo id (Declared t) Δ \/ MapsTo id (Output t) Δ -> 
+      MapsTo id (Internal t) Δ \/ MapsTo id (Output t) Δ -> 
 
       (* Conclusion *)
       ValidSS Δ sst Λ (ss_sig (n_id id) e)
@@ -45,7 +45,7 @@ Inductive ValidSS (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) : ss -> Prop :
                  
       (* Side conditions *)
       (* id ∈ Sigs(Δ) and Δ(id) = array(t, l, u) *)
-      MapsTo id (Declared (Tarray t l u)) Δ
+      MapsTo id (Internal (Tarray t l u)) Δ
       \/ MapsTo id (Output (Tarray t l u)) Δ ->
 
       (* Conclusion *)

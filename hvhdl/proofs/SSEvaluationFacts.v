@@ -65,7 +65,7 @@ Lemma VSeq_not_in_events_if_not_sig :
     VSeq Δ σ σ__w Λ flag stmt σ' Λ' ->
     ~NatSet.In id (events σ__w) ->
     ~OutputOf Δ id  ->
-    ~DeclaredOf Δ id ->
+    ~InternalOf Δ id ->
     ~NatSet.In id (events σ').
 Proof.
   induction 1; auto; subst; simpl; intros.
@@ -73,7 +73,7 @@ Proof.
     destruct (Nat.eq_dec id id0) as [eq | neq]; [
     subst;
     match goal with
-    | [ Hor: _ _ (_ ?t) _ \/ _, Hndecl: ~DeclaredOf _ _, Hnout: ~OutputOf _ _ |- _ ] =>
+    | [ Hor: _ _ (_ ?t) _ \/ _, Hndecl: ~InternalOf _ _, Hnout: ~OutputOf _ _ |- _ ] =>
       inversion Hor; [ exfalso; apply Hndecl; exists t; auto |
                        exfalso; apply Hnout; exists t; auto ]
     end
@@ -108,11 +108,11 @@ Lemma VSeq_inv_well_typed_values_in_sstore :
   forall {Δ σ σ__w Λ flag stmt σ' Λ'},
     VSeq Δ σ σ__w Λ flag stmt σ' Λ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ__w) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+      (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.

@@ -268,7 +268,7 @@ Lemma elab_decl :
   forall {D__s M__g d Δ σ__e id τ},
     EDesign D__s M__g d Δ σ__e ->
     List.In (sdecl_ id τ) (sigs d) ->
-    DeclaredOf Δ id.
+    InternalOf Δ id.
 Proof.
   inversion 1; subst; intros.
   edestruct @EDecls_decl with (Δ := Δ') as (t, MapsTo_Δ'); eauto. 
@@ -330,7 +330,7 @@ Lemma EBeh_decl_of_comp :
     MapsTo id__e d__e D__s ->
     MapsTo id__c (Component Δ__c) Δ' ->
     List.In (sdecl_ id τ) (sigs d__e) ->
-    DeclaredOf Δ__c id.
+    InternalOf Δ__c id.
 Proof.
   induction 1; try (solve [inversion 1]).
 
@@ -365,7 +365,7 @@ Lemma elab_decl_of_comp :
     MapsTo id__e d__e D__s ->
     MapsTo id__c (Component Δ__c) Δ ->
     List.In (sdecl_ id τ) (sigs d__e) ->
-    DeclaredOf Δ__c id.
+    InternalOf Δ__c id.
 Proof.
   inversion 1.
   eapply EBeh_decl_of_comp; eauto.
@@ -436,11 +436,11 @@ Lemma EBeh_inv_well_typed_values_in_sstore :
   forall {D__s Δ σ behavior Δ' σ'},
     EBeh D__s Δ σ behavior Δ' σ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
+      (MapsTo id (Internal t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
@@ -458,7 +458,7 @@ Lemma elab_well_typed_values_in_sstore :
   forall {D__s M__g d Δ σ__e},
     EDesign D__s M__g d Δ σ__e ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+      (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
       MapsTo id v (sstore σ__e) ->
       IsOfType v t.
 Proof.
@@ -476,14 +476,14 @@ Lemma EBeh_inv_well_typed_values_in_sstore_of_comp :
         MapsTo id__c (Component Δ__c) Δ ->
         MapsTo id__c σ__c (cstore σ) ->
         forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
     forall {id__c Δ'__c σ'__c},
       MapsTo id__c (Component Δ'__c) Δ' ->
       MapsTo id__c σ'__c (cstore σ') ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ'__c \/ MapsTo id (Input t) Δ'__c \/ MapsTo id (Output t) Δ'__c) ->
+        (MapsTo id (Internal t) Δ'__c \/ MapsTo id (Input t) Δ'__c \/ MapsTo id (Output t) Δ'__c) ->
         MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
 Proof.
@@ -526,7 +526,7 @@ Lemma elab_well_typed_values_in_sstore_of_comp :
       MapsTo id__c (Component Δ__c) Δ ->
       MapsTo id__c σ__ce (cstore σ__e) ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sstore σ__ce) ->
         IsOfType v t.
 Proof.

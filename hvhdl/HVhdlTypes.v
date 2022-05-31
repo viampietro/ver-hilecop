@@ -29,4 +29,7 @@ Definition IdMap (A : Type) := NatMap.t A.
 
 Definition IdSet := NatSet.t.
 
+(** Enumerates the different phases of the H-VHDL simulation
+    algorithm.  *)
 
+Inductive simflag : Set := fe | re | stab | init.

@@ -24,12 +24,12 @@ Lemma first_rising_edge_full :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* [σ0] is the initial state of [d]. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     (* From [σ0] to [σ] after [↑]. *)
     IsInjectedDState σ0 (E__p τ) σ__i ->
     vrising hdstore Δ σ__i (behavior d) σ__r ->
-    stabilize hdstore Δ σ__r (behavior d) σ ->
+    Stabilize hdstore Δ σ__r (behavior d) σ ->
     
     (* States [s] and [σ] are similar. *)
     FullSimStateAfterRE sitpn γ E__c τ (s0 sitpn) σ.
@@ -53,12 +53,12 @@ Lemma first_rising_edge :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* [σ0] is the initial state of [d]. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     (* From [σ0] to [σ] after [↑]. *)
     IsInjectedDState σ0 (E__p τ) σ__i ->
     vrising hdstore Δ σ__i (behavior d) σ__r ->
-    stabilize hdstore Δ σ__r (behavior d) σ ->
+    Stabilize hdstore Δ σ__r (behavior d) σ ->
     
     (* States [s] and [σ] are similar. *)
     SimStateAfterRE sitpn γ (s0 sitpn) σ.

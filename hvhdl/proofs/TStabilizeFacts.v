@@ -16,12 +16,12 @@ Require Import hvhdl.proofs.TCombinationalEvaluationFacts.
 
 Lemma stab_inv_s_tc :
   forall Δ σ behavior σ',
-    stabilize hdstore Δ σ behavior σ' ->
+    Stabilize hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t σ__t σ__t' v compids,
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
       CsHasUniqueCompIds behavior compids -> 
       MapsTo id__t (Component Δ__t) Δ ->
-      DeclaredOf Δ__t s_time_counter ->
+      InternalOf Δ__t s_time_counter ->
       MapsTo id__t σ__t (cstore σ) ->
       MapsTo s_time_counter v (sstore σ__t) ->
       MapsTo id__t σ__t' (cstore σ') ->
@@ -34,13 +34,13 @@ Proof.
 
   (* CASE Events *)
   - edestruct @vcomb_maps_cstore_id with (Δ := Δ) as (σ__ti, MapsTo_σ__ti); eauto.
-    eapply IHstabilize; eauto.
+    eapply IHStabilize; eauto.
     eapply vcomb_inv_s_tc; eauto.
 Qed.
 
 Lemma stab_TCI_s_rtc_eq_bprod_of_rt :
   forall Δ σ behavior σ',
-    stabilize hdstore Δ σ behavior σ' ->
+    Stabilize hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t t n,
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
       MapsTo id__t (Component Δ__t) Δ ->

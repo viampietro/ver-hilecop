@@ -1,4 +1,4 @@
-(** * Definition of the HILECOP's Transition design in H-VHDL abstract syntax. *)
+(** * Definition of the HILECOP's Transition design in H-VHDL abstract syntax *)
 
 (** Defines the Transition design used in the generation of
    H-VHDL designs from SITPNs.
@@ -82,7 +82,7 @@ Definition transition_ports : list pdecl :=
 
 (** *** Architecture declarative part of the Transition design. *)
 
-(** Declared signal identifiers. *)
+(** Internal signal identifiers. *)
 
 Definition s_condition_combination : ident := 12%nat. 
 Definition s_enabled : ident := 13%nat.
@@ -124,9 +124,6 @@ Definition v_internal_condition : ident := local_var_ffid%nat.
 Definition condition_evaluation_ps :=
   cs_ps condition_evaluation
 
-        (* Sensitivity list. *)
-        {[input_conditions]}
-        
         (* Local variables. *)
         [vdecl_ v_internal_condition tind_boolean]
 
@@ -153,9 +150,6 @@ Definition v_internal_enabled : ident := local_var_ffid.
 Definition enable_evaluation_ps :=
   cs_ps enable_evaluation
 
-        (* Sensitivity list. *)
-        {[input_arcs_valid]}
-        
         (* Local variables. *)
         [vdecl_ v_internal_enabled tind_boolean]
 
@@ -182,9 +176,6 @@ Definition v_internal_reinit_time_counter : ident := local_var_ffid.
 Definition reinit_time_counter_evaluation_ps :=
   cs_ps reinit_time_counter_evaluation
 
-        (* Sensitivity list. *)
-        {[reinit_time, s_enabled]}
-        
         (* Local variables. *)
         [vdecl_ v_internal_reinit_time_counter tind_boolean]
 
@@ -207,9 +198,6 @@ Definition time_counter : ident := 23%nat.
 Definition time_counter_ps :=
   cs_ps time_counter
 
-        (* Sensitivity list. *)
-        {[clk]}
-        
         (* Local variables. *)
         []
 
@@ -221,7 +209,8 @@ Definition time_counter_ps :=
                 If (#s_enabled @= true @&& (#transition_type @/= not_temporal))
                    Then (If (#s_reinit_time_counter @= false)
                             Then (If (#s_time_counter @< #maximal_time_counter) Then
-                                     (s_time_counter @<== (#s_time_counter @+ 1)))
+                                    (s_time_counter @<== (#s_time_counter @+ 1))
+                                    Else ss_null)
                             Else (s_time_counter @<== 1))
                    Else (s_time_counter @<== 0)))
         ).
@@ -236,9 +225,6 @@ Definition firing_condition_evaluation : ident := 24%nat.
 Definition firing_condition_evaluation_ps :=
   cs_ps firing_condition_evaluation
 
-        (* Sensitivity list. *)
-        {[s_enabled, s_condition_combination, s_reinit_time_counter, s_time_counter]}
-        
         (* Local variables. *)
         []
 
@@ -296,9 +282,6 @@ Definition v_priority_combination : ident := local_var_ffid.
 Definition priority_authorization_evaluation_ps :=
   cs_ps priority_authorization_evaluation
 
-        (* Sensitivity list. *)
-        {[priority_authorizations]}
-        
         (* Local variables. *)
         [vdecl_ v_priority_combination tind_boolean]
 
@@ -322,8 +305,6 @@ Definition firable : ident := 26%nat.
 
 Definition firable_ps :=
   cs_ps firable
-        (* Sensitivity list. *)
-        {[clk]}
         
         (* Local variables. *)
         []
@@ -345,8 +326,6 @@ Definition fired_evaluation : ident := 27%nat.
 
 Definition fired_evaluation_ps :=
   cs_ps fired_evaluation
-        (* Sensitivity list. *)
-        {[s_firable, s_priority_combination]}
         
         (* Local variables. *)
         []
@@ -369,9 +348,7 @@ Definition transition_behavior : cs :=
 (** ** Declaration of the Place design. *)
 
 Definition transition_design : design :=
-  design_ transition_entid
-          transition_archid
-          transition_gens
+  design_ transition_gens
           transition_ports
           transition_sigs
           transition_behavior.

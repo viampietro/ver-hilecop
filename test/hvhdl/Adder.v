@@ -37,9 +37,9 @@ Definition ins : list pdecl := [pdecl_in a tind_boolean; pdecl_in b tind_boolean
 Definition o : ident := S b.
 Definition outs : list pdecl := [pdecl_out o tind_boolean].
 
-(** ** Declared signals *)
+(** ** Internal signals *)
 
-(** Declared signal identifiers *)
+(** Internal signal identifiers *)
 
 Definition s_add : ident := S o.
 Definition sigs : list sdecl := [sdecl_ s_add tind_boolean].

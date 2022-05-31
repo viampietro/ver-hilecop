@@ -445,11 +445,11 @@ Lemma vcomb_inv_well_typed_values_in_sstore :
   forall {D__s Δ σ cstmt σ'},
     vcomb D__s Δ σ cstmt σ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+      (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
@@ -488,14 +488,14 @@ Lemma vcomb_inv_well_typed_values_in_sstore_of_comp :
         MapsTo id__c (Component Δ__c) Δ ->
         MapsTo id__c σ__c (cstore σ) ->
         forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
     forall {id__c Δ__c σ'__c},
       MapsTo id__c (Component Δ__c) Δ ->
       MapsTo id__c σ'__c (cstore σ') ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
 Proof.

@@ -161,11 +161,11 @@ Lemma EPort_inv_well_typed_values_in_sstore :
   forall {Δ σ pd Δ' σ'},
     EPort Δ σ pd Δ' σ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
+      (MapsTo id (Internal t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
@@ -187,7 +187,7 @@ Proof.
   (* CASE [id0 = id] *)
   1,2 : cbn; inversion_clear 1 as [MapsTo_decl | MapsTo_or]; intros MapsTo_sstore;
     rewrite eq_ in *; 
-    (* CASE Declared *)
+    (* CASE Internal *)
     [ mapsto_discriminate
     | 
     (* CASE Input or Output *)
@@ -206,11 +206,11 @@ Lemma EPorts_inv_well_typed_values_in_sstore :
   forall {Δ σ ports Δ' σ'},
     EPorts Δ σ ports Δ' σ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
+      (MapsTo id (Internal t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.

@@ -160,7 +160,7 @@ with EOPAssoc (Δ Δ__c : ElDesign) (formals : list (ident * option N)) :
       (* idf and ida have the same type. *)
       MapsTo idf (Output t) Δ__c -> (* [idf ∈ Outs(Δ__c)] *)
       (* [ida ∈ Sigs(Δ) ∪ Outs(Δ)] *)
-      MapsTo ida (Declared t) Δ \/ MapsTo ida (Output t) Δ ->
+      MapsTo ida (Internal t) Δ \/ MapsTo ida (Output t) Δ ->
 
       (* Conclusion *)
       EOPAssoc Δ Δ__c formals (opa_simpl idf (Some (n_id ida))) (formals ++ [(idf, None)])
@@ -182,7 +182,7 @@ with EOPAssoc (Δ Δ__c : ElDesign) (formals : list (ident * option N)) :
 
       (* idf and ida(ei) have the same type. *)
       MapsTo idf (Output t) Δ__c ->
-      MapsTo ida (Declared (Tarray t l u)) Δ \/ MapsTo ida (Output (Tarray t l u)) Δ ->
+      MapsTo ida (Internal (Tarray t l u)) Δ \/ MapsTo ida (Output (Tarray t l u)) Δ ->
 
       (* Conclusion *)
       EOPAssoc Δ Δ__c formals (opa_simpl idf (Some (n_xid ida ei))) (formals ++ [(idf, None)])
@@ -213,7 +213,7 @@ with EOPAssoc (Δ Δ__c : ElDesign) (formals : list (ident * option N)) :
       ~List.In (idf, None) formals ->
       ~List.In (idf, Some i) formals ->
       MapsTo idf (Output (Tarray t l u)) Δ__c ->
-      MapsTo ida (Declared t) Δ \/ MapsTo ida (Output t) Δ ->
+      MapsTo ida (Internal t) Δ \/ MapsTo ida (Output t) Δ ->
 
       (* Conclusion *)
       EOPAssoc Δ Δ__c formals (opa_idx idf ei ($ida)) (formals ++ [(idf, Some i)])
@@ -237,7 +237,7 @@ with EOPAssoc (Δ Δ__c : ElDesign) (formals : list (ident * option N)) :
       ~List.In (idf, None) formals ->
       ~List.In (idf, Some i) formals ->
       MapsTo idf (Output (Tarray t l u)) Δ__c ->
-      MapsTo ida (Declared (Tarray t l' u')) Δ \/ MapsTo ida (Output (Tarray t l' u')) Δ ->
+      MapsTo ida (Internal (Tarray t l' u')) Δ \/ MapsTo ida (Output (Tarray t l' u')) Δ ->
 
       (* Conclusion *)
       EOPAssoc Δ Δ__c formals (opa_idx idf ei (ida$[[ei']])) (formals ++ [(idf, Some i)]).

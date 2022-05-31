@@ -44,7 +44,7 @@ Qed.
 Lemma vcomb_place_inv_s_marking :
   forall {Δ σ σ' v m},
     vcomb hdstore Δ σ place_behavior σ' ->
-    MapsTo s_marking (Declared (Tnat 0 m)) Δ ->
+    MapsTo s_marking (Internal (Tnat 0 m)) Δ ->
     MapsTo s_marking v (sstore σ) ->
     MapsTo s_marking v (sstore σ').
 Proof.
@@ -80,7 +80,7 @@ Lemma vcomb_inv_s_marking :
       List.NoDup compids ->
       MapsTo id__p σ__p (cstore σ) ->
       MapsTo s_marking v (sstore σ__p) ->
-      MapsTo s_marking (Declared (Tnat 0 mm)) Δ__p -> 
+      MapsTo s_marking (Internal (Tnat 0 mm)) Δ__p -> 
       MapsTo id__p σ__p' (cstore σ') ->
       MapsTo s_marking v (sstore σ__p').
 Proof.

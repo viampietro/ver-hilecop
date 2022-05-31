@@ -118,7 +118,7 @@ with VOPAssoc (Δ Δ__c : ElDesign) (sst sst__c : IdMap value) : opassoc -> IdMa
       (* * Side conditions * *)
 
       (* [id__a ∈ S(Δ) ∪ O(Δ) and Δ(id__a) = t] *)
-      (MapsTo id__a (Declared t) Δ \/ MapsTo id__a (Output t) Δ) -> 
+      (MapsTo id__a (Internal t) Δ \/ MapsTo id__a (Output t) Δ) -> 
       
       (* * Conclusion * *)
       VOPAssoc Δ Δ__c sst sst__c (opa_simpl id__f (Some ($id__a))) (add id__a v sst)
@@ -138,7 +138,7 @@ with VOPAssoc (Δ Δ__c : ElDesign) (sst sst__c : IdMap value) : opassoc -> IdMa
     (* * Side conditions * *)
 
     (* [id__a ∈ S(Δ) ∪ O(Δ) and Δ(id__a) = t] *)
-    (MapsTo id__a (Declared t) Δ \/ MapsTo id__a (Output t) Δ) -> 
+    (MapsTo id__a (Internal t) Δ \/ MapsTo id__a (Output t) Δ) -> 
     
     (* * Conclusion * *)
     VOPAssoc Δ Δ__c sst sst__c (opa_idx id__f e__i ($id__a)) (add id__a v sst)
@@ -160,7 +160,7 @@ with VOPAssoc (Δ Δ__c : ElDesign) (sst sst__c : IdMap value) : opassoc -> IdMa
       (* * Side conditions * *)
       
       (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = array(t,l,u)] *)
-      (MapsTo id__a (Declared (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) -> 
+      (MapsTo id__a (Internal (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) -> 
       MapsTo id__a (Varr aofv) sst -> (* [id__a ∈ sst and sst(id__a) = aofv] *)
       let i := (N.to_nat (n__i - l)) in
       let aofv' := set_at v i aofv idx_in_bounds in
@@ -185,7 +185,7 @@ with VOPAssoc (Δ Δ__c : ElDesign) (sst sst__c : IdMap value) : opassoc -> IdMa
     (* * Side conditions * *)
     
     (* [id__a ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id__a) = array(t,l,u)] *)
-    (MapsTo id__a (Declared (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) -> 
+    (MapsTo id__a (Internal (Tarray t l u)) Δ \/ MapsTo id__a (Output (Tarray t l u)) Δ) -> 
     MapsTo id__a (Varr aofv) sst -> (* [id__a ∈ sst and sst(id__a) = aofv] *)
     let i := (N.to_nat (n__i - l)) in
     let aofv' := set_at v i aofv idx_in_bounds in

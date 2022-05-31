@@ -47,7 +47,7 @@ Lemma init_states_eq_marking :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     forall p id__p σ__p0,
       (* [id__p] is the identifier of the place component associated with
@@ -79,7 +79,7 @@ Proof.
   (* Builds [id__p' ∈ (cstore σ__e)] *)
   edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
 
-  (* Builds [Δ__p("s_marking") = Declared (Tnat 0 n)] *)
+  (* Builds [Δ__p("s_marking") = Internal (Tnat 0 n)] *)
   edestruct @elab_PCI_Δ_s_marking as (n, MapsTo_smarking); eauto.
 
   (* Builds proof that [ipm] is well-formed *)
@@ -125,7 +125,7 @@ Lemma init_states_eq_time_counters :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
     
     forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
       InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
@@ -169,7 +169,7 @@ Proof.
   (*           (* Proves [(events σ__e) = ∅] *) *)
   (*           eapply elab_empty_events; eauto *)
   (*           | *)
-  (*           (* Proves [DeclaredOf Δ__t "s_tc"] *) *)
+  (*           (* Proves [InternalOf Δ__t "s_tc"] *) *)
   (*           eapply @elab_TCI_Δ_s_tc; eauto *)
   (*           | *)
   (*           (* Proves ["s_tc" ∉ (events σ__te)] *) *)
@@ -210,7 +210,7 @@ Lemma init_states_eq_reset_orders :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
     
     (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
         InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
@@ -402,7 +402,7 @@ Lemma init_states_eq_actions :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     forall (a : A sitpn) (id__a : ident),
       InA Akeq (a, id__a) (a2out γ) ->
@@ -422,7 +422,7 @@ Lemma init_states_eq_functions :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     forall (f : F sitpn) (id__f : ident),
       InA Fkeq (f, id__f) (f2out γ) ->
@@ -442,7 +442,7 @@ Lemma init_states_eq_conditions :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     forall (c : C sitpn) (id__c : ident),
       InA Ckeq (c, id__c) (c2in γ) ->
@@ -464,9 +464,9 @@ Lemma sim_init_states :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
-    (* init states are similar *)
+    (* Init states are similar *)
     γ ⊢ (s0 sitpn) ∼ σ0.
 Proof.
   intros; unfold SimState; unfold SimStateNoCondsNoReset.

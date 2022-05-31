@@ -39,7 +39,7 @@ Lemma falling_edge_full :
 
     (* From σ to σ' after ↓. *)
     vfalling hdstore Δ σ (behavior d) σ__f ->
-    stabilize hdstore Δ σ__f (behavior d) σ' ->
+    Stabilize hdstore Δ σ__f (behavior d) σ' ->
 
     (* States s' and σ' are similar (post falling edge). *)
     FullSimStateAfterFE sitpn γ s' σ'.
@@ -67,7 +67,7 @@ Lemma falling_edge :
 
     (* From σ to σ' after ↓. *)
     vfalling hdstore Δ σ (behavior d) σ__f ->
-    stabilize hdstore Δ σ__f (behavior d) σ' ->
+    Stabilize hdstore Δ σ__f (behavior d) σ' ->
 
     (* States s' and σ' are similar (post falling edge). *)
     SimStateAfterFE sitpn γ s' σ'.

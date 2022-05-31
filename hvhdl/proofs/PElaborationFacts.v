@@ -43,7 +43,7 @@ Admitted.
 Lemma elab_place_Δ_s_marking :
   forall {M__g Δ σ__e},
     EDesign hdstore M__g place_design Δ σ__e ->
-    exists n, MapsTo Place.s_marking (Declared (Tnat 0 n)) Δ.
+    exists n, MapsTo Place.s_marking (Internal (Tnat 0 n)) Δ.
 Proof.
   inversion 1; subst.
   edestruct @EDecls_P_Δ_s_marking with (Δ := Δ') as (n, MapsTo_Δ''); eauto.
@@ -55,7 +55,7 @@ Lemma EBeh_pcomp_Δ_s_marking :
     EBeh hdstore Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
     MapsTo id__p (Component Δ__p) Δ' ->
-    exists n, MapsTo Place.s_marking (Declared (Tnat 0 n)) Δ__p.
+    exists n, MapsTo Place.s_marking (Internal (Tnat 0 n)) Δ__p.
 Proof.
   induction 1; inversion 1.
 
@@ -81,7 +81,7 @@ Lemma elab_PCI_Δ_s_marking :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
     MapsTo id__p (Component Δ__p) Δ ->
-    exists n, MapsTo Place.s_marking (Declared (Tnat 0 n)) Δ__p.
+    exists n, MapsTo Place.s_marking (Internal (Tnat 0 n)) Δ__p.
 Proof.
   inversion 1.
   eapply EBeh_pcomp_Δ_s_marking; eauto.

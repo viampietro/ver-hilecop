@@ -80,7 +80,7 @@ Lemma fe_equal_fired_aux :
     (* From σ to σ' after ↓. *)
     IsInjectedDState σ (E__p τ) σ__i ->
     vfalling hdstore Δ σ__i (behavior d) σ__f ->
-    stabilize hdstore Δ σ__f (behavior d) σ' ->
+    Stabilize hdstore Δ σ__f (behavior d) σ' ->
 
     forall T__s F Flist,
       IsFiredListAux s' T__s F Flist ->
@@ -150,7 +150,7 @@ Lemma fe_equal_fired :
     (* From σ to σ' after ↓. *)
     IsInjectedDState σ (E__p τ) σ__i ->
     vfalling hdstore Δ σ__i (behavior d) σ__f ->
-    stabilize hdstore Δ σ__f (behavior d) σ' ->
+    Stabilize hdstore Δ σ__f (behavior d) σ' ->
 
     forall t id__t σ'__t,
       InA Tkeq (t, id__t) (t2tci γ) ->

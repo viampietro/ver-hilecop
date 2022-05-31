@@ -211,7 +211,7 @@ Lemma elab_TCI_Δ_s_tc :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
-    DeclaredOf Δ__t s_time_counter.
+    InternalOf Δ__t s_time_counter.
 Proof.
   inversion 1; subst; intros; eapply @elab_decl_of_comp with (d__e := transition_design); eauto.
   apply NatMap.add_1; reflexivity.
@@ -223,7 +223,7 @@ Lemma elab_TCI_Δ_s_rtc :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
-    DeclaredOf Δ__t s_reinit_time_counter.
+    InternalOf Δ__t s_reinit_time_counter.
 Proof.
   inversion 1; subst; intros; eapply @elab_decl_of_comp with (d__e := transition_design); eauto.
   apply NatMap.add_1; reflexivity.

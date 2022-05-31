@@ -99,15 +99,15 @@ Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Output t))
     with signature (@EqOuts ==> impl) as eqouts_mapsto_out_mor.
 Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
 
-(** *** Declared Signal Set Equivalence *)
+(** *** Internal Signal Set Equivalence *)
 
 Definition EqDecls (Δ Δ' : ElDesign) :=
   forall id t,
-    MapsTo id (Declared t) Δ <-> MapsTo id (Declared t) Δ'.
+    MapsTo id (Internal t) Δ <-> MapsTo id (Internal t) Δ'.
 
 Definition EqDecls_refl : forall (Δ : ElDesign), EqDecls Δ Δ. firstorder. Defined.
 Definition EqDecls_trans : forall (Δ Δ' Δ'' : ElDesign), EqDecls Δ Δ' -> EqDecls Δ' Δ'' -> EqDecls Δ Δ''.
-  unfold EqDecls; intros; transitivity (MapsTo id (Declared t0) Δ'); auto.
+  unfold EqDecls; intros; transitivity (MapsTo id (Internal t0) Δ'); auto.
 Defined.
 Definition EqDecls_sym : forall (Δ Δ' : ElDesign), EqDecls Δ Δ' -> EqDecls Δ' Δ.
   unfold EqDecls; symmetry; auto.
@@ -119,14 +119,14 @@ Add Parametric Relation : (ElDesign) (EqDecls)
     transitivity proved by EqDecls_trans
       as EqDecls_rel.
 
-(** Enable rewriting [MapsTo id (Declared t) Δ1] into  
-    [MapsTo id (Declared t) Δ2] if [EqDecls Δ1 Δ2]. *)
+(** Enable rewriting [MapsTo id (Internal t) Δ1] into  
+    [MapsTo id (Internal t) Δ2] if [EqDecls Δ1 Δ2]. *)
 
-Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Declared t)) 
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Internal t)) 
     with signature (@EqDecls ==> impl) as eqdecls_mapsto_decl_mor.
 Proof. intros x y H; rewrite (H id t); unfold impl; auto. Qed.
 
-(** *** Signal (Input, Output and Declared) Set Equivalence *)
+(** *** Signal (Input, Output and Internal) Set Equivalence *)
 
 Definition EqSigs (Δ Δ' : ElDesign) :=
   EqIns Δ Δ' /\ EqOuts Δ Δ' /\ EqDecls Δ Δ'.
@@ -147,10 +147,10 @@ Add Parametric Relation : (ElDesign) (EqSigs)
     transitivity proved by EqSigs_trans
       as EqSigs_rel.
 
-(** Enable rewriting [MapsTo id (Declared t) Δ1] into  
-    [MapsTo id (Declared t) Δ2] if [EqSigs Δ1 Δ2]. *)
+(** Enable rewriting [MapsTo id (Internal t) Δ1] into  
+    [MapsTo id (Internal t) Δ2] if [EqSigs Δ1 Δ2]. *)
 
-Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Declared t)) 
+Add Parametric Morphism (id : ident) (t : type) : (MapsTo id (Internal t)) 
     with signature (@EqSigs ==> impl) as eqsigs_mapsto_decl_mor.
 Proof. intros x y H; do 2 (apply proj2 in H); rewrite H; unfold impl; auto. Qed.
 

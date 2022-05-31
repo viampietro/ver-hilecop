@@ -64,7 +64,7 @@ Lemma trace_sim :
     SitpnExecute E__c s τ θ__s ->
     
     (* From [σ], produces trace [θ__σ] after τ execution cycles. *)
-    simloop hdstore E__p Δ σ (behavior d) τ θ__σ ->
+    SimLoop hdstore E__p Δ σ (behavior d) τ θ__σ ->
 
     (* Conclusion *)
     SimTrace γ θ__s θ__σ re.
@@ -80,7 +80,7 @@ Proof.
   (* CASE τ > 0 *)
   - inversion_clear Hsitpnexec; inversion_clear Hhsim;
     match goal with
-    | [ H: simcycle _ _ _ _ _ _ _ _ |- _ ] =>
+    | [ H: SimCycle _ _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear H; constructor; [
           eauto with hilecop
         | constructor; eauto with hilecop ]
@@ -110,7 +110,7 @@ Theorem full_trace_sim :
     @SitpnFullExec sitpn E__c τ θ__s ->    
     
     (* Design [d] yields simulation trace [θ__σ] after [τ] simulation cycles. *)
-    hfullsim E__p τ d θ__σ ->
+    HFullSim E__p τ d θ__σ ->
     
     (* ** Conclusion: traces are positionally similar. ** *)
     FullSimTrace γ θ__s θ__σ.
@@ -118,13 +118,13 @@ Proof.
   (* Case analysis on τ *)
   destruct τ; intros;
   match goal with
-  | [ Hsitpn: SitpnFullExec _ _ _, Hd: hfullsim _ _ _ _
+  | [ Hsitpn: SitpnFullExec _ _ _, Hd: HFullSim _ _ _ _
       |- _ ] =>
     inversion_clear Hsitpn; inversion_clear Hd
   end;
     lazymatch goal with
-    | [ Hsimloop: simloop _ _ _ _ _ _ _ |- _ ] =>
-        inversion_clear Hsimloop
+    | [ HSimLoop: SimLoop _ _ _ _ _ _ _ |- _ ] =>
+        inversion_clear HSimLoop
     end.
   (* CASE τ = 0, GOAL [γ ⊢ s0 ∼ σ0]. Solved with [sim_init_states] lemma. *)
   - constructor; eauto with hilecop.
@@ -133,7 +133,7 @@ Proof.
      Solved with [first_rising_edge], [falling_edge] and [trace_sim] lemmas. *)
     
   - match goal with
-    | [ H: simcycle _ _ _ _ _ _ _ _ |- _ ] =>
+    | [ H: SimCycle _ _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear H; repeat (constructor; eauto with hilecop)
     end.
 
@@ -145,13 +145,13 @@ Restart.
      [trace_sim]), and trying not to use the hilecop hint database. *)
   destruct τ; intros;
   match goal with
-  | [ Hsitpn: SitpnFullExec _ _ _, Hd: hfullsim _ _ _ _
+  | [ Hsitpn: SitpnFullExec _ _ _, Hd: HFullSim _ _ _ _
       |- _ ] =>
     inversion_clear Hsitpn; inversion_clear Hd
   end;
     lazymatch goal with
-    | [ Hsimloop: simloop _ _ _ _ _ _ _ |- _ ] =>
-        inversion_clear Hsimloop
+    | [ HSimLoop: SimLoop _ _ _ _ _ _ _ |- _ ] =>
+        inversion_clear HSimLoop
     end.
 
   (* CASE τ = 0, GOAL [ γ ⊢ [s0] ∼ [σ0] ] ⇒ [γ ⊢ s0 ≈ σ0]. 
@@ -162,7 +162,7 @@ Restart.
   (* CASE τ > 0, GOAL [γ ⊢ (s0 :: s :: θ__s) ∼ (σ0 :: σ :: θ0)].   
      Solved with [first_rising_edge], [falling_edge] and [trace_sim] lemmas. *)
   - match goal with
-    | [ H: simcycle _ _ _ _ _ _ _ _ |- _ ] =>
+    | [ H: SimCycle _ _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear H
     end.
     (* SUBGOAL [γ ⊢ s0 ≈ σ0], solved with [sim_init_states]. *)
@@ -183,7 +183,7 @@ Restart.
         H0: SitpnStateTransition _ (S τ) _ _ _,
           H1: IsInjectedDState _ (_ (S τ)) _,
             H2: SitpnExecute _ ?s τ ?θ__s,
-              H3: simloop _ _ _ ?σ _ τ ?θ__σ,
+              H3: SimLoop _ _ _ ?σ _ τ ?θ__σ,
         H4: FullSimStateAfterFE _ _ ?s ?σ |- _
       ] =>
         clear H0 H1;
@@ -195,17 +195,17 @@ Restart.
     + (* CASE τ = 0 *)
       intros;
       lazymatch goal with
-      | [ Hexec: SitpnExecute _ _ _ _, Hsim: simloop _ _ _ _ _ _ _ |- _ ] =>
+      | [ Hexec: SitpnExecute _ _ _ _, Hsim: SimLoop _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear Hexec; inversion_clear Hsim; eauto
       end.
     + (* CASE τ > 0 *)
       intros;
       lazymatch goal with
-      | [ Hexec: SitpnExecute _ _ _ _, Hsim: simloop _ _ _ _ _ _ _ |- _ ] =>
+      | [ Hexec: SitpnExecute _ _ _ _, Hsim: SimLoop _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear Hexec; inversion_clear Hsim
       end.
       match goal with
-      | [ H1: simcycle _ _ _ _ _ _ _ _ |- _ ] =>
+      | [ H1: SimCycle _ _ _ _ _ _ _ _ |- _ ] =>
         inversion_clear H1
       end.
       constructor. eapply rising_edge; eauto with hilecop.

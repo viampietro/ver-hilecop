@@ -44,7 +44,7 @@ Qed.
 Lemma vcomb_transition_inv_s_tc :
   forall {Δ σ σ' v},
     vcomb hdstore Δ σ transition_behavior σ' ->
-    DeclaredOf Δ s_time_counter ->
+    InternalOf Δ s_time_counter ->
     MapsTo s_time_counter v (sstore σ) ->
     MapsTo s_time_counter v (sstore σ').
 Proof.
@@ -76,7 +76,7 @@ Lemma vcomb_inv_s_tc :
       InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
       CsHasUniqueCompIds behavior compids -> 
       MapsTo id__t (Component Δ__t) Δ ->
-      DeclaredOf Δ__t s_time_counter ->
+      InternalOf Δ__t s_time_counter ->
       MapsTo id__t σ__t (cstore σ) ->
       MapsTo s_time_counter v (sstore σ__t) ->
       MapsTo id__t σ__t' (cstore σ') ->
@@ -93,7 +93,7 @@ Proof.
     inject_left e; eauto.
     eapply vcomb_transition_inv_s_tc; eauto.
     eapply MIP_inv_sstore; eauto.
-    unfold InputOf; destruct 1; unfold DeclaredOf in *.
+    unfold InputOf; destruct 1; unfold InternalOf in *.
     mapsto_discriminate.
     
   (* CASE component with no events. *)

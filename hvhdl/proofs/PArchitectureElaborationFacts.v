@@ -16,12 +16,12 @@ Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.proofs.ArchitectureElaborationFacts.
 Require Import hvhdl.proofs.DesignElaborationFacts.
 
-(** ** Place Declared Signal Elaboration *)
+(** ** Place Internal Signal Elaboration *)
 
 Lemma EDecl_s_marking :
   forall {Δ σ Δ' σ'},
     EDecl Δ σ (sdecl_ s_marking local_weight_t) Δ' σ' ->
-    exists n, MapsTo s_marking (Declared (Tnat 0 n)) Δ'.
+    exists n, MapsTo s_marking (Internal (Tnat 0 n)) Δ'.
 Proof.
   inversion 1.
   match goal with | [ H: EType _ _ _ |- _ ] => inversion H end.
@@ -33,7 +33,7 @@ Qed.
 Lemma EDecls_P_Δ_s_marking :
   forall {Δ σ Δ' σ'},
     EDecls Δ σ place_sigs Δ' σ' ->
-    exists n, MapsTo s_marking (Declared (Tnat 0 n)) Δ'.
+    exists n, MapsTo s_marking (Internal (Tnat 0 n)) Δ'.
 Proof.
   inversion_clear 1.
   inversion_clear H1.

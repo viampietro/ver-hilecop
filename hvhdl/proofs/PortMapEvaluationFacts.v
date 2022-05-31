@@ -123,11 +123,11 @@ Section IPMap.
     forall {Δ Δ__c σ σ__c asip σ'__c},
       VIPAssoc Δ Δ__c σ σ__c asip σ'__c ->
       (forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sstore σ'__c) ->
         IsOfType v t.
   Proof.
@@ -281,11 +281,11 @@ Section IPMap.
     forall {Δ Δ__c σ σ__c ipm σ__c'},
       MIP Δ Δ__c σ σ__c ipm σ__c' ->
       (forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sstore σ__c) ->
           IsOfType v t) ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+        (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
         MapsTo id v (sstore σ__c') ->
         IsOfType v t.
   Proof.
@@ -328,7 +328,7 @@ Section OPMap.
     forall {Δ Δ__c σ σ__c asop σ' id},
       VOPAssoc Δ Δ__c σ σ__c asop σ' ->
       ~OutputOf Δ id ->
-      ~DeclaredOf Δ id ->
+      ~InternalOf Δ id ->
       ~NatSet.In id (events σ) ->
       ~NatSet.In id (events σ').
   Proof.
@@ -339,7 +339,7 @@ Section OPMap.
          | [ Hor: MapsTo _ _ _ \/ _ |- _ ] =>
            inversion Hor;
            [ match goal with
-             | [ H: MapsTo _ (Declared ?t) _, Hdecl: ~DeclaredOf _ _  |- _ ] =>
+             | [ H: MapsTo _ (Internal ?t) _, Hdecl: ~InternalOf _ _  |- _ ] =>
                subst; apply Hdecl; exists t; auto
              end
            | match goal with
@@ -364,11 +364,11 @@ Section OPMap.
     forall {Δ Δ__c σ σ__c asop σ'},
       VOPAssoc Δ Δ__c σ σ__c asop σ' ->
       (forall {id t v},
-          (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+          (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
           MapsTo id v (sstore σ) ->
           IsOfType v t) ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ') ->
         IsOfType v t.
   Proof.
@@ -464,7 +464,7 @@ Section OPMap.
       MOP Δ Δ__c σ σ__c opmap σ' ->
       ~NatSet.In id (events σ) ->
       ~OutputOf Δ id ->
-      ~DeclaredOf Δ id ->
+      ~InternalOf Δ id ->
       ~NatSet.In id (events σ').
   Proof.
     induction 1; auto.
@@ -488,11 +488,11 @@ Section OPMap.
     forall {Δ Δ__c σ σ__c opmap σ'},
       MOP Δ Δ__c σ σ__c opmap σ' ->
       (forall {id t v},
-          (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+          (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
           MapsTo id v (sstore σ) ->
           IsOfType v t) ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ') ->
         IsOfType v t.
   Proof.

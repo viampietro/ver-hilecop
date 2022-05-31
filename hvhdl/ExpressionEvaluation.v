@@ -50,7 +50,7 @@ Inductive VExpr (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) :
 (** Evaluates a declared signal identifier . *)
           
 | VExprSig (outmode : bool) (id : ident) (t : type) (v : value) :
-    (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ) -> (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = t *)
+    (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ) -> (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = t *)
     ~NatMap.In id Λ ->                                     (* id ∉ Λ *)
     MapsTo id v sst ->   (* id ∈ sst and sst(id) = v *)
     VExpr Δ sst Λ outmode (#id) v
@@ -119,7 +119,7 @@ Inductive VExpr (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) :
       (* Side conditions *)
 
       (* id ∈ Sigs(Δ) ∪ Ins(Δ) and Δ(id) = array(t, l, u) *)
-      (MapsTo id (Declared (Tarray t l u)) Δ \/ MapsTo id (Input (Tarray t l u)) Δ) ->
+      (MapsTo id (Internal (Tarray t l u)) Δ \/ MapsTo id (Input (Tarray t l u)) Δ) ->
       ~NatMap.In id Λ ->                    (* id ∉ Λ *)
       MapsTo id (Varr aofv) sst -> (* id ∈ sst and sst(id) = aofv *)
 
@@ -374,7 +374,7 @@ Definition read (Δ : ElDesign) (sst : IdMap value) (Λ : LEnv) (outmode : bool)
   (* [id] is a local variable identifier *)
   | Some (_, v), None, None => Ret v
   (* [id] is a input port or an declared signal identifier. *)
-  | None, Some v, Some (Input _ | Declared _) => Ret v
+  | None, Some v, Some (Input _ | Internal _) => Ret v
   (* [id] is an output signal identifier, checks that [outmode]
      is on to return the associated value; error otherwise. *)
   | None, Some v, Some (Output _) =>

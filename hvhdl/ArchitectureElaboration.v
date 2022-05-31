@@ -50,4 +50,4 @@ with EDecl (Δ : ElDesign) (σ : DState)  : sdecl -> ElDesign -> DState -> Prop 
       ~InSStore id σ ->  (* id ∉ σ *)
 
       (* Conclusion *)
-      EDecl Δ σ (sdecl_ id τ) (MkElDesign (add id (Declared t) Δ)) (sstore_add id v σ).
+      EDecl Δ σ (sdecl_ id τ) (MkElDesign (add id (Internal t) Δ)) (sstore_add id v σ).

@@ -108,7 +108,7 @@ with DesignAttribute  :=
 | Generic (t : type) (v : value)
 | Input (t : type)
 | Output (t : type)
-| Declared (t : type)
+| Internal (t : type)
 | Process (lenv : LEnv)
 | Component (Δ__c : ElDesign).
 
@@ -131,7 +131,7 @@ Definition OutputOf (Δ : ElDesign) id :=
   exists t, MapsTo id (Output t) Δ.
 
 Definition InternalOf (Δ : ElDesign) id :=
-  exists t, MapsTo id (Declared t) Δ.
+  exists t, MapsTo id (Internal t) Δ.
 
 Definition ProcessOf (Δ : ElDesign) id :=
   exists Λ, MapsTo id (Process Λ) Δ.
@@ -177,12 +177,6 @@ Definition cstore_add (id__c : ident) (σ__c : DState) (σ : DState) : DState :=
 Definition InSStore (id : ident) (σ : DState) :=
   NatMap.In id (sstore σ).
 
-(** Useful function to create a merged [DState] *)
-
-Definition merge_natmap {A : Type}
-           (Aeq : A -> A -> Prop)
-           (Aeq_dec : forall x y, {Aeq x y} + {~Aeq x y})
-           (m0 m1 m2 : NatMap.t A) : NatMap.t A := m0.
 
 (** Design state equality relation *)
 
@@ -200,6 +194,10 @@ Inductive DStateEq (σ1 σ2 : DState) : Prop :=
         NatMap.MapsTo id σ__c2 (cstore σ2) ->
         DStateEq σ__c1 σ__c2
     }.
+
+(** DStateEq is decidable *)
+
+Lemma DStateEq_dec : forall x y, {DStateEq x y} + {~DStateEq x y}. Admitted.
 
 (** Predicate stating that a DState [σ__m] results from the
     interleaving of an origin DState [σ__o], and two DState
@@ -264,6 +262,50 @@ Record IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
                       
     }.
 
+(** Looks up the value associated to [id] in map [m1] and [m2] and
+    compares it to [v0]. If values are equal then the [v0] is
+    returned, otherwise the looked-up value is returned.
+
+    Note that if [id] is not bound in [m1] or [m2], [v0] is
+    returned instead of raising an error, in order to have a total
+    function.  *)
+
+Definition get_freshest_value {A : Type}
+  {Aeq : A -> A -> Prop}
+  (Aeq_dec : forall x y, {Aeq x y} + {~Aeq x y})
+  (m1 m2 : IdMap A) (id : ident) (v0 : A) : A :=
+  match find id m1 with
+  | Some v1 =>
+      if Aeq_dec v0 v1 then
+        match find id m2 with
+        | Some v2 => if Aeq_dec v0 v2 then v0 else v2
+        (* Case [id] is not bound in [m1] *)
+        | None => v0
+        end
+      else v1
+  (* Case [id] is not bound in [m1] *)
+  | None => v0
+  end.
+
+(** Returns a new identifier map where the identifiers bound in [m0]
+    are associated with the freshest value either coming from [m1] or
+    [m2], or from [m0] if an identifier is associated with the same
+    value in the three maps. *)
+
+Definition merge_idmap {A : Type}
+           {Aeq : A -> A -> Prop}
+           (Aeq_dec : forall x y, {Aeq x y} + {~Aeq x y})
+           (m0 m1 m2 : IdMap A) : IdMap A :=
+  NatMap.mapi (get_freshest_value Aeq_dec m1 m2) m0.
+
+(** Returns a new design state resulting from the merging of the
+    origin state [σ0] with the two states [σ1] and [σ2]. *)
+
+Definition merge (σ0 σ1 σ2 : DState) : DState :=
+  MkDState
+    (merge_idmap value_eq_dec (sstore σ0) (sstore σ1) (sstore σ2))
+    (merge_idmap DStateEq_dec (cstore σ0) (cstore σ1) (cstore σ2)).
+
 (** Defines the relation stating that a design state [σ__i] is the
     result of the "injection" of the values of map [m] in the
     [sstore] of design state [σ__o]. *)
@@ -271,3 +313,18 @@ Record IsMergedDState (σ__o σ' σ'' σ__m : DState) : Prop :=
 Definition IsInjectedDState (σ__o : DState) (m : IdMap value) (σ__i : DState) : Prop :=
   IsOverrUnion (sstore σ__o) m (sstore σ__i).
 
+(** Overrides map [m0] with the values defined in map [m1] for all
+    identifiers mapped in [m0] and [m1]. *)
+
+Definition inj_in_map {A : Type} (m0 m1 : IdMap A) :=
+  let overr_value id v := match find id m1 with
+                          | Some v1 => v1
+                          | None => v
+                          end in
+  NatMap.mapi overr_value m0.
+
+(** Overrides the signal store of state [σ] with the values of map
+    [m]. *)
+
+Definition inj (σ : DState) (m : IdMap value) : DState :=
+  MkDState (inj_in_map (sstore σ) m) (cstore σ).

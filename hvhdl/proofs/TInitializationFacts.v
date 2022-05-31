@@ -58,7 +58,7 @@ Section TVRunInit.
     forall Δ σ σ',
       vruninit hdstore Δ σ transition_behavior σ' ->
       ~NatSet.In s_time_counter (events σ) ->
-      DeclaredOf Δ s_time_counter ->
+      InternalOf Δ s_time_counter ->
       MapsTo s_time_counter (Vnat 0) (sstore σ').
   Proof.
     intros *; unfold transition_behavior.
@@ -80,7 +80,7 @@ Section TVRunInit.
       eapply vruninit_tc_ps_no_events_s_tc; eauto.
       eapply not_in_union; eauto.
       eapply vruninit_not_in_events_if_not_assigned; eauto.
-      destruct 1; unfold DeclaredOf in *; mapsto_discriminate.
+      destruct 1; unfold InternalOf in *; mapsto_discriminate.
       simpl; cbv; lia.
   Qed.
   
@@ -92,7 +92,7 @@ Section TVRunInit.
         CsHasUniqueCompIds behavior compids ->
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
-        DeclaredOf Δ__t s_time_counter ->
+        InternalOf Δ__t s_time_counter ->
         MapsTo id__t σ__t (cstore σ) ->
         ~NatSet.In s_time_counter (events σ__t) ->
         NatMap.MapsTo id__t σ__t' (cstore σ') ->
@@ -109,7 +109,7 @@ Section TVRunInit.
       inject_left e.
       eapply vruninit_T_s_tc_eq_O; eauto.
       eapply MIP_not_in_events_if_not_input; eauto.
-      destruct 1; unfold DeclaredOf in *; mapsto_discriminate.
+      destruct 1; unfold InternalOf in *; mapsto_discriminate.
 
     (* CASE eventless component *)
     - inversion 1; subst; subst_transition_design.
@@ -126,7 +126,7 @@ Section TVRunInit.
       (* inject_left e. *)
       (* eapply vruninit_T_s_tc_eq_O; eauto. *)
       (* eapply MIP_not_in_events_if_not_input; eauto. *)
-      (* destruct 1; unfold DeclaredOf in *; mapsto_discriminate. *)
+      (* destruct 1; unfold InternalOf in *; mapsto_discriminate. *)
       (* erewrite <- @MapsTo_fun with (e := σ__t) (e' := σ__c); eauto. *)
       admit.
       
@@ -190,7 +190,7 @@ Section TVRunInit.
       (* eapply vruninit_rtc_ps_no_events_s_rtc; eauto. *)
       (* eapply not_in_union; eauto. *)
       (* eapply vruninit_not_in_events_if_not_assigned; eauto. *)
-      (* destruct 1; unfold DeclaredOf in *; mapsto_discriminate. *)
+      (* destruct 1; unfold InternalOf in *; mapsto_discriminate. *)
       (* simpl; cbv; lia. *)
       admit.
   Admitted.
@@ -265,13 +265,13 @@ Section TInit.
 
   Lemma init_s_tc_eq_O :
     forall Δ σ behavior σ0,
-      init hdstore Δ σ behavior σ0 ->
+      Init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t σ__t σ__t0,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids -> 
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
-        DeclaredOf Δ__t s_time_counter ->
+        InternalOf Δ__t s_time_counter ->
         MapsTo id__t σ__t (cstore σ) ->
         ~NatSet.In s_time_counter (events σ__t) ->
         MapsTo id__t σ__t0 (cstore σ0) ->
@@ -294,7 +294,7 @@ Section TInit.
 
   Lemma init_TCI_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
-      init hdstore Δ σ behavior σ0 ->
+      Init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t t n,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids ->
@@ -316,7 +316,7 @@ Section TInit.
 
   Lemma init_TCI_eval_rt_0 :
     forall D__s Δ σ behavior σ0,
-      init D__s Δ σ behavior σ0 ->
+      Init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
         MapsTo id__t σ__t0 (cstore σ0) ->
@@ -327,7 +327,7 @@ Section TInit.
 
   Lemma init_TCI_eval_rt_i :
     forall D__s Δ σ behavior σ0,
-      init D__s Δ σ behavior σ0 ->
+      Init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv id i b ,
         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
         MapsTo id__t σ__t0 (cstore σ0) ->

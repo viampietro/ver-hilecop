@@ -103,7 +103,7 @@ Definition place_ports : list pdecl :=
 
 Definition local_weight_t := tind_natural 0 (#maximal_marking).
 
-(** Declared signal identifiers. *)
+(** Internal signal identifiers. *)
 
 Definition s_input_token_sum : ident := 14%nat.
 Definition s_marking : ident := 15%nat.

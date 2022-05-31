@@ -112,7 +112,7 @@ Section PVRunInit.
       vruninit hdstore Δ σ place_behavior σ' ->
       ~NatSet.In s_marking (events σ) ->
       InputOf Δ initial_marking ->
-      MapsTo s_marking (Declared (Tnat 0 m)) Δ ->
+      MapsTo s_marking (Internal (Tnat 0 m)) Δ ->
       MapsTo initial_marking (Vnat n) (sstore σ) ->
       MapsTo s_marking (Vnat n) (sstore σ').
   Proof.
@@ -152,7 +152,7 @@ Section PVRunInit.
         NatMap.MapsTo id__p σ__p' (cstore σ') ->
         ListIPM Δ Δ__p σ [] i__p formals ->
         InputOf Δ__p initial_marking ->
-        MapsTo s_marking (Declared (Tnat 0 m)) Δ__p ->
+        MapsTo s_marking (Internal (Tnat 0 m)) Δ__p ->
         ~NatSet.In s_marking (events σ__p) ->
         NatMap.MapsTo Place.s_marking (Vnat n) (sstore σ__p').
   Proof.
@@ -211,7 +211,7 @@ Section PInit.
 
   Lemma init_s_marking_eq_nat :
     forall Δ σ behavior σ0,
-      init hdstore Δ σ behavior σ0 ->
+      Init hdstore Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p σ__p0 n Δ__p cids mm formals,
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
         Equal (events σ) {[]} ->
@@ -224,7 +224,7 @@ Section PInit.
         InputOf Δ__p initial_marking ->
         MapsTo id__p σ__p0 (cstore σ0) ->
         ~NatSet.In s_marking (events σ__p) ->
-        MapsTo Place.s_marking (Declared (Tnat 0 mm)) Δ__p ->
+        MapsTo Place.s_marking (Internal (Tnat 0 mm)) Δ__p ->
         MapsTo Place.s_marking (Vnat n) (sstore σ__p0).
   Proof.
     inversion 1.
@@ -246,7 +246,7 @@ Section PInit.
 
   Lemma init_PCI_eval_rtt_i :
     forall D__s Δ σ behavior σ0,
-      init D__s Δ σ behavior σ0 ->
+      Init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 aofv id i b ,
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
         MapsTo id__p σ__p0 (cstore σ0) ->
@@ -258,7 +258,7 @@ Section PInit.
   
   Lemma init_PCI_rtt_eq_false :
     forall D__s Δ σ behavior σ0,
-      init D__s Δ σ behavior σ0 ->
+      Init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 Δ__p aofv i t n,
         InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
         MapsTo id__p (Component Δ__p) Δ ->

@@ -84,7 +84,7 @@ Axiom sitpn2vhdl_init_state_ex :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* There exists an initial state [σ0] of [d]. *)
-    exists σ0, init hdstore Δ σ__e (behavior d) σ0. 
+    exists σ0, Init hdstore Δ σ__e (behavior d) σ0. 
 
 (** ** Simulation trace theorem *)
 
@@ -102,7 +102,7 @@ Axiom IsWellDefinedSimEnv_ex :
 
 Axiom SimEnv_ex : forall sitpn γ E__c, exists E__p, SimEnv sitpn γ E__c E__p.
 
-(** There exist a simulation trace [θ__σ] that verify the [simloop] for
+(** There exist a simulation trace [θ__σ] that verify the [SimLoop] for
     all design [d] result of the transformation of a well-defined and
     bounded SITPN model [sitpn]. *)
 
@@ -122,12 +122,12 @@ Axiom sitpn2vhdl_sim_ex :
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* An initial state [σ0] of [d]. *)
-    init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (behavior d) σ0 ->
 
     (* The simulation env [E__p] is well-defined. *)
     IsWellDefinedSimEnv Δ E__p ->
     
-    exists θ__σ, simloop hdstore E__p Δ σ0 (behavior d) τ θ__σ.
+    exists θ__σ, SimLoop hdstore E__p Δ σ0 (behavior d) τ θ__σ.
 
 (** ** Semantic preservation theorem  *)
 
@@ -155,7 +155,7 @@ Theorem sitpn2vhdl_semantic_preservation :
       exists θ__σ,
         
         (* Design [d] yields simulation trace [θ__σ] after [τ] simulation cycles. *)
-        hfullsim E__p τ d θ__σ /\
+        HFullSim E__p τ d θ__σ /\
         
         (* Traces are fully similar. *)
         FullSimTrace γ θ__s θ__σ.
@@ -169,11 +169,11 @@ Proof.
 
   (* Existence of an elaborated design [Δ], a default state [σ__e], an
      initial state [σ0], and a simulation trace [θ__σ]. *)
-  (* unfold hfullsim; eapply FullSim; eauto. *)
+  (* unfold HFullSim; eapply FullSim; eauto. *)
 
   (* Similar traces. *)
   (* eapply trace_sim; eauto. *)
-  (* unfold hfullsim; eapply FullSim; eauto.   *)
+  (* unfold HFullSim; eapply FullSim; eauto.   *)
 Admitted.
 
 

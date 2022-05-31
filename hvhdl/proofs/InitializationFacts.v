@@ -383,11 +383,11 @@ Section VRunInit.
     forall {D__s Δ σ behavior σ'},
       vruninit D__s Δ σ behavior σ' ->
       (forall {id t v},
-          (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+          (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
           MapsTo id v (sstore σ) ->
           IsOfType v t) ->
       forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ') ->
         IsOfType v t.
   Proof.
@@ -426,14 +426,14 @@ Section VRunInit.
           MapsTo id__c (Component Δ__c) Δ ->
           MapsTo id__c σ__c (cstore σ) ->
           forall {id t v},
-            (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+            (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
             MapsTo id v (sstore σ__c) ->
             IsOfType v t) ->
       forall {id__c Δ__c σ'__c},
         MapsTo id__c (Component Δ__c) Δ ->
         MapsTo id__c σ'__c (cstore σ') ->
         forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sstore σ'__c) ->
           IsOfType v t.
   Proof.
@@ -599,7 +599,7 @@ Section Init.
 
   Lemma init_maps_cstore_id :
     forall {D__s Δ σ behavior σ' id__c σ__c},
-      init D__s Δ σ behavior σ' ->
+      Init D__s Δ σ behavior σ' ->
       MapsTo id__c σ__c (cstore σ) ->
       exists σ__c', MapsTo id__c σ__c' (cstore σ').
   Proof.
@@ -610,7 +610,7 @@ Section Init.
   
   Lemma init_maps_sstore_of_comp :
     forall {D__s Δ σ behavior σ0 id__c id__e gm ipm opm σ__c σ__c0 id v},
-      init D__s Δ σ behavior σ0 ->
+      Init D__s Δ σ behavior σ0 ->
       InCs (cs_comp id__c id__e gm ipm opm) behavior ->
       MapsTo id__c σ__c (cstore σ) ->
       MapsTo id v (sstore σ__c) ->
@@ -625,19 +625,19 @@ Section Init.
 
   Lemma init_inv_well_typed_values_in_sstore_of_comp :
     forall {D__s Δ σ behavior σ0},
-      init D__s Δ σ behavior σ0 ->
+      Init D__s Δ σ behavior σ0 ->
       (forall {id__c Δ__c σ__c},
           MapsTo id__c (Component Δ__c) Δ ->
           MapsTo id__c σ__c (cstore σ) ->
           forall {id t v},
-            (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+            (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
             MapsTo id v (sstore σ__c) ->
             IsOfType v t) ->
       forall {id__c Δ__c σ__c0},
         MapsTo id__c (Component Δ__c) Δ ->
         MapsTo id__c σ__c0 (cstore σ0) ->
         forall {id t v},
-          (MapsTo id (Declared t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
+          (MapsTo id (Internal t) Δ__c \/ MapsTo id (Input t) Δ__c \/ MapsTo id (Output t) Δ__c) ->
           MapsTo id v (sstore σ__c0) ->
           IsOfType v t.
   Proof.

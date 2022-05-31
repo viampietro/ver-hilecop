@@ -40,7 +40,7 @@ Lemma rising_edge_full :
     (* From σ to σ' after ↑. *)
     IsInjectedDState σ (E__p τ) σ__i ->
     vrising hdstore Δ σ__i (behavior d) σ__r ->
-    stabilize hdstore Δ σ__r (behavior d) σ' ->
+    Stabilize hdstore Δ σ__r (behavior d) σ' ->
 
     (* States s' and σ' are similar (full post rising edge similarity). *)
     FullSimStateAfterRE sitpn γ E__c τ s' σ'.
@@ -69,7 +69,7 @@ Lemma rising_edge :
     (* From σ to σ' after ↑. *)
     IsInjectedDState σ (E__p τ) σ__i ->
     vrising hdstore Δ σ__i (behavior d) σ__r ->
-    stabilize hdstore Δ σ__r (behavior d) σ' ->
+    Stabilize hdstore Δ σ__r (behavior d) σ' ->
 
     (* States s' and σ' are similar (post rising edge similarity). *)
     SimStateAfterRE sitpn γ s' σ'.

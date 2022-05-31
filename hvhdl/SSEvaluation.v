@@ -18,10 +18,8 @@ Import HVhdlSsNotations.
     
     [VSeq] does not define error cases. *)
 
-Inductive seqflag : Set := fe | re | stab | initl.
-
 Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
-  seqflag -> ss -> IdMap value -> LEnv -> Prop :=
+  simflag -> ss -> IdMap value -> LEnv -> Prop :=
 
 (** Evaluates a signal assignment statement.
 
@@ -38,7 +36,7 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
       (* * Side conditions * *)
       
       (* id ∈ S(Δ) ∪ O(Δ) and Δ(id) = t *)
-      (NatMap.MapsTo id (Declared t) Δ \/ NatMap.MapsTo id (Output t) Δ) -> 
+      (NatMap.MapsTo id (Internal t) Δ \/ NatMap.MapsTo id (Output t) Δ) -> 
             
       (* * Conclusion: [Δ, sst, sst__w, Λ ⊢ id ⇐ e ⇝ sst__w(id) ← v, Λ] * *)
       VSeq Δ sst__r sst__w Λ flag ($id @<== e) (add id v sst__w) Λ
@@ -62,7 +60,7 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
       (* * Side conditions * *)
       
       (* id ∈ Sigs(Δ) ∪ Outs(Δ) and Δ(id) = array(t, l, u) *)
-      (NatMap.MapsTo id (Declared (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) ->
+      (NatMap.MapsTo id (Internal (Tarray t l u)) Δ \/ NatMap.MapsTo id (Output (Tarray t l u)) Δ) ->
       
       (* id ∈ sst and sst(id) = aofv *)
       NatMap.MapsTo id (Varr aofv) sst__w ->
@@ -218,7 +216,7 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
     forall flag stmt stmt' sst__w' Λ',
 
       (* * Side conditions * *)
-      flag <> initl ->
+      flag <> init ->
       
       (* * Premises * *)
       VSeq Δ sst__r sst__w Λ flag stmt' sst__w' Λ' ->
@@ -235,10 +233,10 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
     forall stmt stmt' sst__w' Λ',
 
       (* * Premises * *)
-      VSeq Δ sst__r sst__w Λ initl stmt sst__w' Λ' ->
+      VSeq Δ sst__r sst__w Λ init stmt sst__w' Λ' ->
 
       (* * Conclusion * *)
-      VSeq Δ sst__r sst__w Λ initl (ss_rst stmt stmt') sst__w' Λ'
+      VSeq Δ sst__r sst__w Λ init (ss_rst stmt stmt') sst__w' Λ'
            
 (** Evaluates the null statement. *)
 | VSeqNull :

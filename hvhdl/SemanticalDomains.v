@@ -37,7 +37,11 @@ Section Values.
   Scheme value_ind_mut := Induction for value Sort Prop
       with arrofvalues_ind_mut := Induction for arrofvalues Sort Prop.
 
-  (* Conversion from [arrofvalues] to [list value] *)
+  (** Equality is decidable for the [value] type *)
+
+  Lemma value_eq_dec : forall x y : value, {x = y} + {x <> y}. Admitted.
+  
+  (** Conversion from [arrofvalues] to [list value] *)
 
   Fixpoint aofv2list (aofv : arrofvalues) {struct aofv} : list (value) :=
     match aofv with
@@ -248,17 +252,19 @@ End Types.
 
 Section ValueEq.
 
-  (** Specifies the equality relation between two values,
-      and the result of the equality evaluation;
-      result can either be an error (i.e, [None]), or
-      some boolean value.
+  (** Specifies the equality relation between two values, and the
+      result of the equality evaluation; result can either be an error
+      (i.e, [None]), or some Boolean value.
 
-      Not possible to distinguish errors from "falsity":
+      The third parameter is mandatory, otherwise, it is not possible
+      to distinguish errors from "falsity"; imagine a relation [VEq]
+      that takes two values as parameters:
 
       - [~VEq (Vnat 0) (Vnat 1)] is provable because 0 ≠ 1.
-      - [~VEq (Vnat 0) (Vbool false)] is provable because 0 and 
-      false are not comparable, however it is an error case.
-   *)
+
+      - [~VEq (Vnat 0) (Vbool false)] is provable because 0 and false
+        are not comparable, however it is an error case because the
+        two values are not of the same type.  *)
 
   Inductive OVEq : value -> value -> option bool -> Prop :=
   | OVEq_BoolT : forall b b', b = b' -> OVEq (Vbool b) (Vbool b') (Some true)
@@ -381,7 +387,7 @@ Section ValueEq.
     | Varr aofv, Varr aofv' => arrofveq aofv aofv'
     | _, _ => Err "veq: can not compare two values of different domains"
     end                              
-  (** Implements the equality operator between arrays of values.
+  (** Implements the equality operator between array of values.
       
       Returns [Some true] if values of [aofv] and [aofv'] are equal pair-wise.
       

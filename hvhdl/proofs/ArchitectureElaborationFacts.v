@@ -48,13 +48,13 @@ Proof.
         | [ H: ~NatMap.In _ _ |- _ ] => 
           apply H; exists (Generic t1 v0); assumption
         end
-      | rewrite (add_mapsto_iff Δ id0 id0 (Declared t0) (Generic t1 v0)) in Hmap;
+      | rewrite (add_mapsto_iff Δ id0 id0 (Internal t0) (Generic t1 v0)) in Hmap;
         firstorder;
         lazymatch goal with
         | [ Heq_semobj: _ = Generic _ _ |- _ ] =>
           inversion Heq_semobj
         end ].
-  - split; intros Hmap; [ apply (add_2 (Declared t0) Hneq_id Hmap) | apply (add_3 Hneq_id Hmap) ].
+  - split; intros Hmap; [ apply (add_2 (Internal t0) Hneq_id Hmap) | apply (add_3 Hneq_id Hmap) ].
 Qed.
 
 #[export] Hint Resolve EDecl_idle_gens : hvhdl.
@@ -133,14 +133,14 @@ Qed.
 Lemma EDecl_decl :
   forall {Δ σ Δ' σ' id τ},
     EDecl Δ σ (sdecl_ id τ) Δ' σ' ->
-    DeclaredOf Δ' id.
+    InternalOf Δ' id.
 Proof. inversion 1; exists t0; auto with mapsto. Qed.
 
 Lemma EDecls_decl :
   forall {Δ σ sigs Δ' σ' id τ},
     EDecls Δ σ sigs Δ' σ' ->
     List.In (sdecl_ id τ) sigs ->
-    DeclaredOf Δ' id.
+    InternalOf Δ' id.
 Proof.
   induction 1; try (solve [inversion 1]).
   inversion 1.
@@ -153,11 +153,11 @@ Lemma EDecl_inv_well_typed_values_in_sstore :
   forall {Δ σ ad Δ' σ'},
     EDecl Δ σ ad Δ' σ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
+      (MapsTo id (Internal t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
@@ -169,8 +169,8 @@ Proof.
   (* CASE [id0 = id] *)
   - cbn; inversion_clear 1 as [MapsTo_decl | MapsTo_or];
     intros MapsTo_sstore.
-    (* CASE Declared *)
-    + assert (eq_type : Declared t1 = Declared t0) by
+    (* CASE Internal *)
+    + assert (eq_type : Internal t1 = Internal t0) by
           (eauto with mapsto).
       inject_left eq_type.
       assert (eq_val : v0 = v) by (eauto with mapsto).
@@ -193,11 +193,11 @@ Lemma EDecls_inv_well_typed_values_in_sstore :
   forall {Δ σ sigs Δ' σ'},
     EDecls Δ σ sigs Δ' σ' ->
     (forall {id t v},
-        (MapsTo id (Declared t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
+        (MapsTo id (Internal t) Δ \/ MapsTo id (Input t) Δ \/ MapsTo id (Output t) Δ) ->
         MapsTo id v (sstore σ) ->
         IsOfType v t) ->
     forall {id t v},
-      (MapsTo id (Declared t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
+      (MapsTo id (Internal t) Δ' \/ MapsTo id (Input t) Δ' \/ MapsTo id (Output t) Δ') ->
       MapsTo id v (sstore σ') ->
       IsOfType v t.
 Proof.
@@ -210,7 +210,7 @@ Lemma EDecl_inv_Δ_if_not_decl :
   forall {Δ σ ad Δ' σ'},
     EDecl Δ σ ad Δ' σ' ->
     forall {id sobj},
-      (~exists t, sobj = Declared t) ->
+      (~exists t, sobj = Internal t) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
   split; [ | eapply EDecl_inv_Δ; eauto].
@@ -218,7 +218,7 @@ Proof.
   destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
     [ rewrite eq_; intros; exfalso;
       match goal with
-      | [ H1: ~(_), H2: MapsTo ?k _ (add ?k (Declared ?t) _)  |- _ ] =>
+      | [ H1: ~(_), H2: MapsTo ?k _ (add ?k (Internal ?t) _)  |- _ ] =>
         apply H1; exists t; eauto with mapsto
       end
     | eauto with mapsto ].
@@ -228,7 +228,7 @@ Lemma EDecls_inv_Δ_if_not_decl :
   forall {Δ σ sigs Δ' σ'},
     EDecls Δ σ sigs Δ' σ' ->
     forall {id sobj},
-      (~exists t, sobj = Declared t) ->
+      (~exists t, sobj = Internal t) ->
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
   induction 1; try (solve [reflexivity]).
