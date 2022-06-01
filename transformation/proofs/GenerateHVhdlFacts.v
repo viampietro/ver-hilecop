@@ -29,7 +29,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
   (*   forall {sitpn p s v s'}, *)
   (*     generate_place_comp_inst sitpn p s = OK v s' -> *)
   (*     exists (id__p : ident) (gm : genmap) (ipm : inputmap) (opm : outputmap), *)
-  (*       InA Pkeq (p, id__p) (p2pci (γ s')) /\ InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s'). *)
+  (*       InA Pkeq (p, id__p) (p2pci (γ s')) /\ InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s'). *)
   (* Proof. *)
   (*   intros until s'; intros e; monadFullInv e. *)
   (*   simpl; simpl in EQ4. *)
@@ -44,7 +44,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*     forall {sitpn p s v s' g i o}, *)
 (*       generate_place_comp_inst sitpn p s = OK v s' -> *)
 (*       forall (id__p : ident) (gm : genmap) (ipm : inputmap) (opm : outputmap), *)
-(*         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') -> *)
+(*         InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s') -> *)
 (*         InA Pkeq (p, id__p) (p2pci (γ s')) -> *)
 (*         ~(exists id__e gm ipm opm, InCs (cs_comp (nextid s) id__e gm ipm opm) (beh s)) -> *)
 (*         InA Pkeq (p, (g, i, o)) (plmap (arch s)) -> *)
@@ -72,7 +72,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*     intros InA_setv nex_InCs; intros; *)
 (*       erewrite @eqv_if_InA_NoDupA_setv with (y := id__p) (eqk := Peq) in InCs_beh; *)
 (*       eauto with typeclass_instances. *)
-(*     exfalso; apply nex_InCs; exists Petri.place_entid, gm, ipm, opm; auto. *)
+(*     exfalso; apply nex_InCs; exists Petri.place_id, gm, ipm, opm; auto. *)
 (*   Qed. *)
   
   (* Lemma iter_gen_p_comp_inst_p_comp : *)
@@ -82,7 +82,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
   (*     forall p, InA Peq p pls -> *)
   (*       exists id__p gm ipm opm, *)
   (*         InA Pkeq (p, id__p) (p2pci (γ s')) /\ *)
-  (*         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s'). *)
+  (*         InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s'). *)
   (* Proof. *)
   (*   intros until pls; functional induction (iter (generate_place_comp_inst sitpn) pls) using iter_ind. *)
 
@@ -120,7 +120,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*         NoDupA Peq pls -> *)
 (*         InA Peq p pls -> *)
 (*         InA Pkeq (p, id__p) (p2pci (γ s')) -> *)
-(*         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') -> *)
+(*         InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s') -> *)
 (*         NoDupA Peq (fs (plmap (arch s))) -> *)
 (*         ~(exists p1 id__p1, InA Pkeq (p1, id__p1) (p2pci (γ s)) /\ id__p1 >= nextid s) -> *)
 (*         ~(exists id__c id__e gm ipm opm, InCs (cs_comp id__c id__e gm ipm opm) (beh s) /\ id__c >= nextid s) -> *)
@@ -165,7 +165,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*       Sig_in_List (lofPs s) -> *)
 (*       forall p, exists id__p gm ipm opm, *)
 (*           InA Pkeq (p, id__p) (p2pci (γ s')) /\ *)
-(*           InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s'). *)
+(*           InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s'). *)
 (*   Proof. *)
 (*     intros until s'; intros e; minv e; intros SIL p. *)
 (*     eapply iter_gen_p_comp_inst_p_comp; eauto; *)
@@ -187,7 +187,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*         InA Pkeq (p, id__p) (p2pci (γ s')) -> *)
 (*         InA Pkeq (p, (g, i, o)) (plmap (arch s)) -> *)
 (*         List.In (initial_marking, inl (e_nat (M0 p))) i -> *)
-(*         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') -> *)
+(*         InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s') -> *)
 (*         List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm. *)
 (*   Proof. *)
 (*     intros until s'; intros e; minv e. *)
@@ -207,7 +207,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*       generate_trans_comp_inst sitpn t s = OK v s' -> *)
 (*       exists id__t gm ipm opm, *)
 (*         InA Tkeq (t, id__t) (t2tci (γ s')) *)
-(*         /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s'). *)
+(*         /\ InCs (cs_comp id__t Petri.trans_id gm ipm opm) (beh s'). *)
 (*   Proof. *)
 (*     intros until s'; intros e; minv e. *)
 (*     exists (nextid s0), g, x0, x2; split; eauto with setoidl. *)
@@ -220,7 +220,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*       forall t, InA Teq t trs -> *)
 (*                 exists id__t gm ipm opm, *)
 (*                   InA Tkeq (t, id__t) (t2tci (γ s')) /\ *)
-(*                   InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s'). *)
+(*                   InCs (cs_comp id__t Petri.trans_id gm ipm opm) (beh s'). *)
 (*   Proof. *)
 (*     intros until trs; *)
 (*       functional induction (iter (generate_trans_comp_inst sitpn) trs) using iter_ind. *)
@@ -250,7 +250,7 @@ Require Import transformation.proofs.GeneratePortsFacts.
 (*       Sig_in_List (lofTs s) -> *)
 (*       forall t, *)
 (*       exists id__t gm ipm opm, *)
-(*         InA Tkeq (t, id__t) (t2tci (γ s')) /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s'). *)
+(*         InA Tkeq (t, id__t) (t2tci (γ s')) /\ InCs (cs_comp id__t Petri.trans_id gm ipm opm) (beh s'). *)
 (*   Proof. *)
 (*     intros *; intros e; minv e; intros SIL t. *)
 (*     eapply iter_gen_tcomp_inst_t_comp; eauto; *)
@@ -269,7 +269,7 @@ Section Sitpn2HVhdl.
   (*     Sig_in_List (lofTs s) -> *)
   (*     forall t, exists id__t gm ipm opm, *)
   (*         InA Tkeq (t, id__t) (t2tci (γ s')) /\ *)
-  (*         InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (beh s'). *)
+  (*         InCs (cs_comp id__t Petri.trans_id gm ipm opm) (beh s'). *)
   (* Proof. *)
   (*   intros *; intros e; monadInv e; intros SIL t. *)
   (*   eapply gen_tcomp_insts_t_comp; eauto. *)
@@ -282,7 +282,7 @@ Section Sitpn2HVhdl.
   (*     Sig_in_List (lofPs s) -> *)
   (*     forall p, exists id__p gm ipm opm, *)
   (*         InA Pkeq (p, id__p) (p2pci (γ s')) /\ *)
-  (*         InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s'). *)
+  (*         InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s'). *)
   (* Proof. *)
   (*   intros until s'; intros e; monadInv e; intros Hsil p. *)
   (*   specialize (gen_p_comp_insts_p_comp EQ Hsil p) *)
@@ -306,7 +306,7 @@ Section Sitpn2HVhdl.
   (*       InA Pkeq (p, id__p) (p2pci (γ s')) -> *)
   (*       InA Pkeq (p, (g, i, o)) (plmap (arch s)) -> *)
   (*       List.In (initial_marking, inl (e_nat (M0 p))) i -> *)
-  (*       InCs (cs_comp id__p Petri.place_entid gm ipm opm) (beh s') -> *)
+  (*       InCs (cs_comp id__p Petri.place_id gm ipm opm) (beh s') -> *)
   (*       List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm. *)
   (* Proof. *)
   (*   intros *; intros e; monadInv e; intros. *)
@@ -371,7 +371,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall p, exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci γ)
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (behavior d).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (behavior d).
   Proof.
     intros. 
     functional induction (sitpn2hvhdl sitpn id__e id__a mm) using sitpn2hvhdl_ind.
@@ -406,7 +406,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall t, exists id__t gm ipm opm,
           InA Tkeq (t, id__t) (t2tci γ)
-          /\ InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d).
+          /\ InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d).
   Proof.
     (*   intros *.  *)
     (*   functional induction (sitpn2hvhdl sitpn id__ent id__arch mm) using sitpn2hvhdl_ind. *)
@@ -433,7 +433,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall p id__p gm ipm opm,
         InA Pkeq (p, id__p) (p2pci γ) ->
-        InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+        InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
         List.In (associp_ ($initial_marking) (@M0 sitpn p)) ipm.
   Proof.
     (*   intros until mm;   *)
@@ -512,7 +512,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm,
         InA Tkeq (t, id__t) (t2tci γ) ->
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
         PInputsOf t [] ->
         List.In (associp_ (Transition.reinit_time $[[0]]) false) ipm.
   Admitted.
@@ -523,7 +523,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm,
         InA Tkeq (t, id__t) (t2tci γ) ->
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
         PInputsOf t [] ->
         List.In (assocg_ Transition.input_arcs_number 1) gm.
   Admitted.
@@ -537,9 +537,9 @@ Section Sitpn2HVhdl.
         PInputsOf t pinputs_of_t ->
         TOutputsOf p toutputs_of_p ->
         InA Tkeq (t, id__t) (t2tci γ) ->
-        InCs (cs_comp id__t Petri.transition_entid gm__t ipm__t opm__t) (behavior d) ->
+        InCs (cs_comp id__t Petri.trans_id gm__t ipm__t opm__t) (behavior d) ->
         InA Pkeq (p, id__p) (p2pci γ) ->
-        InCs (cs_comp id__p Petri.place_entid gm__p ipm__p opm__p) (behavior d) ->
+        InCs (cs_comp id__p Petri.place_id gm__p ipm__p opm__p) (behavior d) ->
         exists i j id__ji,
           0 <= i < length pinputs_of_t
           /\ 0 <= j < length toutputs_of_p
@@ -553,7 +553,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall t id__t gm ipm opm pinputs_of_t,
         InA Tkeq (t, id__t) (t2tci γ) ->
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
         PInputsOf t pinputs_of_t ->
         length pinputs_of_t <> 0 ->
         List.In (assocg_ Transition.input_arcs_number (length pinputs_of_t)) gm.
@@ -565,7 +565,7 @@ Section Sitpn2HVhdl.
       IsWellDefined sitpn ->
       forall p id__p gm ipm opm toutputs_of_p,
         InA Pkeq (p, id__p) (p2pci γ) ->
-        InCs (cs_comp id__p Petri.place_entid gm ipm opm) (behavior d) ->
+        InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
         TOutputsOf p toutputs_of_p ->
         length toutputs_of_p <> 0 ->
         List.In (assocg_ Place.output_arcs_number (length toutputs_of_p)) gm.

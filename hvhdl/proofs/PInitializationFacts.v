@@ -142,7 +142,7 @@ Section PVRunInit.
     forall Δ σ behavior σ',
       vruninit hdstore Δ σ behavior σ' ->
       forall id__p g__p i__p o__p σ__p σ__p' n Δ__p cids m formals,
-        InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
+        InCs (cs_comp id__p Petri.place_id g__p i__p o__p) behavior ->
         AreCsCompIds behavior cids -> 
         List.NoDup cids ->
         List.In (associp_ ($initial_marking) (e_nat n)) i__p ->
@@ -213,7 +213,7 @@ Section PInit.
     forall Δ σ behavior σ0,
       Init hdstore Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p σ__p0 n Δ__p cids mm formals,
-        InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
+        InCs (cs_comp id__p Petri.place_id g__p i__p o__p) behavior ->
         Equal (events σ) {[]} ->
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo id__p σ__p (cstore σ) ->
@@ -248,7 +248,7 @@ Section PInit.
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 aofv id i b ,
-        InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
+        InCs (cs_comp id__p Petri.place_id g__p i__p o__p) behavior ->
         MapsTo id__p σ__p0 (cstore σ0) ->
         MapsTo reinit_transitions_time (Varr aofv) (sstore σ__p0) ->
         List.In (opassoc_idx reinit_transitions_time (e_nat i) ($id)) o__p ->
@@ -260,7 +260,7 @@ Section PInit.
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 Δ__p aofv i t n,
-        InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) behavior ->
+        InCs (cs_comp id__p Petri.place_id g__p i__p o__p) behavior ->
         MapsTo id__p (Component Δ__p) Δ ->
         MapsTo output_arcs_number (Generic t (Vnat n)) Δ__p ->
         MapsTo id__p σ__p0 (cstore σ0) ->

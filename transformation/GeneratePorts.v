@@ -176,7 +176,7 @@ Section GeneratePortsAndPs.
         let '(rss, fss) := rss_fss in
         (* Builds the action activation process, and appends it to the
            behavior of the compile-time state. *)
-        add_cs (cs_ps action_ps_id [] (Rst rss Else (Falling fss))).
+        add_cs (cs_ps actions_ps_id [] (Rst rss Else (Falling fss))).
     
   End GenerateActionPortsAndPs.
 
@@ -241,7 +241,7 @@ Section GeneratePortsAndPs.
         let (rstss, rss) := rstss_rss in
         (* Builds the function process and appends it to the behavior
            of the compile-time state. *)
-        add_cs (cs_ps function_ps_id [] (Rst rstss Else (Rising rss))).
+        add_cs (cs_ps functions_ps_id [] (Rst rstss Else (Rising rss))).
     
   End GenerateFunPortsAndPs.
 

@@ -155,7 +155,7 @@ Section GenArch.
       
       (* Adds the new PCI in the compile-time state's behavior. *)
       let '(g, i, o) := gio in
-      do _ <- add_cs (cs_comp id__p place_entid g i o);
+      do _ <- add_cs (cs_comp id__p place_id g i o);
 
       (* Adds a binding between place [p] and PCI [id__p] in γ. *)
       bind_place p id__p.
@@ -283,7 +283,7 @@ Section GenArch.
       
       (* Adds the new TCI in the compile-time state's behavior. *)
       let '(g, i, o) := gio in      
-      do _ <- add_cs (cs_comp id__t transition_entid g i o);
+      do _ <- add_cs (cs_comp id__t trans_id g i o);
 
       (* Adds a binding between transition [t] and TCI [id__t] in γ. *)
       bind_transition t id__t.

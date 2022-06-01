@@ -175,10 +175,10 @@ Section PutCompFacts.
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') cstmt) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) cstmt) ->
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) cstmt) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) v).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) v).
   Proof.
     intros *; intros EQ NoDup_compids InCs_idc_ex.  
     destruct 1 as [ id__p [ g__p [ i__p [ o__p [ InA_ InCS_cstmt ] ] ] ] ].
@@ -191,7 +191,7 @@ Section PutCompFacts.
       exists id__p, g, i, o; split; [ assumption | ].
       destruct InCs_idc_ex as [ g' [ i' [ o' InCs_idc ] ] ].
       rewrite eq_idp_idc.
-      assert (eq_ide_plid : id__e = Petri.place_entid).
+      assert (eq_ide_plid : id__e = Petri.place_id).
       {
         rewrite eq_idp_idc in InCS_cstmt.
         specialize (InCs_NoDup_comp_eq InCS_cstmt InCs_idc NoDup_compids)
@@ -214,10 +214,10 @@ Section PutCompFacts.
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof. intros *; intros e; monadFullInv e; cbn.
          eapply put_comp_aux_pci_ex; eauto.  
   Qed.

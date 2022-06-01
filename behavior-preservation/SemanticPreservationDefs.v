@@ -38,7 +38,7 @@ Require Import transformation.Sitpn2HVhdlTypes.
 (** Defines the state similarity relation between an SITPN state and a
     H-VHDL design state, without similarity of condition values and reset orders.  *)
 
-Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlBinder sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
 
   (* Markings are similar. *)  
   (forall p id__p σ__p,
@@ -93,7 +93,7 @@ Definition SimStateNoCondsNoReset {sitpn} (γ : Sitpn2HVhdlMap sitpn) (s : Sitpn
     state and a H-VHDL design state, with similarity of condition
     values and reset orders.  *)
 
-Definition SimState sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+Definition SimState sitpn (γ : Sitpn2HVhdlBinder sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
   SimStateNoCondsNoReset γ s σ
 
   (* Reset orders are similar. *)
@@ -124,7 +124,7 @@ Notation "γ ⊢ s '∼' σ" := (SimState _ γ s σ) (at level 50).
     between an SITPN state and a H-VHDL design state. Only condition
     values are not similar. *)
 
-Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlBinder sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
 
   (* State similarity without similar condition values and reset
      orders. *)
@@ -147,7 +147,7 @@ Definition SimStateAfterRE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
     between an SITPN state and a H-VHDL design state.  *)
 
 Definition FullSimStateAfterRE sitpn
-           (γ : Sitpn2HVhdlMap sitpn)
+           (γ : Sitpn2HVhdlBinder sitpn)
            (E : nat -> C sitpn -> bool)
            (τ : nat)
            (s : SitpnState sitpn) (σ : DState) : Prop :=
@@ -221,7 +221,7 @@ Definition FullSimStateAfterRE sitpn
     the value of reset orders (which does not hold after a falling
     edge). *)
 
-Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlBinder sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
   (* State similarity without similar condition values and reset
      orders. *)
   SimStateNoCondsNoReset γ s σ
@@ -238,7 +238,7 @@ Definition SimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sit
 (** Defines the full state similarity relation, after a falling edge,
     between an SITPN state and a H-VHDL design state.  *)
 
-Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
+Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlBinder sitpn) (s : SitpnState sitpn) (σ : DState) : Prop :=
   
   (* State similarity after falling edge *)
   SimStateAfterFE sitpn γ s σ 
@@ -314,7 +314,7 @@ Definition FullSimStateAfterFE sitpn (γ : Sitpn2HVhdlMap sitpn) (s : SitpnState
     ports of design [d] that implements the conditions of [sitpn].
  *)
 
-Definition SimEnv sitpn (γ : Sitpn2HVhdlMap sitpn) (E__c : nat -> C sitpn -> bool) (E__p : nat -> IdMap value) : Prop :=
+Definition SimEnv sitpn (γ : Sitpn2HVhdlBinder sitpn) (E__c : nat -> C sitpn -> bool) (E__p : nat -> IdMap value) : Prop :=
   forall τ c id__c,
     (* [γ(c) = id__c] *)
     InA Ckeq (c, id__c) (c2in γ)  ->

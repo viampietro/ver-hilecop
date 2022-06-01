@@ -88,7 +88,7 @@ Section TVRunInit.
     forall Δ σ behavior σ',
       vruninit hdstore Δ σ behavior σ' ->
       forall id__t gm ipm opm σ__t' compids Δ__t σ__t,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids ->
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
@@ -199,7 +199,7 @@ Section TVRunInit.
     forall Δ σ behavior σ',
       vruninit hdstore Δ σ behavior σ' ->
       forall id__t gm ipm opm compids Δ__t t n,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids ->
         Equal (events σ) {[]} -> 
         MapsTo id__t (Component Δ__t) Δ ->
@@ -267,7 +267,7 @@ Section TInit.
     forall Δ σ behavior σ0,
       Init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t σ__t σ__t0,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids -> 
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
@@ -296,7 +296,7 @@ Section TInit.
     forall Δ σ behavior σ0,
       Init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t t n,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
         CsHasUniqueCompIds behavior compids ->
         Equal (events σ) {[]} ->
         MapsTo id__t (Component Δ__t) Δ ->
@@ -318,7 +318,7 @@ Section TInit.
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
         MapsTo id__t σ__t0 (cstore σ0) ->
         MapsTo reinit_time (Varr aofv) (sstore σ__t0) ->
         List.In (associp_ (reinit_time $[[0]]) false) ipm ->
@@ -329,7 +329,7 @@ Section TInit.
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv id i b ,
-        InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+        InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
         MapsTo id__t σ__t0 (cstore σ0) ->
         MapsTo reinit_time (Varr aofv) (sstore σ__t0) ->
         MapsTo id (Vbool b) (sstore σ0) ->

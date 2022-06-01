@@ -29,7 +29,7 @@ Qed.
 Lemma EBeh_TCI_Δ_in_arcs_nb_1 : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm Δ__t},
     EBeh hdstore Δ σ behavior Δ' σ' ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
     MapsTo id__t (Component Δ__t) Δ' ->
     exists t n, MapsTo Transition.input_arcs_number (Generic t (Vnat n)) Δ__t.
 Proof.
@@ -55,7 +55,7 @@ Qed.
 Lemma elab_TCI_Δ_in_arcs_nb_1 :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
     exists t n, MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t.
 Proof.
@@ -66,7 +66,7 @@ Qed.
 Lemma elab_TCI_Δ_in_arcs_nb_2 :
   forall {d Δ σ__e id__t gm ipm opm Δ__t e v},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
     List.In (assocg_ input_arcs_number e) gm ->
     VExpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
@@ -101,7 +101,7 @@ Lemma EBeh_TCI_Δ_rt :
   forall {Δ σ behavior Δ' σ'},
     EBeh hdstore Δ σ behavior Δ' σ' ->
     forall {id__t gm ipm opm Δ__t t n},
-      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+      InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
       MapsTo id__t (Component Δ__t) Δ' ->
       MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
       MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t.
@@ -133,7 +133,7 @@ Lemma elab_TCI_Δ_rt :
   forall {d Δ σ__e},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     forall {id__t gm ipm opm Δ__t t n},
-      InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+      InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
       MapsTo id__t (Component Δ__t) Δ ->
       MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t ->
       MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t.
@@ -157,7 +157,7 @@ Qed.
 Lemma EBeh_TCI_σ_rt : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm σ'__t},
     EBeh hdstore Δ σ behavior Δ' σ' ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) behavior ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
     MapsTo id__t σ'__t (cstore σ') ->
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ'__t).
 Proof.
@@ -184,7 +184,7 @@ Qed.
 Lemma elab_TCI_σ_rt : 
   forall {d Δ σ__e id__t gm ipm opm σ__te},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t σ__te (cstore σ__e) ->
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ__te).
 Proof.
@@ -195,7 +195,7 @@ Qed.
 Lemma elab_TCI_σ_rt_2 : 
   forall {d Δ σ__e id__t gm ipm opm σ__te Δ__t t n},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t σ__te (cstore σ__e) ->
     MapsTo id__t (Component Δ__t) Δ ->
     MapsTo Transition.input_arcs_number (Generic t (Vnat n)) Δ__t ->
@@ -209,7 +209,7 @@ Admitted.
 Lemma elab_TCI_Δ_s_tc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
     InternalOf Δ__t s_time_counter.
 Proof.
@@ -221,7 +221,7 @@ Qed.
 Lemma elab_TCI_Δ_s_rtc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
-    InCs (cs_comp id__t Petri.transition_entid gm ipm opm) (behavior d) ->
+    InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
     InternalOf Δ__t s_reinit_time_counter.
 Proof.

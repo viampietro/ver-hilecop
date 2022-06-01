@@ -52,9 +52,9 @@ Section GenPCIsFacts.
     forall sitpn (x y : P sitpn) s,
       Peq x y ->
       ((exists id__p g__p i__p o__p,
-           InA Pkeq (x, id__p) (p2pci (γ s)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s))
+           InA Pkeq (x, id__p) (p2pci (γ s)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s))
        <-> (exists id__p g__p i__p o__p,
-               InA Pkeq (y, id__p) (p2pci (γ s)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s))).
+               InA Pkeq (y, id__p) (p2pci (γ s)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s))).
   Proof.
     intros; split;
       (edestruct 1 as (id__p, (g__p, (i__p, (o__p, (InA_a, InCs_)))));
@@ -65,7 +65,7 @@ Section GenPCIsFacts.
     forall sitpn (n : nat) (a : P sitpn) (s1 : Sitpn2HVhdlState sitpn) (x : unit) (s2 : Sitpn2HVhdlState sitpn),
       generate_pci a n s1 = OK x s2 ->
       exists id__p g__p i__p o__p,
-        InA Pkeq (a, id__p) (p2pci (γ s2)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s2).
+        InA Pkeq (a, id__p) (p2pci (γ s2)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s2).
   Proof.
     intros *; intros e; minv e.
     all: do 4 eexists; split; [ eauto with setoidl | left; eauto ].
@@ -76,9 +76,9 @@ Section GenPCIsFacts.
       generate_pci a n s1 = OK x s2 ->
       forall b,
         (exists id__p g__p i__p o__p,
-            InA Pkeq (b, id__p) (p2pci (γ s1)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s1)) ->
+            InA Pkeq (b, id__p) (p2pci (γ s1)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s1)) ->
         exists id__p g__p i__p o__p,
-          InA Pkeq (b, id__p) (p2pci (γ s2)) /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s2).
+          InA Pkeq (b, id__p) (p2pci (γ s2)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s2).
   Proof.
     intros *; intros e b; destruct (Peqdec a b) as [Peq_ab | nPeq_ab]. 
 
@@ -108,7 +108,7 @@ Section GenPCIsFacts.
       Sig_in_List (lofPs s) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof.
     intros *; intros e; minv e. intros SIL_lofPs.
     pattern p, s'.
@@ -158,10 +158,10 @@ Section GenTCIsFacts.
       generate_tcis s = OK v s' ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) -> 
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern.
          match goal with
          | [ EQ: OK _ _ = OK _ _ |- _ ] =>
@@ -201,7 +201,7 @@ Section GenArchiFacts.
       Sig_in_List (lofPs s) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof.
     intros *; intros e; monadInv e; intros SIL_lofPs.
     eapply gen_tcis_pci_ex; eauto.

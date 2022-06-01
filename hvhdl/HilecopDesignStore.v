@@ -13,13 +13,13 @@ Require Import Transition.
     declarations of the place and transition designs.  *)
 
 Definition hdstore : IdMap design :=
-  (NatMap.add transition_entid transition_design
-              (NatMap.add place_entid place_design (NatMap.empty design))).
+  (NatMap.add trans_id transition_design
+              (NatMap.add place_id place_design (NatMap.empty design))).
 
 (** ** Facts about the HILECOP Design Store *)
 
 Lemma is_place_design :
-  forall {d}, MapsTo Petri.place_entid d hdstore -> d = place_design.
+  forall {d}, MapsTo Petri.place_id d hdstore -> d = place_design.
 Proof.
   intros *; unfold hdstore.
   rewrite add_mapsto_iff.
@@ -34,7 +34,7 @@ Proof.
 Defined.
 
 Lemma is_transition_design :
-  forall {d}, MapsTo Petri.transition_entid d hdstore -> d = transition_design.
+  forall {d}, MapsTo Petri.trans_id d hdstore -> d = transition_design.
 Proof.
   intros *; unfold hdstore.
   rewrite add_mapsto_iff.
@@ -47,24 +47,24 @@ Defined.
 
 Ltac subst_place_design1 H :=
   match type of H with
-  | MapsTo Petri.place_entid ?d hdstore =>
+  | MapsTo Petri.place_id ?d hdstore =>
     specialize (is_place_design H); intros; subst d
   end.
 
 Ltac subst_place_design :=
   match goal with
-  | [ H: MapsTo Petri.place_entid ?d hdstore |- _ ] =>
+  | [ H: MapsTo Petri.place_id ?d hdstore |- _ ] =>
     subst_place_design1 H
   end.
 
 Ltac subst_transition_design1 H :=
   match type of H with
-  | MapsTo Petri.transition_entid ?d hdstore =>
+  | MapsTo Petri.trans_id ?d hdstore =>
     specialize (is_transition_design H); intros; subst d
   end.
 
 Ltac subst_transition_design :=
   match goal with
-  | [ H: MapsTo Petri.transition_entid ?d hdstore |- _ ] =>
+  | [ H: MapsTo Petri.trans_id ?d hdstore |- _ ] =>
     subst_transition_design1 H
   end.

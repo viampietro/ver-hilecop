@@ -102,14 +102,14 @@ Section ConnToOutputTcisFacts.
       connect_to_output_tcis pinfo i o s = OK v s' ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof.
     destruct 2 as [ id__p [ g__p [ i__p [ o__p [ InA_p2pci InCss ] ] ] ] ].
     exists id__p.
-    cut (exists g__p i__p o__p, InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+    cut (exists g__p i__p o__p, InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
     intros InCs_ex; destruct InCs_ex as [ g__p' [ i__p' [ o__p' InCss' ] ] ].
     do 3 eexists; split; eauto; erewrite <- conn_to_output_tcis_inv_γ; eauto.
     eapply conn_to_output_tcis_comp_ex; eauto.
@@ -127,10 +127,10 @@ Section GenInterFacts.
       NoDup (get_cids (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) ->
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof.  
     intros *; intros H; pattern s, s'.
     monadFullInv H.

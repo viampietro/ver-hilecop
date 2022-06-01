@@ -56,7 +56,7 @@ Section CompileTimeTypes.
   (** Maps the elements of an SITPN to their signal or component
     identifiers on the VHDL side. *)
 
-  Inductive Sitpn2HVhdlMap : Type :=
+  Inductive Sitpn2HVhdlBinder : Type :=
     MkS2HMap {
         p2pci : list (P sitpn * ident);
         t2tci : list (T sitpn * ident);
@@ -65,7 +65,7 @@ Section CompileTimeTypes.
         c2in    : list (C sitpn * ident);
       }.
   
-  (** Empty [Sitpn2HVhdlMap] structure *)
+  (** Empty [Sitpn2HVhdlBinder] structure *)
 
   Definition EmptyS2HMap := MkS2HMap [] [] [] [] [].
   
@@ -98,7 +98,7 @@ Section CompileTimeTypes.
         beh : cs;
 
         (* Source-to-target binder *)
-        γ : Sitpn2HVhdlMap;
+        γ : Sitpn2HVhdlBinder;
 
       }.
 
@@ -120,7 +120,7 @@ Arguments cinfos {sitpn}.
 Arguments ainfos {sitpn}.
 Arguments finfos {sitpn}.
 
-(* Set implicit arguments for Sitpn2HVhdlMap *)
+(* Set implicit arguments for Sitpn2HVhdlBinder *)
 
 Arguments p2pci {sitpn}.
 Arguments t2tci {sitpn}.
@@ -206,10 +206,10 @@ Section CompileTimeStateOpers.
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s) (sitpninfos s)
                     (nextid s) (ports s) (sigs s) beh (γ s)).
   
-  Definition get_binder : @Mon (Sitpn2HVhdlState sitpn) (Sitpn2HVhdlMap sitpn) :=
+  Definition get_binder : @Mon (Sitpn2HVhdlState sitpn) (Sitpn2HVhdlBinder sitpn) :=
     do s <- Get; Ret (γ s).
 
-  Definition set_binder (γ : Sitpn2HVhdlMap sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
+  Definition set_binder (γ : Sitpn2HVhdlBinder sitpn) : @Mon (Sitpn2HVhdlState sitpn) unit :=
     do s <- Get;
     Put (MkS2HState sitpn (lofPs s) (lofTs s) (lofCs s) (lofAs s) (lofFs s) (sitpninfos s)
                     (nextid s) (ports s) (sigs s) (beh s) γ).

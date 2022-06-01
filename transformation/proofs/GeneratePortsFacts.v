@@ -51,10 +51,10 @@ Section GenActionPorts.
       generate_action_ports_and_ps sitpn s = OK v s' ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) -> 
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof. intros * EQ; pattern s, s'; solve_sinv_pattern.
          minv EQ3; cbn.
          intros [ id__p [ g__p [ i__p [ o__p [ InA_p2pci InCs_ ] ] ] ] ];
@@ -96,10 +96,10 @@ Section GenFunPorts.
       generate_fun_ports_and_ps sitpn s = OK v s' ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) -> 
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof. intros * EQ; pattern s, s'; solve_sinv_pattern.
          minv EQ3; cbn.
          intros [ id__p [ g__p [ i__p [ o__p [ InA_p2pci InCs_ ] ] ] ] ];
@@ -141,10 +141,10 @@ Section GenCondPorts.
       generate_and_connect_cond_ports sitpn s = OK v s' ->
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) -> 
       (exists id__p g__p i__p o__p,
           InA Pkeq (p, id__p) (p2pci (γ s'))
-          /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+          /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof. intros * EQ; pattern s, s'; solve_sinv_pattern.
          minv EQ13.
          intros [ id__p [ g__p [ i__p [ o__p [ InA_p2pci InCss7 ] ] ] ] ].
@@ -154,12 +154,12 @@ Section GenCondPorts.
          + (* CASE [id__p = x2] *)
            subst.
            exists g, x4, o; split; [ assumption | ].
-           cut (Petri.place_entid = i0); [ intros eq_id__e; subst; eapply put_comp_aux_InCs; eauto | ].
+           cut (Petri.place_id = i0); [ intros eq_id__e; subst; eapply put_comp_aux_InCs; eauto | ].
            assert (eq_beh : beh s3 = beh s6) by (pattern s3, s6; mend_sinv).
            assert (InCss6 : InCs (cs_comp x2 i0 g i o) (beh s6))
              by (rewrite <- eq_beh; eapply get_comp_InCs; eauto).
            erewrite <- put_comp_aux_inv_state in InCss7; eauto.
-           assert (eq_comp : cs_comp x2 Petri.place_entid g__p i__p o__p = cs_comp x2 i0 g i o)
+           assert (eq_comp : cs_comp x2 Petri.place_id g__p i__p o__p = cs_comp x2 i0 g i o)
              by (rewrite <- eq_beh in InCss7, InCss6; eapply get_comp_uniq_comp; eauto).
            injection eq_comp; auto.
          + (* CASE [id__p <> x2] *)
@@ -200,10 +200,10 @@ Lemma gen_ports_pci_ex :
     generate_ports s = OK v s' ->
     (exists id__p g__p i__p o__p,
         InA Pkeq (p, id__p) (p2pci (γ s))
-        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s)) -> 
+        /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) -> 
     (exists id__p g__p i__p o__p,
         InA Pkeq (p, id__p) (p2pci (γ s'))
-        /\ InCs (cs_comp id__p Petri.place_entid g__p i__p o__p) (beh s')).
+        /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
 Proof. intros * EQ pci_ex; monadInv EQ.
        eapply gen_cports_pci_ex; eauto;
          eapply gen_fports_pci_ex; eauto;

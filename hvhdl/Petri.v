@@ -18,16 +18,16 @@ Definition clk : ident := 0.
 (** Defines reserved identifiers for the place, and the transition
     designs.  *)
 
-Definition place_entid : ident := 1.
+Definition place_id : ident := 1.
 Definition place_archid : ident := 2.
-Definition transition_entid : ident := 3.
+Definition trans_id : ident := 3.
 Definition transition_archid : ident := 4.
 
 (** Reserved identifiers for the action activation and function
     execution generated processes. *)
 
-Definition action_ps_id : ident := 5.
-Definition function_ps_id : ident := 6.
+Definition actions_ps_id : ident := 5.
+Definition functions_ps_id : ident := 6.
 
 (** Defines the first fresh identifier. 
     Starts the available identifier range. *)

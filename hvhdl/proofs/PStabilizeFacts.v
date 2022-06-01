@@ -24,7 +24,7 @@ Lemma stab_inv_s_marking :
   forall Δ σ behavior σ',
     Stabilize hdstore Δ σ behavior σ' ->
     forall id__p gm ipm opm σ__p σ__p' v Δ__p compids mm,
-      InCs (cs_comp id__p Petri.place_entid gm ipm opm) behavior ->
+      InCs (cs_comp id__p Petri.place_id gm ipm opm) behavior ->
       MapsTo id__p (Component Δ__p) Δ ->
       AreCsCompIds behavior compids ->
       List.NoDup compids ->

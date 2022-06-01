@@ -6,7 +6,6 @@
 Require Import CoqLib.
 Require Import common.GlobalFacts.
 Require Import SetoidList.
-Require Import Classical_Prop.
 Require Import GlobalTypes.
 Require Export FstSplit.
 Require Export InAndNoDup.
@@ -25,7 +24,8 @@ Section ListPlusMisc.
          decidable, computes the intersection between two lists of
          As. *)
 
-  Definition inter (eq : A -> A -> Prop) (Aeqdec : forall x y : A, {eq x y} + {~eq x y}) (l m : list A) :=
+  Definition inter (eq : A -> A -> Prop)
+    (Aeqdec : forall x y : A, {eq x y} + {~eq x y}) (l m : list A) :=
     filter (fun a => if InA_dec Aeqdec a m then true else false) l. 
 
   (** States that a finite set is implemented by a list. *)
@@ -38,16 +38,77 @@ Section ListPlusMisc.
   
   Definition Sig_in_List {A : Type} {P : A -> Prop} (l : list {x : A | P x}) : Prop :=
     (forall a : {x : A | P x}, InA GlobalFacts.P1SigEq a l) /\ NoDupA GlobalFacts.P1SigEq l.
+
+  (** States that a given list enumerates all the elements of a given
+      type [A], and thus that the number of elements in [A] is
+      finite. Inspired from [Coq.Logic.FinFun]. *)
+  
+  Definition Full (eqA : A -> A -> Prop) (l : list A) :=
+    forall a : A, InA eqA a l.
+
+  Definition FullP (eqA : A -> A -> Prop) (P : A -> Prop) (l : list A) :=
+    forall a : A, P a <-> InA eqA a l.
+
+  Definition Listing (eqA : A -> A -> Prop) (l : list A) :=
+    NoDupA eqA l /\ Full eqA l.
+
+  Definition ListingP (eqA : A -> A -> Prop) (P : A -> Prop) (l : list A) :=
+    NoDupA eqA l /\ FullP eqA P l.
   
 End ListPlusMisc.
 
-(** ** Finds and sets an element in a list of couple. *)
+(** ** Operations and predicates on functions implemented as lists of couples *)
 
-Section MapAsListOfCouples.
+Section FunAsListOfCouples.
 
   Variable A B : Type.
-  Variable eq : A -> A -> Prop.
-  Variable eq_dec : forall x y : A, {eq x y} + {~eq x y}.
+  Variable eqA : A -> A -> Prop.
+  Variable eqA_dec : forall x y : A, {eqA x y} + {~eqA x y}.
+  Variable eqB : B -> B -> Prop.
+  Variable eqB_dec : forall x y : B, {eqB x y} + {~eqB x y}.
+  
+  (** States that a given list of couples [A * B] implements a
+      function from [A] to [B]. *)
+  
+  Definition IsFun (l : list (A * B)) := NoDupA eqA (fs l).
+
+  (** States that a given list of couples [A * B] implements a
+      application from [A] to [B]. *)
+  
+  Definition IsApp (l : list (A * B)) := Listing eqA (fs l).
+  
+  (** Equality between two couples [A * B] *)
+  
+  Definition ProdEq (c1 c2 : A * B) :=
+    eqA (fst c1) (fst c2) /\ eqB (snd c1) (snd c2).
+  
+  (** States that a given list of couples [l] implements an injective
+      application from [A] to [B]. *)
+
+  Definition IsInjective (l : list (A * B)) :=
+    IsApp l /\ forall y x1 x2, InA ProdEq (x1, y) l -> InA ProdEq (x2, y) l -> eqA x1 x2.
+
+  (** States that a given list of couples [l] implements a surjective
+      application from [A] to [B]; i.e. all the elements of type [B]
+      are in the second elements of [l]. *)
+
+  Definition IsSurjective (l : list (A * B)) :=
+    IsApp l /\ forall y, InA eqB y (snd (split l)).
+
+  (** Variant: all the elements of type [B] and that verify property
+      [P] are in the second elements of [l]. *)
+  
+  Definition IsSurjectiveP (P : B -> Prop) (l : list (A * B)) :=
+    IsApp l /\ forall y, InA eqB y (snd (split l)).
+
+  (** States that a given list of couples [l] implements a bijective
+      application. *)
+
+  Definition IsBijective (l : list (A * B)) :=
+    IsInjective l /\ IsSurjective l.
+
+  Definition IsBijectiveP (P : B -> Prop) (l : list (A * B)) :=
+    IsInjective l /\ IsSurjectiveP P l.
   
   (** Returns [Some a] if it is asscoiated with [k] in list [l].  
       Returns None, if k is not in the first elements of [l].
@@ -56,7 +117,7 @@ Section MapAsListOfCouples.
   Fixpoint getv (k : A) (l : list (A * B)) {struct l} : option B :=
     match l with
     | nil => None
-    | cons (a, b) tl => if eq_dec k a then Some b else getv k tl
+    | cons (a, b) tl => if eqA_dec k a then Some b else getv k tl
     end.
 
   (** Sets the couple [(k, v)] in list [l]. If [k] is in the first
@@ -67,15 +128,36 @@ Section MapAsListOfCouples.
   Fixpoint setv (k : A) (v : B) (l : list (A * B)) {struct l} : list (A * B) :=
     match l with
     | nil => [(k, v)]
-    | cons (a, b) tl => if eq_dec k a then cons (k, v) tl else cons (a, b) (setv k v tl)
+    | cons (a, b) tl => if eqA_dec k a then cons (k, v) tl else cons (a, b) (setv k v tl)
     end.
 
   Functional Scheme setv_ind := Induction for setv Sort Prop.
-  
-End MapAsListOfCouples.
 
-Arguments getv {A B eq}.
-Arguments setv {A B eq}.
+  (** Returns the domain of function implemented by the list of
+      couples [l]. *)
+
+  Definition dom (l : list (A * B)) := fst (split l).
+
+  (** Returns the codomain of the function implemented by the list of
+      couples [l]. *)
+
+  Definition codom (l : list (A * B)) := snd (split l).
+
+  (** Creates a new list that implements the function from [A ∪ B] to
+      [C] by merging the domains of the two functions implemented by
+      [l] and [m]. *)
+  
+  Variable C : Type.
+  
+  Definition merge_dom (l : list (A * C)) (m : list (B * C)) :
+    list ((A + B) * C) :=
+    (map (fun '(a, c) => (inl a, c)) l) ++ (map (fun '(b, c) => (inr b, c)) m).
+    
+  
+End FunAsListOfCouples.
+
+Arguments getv {A B eqA}.
+Arguments setv {A B eqA}.
 
 (** ** Map function with possible errors (Option Map). *)
 
@@ -437,19 +519,25 @@ Section PredInList.
   Qed.
 
   Theorem not_is_pred_in_list_if_hd :
-    forall (l : list A) (x y : A) , ~IsPredInNoDupList x y (y :: l).
+    forall (l : list A) (x y : A) (eqA_dec : forall x y : A, {x = y} + {x <> y}),
+      ~IsPredInNoDupList x y (y :: l).
   Proof.
-    induction l; intros x y His_pred.
+    induction l; intros x y eqA_dec His_pred.
     - unfold IsPredInNoDupList in His_pred.
       decompose [and] His_pred.
-      inversion H2; inversion H3.
+      repeat (match goal with
+              | H : IsPredInList _ _ _ |- _ => inversion H
+              end).
+      
     - unfold IsPredInNoDupList in His_pred.
       decompose [and] His_pred.
-      inversion H2.
+      match goal with
+      | H : IsPredInList _ _ _ |- _ => inversion H
+      end.
       + contradiction.
       + contradiction.
-      + assert (Hvee := classic (x = a)).
-        elim Hvee.
+      + specialize (eqA_dec x a) as eqA_dec_xa.
+        elim eqA_dec_xa.
         -- intro Heq_xa.
            rewrite Heq_xa in H3.
            rewrite Heq_xa in H.
@@ -464,16 +552,17 @@ Section PredInList.
            apply NoDup_remove with (l := [y]) in H1.
            apply proj1 in H1.
            unfold IsPredInNoDupList in IHl.
-           apply (IHl x y (conj H (conj H1 His_pred_in_l))).
+           apply (IHl x y eqA_dec); auto.
   Qed.
 
   Theorem not_is_pred_in_dec_list :
-    forall (l' l : list A) (x y : A),
+    forall (l' l : list A) (x y : A)
+           (eqA_dec : forall x y : A, {x = y} + {x <> y}),
       IsDecListCons (y :: l) l' ->
       In x l ->
       ~IsPredInNoDupList x y l'.
   Proof.
-    induction l'; intros l x y His_dec Hin_x_l.
+    induction l'; intros l x y eqA_dec His_dec Hin_x_l.
     - inversion His_dec.
     - intro His_pred.
       unfold IsPredInNoDupList in His_pred; decompose [and] His_pred.
@@ -506,14 +595,14 @@ Section PredInList.
            apply NoDup_cons_iff in Hnodup.
            apply proj1 in Hnodup; contradiction.
       + inversion His_dec.
-        -- assert (Hnot_is_pred : ~IsPredInNoDupList x y (y :: l))
-            by apply not_is_pred_in_list_if_hd.
+        -- assert (Hnot_is_pred : ~IsPredInNoDupList x y (y :: l)) by
+             (apply not_is_pred_in_list_if_hd; assumption).
            rewrite <- H4 in His_pred; rewrite <- H4 in Hnodup.
            rewrite <- H5 in His_pred; rewrite <- H5 in Hnodup.
            specialize (conj Hneq_xy (conj Hnodup His_pred)) as His_pred'.
            contradiction.
         -- assert (Hnot_is_pred : ~IsPredInNoDupList x y (y :: l))
-            by apply not_is_pred_in_list_if_hd.
+            by (apply not_is_pred_in_list_if_hd; assumption).
            rewrite <- H5 in Hnodup; rewrite <- H5 in H0.
            apply NoDup_cons_iff in Hnodup.
            apply proj2 in Hnodup.
@@ -521,7 +610,8 @@ Section PredInList.
            contradiction.
         -- apply NoDup_cons_iff in Hnodup.
            apply proj2 in Hnodup.
-           apply (IHl' l x y H4 Hin_x_l (conj Hneq_xy (conj Hnodup H0))).
+           eapply IHl'; eauto.
+           unfold IsPredInNoDupList; auto.
   Qed.
 
   (** *** Predecessor or same element in list *)

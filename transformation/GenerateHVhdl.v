@@ -38,11 +38,11 @@ Section Sitpn2HVhdl.
   (** Defines the transformation function that generates an H-VHDL design
       from an SITPN. *)
 
-  Definition generate_design_and_binder : CompileTimeState (design * Sitpn2HVhdlMap sitpn):=
+  Definition generate_design_and_binder : CompileTimeState (design * Sitpn2HVhdlBinder sitpn):=
     do s <- Get; Ret ((design_ [] (ports s) (sigs s) (beh s)), (γ s)).
     
   Definition sitpn2hvhdl (b : P sitpn -> nat) :
-    (design * Sitpn2HVhdlMap sitpn) + string :=
+    (design * Sitpn2HVhdlBinder sitpn) + string :=
     RedV 
       ((do _ <- generate_sitpn_infos sitpn;
         do _ <- generate_architecture b;
