@@ -95,7 +95,8 @@ Section GenSitpnInfos.
         of [p] are in [tc] and [tout], and [tout] and [tc] has no
         duplicate.  *)
 
-    Definition get_neighbors_of_p (p : P sitpn) : CompileTimeState (list (T sitpn) * list (T sitpn) * list (T sitpn)) :=
+    Definition get_neighbors_of_p (p : P sitpn) :
+      CompileTimeState (list (T sitpn) * list (T sitpn) * list (T sitpn)) :=
       
       (* Adds the transition t to the list of input and/or output
          transitions of p. The list of output transitions of p is

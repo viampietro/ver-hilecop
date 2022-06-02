@@ -65,22 +65,22 @@ with EVar (Δ : ElDesign) (Λ : LEnv) : vdecl -> LEnv -> Prop :=
     It creates a map (i.e, a dimensioning function) binding generic
     constant ids to values.  *)
 
-Inductive EMapG (M__g : IdMap value) : list assocg -> IdMap value -> Prop :=
+Inductive EMapG (M__g : IdMap value) : list gassoc -> IdMap value -> Prop :=
   
 (* Elaborates an empty generic map. No effect on the dimensioning function. *)
 | EMapGNil : EMapG M__g [] M__g
 
 (* Elaborates a sequence of generic map associations. *)
 | EMapGCons :
-    forall ag lofassocgs M__g' M__g'',
-      EAssocG M__g ag M__g' ->
-      EMapG M__g' lofassocgs M__g'' ->
-      EMapG M__g (ag :: lofassocgs) M__g''
+    forall ag lofgassocs M__g' M__g'',
+      EGassoc M__g ag M__g' ->
+      EMapG M__g' lofgassocs M__g'' ->
+      EMapG M__g (ag :: lofgassocs) M__g''
 
 (** Defines the elaboration relation for a single generic map association. *)
             
-with EAssocG (M__g : IdMap value) : assocg -> IdMap value -> Prop :=
-| EAssocG_ :
+with EGassoc (M__g : IdMap value) : gassoc -> IdMap value -> Prop :=
+| EGa_ :
     forall id e v,
 
       (* Premises *)
@@ -91,7 +91,7 @@ with EAssocG (M__g : IdMap value) : assocg -> IdMap value -> Prop :=
       ~NatMap.In id M__g ->
 
       (* Conclusion *)
-      EAssocG M__g (assocg_ id e) (add id v M__g).
+      EGassoc M__g (ga_ id e) (add id v M__g).
 
 (** * Design elaboration relation *)
 

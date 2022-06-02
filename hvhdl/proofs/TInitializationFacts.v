@@ -195,7 +195,7 @@ Section TVRunInit.
       admit.
   Admitted.
                  
-  Lemma vruninit_TCI_s_rtc_eq_bprod_of_rt :
+  Lemma vruninit_TDI_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ',
       vruninit hdstore Δ σ behavior σ' ->
       forall id__t gm ipm opm compids Δ__t t n,
@@ -292,7 +292,7 @@ Section TInit.
     
   Qed.
 
-  Lemma init_TCI_s_rtc_eq_bprod_of_rt :
+  Lemma init_TDI_s_rtc_eq_bprod_of_rt :
     forall Δ σ behavior σ0,
       Init hdstore Δ σ behavior σ0 ->
       forall id__t gm ipm opm compids Δ__t t n,
@@ -310,11 +310,11 @@ Section TInit.
     inversion_clear 1.
     intros *; do 5 intro.
     
-    eapply stab_TCI_s_rtc_eq_bprod_of_rt; eauto.    
-    eapply vruninit_TCI_s_rtc_eq_bprod_of_rt; eauto.
+    eapply stab_TDI_s_rtc_eq_bprod_of_rt; eauto.    
+    eapply vruninit_TDI_s_rtc_eq_bprod_of_rt; eauto.
   Qed.
 
-  Lemma init_TCI_eval_rt_0 :
+  Lemma init_TDI_eval_rt_0 :
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv,
@@ -325,7 +325,7 @@ Section TInit.
         get_bool_at aofv 0 = false.
   Admitted.
 
-  Lemma init_TCI_eval_rt_i :
+  Lemma init_TDI_eval_rt_i :
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__t gm ipm opm σ__t0 aofv id i b ,

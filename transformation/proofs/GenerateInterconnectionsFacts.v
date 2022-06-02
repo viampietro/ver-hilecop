@@ -12,38 +12,38 @@ Require Import transformation.Sitpn2HVhdlUtils.
 Require Import transformation.proofs.SInvTactics.
 Require Import transformation.proofs.Sitpn2HVhdlUtilsFacts.
 
-(** *** Facts about the [connect_to_input_tcis] *)
+(** *** Facts about the [connect_to_input_tdis] *)
 
-Section ConnToInputTcisFacts.
+Section ConnToInputTdisFacts.
 
-  Lemma conn_to_input_tcis_inv_beh :
+  Lemma conn_to_input_tdis_inv_beh :
     forall {sitpn : Sitpn} {pinfo i} {s : Sitpn2HVhdlState sitpn} {v s'},
-      connect_to_input_tcis pinfo i s = OK v s' ->
+      connect_to_input_tdis pinfo i s = OK v s' ->
       beh s = beh s'.
   Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern. Qed.
 
-  Lemma conn_to_input_tcis_inv_γ :
+  Lemma conn_to_input_tdis_inv_γ :
     forall {sitpn : Sitpn} {pinfo i} {s : Sitpn2HVhdlState sitpn} {v s'},
-      connect_to_input_tcis pinfo i s = OK v s' ->
+      connect_to_input_tdis pinfo i s = OK v s' ->
       γ s = γ s'.
   Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern. Qed.
 
-End ConnToInputTcisFacts.
+End ConnToInputTdisFacts.
 
-(** *** Facts about the [connect_to_output_tcis] *)
+(** *** Facts about the [connect_to_output_tdis] *)
 
-Section ConnToOutputTcisFacts.
+Section ConnToOutputTdisFacts.
 
-  Lemma conn_to_output_tcis_inv_γ :
+  Lemma conn_to_output_tdis_inv_γ :
     forall {sitpn : Sitpn} {pinfo i o} {s : Sitpn2HVhdlState sitpn} {v s'},
-      connect_to_output_tcis pinfo i o s = OK v s' ->
+      connect_to_output_tdis pinfo i o s = OK v s' ->
       γ s = γ s'.
   Proof. intros *; intros H; pattern s, s'; solve_sinv_pattern. Qed.
   
-  Lemma conn_to_output_tcis_nodup_cids :
+  Lemma conn_to_output_tdis_nodup_cids :
     forall {sitpn : Sitpn} {pinfo i o} {s : Sitpn2HVhdlState sitpn}
            {v s'},
-      connect_to_output_tcis pinfo i o s = OK v s' ->
+      connect_to_output_tdis pinfo i o s = OK v s' ->
       NoDup (get_cids (beh s)) ->
       NoDup (get_cids (beh s')).
   Proof.
@@ -54,10 +54,10 @@ Section ConnToOutputTcisFacts.
     erewrite <- put_comp_aux_inv_state; eauto with put_comp.
   Qed.
   
-  Lemma conn_to_output_tcis_comp_ex :
+  Lemma conn_to_output_tdis_comp_ex :
     forall {sitpn : Sitpn} {pinfo i o} {s : Sitpn2HVhdlState sitpn}
            {v s'} {id__c id__e},
-      connect_to_output_tcis pinfo i o s = OK v s' ->
+      connect_to_output_tdis pinfo i o s = OK v s' ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s)) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s')).
   Proof.
@@ -96,51 +96,51 @@ Section ConnToOutputTcisFacts.
           do 3 eexists; eauto with put_comp.
   Qed.
 
-  Lemma conn_to_output_tcis_pci_ex_inv :
+  Lemma conn_to_output_tdis_pdi_ex_inv :
     forall {sitpn : Sitpn} {pinfo i o}
            {s : Sitpn2HVhdlState sitpn} {v s' p},
-      connect_to_output_tcis pinfo i o s = OK v s' ->
+      connect_to_output_tdis pinfo i o s = OK v s' ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s))
+          InA Pkeq (p, id__p) (p2pdi (γ s))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s'))
+          InA Pkeq (p, id__p) (p2pdi (γ s'))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof.
-    destruct 2 as [ id__p [ g__p [ i__p [ o__p [ InA_p2pci InCss ] ] ] ] ].
+    destruct 2 as [ id__p [ g__p [ i__p [ o__p [ InA_p2pdi InCss ] ] ] ] ].
     exists id__p.
     cut (exists g__p i__p o__p, InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
     intros InCs_ex; destruct InCs_ex as [ g__p' [ i__p' [ o__p' InCss' ] ] ].
-    do 3 eexists; split; eauto; erewrite <- conn_to_output_tcis_inv_γ; eauto.
-    eapply conn_to_output_tcis_comp_ex; eauto.
+    do 3 eexists; split; eauto; erewrite <- conn_to_output_tdis_inv_γ; eauto.
+    eapply conn_to_output_tdis_comp_ex; eauto.
   Qed.
   
-End ConnToOutputTcisFacts.
+End ConnToOutputTdisFacts.
 
 (** *** Facts about the [generate_interconnections] *)
 
 Section GenInterFacts.
 
-  Lemma gen_inter_pci_ex :
+  Lemma gen_inter_pdi_ex :
     forall (sitpn : Sitpn) (s : Sitpn2HVhdlState sitpn) v s' p,
       generate_interconnections s = OK v s' ->
       NoDup (get_cids (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s))
+          InA Pkeq (p, id__p) (p2pdi (γ s))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s'))
+          InA Pkeq (p, id__p) (p2pdi (γ s'))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof.  
     intros *; intros H; pattern s, s'.
     monadFullInv H.
-    intros NoDup_cids pci_ex.
+    intros NoDup_cids pdi_ex.
     apply proj2 with (A := NoDup (get_cids (beh s'))).
-    generalize NoDup_cids, pci_ex.
+    generalize NoDup_cids, pdi_ex.
     pattern s0, s'; eapply (iter_inv_state EQ0); eauto.
     (*  *)
     - unfold Transitive.
-      intros *; intros tr_xy tr_yz NoDup_cids_x pci_ex_x.
+      intros *; intros tr_xy tr_yz NoDup_cids_x pdi_ex_x.
       apply tr_yz; eapply tr_xy; eauto.
       
     (*  *)
@@ -162,24 +162,24 @@ Section GenInterFacts.
           destruct X as [ [ [ id__e g ] i ] o ]; monadInv E
       end.
       match goal with
-      | [ E: connect_to_input_tcis _ _ _ = OK _ _ |- _ ] =>
-          erewrite (conn_to_input_tcis_inv_beh E); eauto;
-          erewrite (conn_to_input_tcis_inv_γ E); eauto
+      | [ E: connect_to_input_tdis _ _ _ = OK _ _ |- _ ] =>
+          erewrite (conn_to_input_tdis_inv_beh E); eauto;
+          erewrite (conn_to_input_tdis_inv_γ E); eauto
       end.
       match goal with
       | [ E: (let (_, _) := ?X in _) _ = OK _ _ |- _ ] =>
           destruct X
       end.
-      intros NoDup_cids1 pci_ex1; split.
+      intros NoDup_cids1 pdi_ex1; split.
       + eapply put_comp_nodup_cids; eauto;
-          eapply conn_to_output_tcis_nodup_cids; eauto.
-      + eapply (put_comp_pci_ex EQ6); [
-            eapply conn_to_output_tcis_nodup_cids; eauto
-          | eapply conn_to_output_tcis_comp_ex; eauto;
-            erewrite <- conn_to_input_tcis_inv_beh; eauto;
+          eapply conn_to_output_tdis_nodup_cids; eauto.
+      + eapply (put_comp_pdi_ex EQ6); [
+            eapply conn_to_output_tdis_nodup_cids; eauto
+          | eapply conn_to_output_tdis_comp_ex; eauto;
+            erewrite <- conn_to_input_tdis_inv_beh; eauto;
             erewrite <- get_comp_aux_inv_state; eauto;
             exists g, i, o; eapply get_comp_aux_InCs; eauto
-          | eapply conn_to_output_tcis_pci_ex_inv; eauto
+          | eapply conn_to_output_tdis_pdi_ex_inv; eauto
           ].      
   Qed.
   

@@ -26,7 +26,7 @@ Proof.
   erewrite <- @EPorts_inv_gens with (Δ := Δ0) (Δ' := Δ'); eauto 1.
 Qed.
 
-Lemma EBeh_TCI_Δ_in_arcs_nb_1 : 
+Lemma EBeh_TDI_Δ_in_arcs_nb_1 : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm Δ__t},
     EBeh hdstore Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
@@ -52,7 +52,7 @@ Proof.
   - apply IHEBeh2; auto.  
 Qed.
 
-Lemma elab_TCI_Δ_in_arcs_nb_1 :
+Lemma elab_TDI_Δ_in_arcs_nb_1 :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
@@ -60,15 +60,15 @@ Lemma elab_TCI_Δ_in_arcs_nb_1 :
     exists t n, MapsTo input_arcs_number (Generic t (Vnat n)) Δ__t.
 Proof.
   inversion 1.
-  eapply EBeh_TCI_Δ_in_arcs_nb_1; eauto.
+  eapply EBeh_TDI_Δ_in_arcs_nb_1; eauto.
 Qed.
 
-Lemma elab_TCI_Δ_in_arcs_nb_2 :
+Lemma elab_TDI_Δ_in_arcs_nb_2 :
   forall {d Δ σ__e id__t gm ipm opm Δ__t e v},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
     MapsTo id__t (Component Δ__t) Δ ->
-    List.In (assocg_ input_arcs_number e) gm ->
+    List.In (ga_ input_arcs_number e) gm ->
     VExpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
     exists t, MapsTo input_arcs_number (Generic t v) Δ__t.
 Admitted.
@@ -97,7 +97,7 @@ Proof.
   eapply EDecls_inv_Δ; eauto.
 Qed.
 
-Lemma EBeh_TCI_Δ_rt : 
+Lemma EBeh_TDI_Δ_rt : 
   forall {Δ σ behavior Δ' σ'},
     EBeh hdstore Δ σ behavior Δ' σ' ->
     forall {id__t gm ipm opm Δ__t t n},
@@ -129,7 +129,7 @@ Proof.
     eapply IHEBeh2; eauto.
 Qed.
 
-Lemma elab_TCI_Δ_rt : 
+Lemma elab_TDI_Δ_rt : 
   forall {d Δ σ__e},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     forall {id__t gm ipm opm Δ__t t n},
@@ -139,7 +139,7 @@ Lemma elab_TCI_Δ_rt :
       MapsTo Transition.reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t.
 Proof.
   inversion 1.
-  eapply EBeh_TCI_Δ_rt; eauto.
+  eapply EBeh_TDI_Δ_rt; eauto.
 Qed.
 
 Lemma elab_T_σ_rt :
@@ -154,7 +154,7 @@ Proof.
   eapply EDecls_inv_sstore; eauto.
 Qed.
 
-Lemma EBeh_TCI_σ_rt : 
+Lemma EBeh_TDI_σ_rt : 
   forall {Δ σ behavior Δ' σ' id__t gm ipm opm σ'__t},
     EBeh hdstore Δ σ behavior Δ' σ' ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) behavior ->
@@ -181,7 +181,7 @@ Proof.
   - apply IHEBeh2; auto.  
 Qed.
 
-Lemma elab_TCI_σ_rt : 
+Lemma elab_TDI_σ_rt : 
   forall {d Δ σ__e id__t gm ipm opm σ__te},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
@@ -189,10 +189,10 @@ Lemma elab_TCI_σ_rt :
     exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ__te).
 Proof.
   inversion 1.
-  eapply EBeh_TCI_σ_rt; eauto.
+  eapply EBeh_TDI_σ_rt; eauto.
 Qed.
 
-Lemma elab_TCI_σ_rt_2 : 
+Lemma elab_TDI_σ_rt_2 : 
   forall {d Δ σ__e id__t gm ipm opm σ__te Δ__t t n},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
@@ -206,7 +206,7 @@ Admitted.
 
 (** ** Facts about the [s_time_counter] declared signal *)
 
-Lemma elab_TCI_Δ_s_tc :
+Lemma elab_TDI_Δ_s_tc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->
@@ -218,7 +218,7 @@ Proof.
   firstorder.
 Qed.
 
-Lemma elab_TCI_Δ_s_rtc :
+Lemma elab_TDI_Δ_s_rtc :
   forall {d Δ σ__e id__t gm ipm opm Δ__t},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__t Petri.trans_id gm ipm opm) (behavior d) ->

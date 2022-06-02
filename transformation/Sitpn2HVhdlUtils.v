@@ -9,6 +9,8 @@ Require Import common.StateAndErrorMonad.
 Require Import String.
 
 Require Import sitpn.Sitpn.
+Require Import sitpn.SitpnTypes.
+
 Require Import hvhdl.HVhdlCoreLib.
 Require Import hvhdl.HVhdlHilecopLib.
 Require Import transformation.Sitpn2HVhdlTypes.
@@ -139,11 +141,11 @@ Section Sitpn2HVhdlUtils.
   (** The [get_comp_aux] function looks up [cstmt] for a component
       instantiation statement labelled with [id__c] as a component
       instance identifier, and returns a tuple composed of the
-      component instantiation statement's entity identifier, generic
+      design instantiation statement's entity identifier, generic
       map, input port and output port map when found.
 
       The [get_comp_aux] function throws an error there exist multiple
-      component instantiation statements with identifier [id__c] in
+      design instantiation statements with identifier [id__c] in
       [cstmt].
 
       The [get_comp_aux] function returns [None] (does not throw an
@@ -227,12 +229,30 @@ Section Sitpn2HVhdlUtils.
     set_beh newb.
 
   (** Returns sig type composed of a [cs] statement and a proof that
-      this [cs] statement is a component instantiation statement. *)
+      this [cs] statement is a design instantiation statement. *)
 
   Definition to_ci (id__c id__e : ident) (g : genmap) (i : inputmap) (o : outputmap) :
     { ci : cs | exists id__e g i o, ci = cs_comp id__c id__e g i o}.
     refine (exist _ (cs_comp id__c id__e g i o) _); exists id__e, g, i, o; reflexivity.
   Defined.
+
+  (** Returns a first part of the input port map destinated to the TDI
+      corresponding to transition [t].  *)
+
+  Definition init_tdi_ipm (t : T sitpn) : inputmap := 
+    match Is t with
+    | Some (MkTItval a (ninat b) _) =>
+        [ipa_ Transition.time_A_value a;
+         ipa_ Transition.time_B_value b]
+          
+    | Some (MkTItval a i+ _) =>
+        [ipa_ Transition.time_A_value a;
+         ipa_ Transition.time_B_value 0]
+          
+    | None =>
+        [ipa_ Transition.time_A_value 0;
+         ipa_ Transition.time_B_value 0]
+    end.
   
 End Sitpn2HVhdlUtils.
 
@@ -242,3 +262,4 @@ Arguments actual {sitpn}.
 Arguments connect {sitpn}.
 Arguments cassoc_imap {sitpn}.
 Arguments cassoc_omap {sitpn}.
+Arguments init_tdi_ipm {sitpn}.

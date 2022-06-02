@@ -244,7 +244,7 @@ Section PInit.
     eapply vruninit_s_marking_eq_nat; eauto.
   Qed.
 
-  Lemma init_PCI_eval_rtt_i :
+  Lemma init_PDI_eval_rtt_i :
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 aofv id i b ,
@@ -256,7 +256,7 @@ Section PInit.
         MapsTo id (Vbool b) (sstore σ0).
   Admitted.
   
-  Lemma init_PCI_rtt_eq_false :
+  Lemma init_PDI_rtt_eq_false :
     forall D__s Δ σ behavior σ0,
       Init D__s Δ σ behavior σ0 ->
       forall id__p g__p i__p o__p σ__p0 Δ__p aofv i t n,

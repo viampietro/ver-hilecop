@@ -167,17 +167,17 @@ Section PutCompFacts.
     edestruct IHcstmt2 as [ g1 [ i1 [ o1 InCsx ] ] ]; eauto; simpl; do 3 eexists; eauto.
   Qed.
   
-  Lemma put_comp_aux_pci_ex :
+  Lemma put_comp_aux_pdi_ex :
     forall {cstmt} {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s' p},
       put_comp_aux sitpn id__c id__e g i o cstmt s = OK v s' ->
       NoDup (get_cids cstmt) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') cstmt) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s))
+          InA Pkeq (p, id__p) (p2pdi (γ s))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) cstmt) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s'))
+          InA Pkeq (p, id__p) (p2pdi (γ s'))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) v).
   Proof.
     intros *; intros EQ NoDup_compids InCs_idc_ex.  
@@ -206,20 +206,20 @@ Section PutCompFacts.
         [ assumption | (eapply (put_comp_aux_InCs_inv EQ); eauto) ].
   Qed.
   
-  Lemma put_comp_pci_ex :
+  Lemma put_comp_pdi_ex :
     forall {sitpn : Sitpn} {id__c id__e} {g i o}
            {s : Sitpn2HVhdlState sitpn} {v s' p},
       put_comp id__c id__e g i o s = OK v s' ->
       NoDup (get_cids (beh s)) ->
       (exists g' i' o', InCs (cs_comp id__c id__e g' i' o') (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s))
+          InA Pkeq (p, id__p) (p2pdi (γ s))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s)) ->
       (exists id__p g__p i__p o__p,
-          InA Pkeq (p, id__p) (p2pci (γ s'))
+          InA Pkeq (p, id__p) (p2pdi (γ s'))
           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s')).
   Proof. intros *; intros e; monadFullInv e; cbn.
-         eapply put_comp_aux_pci_ex; eauto.  
+         eapply put_comp_aux_pdi_ex; eauto.  
   Qed.
 
   Lemma put_comp_aux_cid_In_cstmt:
@@ -286,8 +286,8 @@ Section PutCompFacts.
 End PutCompFacts.
 
 #[export]
-Hint Resolve put_comp_aux_comp_ex put_comp_aux_pci_ex
- put_comp_pci_ex : put_comp.
+Hint Resolve put_comp_aux_comp_ex put_comp_aux_pdi_ex
+ put_comp_pdi_ex : put_comp.
 
 #[export]
 Hint Resolve put_comp_aux_InCs put_comp_aux_InCs_inv : put_comp.

@@ -21,7 +21,7 @@ Ltac solve_vcomb_par_l :=
       ACCI1: AreCsCompIds ?cs1 ?compids1,
       ACCI2: AreCsCompIds ?cs2 ?compids2,
       ACCIpar: AreCsCompIds (?cs1 // ?cs2) ?compids,
-      NoDupcids: List.NoDup ?compids,
+      NoDupdids: List.NoDup ?compids,
       IMDS: IsMergedDState ?σ0 ?σ1 ?σ2 ?σ__m,
       MapsTom: MapsTo ?k ?v (?store ?σ__m)                      
       |- MapsTo ?k ?v (?store ?σ1) ] =>
@@ -52,7 +52,7 @@ Ltac solve_vcomb_par_r :=
       ACCI1: AreCsCompIds ?cs1 ?compids1,
       ACCI2: AreCsCompIds ?cs2 ?compids2,
       ACCIpar: AreCsCompIds (?cs1 // ?cs2) ?compids,
-      NoDupcids: List.NoDup ?compids,
+      NoDupdids: List.NoDup ?compids,
       IMDS: IsMergedDState ?σ0 ?σ1 ?σ2 ?σ__m,
       MapsTom: MapsTo ?k ?v (?store ?σ__m)                      
       |- MapsTo ?k ?v (?store ?σ2) ] =>

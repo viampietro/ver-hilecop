@@ -83,9 +83,9 @@ Section GeneratePortsAndPs.
 
     Definition connect_in_cond_port (id__c : ident) (c : C sitpn) (t : T sitpn) :
       CompileTimeState unit :=
-      do id__t <- get_tci_id_from_binder t;
-      do tci <- get_comp id__t;
-      let '(id__e, g__t, i__t, o__t) := tci in
+      do id__t <- get_tdi_id_from_binder t;
+      do tdi <- get_comp id__t;
+      let '(id__e, g__t, i__t, o__t) := tdi in
       do e   <- build_cond_expr id__c c t;
       do i__t' <- cassoc_imap i__t Transition.input_conditions e;
       put_comp id__t id__e g__t i__t' o__t.
@@ -105,7 +105,7 @@ Section GeneratePortsAndPs.
       iter (connect_in_cond_port id__c c) trs_of_c.
 
     (** Generates an input port for each condition [c] of [sitpn], and
-        connects this input port to the TCIs representing the
+        connects this input port to the TDIs representing the
         transitions associated with the condition [c]. *)
 
     Definition generate_and_connect_cond_ports : CompileTimeState unit :=
@@ -129,12 +129,12 @@ Section GeneratePortsAndPs.
       do pls_of_a <- get_ainfo a;
       let add_or :=
         fun e p =>
-          do id__p <- get_pci_id_from_binder p;
-          do pci <- get_comp id__p;
-          let '(id__e, g__p, i__p, o__p) := pci in
+          do id__p <- get_pdi_id_from_binder p;
+          do pdi <- get_comp id__p;
+          let '(id__e, g__p, i__p, o__p) := pdi in
           do a <- actual Place.marked o__p;
           match a with
-          | None => Err ("build_activation_expr: The marked port of PCI " ++ $$id__p ++ " is open.")
+          | None => Err ("build_activation_expr: The marked port of PDI " ++ $$id__p ++ " is open.")
           | Some n => Ret (e_name n @|| e)
           end
       in
@@ -195,12 +195,12 @@ Section GeneratePortsAndPs.
       do trs_of_f <- get_finfo f;
       let add_or :=
         fun e t =>
-          do id__t <- get_tci_id_from_binder t;
-          do tci <- get_comp id__t;
-          let '(id__e, g__t, i__t, o__t) := tci in
+          do id__t <- get_tdi_id_from_binder t;
+          do tdi <- get_comp id__t;
+          let '(id__e, g__t, i__t, o__t) := tdi in
           do a <- actual Transition.fired o__t;
           match a with
-          | None => Err ("build_execution_expr: The fired port of TCI " ++ $$id__t ++ " is open.")
+          | None => Err ("build_execution_expr: The fired port of TDI " ++ $$id__t ++ " is open.")
           | Some n => Ret (e_name n @|| e)
           end
       in

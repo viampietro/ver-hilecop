@@ -20,7 +20,7 @@ Require Import hvhdl.proofs.PArchitectureElaborationFacts.
 
 (** ** Facts about the [output_arcs_number] generic constant *)
 
-Lemma elab_PCI_Δ_out_arcs_nb_1 :
+Lemma elab_PDI_Δ_out_arcs_nb_1 :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
@@ -28,12 +28,12 @@ Lemma elab_PCI_Δ_out_arcs_nb_1 :
     exists t n, MapsTo Place.output_arcs_number (Generic t (Vnat n)) Δ__p.
 Admitted.
 
-Lemma elab_PCI_Δ_out_arcs_nb_2 :
+Lemma elab_PDI_Δ_out_arcs_nb_2 :
   forall {d Δ σ__e id__p gm ipm opm Δ__p e v},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
     MapsTo id__p (Component Δ__p) Δ ->
-    List.In (assocg_ Place.output_arcs_number e) gm ->
+    List.In (ga_ Place.output_arcs_number e) gm ->
     VExpr EmptyElDesign EmptyDState EmptyLEnv false e v ->
     exists t, MapsTo Place.output_arcs_number (Generic t v) Δ__p.
 Admitted.
@@ -76,7 +76,7 @@ Proof.
   - apply IHEBeh2; auto.
 Qed.
 
-Lemma elab_PCI_Δ_s_marking :
+Lemma elab_PDI_Δ_s_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
@@ -89,7 +89,7 @@ Qed.
 
 (** ** Facts about the [initial_marking] input port *)
 
-Lemma elab_PCI_Δ_init_marking :
+Lemma elab_PDI_Δ_init_marking :
   forall {d Δ σ__e id__p gm ipm opm Δ__p},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
@@ -103,7 +103,7 @@ Qed.
 
 (** ** Facts about the [reinit_transitions_time] output port *)
 
-Lemma elab_PCI_σ_rtt : 
+Lemma elab_PDI_σ_rtt : 
   forall {d Δ σ__e id__p gm ipm opm σ__pe},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     InCs (cs_comp id__p Petri.place_id gm ipm opm) (behavior d) ->
@@ -111,7 +111,7 @@ Lemma elab_PCI_σ_rtt :
     exists aofv, MapsTo Place.reinit_transitions_time (Varr aofv) (sstore σ__pe).
 Admitted.
 
-Lemma elab_PCI_Δ_rtt : 
+Lemma elab_PDI_Δ_rtt : 
   forall {d Δ σ__e},
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
     forall {id__p gm ipm opm Δ__p t n},

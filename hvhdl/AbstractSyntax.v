@@ -163,15 +163,15 @@ Inductive vdecl : Type :=
 (** Generic constant association; e.g:
 
     - Concrete syntax = "g ⇒ 1"
-    - Abstract syntax = "assocg_ g (e_nat 1)"
+    - Abstract syntax = "ga_ g (e_nat 1)"
  *)
 
-Inductive assocg : Type :=
-  assocg_ (id : ident) (e : expr).
+Inductive gassoc : Type :=
+  ga_ (id : ident) (e : expr).
 
 (** A generic map is a list of generic constant associations. *)
 
-Definition genmap := list assocg.
+Definition genmap := list gassoc.
 
 (** Input port association. *)
 

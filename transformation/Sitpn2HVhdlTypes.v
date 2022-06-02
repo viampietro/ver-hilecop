@@ -58,8 +58,8 @@ Section CompileTimeTypes.
 
   Inductive Sitpn2HVhdlBinder : Type :=
     MkS2HMap {
-        p2pci : list (P sitpn * ident);
-        t2tci : list (T sitpn * ident);
+        p2pdi : list (P sitpn * ident);
+        t2tdi : list (T sitpn * ident);
         a2out   : list (A sitpn * ident);
         f2out   : list (F sitpn * ident);
         c2in    : list (C sitpn * ident);
@@ -122,8 +122,8 @@ Arguments finfos {sitpn}.
 
 (* Set implicit arguments for Sitpn2HVhdlBinder *)
 
-Arguments p2pci {sitpn}.
-Arguments t2tci {sitpn}.
+Arguments p2pdi {sitpn}.
+Arguments t2tdi {sitpn}.
 Arguments a2out {sitpn}.
 Arguments f2out {sitpn}.
 Arguments c2in {sitpn}.
@@ -243,41 +243,41 @@ Section CompileTimeStateOpers.
     (* Sets the couple [(a, id)] in the [a2out] field of [γ]. *)
     let a2out' := setv Aeqdec a id (a2out γ) in
     (* Updates the new archictecture. *)
-    set_binder (MkS2HMap sitpn (p2pci γ) (t2tci γ) a2out' (f2out γ) (c2in γ)).
+    set_binder (MkS2HMap sitpn (p2pdi γ) (t2tdi γ) a2out' (f2out γ) (c2in γ)).
 
   Definition bind_function (f : F sitpn) (id : ident) :=
     do γ <- get_binder;
     (* Sets the couple [(f, id)] in the [f2out] field of [γ]. *)
     let f2out' := setv Feqdec f id (f2out γ) in
     (* Updates the new archictecture. *)
-    set_binder (MkS2HMap sitpn (p2pci γ) (t2tci γ) (a2out γ) f2out' (c2in γ)).
+    set_binder (MkS2HMap sitpn (p2pdi γ) (t2tdi γ) (a2out γ) f2out' (c2in γ)).
 
   Definition bind_condition (c : C sitpn) (id : ident) :=
     do γ <- get_binder;
     (* Sets the couple [(c, id)] in the [c2in] field of [γ]. *)
     let c2in' := setv Ceqdec c id (c2in γ) in
     (* Updates the new archictecture. *)
-    set_binder (MkS2HMap sitpn (p2pci γ) (t2tci γ) (a2out γ) (f2out γ) c2in').
+    set_binder (MkS2HMap sitpn (p2pdi γ) (t2tdi γ) (a2out γ) (f2out γ) c2in').
 
   Definition bind_place (p : P sitpn) (id : ident) :=
     do γ <- get_binder;
-    (* Sets the couple [(p, id)] in the [p2pci] field of [γ]. *)
-    let p2pci' := setv Peqdec p id (p2pci γ) in
+    (* Sets the couple [(p, id)] in the [p2pdi] field of [γ]. *)
+    let p2pdi' := setv Peqdec p id (p2pdi γ) in
     (* Updates the new archictecture. *)
-    set_binder (MkS2HMap sitpn p2pci' (t2tci γ) (a2out γ) (f2out γ) (c2in γ)).
+    set_binder (MkS2HMap sitpn p2pdi' (t2tdi γ) (a2out γ) (f2out γ) (c2in γ)).
 
   Definition bind_transition (t : T sitpn) (id : ident) :=
     do γ <- get_binder;
-    (* Sets the couple [(t, id)] in the [t2tci] field of [γ]. *)
-    let t2tci' := setv Teqdec t id (t2tci γ) in
+    (* Sets the couple [(t, id)] in the [t2tdi] field of [γ]. *)
+    let t2tdi' := setv Teqdec t id (t2tdi γ) in
     (* Updates the new architecture. *)
-    set_binder (MkS2HMap sitpn (p2pci γ) t2tci' (a2out γ) (f2out γ) (c2in γ)).
+    set_binder (MkS2HMap sitpn (p2pdi γ) t2tdi' (a2out γ) (f2out γ) (c2in γ)).
 
-  Definition get_pci_id_from_binder (p : P sitpn) :=
-    do γ <- get_binder; getv Peqdec p (p2pci γ).
+  Definition get_pdi_id_from_binder (p : P sitpn) :=
+    do γ <- get_binder; getv Peqdec p (p2pdi γ).
 
-  Definition get_tci_id_from_binder (t : T sitpn) :=
-    do γ <- get_binder; getv Teqdec t (t2tci γ).
+  Definition get_tdi_id_from_binder (t : T sitpn) :=
+    do γ <- get_binder; getv Teqdec t (t2tdi γ).
   
   (** *** Operations for beh *)
 
@@ -419,8 +419,8 @@ Arguments bind_function {sitpn}.
 Arguments bind_condition {sitpn}.
 Arguments bind_place {sitpn}.
 Arguments bind_transition {sitpn}.
-Arguments get_pci_id_from_binder {sitpn}.
-Arguments get_tci_id_from_binder {sitpn}.
+Arguments get_pdi_id_from_binder {sitpn}.
+Arguments get_tdi_id_from_binder {sitpn}.
 
 (* Set implicit arguments for list of ports/sigs monadic functions. *)
 

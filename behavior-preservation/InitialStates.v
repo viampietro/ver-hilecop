@@ -52,7 +52,7 @@ Lemma init_states_eq_marking :
     forall p id__p σ__p0,
       (* [id__p] is the identifier of the place component associated with
          place [p] by the [γ] binder. *)
-      InA Pkeq (p, id__p) (p2pci γ) ->
+      InA Pkeq (p, id__p) (p2pdi γ) ->
 
       (* [σ__p] is the current state of component [id__p] is the global
          design state [σ]. *)
@@ -67,7 +67,7 @@ Proof.
   (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
   (* Builds [comp(id__p', "place", g__p, i__p, o__p) ∈ (behavior d)] *)
-  edestruct @sitpn2hvhdl_pci_ex with (sitpn := sitpn) (p := p)
+  edestruct @sitpn2hvhdl_pdi_ex with (sitpn := sitpn) (p := p)
     as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
   (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
@@ -80,7 +80,7 @@ Proof.
   edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
 
   (* Builds [Δ__p("s_marking") = Internal (Tnat 0 n)] *)
-  edestruct @elab_PCI_Δ_s_marking as (n, MapsTo_smarking); eauto.
+  edestruct @elab_PDI_Δ_s_marking as (n, MapsTo_smarking); eauto.
 
   (* Builds proof that [ipm] is well-formed *)
   edestruct @elab_ValidIPM as (formals, (ListIPM_ipm, CheckFormals_ipm)); eauto.
@@ -100,11 +100,11 @@ Proof.
   (* - eapply sitpn2hvhdl_bind_init_marking; eauto. *)
 
   (* (* Proves [initial_marking ∈ Ins(Δ__p) *) *)
-  (* - eapply elab_PCI_Δ_init_marking; eauto. *)
+  (* - eapply elab_PDI_Δ_init_marking; eauto. *)
     
   (* (* Proves [id__p = id__p'] *) *)
   (* - erewrite NoDupA_fs_eqk_eq with (eqk := @Peq sitpn) (b := id__p'); eauto. *)
-  (*   eapply sitpn2hvhdl_nodup_p2pci; eauto. *)
+  (*   eapply sitpn2hvhdl_nodup_p2pdi; eauto. *)
 
   (* (* Proves [s_marking ∉ (events σ__pe)] *) *)
   (* - erewrite elab_empty_events_for_comps; eauto with set. *)
@@ -128,7 +128,7 @@ Lemma init_states_eq_time_counters :
     Init hdstore Δ σ__e (behavior d) σ0 ->
     
     forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
-      InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
+      InA Tkeq (proj1_sig t, id__t) (t2tdi γ) ->
       MapsTo id__t σ__t0 (cstore σ0) ->
       (upper t = i+ /\ TcLeLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (I (s0 sitpn) t)) (sstore σ__t0)) /\
       (upper t = i+ /\ TcGtLower (s0 sitpn) t -> MapsTo Transition.s_time_counter (Vnat (lower t)) (sstore σ__t0)) /\
@@ -148,7 +148,7 @@ Proof.
     
   (*   (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *) *)
   (*   edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t) *)
-  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tci, InCs_t))))); eauto; *)
+  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tdi, InCs_t))))); eauto; *)
 
   (*     (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
   (*     destruct (AreCsCompIds_ex (behavior d)) as (compids, AreCsCompIds_); *)
@@ -170,14 +170,14 @@ Proof.
   (*           eapply elab_empty_events; eauto *)
   (*           | *)
   (*           (* Proves [InternalOf Δ__t "s_tc"] *) *)
-  (*           eapply @elab_TCI_Δ_s_tc; eauto *)
+  (*           eapply @elab_TDI_Δ_s_tc; eauto *)
   (*           | *)
   (*           (* Proves ["s_tc" ∉ (events σ__te)] *) *)
   (*           erewrite elab_empty_events_for_comps; eauto with set *)
   (*           | *)
   (*           (* Proves [id__t = id__t'] *) *)
   (*           erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto; *)
-  (*           eapply sitpn2hvhdl_nodup_t2tci; eauto ]. *)
+  (*           eapply sitpn2hvhdl_nodup_t2tdi; eauto ]. *)
   
   (* (* CASE [upper(I__s(t)) = ∞ and s0.I(t) > lower(I__s(t))] *) *)
   (* - destruct 1 as (upper_, TcGtLower_). *)
@@ -213,7 +213,7 @@ Lemma init_states_eq_reset_orders :
     Init hdstore Δ σ__e (behavior d) σ0 ->
     
     (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
-        InA Tkeq (proj1_sig t, id__t) (t2tci γ) ->
+        InA Tkeq (proj1_sig t, id__t) (t2tdi γ) ->
         MapsTo id__t σ__t0 (cstore σ0) ->
         MapsTo Transition.s_reinit_time_counter (Vbool (reset (s0 sitpn) t)) (sstore σ__t0)).
 Proof.
@@ -225,12 +225,12 @@ Proof.
   (* (* Building premises of [init_rtc_eq_bprod_of_rt] lemma. *) *)
   
   (* (* Builds [comp(id__t', "transition", gm, ipm, opm) ∈ (behavior d)] *)
-  (*    and [(t, id__t') ∈ t2tci γ], and rewrites [id__t'] as [id__t].  *) *)
+  (*    and [(t, id__t') ∈ t2tdi γ], and rewrites [id__t'] as [id__t].  *) *)
   (* edestruct @sitpn2hvhdl_t_comp with (sitpn := sitpn) (t := proj1_sig t) *)
-  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tci, InCs_t))))); eauto. *)
+  (*   as (id__t', (gm, (ipm, (opm, (InA_t2tdi, InCs_t))))); eauto. *)
   (* assert (eq_id__t : id__t = id__t') by *)
   (*     (erewrite NoDupA_fs_eqk_eq with (eqk := Teq) (b := id__t'); eauto; *)
-  (*      eapply sitpn2hvhdl_nodup_t2tci; eauto). *)
+  (*      eapply sitpn2hvhdl_nodup_t2tdi; eauto). *)
   (* rewrite <- eq_id__t in *; clear eq_id__t. *)
 
   (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
@@ -243,13 +243,13 @@ Proof.
   (* edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__te, MapsTo_σ__te); eauto. *)
 
   (* (* Builds [Δ__t("in_arcs_nb") = (t, n)] *) *)
-  (* edestruct @elab_TCI_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto. *)
+  (* edestruct @elab_TDI_Δ_in_arcs_nb_1 as (t__ian, (n, MapsTo_ian)); eauto. *)
   
   (* (* Builds [σ__t0("rt") = aofv] *) *)
   (* assert (aofv_ex : exists aofv, MapsTo Transition.reinit_time (Varr aofv) (sstore σ__t0)). *)
-  (* { edestruct @elab_TCI_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto. *)
+  (* { edestruct @elab_TDI_σ_rt with (d := d) as (aofv, MapsTo_aofv); eauto. *)
   (*   assert (MapsTo reinit_time (Input (Tarray Tbool 0 (n - 1))) Δ__t) by *)
-  (*       (eapply elab_TCI_Δ_rt; eauto). *)
+  (*       (eapply elab_TDI_Δ_rt; eauto). *)
   (*   assert (IsOfType (Varr aofv) (Tarray Tbool 0 (n - 1))) by *)
   (*       (eapply elab_well_typed_values_in_sstore_of_comp; eauto). *)
   (*   edestruct @init_maps_sstore_of_comp as (v', MapsTo_v'); eauto. *)
@@ -261,7 +261,7 @@ Proof.
   (* } *)
   (* destruct aofv_ex as (aofv, MapsTo_rt). *)
   
-  (* eapply init_TCI_s_rtc_eq_bprod_of_rt; eauto; *)
+  (* eapply init_TDI_s_rtc_eq_bprod_of_rt; eauto; *)
   (*   (* 3 SUBGOALS *) *)
   (*   (* Proves [CsHasUniqueCompIds (behavior d) compids] *) *)
   (*   [split; eauto; eapply elab_nodup_compids; eauto *)
@@ -283,14 +283,14 @@ Proof.
   (*   replace (get_bool_at aofv 0) with false. *)
   (*   constructor. *)
   (*   (* SUBGOAL [get_bool_at aofv 0 = false] *) *)
-  (*   + symmetry; eapply init_TCI_eval_rt_0; eauto. *)
+  (*   + symmetry; eapply init_TDI_eval_rt_0; eauto. *)
   (*     eapply sitpn2hvhdl_emp_pinputs_rt; eauto. *)
 
   (*   (* SUBGOAL [Δ__t("in_arcs_nb") = 1] *) *)
-  (*   + assert (List.In (assocg_ input_arcs_number 1) gm) *)
+  (*   + assert (List.In (ga_ input_arcs_number 1) gm) *)
   (*       by (eapply sitpn2hvhdl_emp_pinputs_in_arcs_nb ; eauto). *)
   (*     edestruct @elab_wf_gmap_expr with (D__s := hdstore) as (v, vexpr_); eauto. *)
-  (*     edestruct @elab_TCI_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
+  (*     edestruct @elab_TDI_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
   (*     inversion_clear vexpr_ in Mapsto_ian0. *)
   (*     assert (e1 : Generic t__ian0 (Vnat 1) = Generic t__ian (Vnat n)) *)
   (*       by eauto with mapsto. *)
@@ -321,17 +321,17 @@ Proof.
   (*   (* SUBGOAL [length (p :: pinputs_of_t) = n] (i.e, [ |input(t)| = *)
   (*      Δ__t("in_arcs_nb") ] ).  *) *)
   (*   2 : { *)
-  (*     assert (List.In (assocg_ input_arcs_number (length (p :: pinputs_of_t))) gm) *)
+  (*     assert (List.In (ga_ input_arcs_number (length (p :: pinputs_of_t))) gm) *)
   (*       by (eapply sitpn2hvhdl_nemp_pinputs_in_arcs_nb; eauto; cbn; lia). *)
   (*     edestruct @elab_wf_gmap_expr with (D__s := hdstore) (gm := gm) as (v, vexpr_); eauto. *)
-  (*     edestruct @elab_TCI_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
+  (*     edestruct @elab_TDI_Δ_in_arcs_nb_2 with (d := d) as (t__ian0, Mapsto_ian0); eauto. *)
   (*     inversion_clear vexpr_ in Mapsto_ian0. *)
   (*     assert (e1 : Generic t__ian0 (Vnat (S (Datatypes.length pinputs_of_t))) = Generic t__ian (Vnat n)) *)
   (*       by eauto with mapsto. *)
   (*     inversion e1; reflexivity. } *)
     
   (*   (* SUBGOAL [σ__t0("rt")(i) = false] *) *)
-  (*   eapply init_TCI_eval_rt_i; eauto. *)
+  (*   eapply init_TDI_eval_rt_i; eauto. *)
 
   (*   (* Then, show [σ0("id__ji") = false] *) *)
 
@@ -341,13 +341,13 @@ Proof.
   (*       as (σ__pe, MapsTo_σ__pe); eauto. *)
   (*   edestruct @init_maps_cstore_id with (D__s := hdstore) *)
   (*     as (σ__p0, MapsTo_σ__p0); eauto. *)
-  (*   edestruct @elab_PCI_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e); *)
+  (*   edestruct @elab_PDI_σ_rtt with (d := d) as (aofv__pe, MapsTo_rtt__e); *)
   (*     eauto. *)
   (*   assert (MapsTo_rtt0_ex: exists aofv, MapsTo reinit_transitions_time (Varr aofv) (sstore σ__p0)). *)
   (*   { edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1. *)
-  (*     edestruct @elab_PCI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
+  (*     edestruct @elab_PDI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
   (*     assert (MapsTo reinit_transitions_time (Output (Tarray Tbool 0 (m - 1))) Δ__p) by *)
-  (*         (eapply elab_PCI_Δ_rtt; eauto). *)
+  (*         (eapply elab_PDI_Δ_rtt; eauto). *)
   (*     assert (IsOfType (Varr aofv__pe) (Tarray Tbool 0 (m - 1))) by *)
   (*         (eapply elab_well_typed_values_in_sstore_of_comp; eauto). *)
   (*     edestruct @init_maps_sstore_of_comp with (D__s := hdstore) *)
@@ -360,7 +360,7 @@ Proof.
   (*   } *)
   (*   destruct MapsTo_rtt0_ex as (aofv__P0, MapsTo_rtt0). *)
     
-  (*   eapply @init_PCI_eval_rtt_i; eauto 1. *)
+  (*   eapply @init_PDI_eval_rtt_i; eauto 1. *)
     
   (*   (* SUBGOAL [σ__p0("rtt")(j) = false] *) *)
 
@@ -370,19 +370,19 @@ Proof.
   (*   edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto 1. *)
 
   (*   (* Builds [Δ__p("out_arcs_nb") = (t__oan, m)] *) *)
-  (*   edestruct @elab_PCI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
+  (*   edestruct @elab_PDI_Δ_out_arcs_nb_1 as (t__oan, (m, MapsTo_oan)); eauto 1. *)
     
-  (*   eapply @init_PCI_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto. *)
+  (*   eapply @init_PDI_rtt_eq_false with (n := length toutputs_of_p) (t := t__oan); eauto. *)
 
   (*   (* SUBGOAL [Δ__p("out_arcs_nb") = |output(p)|] *) *)
-  (*   assert (List.In (assocg_ output_arcs_number (length toutputs_of_p)) gm__p). *)
+  (*   assert (List.In (ga_ output_arcs_number (length toutputs_of_p)) gm__p). *)
   (*   { eapply sitpn2hvhdl_nemp_toutputs_out_arcs_nb; eauto. *)
   (*     eapply length_neq_O with (eqA := Teq); eauto. *)
   (*     exists (proj1_sig t). *)
   (*     rewrite <- ((proj1 TOutputsOf_p) (proj1_sig t)); assumption. } *)
 
   (*   edestruct @elab_wf_gmap_expr with (D__s := hdstore) (gm := gm__p) as (v, vexpr_); eauto. *)
-  (*   edestruct @elab_PCI_Δ_out_arcs_nb_2 as (t__oan0, MapsTo_oan0); eauto 1. *)
+  (*   edestruct @elab_PDI_Δ_out_arcs_nb_2 as (t__oan0, MapsTo_oan0); eauto 1. *)
   (*   inversion_clear vexpr_ in MapsTo_oan0. *)
   (*   assert (e1 : Generic t__oan (Vnat m) = Generic t__oan0 (Vnat (length toutputs_of_p))) *)
   (*     by eauto with mapsto. *)

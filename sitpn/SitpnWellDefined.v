@@ -6,6 +6,7 @@ Require Import sitpn.Sitpn.
 Require Import sitpn.SitpnFacts.
 Require Import sitpn.SitpnTypes.
 Require Import sitpn.SitpnSemanticsDefs.
+Require Import sitpn.SitpnUtils.
 
 Set Implicit Arguments.
 
@@ -101,8 +102,8 @@ Definition PrIsTotalOverConflictGroup sitpn (cg : list (T sitpn)) : Prop :=
 
 Definition AllConflictsSolved (sitpn : Sitpn) :=
   forall (p : P sitpn),
-    AllConflictsSolvedByMutualExcl (toutputs_c p)
-    \/ PrIsTotalOverConflictGroup (toutputs_c p).
+    AllConflictsSolvedByMutualExcl (coutputs_of_p p)
+    \/ PrIsTotalOverConflictGroup (coutputs_of_p p).
 
 (** Defines a predicate stating that an [Sitpn] is well-defined, that is: 
 

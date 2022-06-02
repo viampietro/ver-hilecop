@@ -38,7 +38,7 @@ Proof.
     eapply vcomb_inv_s_tc; eauto.
 Qed.
 
-Lemma stab_TCI_s_rtc_eq_bprod_of_rt :
+Lemma stab_TDI_s_rtc_eq_bprod_of_rt :
   forall Δ σ behavior σ',
     Stabilize hdstore Δ σ behavior σ' ->
     forall id__t gm ipm opm Δ__t t n,
