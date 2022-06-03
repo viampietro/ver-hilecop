@@ -70,8 +70,8 @@ Coercion n_id : ident >-> name.
 Notation " # x " := (e_name (n_id x)) (at level 99) : abss_scope.
 Notation " x [[ i ]] " := (e_name (n_xid x i)) (at level 100) : abss_scope. 
 
-Notation " x @&& y " := (e_binop bo_and x y) (at level 100) : abss_scope.
-Notation " x @|| y " := (e_binop bo_or x y) (at level 100) : abss_scope.
+Notation " x @&& y " := (e_binop bo_and x y) (right associativity,at level 100) : abss_scope.
+Notation " x @|| y " := (e_binop bo_or x y) (right associativity, at level 100) : abss_scope.
 Notation " x @= y "  := (e_binop bo_eq x y) (at level 100)  : abss_scope.
 Notation " x @/= y " := (e_binop bo_neq x y) (at level 100) : abss_scope.
 Notation " x @< y "  := (e_binop bo_lt x y) (at level 100)  : abss_scope.
@@ -389,5 +389,50 @@ Definition AreVarIds (vars : list vdecl) (varids : list ident) : Prop :=
   let var2id := (fun vd : vdecl => let '(vdecl_ id _) := vd in id) in
   Map var2id vars varids.
 
+(** States that a "simple" sequential statement, i.e. not a sequence,
+    is a part of sequence. *)
 
+Fixpoint InSs (stmt stmt' : ss) {struct stmt'} : Prop :=
+  match stmt' with
+  | stmt1 ;; stmt2 => InSs stmt stmt1 \/ InSs stmt stmt2
+  | _ => stmt = stmt'
+  end.
 
+(** States that an expression is a composition of "or" expressions
+    applied to atoms that are identifiers or Boolean constants. The
+    second parameter is the number of such identifiers and constants
+    composing the expression.
+    
+    Examples: [IsBSumExpr (true @|| id1 @|| false) 3] [IsBSumExpr
+    (true @|| id1 @|| id2 @|| id3) 4] [~IsBSumExpr (true @&& (id1 @||
+    id2)) 2]
+
+ *)
+
+Inductive IsBSumExpr : expr -> nat -> Prop :=
+| IsBSumExprId : forall id, IsBSumExpr (#id) 1
+| IsBSumExprBool : forall b : bool, IsBSumExpr b 1
+| IsBSumExprCons :
+  forall e1 e2 n m,
+    IsBSumExpr e1 n ->
+    IsBSumExpr e2 m ->
+    IsBSumExpr (e1 @|| e2) (n + m).
+
+(** States that an given identifier [id] is an operand of a binary
+    operator expression [e]. *)
+
+Fixpoint InBOpId (id : ident) (e : expr) : Prop := 
+  match e with
+  | (#id') => id = id'
+  | e_binop _ e1 e2 => InBOpId id e1 \/ InBOpId id e2
+  | _ => False
+  end.
+
+(** Returns the number of atomic sequential statements in a
+    sequence. *)
+
+Fixpoint seq_length (stmt : ss) {struct stmt} : nat :=
+  match stmt with
+    ss_seq ss1 ss2 => seq_length ss1 + seq_length ss2
+  | _ => 1
+  end.

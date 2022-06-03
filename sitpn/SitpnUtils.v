@@ -143,3 +143,35 @@ Arguments outputs_of_t {sitpn}.
 Arguments conds_of_t {sitpn}.
 Arguments get_trans_type {sitpn}.
 Arguments get_max_time_counter {sitpn}.
+
+(** ** Operations and predicates on actions *)
+
+Section ActionUtils.
+
+  Variable sitpn : Sitpn.
+  
+  (** Returns the list implementing the set of places associated with
+      an action [a]. *)
+
+  Definition pls_of_a (a : A sitpn) : list (P sitpn) :=
+    tfilter (fun p => has_A p a) (places sitpn) nat_to_P.
+  
+End ActionUtils.
+
+Arguments pls_of_a {sitpn}.
+
+(** ** Operations and predicates on functions *)
+
+Section FunctionUtils.
+
+  Variable sitpn : Sitpn.
+  
+  (** Returns the list implementing the set of transitions associated
+      with a function [f]. *)
+
+  Definition trs_of_f (f : F sitpn) : list (T sitpn) :=
+    tfilter (fun t => has_F t f) (transitions sitpn) nat_to_T.
+  
+End FunctionUtils.
+
+Arguments trs_of_f {sitpn}.
