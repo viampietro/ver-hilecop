@@ -253,7 +253,7 @@ Record HM2T_
                 \/ a = inhibitor
                 \/ AllConflictsSolvedByMutualExcl (coutputs_of_p p) ->
                 In (ipa_ (Transition.priority_authorizations $[[j]]) true) i__t)
-            /\ (a = basic \/ ~AllConflictsSolvedByMutualExcl (coutputs_of_p p) ->
+            /\ (a = basic /\ ~AllConflictsSolvedByMutualExcl (coutputs_of_p p) ->
                 In (ipa_ (Transition.priority_authorizations $[[j]]) true) i__t);
 
       (** For all place of the input SITPN model for which conflicts
