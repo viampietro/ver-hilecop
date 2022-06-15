@@ -25,9 +25,8 @@ Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.DesignElaboration.
-Require Import hvhdl.SynchronousEvaluation.
 Require Import hvhdl.Initialization.
-Require Import hvhdl.Stabilize.
+Require Import hvhdl.Stabilization.
 Require Import hvhdl.Place.
 Require Import hvhdl.Transition.
 
