@@ -21,33 +21,33 @@ Require Import hvhdl.HVhdlHilecopLib.
 (* Require Import hvhdl.HVhdlHilecopFactsLib. *)
 Require Import hvhdl.HVhdlSimulationLib.
 (* Require Import hvhdl.proofs.HVhdlSimulationFactsLib. *)
-Require Import hvhdl.proofs.WellDefinedDesignFacts.
-Require Import hvhdl.proofs.DesignElaborationFacts.
-Require Import hvhdl.proofs.PElaborationFacts.
-Require Import hvhdl.proofs.PInitializationFacts.
+(* Require Import hvhdl.proofs.WellDefinedDesignFacts. *)
+(* Require Import hvhdl.proofs.DesignElaborationFacts. *)
+(* Require Import hvhdl.proofs.PElaborationFacts. *)
+(* Require Import hvhdl.proofs.PInitializationFacts. *)
 
 Require Import transformation.Sitpn2HVhdl.
-Require Import transformation.proofs.GenerateHVhdlFacts.
-Require Import transformation.proofs.GenerateInfosFacts.
+(* Require Import transformation.proofs.GenerateHVhdlFacts. *)
+(* Require Import transformation.proofs.GenerateInfosFacts. *)
 
 Require Import soundness.SemanticPreservationDefs.
 
 (** ** Initial States Equal Marking Lemma *)    
 
 Lemma init_states_eq_marking :
-  forall sitpn id__e id__a mm d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__e id__a mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
 
     forall p id__p σ__p0,
       (* [id__p] is the identifier of the place component associated with
@@ -62,31 +62,31 @@ Lemma init_states_eq_marking :
          [s_marking] at state [σ__p]. *)
       MapsTo Place.s_marking (Vnat (M (s0 sitpn) p)) (sstore σ__p0).
 Proof.
-  intros.
+  (* intros. *)
 
-  (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
+  (* (* Builds the premises of the [init_s_marking_eq_nat] lemma. *) *)
   
-  (* Builds [comp(id__p', "place", g__p, i__p, o__p) ∈ (behavior d)] *)
-  edestruct @sitpn2hvhdl_pdi_ex with (sitpn := sitpn) (p := p)
-    as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
+  (* (* Builds [comp(id__p', "place", g__p, i__p, o__p) ∈ (behavior d)] *) *)
+  (* edestruct @sitpn2hvhdl_pdi_ex with (sitpn := sitpn) (p := p) *)
+  (*   as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto. *)
   
-  (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
-  destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds).
+  (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
+  (* destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds). *)
 
-  (* Builds [id__p' ∈ Comps(Δ)] *)
-  edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto.
+  (* (* Builds [id__p' ∈ Comps(Δ)] *) *)
+  (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto. *)
 
-  (* Builds [id__p' ∈ (cstore σ__e)] *)
-  edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto.
+  (* (* Builds [id__p' ∈ (cstore σ__e)] *) *)
+  (* edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto. *)
 
-  (* Builds [Δ__p("s_marking") = Internal (Tnat 0 n)] *)
-  edestruct @elab_PDI_Δ_s_marking as (n, MapsTo_smarking); eauto.
+  (* (* Builds [Δ__p("s_marking") = Internal (Tnat 0 n)] *) *)
+  (* edestruct @elab_PDI_Δ_s_marking as (n, MapsTo_smarking); eauto. *)
 
-  (* Builds proof that [ipm] is well-formed *)
-  edestruct @elab_ValidIPM as (formals, (ListIPM_ipm, CheckFormals_ipm)); eauto.
+  (* (* Builds proof that [ipm] is well-formed *) *)
+  (* edestruct @elab_ValidIPM as (formals, (ListIPM_ipm, CheckFormals_ipm)); eauto. *)
   
-  (* To prove [σ__p0("s_marking") = M0(p)] *)
-  eapply init_s_marking_eq_nat; eauto.
+  (* (* To prove [σ__p0("s_marking") = M0(p)] *) *)
+  (* eapply init_s_marking_eq_nat; eauto. *)
   
   (* (* 6 subgoals left. *) *)
 
@@ -113,19 +113,19 @@ Admitted.
 (** ** Initial States Equal Time Counters *)
 
 Lemma init_states_eq_time_counters :
-  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
     
     forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
       InA Tkeq (proj1_sig t, id__t) (t2tdi γ) ->
@@ -198,19 +198,19 @@ Proof.
 Admitted.
 
 Lemma init_states_eq_reset_orders :
-  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
     
     (forall (t : Ti sitpn) (id__t : ident) (σ__t0 : DState),
         InA Tkeq (proj1_sig t, id__t) (t2tdi γ) ->
@@ -390,19 +390,19 @@ Proof.
 Admitted.
 
 Lemma init_states_eq_actions :
-  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
 
     forall (a : A sitpn) (id__a : ident),
       InA Akeq (a, id__a) (a2out γ) ->
@@ -410,19 +410,19 @@ Lemma init_states_eq_actions :
 Admitted.
 
 Lemma init_states_eq_functions :
-  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
 
     forall (f : F sitpn) (id__f : ident),
       InA Fkeq (f, id__f) (f2out γ) ->
@@ -430,44 +430,44 @@ Lemma init_states_eq_functions :
 Admitted.
 
 Lemma init_states_eq_conditions :
-  forall sitpn id__ent id__arch mm d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__ent id__arch mm = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
 
     forall (c : C sitpn) (id__c : ident),
       InA Ckeq (c, id__c) (c2in γ) ->
       MapsTo id__c (Vbool (cond (s0 sitpn) c)) (sstore σ0).
 Admitted.
 
-(** ** Similar Initial States Lemma *)
+(** ** Similar initial states lemmas *)
 
 Lemma sim_init_states :
-  forall sitpn id__ent id__arch b d γ Δ σ__e σ0,
+  forall sitpn b d γ Δ σ__e σ0,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* [sitpn] translates into [(d, γ)]. *)
-    sitpn2hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
     
     (* [Δ, σ__e] are the results of the elaboration of [d]. *)
     EDesign hdstore (NatMap.empty value) d Δ σ__e ->
 
     (* initialization d's state. *)
-    Init hdstore Δ σ__e (behavior d) σ0 ->
+    Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
 
-    (* Init states are similar *)
-    γ ⊢ (s0 sitpn) ∼ σ0.
+    (* Initial states are similar *)
+    SimState sitpn γ (s0 sitpn) σ0.
 Proof.
   intros; unfold SimState; unfold SimStateNoCondsNoReset.
   split. split. eapply init_states_eq_marking; eauto.
@@ -479,3 +479,49 @@ Proof.
 Qed.
 
 #[export] Hint Resolve sim_init_states : hilecop.
+
+(** For all SITPN [sitpn] passed as input to the HM2T and resulting
+    design [d], [d] admits an initial state [σ0] that is similar to
+    the initial state of [sitpn]. *)
+
+Lemma sim_init_state_ex :
+  forall sitpn b d γ Δ σ__e,
+
+    (* [sitpn] is well-defined. *)
+    IsWellDefined sitpn ->
+    
+    (* [sitpn] translates into [(d, γ)]. *)
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
+    
+    (* [Δ, σ__e] are the results of the elaboration of [d]. *)
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
+
+    (* There exists an initial state [σ0] of [d]. *)
+    exists σ0,
+      Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0
+    
+      (* Initial states are similar *)
+      /\ SimState sitpn γ (s0 sitpn) σ0.
+Admitted.
+
+(** For all SITPN [sitpn] passed as input to the HM2T and resulting
+    design [d], [d] admits an initial state [σ0]. *)
+
+Lemma init_state_ex :
+  forall sitpn b d γ Δ σ__e,
+
+    (* The SITPN model [sitpn] is well-defined. *)
+    IsWellDefined sitpn ->
+    
+    (* sitpn translates into (d, γ). *)
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
+
+    (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
+
+    (* There exists an initial state [σ0] of [d]. *)
+    exists σ0, Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0. 
+Admitted.
+
+#[export] Hint Resolve init_state_ex : hilecop.
+

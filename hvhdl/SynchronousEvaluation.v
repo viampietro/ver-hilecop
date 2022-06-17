@@ -46,7 +46,7 @@ Inductive vrising (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> DS
     forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      VSeq Δ σ σ Λ re stmt σ' Λ' ->
+      VSeq Δ σ σ Λ rising stmt σ' Λ' ->
       
       (* * Side conditions * *)
       NatSet.In clk sl ->
@@ -176,7 +176,7 @@ Inductive vfalling (D__s : IdMap design) (Δ : ElDesign) (σ : DState) : cs -> D
     forall id__p sl vars stmt Λ σ' Λ',
 
       (* * Premises * *)
-      VSeq Δ σ σ Λ fe stmt σ' Λ' ->
+      VSeq Δ σ σ Λ falling stmt σ' Λ' ->
       
       (* * Side conditions * *)
       NatSet.In clk sl ->

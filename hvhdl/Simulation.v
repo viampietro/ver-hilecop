@@ -52,9 +52,9 @@ Inductive SimCycle
       
       (* * Premises * *)
       
-      VConc D__s Δ (inj σ (E__p τ)) re cstmt σ__r ->
+      VConc D__s Δ (inj σ (E__p τ)) rising cstmt σ__r ->
       Stabilize D__s Δ σ__r cstmt σ' ->
-      VConc D__s Δ σ' fe cstmt σ__f ->
+      VConc D__s Δ σ' falling cstmt σ__f ->
       Stabilize D__s Δ σ__f cstmt σ'' ->
 
       (* * Conclusion * *)

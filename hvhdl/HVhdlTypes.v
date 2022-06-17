@@ -32,4 +32,4 @@ Definition IdSet := NatSet.t.
 (** Enumerates the different phases of the H-VHDL simulation
     algorithm.  *)
 
-Inductive simflag : Set := fe | re | stab | init.
+Inductive simflag : Set := falling | rising | stab | init.

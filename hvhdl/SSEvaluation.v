@@ -172,7 +172,7 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
     Does nothing; ↑ blocks only respond to ↑ flag. *)
            
 | VSeqRisingDefault :
-    forall flag stmt, flag <> re -> VSeq Δ sst__r sst__w Λ flag (Rising stmt) sst__w Λ
+    forall flag stmt, flag <> rising -> VSeq Δ sst__r sst__w Λ flag (Rising stmt) sst__w Λ
 
 (** Evaluates a rising edge block statement when the [re] flag is raised. 
     Evaluates the inner block of the rising edge statement.
@@ -182,10 +182,10 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
     forall stmt sst__w' Λ',
       
       (* * Premises * *)
-      VSeq Δ sst__r sst__w Λ re stmt sst__w' Λ' ->
+      VSeq Δ sst__r sst__w Λ rising stmt sst__w' Λ' ->
 
       (* * Conclusion * *)
-      VSeq Δ sst__r sst__w Λ re (Rising stmt) sst__w' Λ'
+      VSeq Δ sst__r sst__w Λ rising (Rising stmt) sst__w' Λ'
 
 (** Evaluates a falling edge block statement when another flag than ↓
     is raised (i.e, during a stabilization, a ↑ or the initl phase).
@@ -193,7 +193,7 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
     Does nothing; ↓ blocks only respond to ↓ flag. *)
                       
 | VSeqFallingDefault :
-    forall flag stmt, flag <> fe -> VSeq Δ sst__r sst__w Λ flag (Rising stmt) sst__w Λ
+    forall flag stmt, flag <> falling -> VSeq Δ sst__r sst__w Λ flag (Rising stmt) sst__w Λ
            
 (** Evaluates a falling edge block statement when the [fe] flag is
     raised. Evaluates the inner block of the falling edge statement. *)
@@ -202,10 +202,10 @@ Inductive VSeq (Δ : ElDesign) (sst__r sst__w : IdMap value) (Λ : LEnv) :
     forall stmt sst__w' Λ',
       
       (* * Premises * *)
-      VSeq Δ sst__r sst__w Λ fe stmt sst__w' Λ' ->
+      VSeq Δ sst__r sst__w Λ falling stmt sst__w' Λ' ->
 
       (* * Conclusion * *)
-      VSeq Δ sst__r sst__w Λ fe (Falling stmt) sst__w' Λ'
+      VSeq Δ sst__r sst__w Λ falling (Falling stmt) sst__w' Λ'
            
 (** Evaluates a rst block statement when another flag than [init] is
     raised (i.e, during a stabilization, a ↑ or a ↓ phase).

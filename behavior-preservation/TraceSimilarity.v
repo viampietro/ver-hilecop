@@ -22,14 +22,13 @@ Require Import hvhdl.HVhdlTypes.
 Require Import hvhdl.Environment.
 Require Import hvhdl.SemanticalDomains.
 Require Import hvhdl.Simulation.
-Require Import hvhdl.CombinationalEvaluation.
-Require Import hvhdl.SynchronousEvaluation.
 Require Import hvhdl.DesignElaboration.
 Require Import hvhdl.AbstractSyntax.
 Require Import hvhdl.HilecopDesignStore.
 Require Import hvhdl.Initialization.
-Require Import hvhdl.Stabilize.
+Require Import hvhdl.Stabilization.
 Require Import hvhdl.PortMapEvaluation.
+Require Import hvhdl.CSEvaluation.
 
 (* SITPN to H-VHDL Libraries *)
 
@@ -46,10 +45,10 @@ Require Import soundness.RisingEdge.
 (** ** Trace similarity lemma *)
 
 Lemma trace_sim :
-  forall sitpn id__ent id__arch b d γ E__c E__p Δ σ__e τ s σ θ__s θ__σ, 
+  forall sitpn b d γ E__c E__p Δ σ__e τ s σ θ__s θ__σ, 
 
     (* sitpn translates into (d, γ). *)
-    sitpn2hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->
@@ -64,7 +63,7 @@ Lemma trace_sim :
     SitpnExecute E__c s τ θ__s ->
     
     (* From [σ], produces trace [θ__σ] after τ execution cycles. *)
-    SimLoop hdstore E__p Δ σ (behavior d) τ θ__σ ->
+    SimLoop hdstore E__p Δ σ (beh d) τ θ__σ ->
 
     (* Conclusion *)
     SimTrace γ θ__s θ__σ re.
@@ -94,13 +93,13 @@ Qed.
     a given H-VHDL design [d]. *)
 
 Theorem full_trace_sim :
-  forall sitpn id__ent id__arch E__c τ θ__s d E__p b θ__σ γ,
+  forall sitpn E__c τ θ__s d E__p b θ__σ γ,
 
     (* [sitpn] is well-defined. *)
     IsWellDefined sitpn ->
     
     (* sitpn translates into (d, γ). *)
-    sitpn2hvhdl sitpn id__ent id__arch b = (inl (d, γ)) ->
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
 
     (* Environments are similar. *)
     SimEnv sitpn γ E__c E__p ->
@@ -181,7 +180,7 @@ Restart.
     match goal with
     | [
         H0: SitpnStateTransition _ (S τ) _ _ _,
-          H1: IsInjectedDState _ (_ (S τ)) _,
+          H1: VConc _ _ (inj _ (_ (S τ))) _ _ _,
             H2: SitpnExecute _ ?s τ ?θ__s,
               H3: SimLoop _ _ _ ?σ _ τ ?θ__σ,
         H4: FullSimStateAfterFE _ _ ?s ?σ |- _
