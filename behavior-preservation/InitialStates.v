@@ -449,7 +449,7 @@ Lemma init_states_eq_conditions :
       MapsTo id__c (Vbool (cond (s0 sitpn) c)) (sstore σ0).
 Admitted.
 
-(** ** Similar Initial States Lemma *)
+(** ** Similar initial states lemmas *)
 
 Lemma sim_init_states :
   forall sitpn b d γ Δ σ__e σ0,
@@ -466,7 +466,7 @@ Lemma sim_init_states :
     (* initialization d's state. *)
     Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0 ->
 
-    (* Init states are similar *)
+    (* Initial states are similar *)
     SimState sitpn γ (s0 sitpn) σ0.
 Proof.
   intros; unfold SimState; unfold SimStateNoCondsNoReset.
@@ -479,3 +479,49 @@ Proof.
 Qed.
 
 #[export] Hint Resolve sim_init_states : hilecop.
+
+(** For all SITPN [sitpn] passed as input to the HM2T and resulting
+    design [d], [d] admits an initial state [σ0] that is similar to
+    the initial state of [sitpn]. *)
+
+Lemma sim_init_state_ex :
+  forall sitpn b d γ Δ σ__e,
+
+    (* [sitpn] is well-defined. *)
+    IsWellDefined sitpn ->
+    
+    (* [sitpn] translates into [(d, γ)]. *)
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
+    
+    (* [Δ, σ__e] are the results of the elaboration of [d]. *)
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
+
+    (* There exists an initial state [σ0] of [d]. *)
+    exists σ0,
+      Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0
+    
+      (* Initial states are similar *)
+      /\ SimState sitpn γ (s0 sitpn) σ0.
+Admitted.
+
+(** For all SITPN [sitpn] passed as input to the HM2T and resulting
+    design [d], [d] admits an initial state [σ0]. *)
+
+Lemma init_state_ex :
+  forall sitpn b d γ Δ σ__e,
+
+    (* The SITPN model [sitpn] is well-defined. *)
+    IsWellDefined sitpn ->
+    
+    (* sitpn translates into (d, γ). *)
+    sitpn2hvhdl sitpn b = (inl (d, γ)) ->
+
+    (* An elaborated version [Δ] of [d], with a default state [σ__e] *)
+    EDesign hdstore (NatMap.empty value) d Δ σ__e ->
+
+    (* There exists an initial state [σ0] of [d]. *)
+    exists σ0, Init hdstore Δ σ__e (AbstractSyntax.beh d) σ0. 
+Admitted.
+
+#[export] Hint Resolve init_state_ex : hilecop.
+
