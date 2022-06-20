@@ -88,7 +88,10 @@ Qed.
 
 #[export] Hint Resolve trace_sim : hilecop.
 
-(** Assuming the existence of an elaborated design [Δ], a default
+(** For all SITPN model [sitpn] and design [d] resulting from from the
+    HM2T, 
+    
+    Assuming the existence of an elaborated design [Δ], a default
     state [σ__e], an initial state [σ0], and a simulation trace [θ__σ] for
     a given H-VHDL design [d]. *)
 

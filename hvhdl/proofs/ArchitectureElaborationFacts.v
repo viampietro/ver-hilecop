@@ -21,12 +21,15 @@ Proof.
   intros; apply IHEDecls.
   firstorder.
   lazymatch goal with
-  | [ HEDecl: EDecl _ _ _ _ _ |- _ ] =>
-    destruct ad; inversion_clear HEDecl
+  | [ sd: sdecl, HEDecl: EDecl _ _ _ _ _ |- _ ] =>
+    destruct sd; inversion_clear HEDecl
   end.
-  specialize (Nat.eq_dec id sigid) as Hsum_id.
+  match goal with
+  | |- MapsTo ?id _ (sstore (sstore_add ?id0 _ _)) =>
+      specialize (Nat.eq_dec id id0) as Hsum_id
+  end.
   inversion_clear Hsum_id as [Heq_id | Hneq_id].
-  - assert (Hex_id : exists τ0, List.In (sdecl_ id τ0) (sdecl_ sigid τ :: lofsigs))
+  - assert (Hex_id : exists τ0, List.In (sdecl_ id τ0) (sdecl_ id0 τ :: lofsigs))
       by (exists τ; rewrite Heq_id; apply in_eq).
     elimtype False; apply H1; assumption.
   - simpl; apply add_2; auto.          
@@ -114,27 +117,11 @@ Proof.
   apply IHEDecls; eapply EDecl_inv_sstore; eauto.
 Qed.
 
-Lemma EDecl_inv_events :
-  forall {Δ σ ad Δ' σ'},
-    EDecl Δ σ ad Δ' σ' ->
-    NatSet.Equal (events σ) (events σ').
-Proof. induction 1; auto with set. Qed.
-
-Lemma EDecls_inv_events : 
-  forall {Δ σ sigs Δ' σ'},
-    EDecls Δ σ sigs Δ' σ' ->
-    NatSet.Equal (events σ) (events σ').
-Proof.
-  induction 1; auto with set.
-  transitivity (events σ'); [
-    eapply EDecl_inv_events; eauto | auto].
-Qed.
-
 Lemma EDecl_decl :
   forall {Δ σ Δ' σ' id τ},
     EDecl Δ σ (sdecl_ id τ) Δ' σ' ->
     InternalOf Δ' id.
-Proof. inversion 1; exists t0; auto with mapsto. Qed.
+Proof. inversion 1; exists t0; cbn; auto with mapsto. Qed.
 
 Lemma EDecls_decl :
   forall {Δ σ sigs Δ' σ' id τ},
@@ -218,8 +205,9 @@ Proof.
   destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
     [ rewrite eq_; intros; exfalso;
       match goal with
-      | [ H1: ~(_), H2: MapsTo ?k _ (add ?k (Internal ?t) _)  |- _ ] =>
-        apply H1; exists t; eauto with mapsto
+      | [ H1: ~(_),
+            H2: MapsTo ?k _ (ElDesign_to_IdMap (MkElDesign (add ?k (Internal ?t) _)))  |- _ ] =>
+        cbn in H2; apply H1; exists t; eauto with mapsto
       end
     | eauto with mapsto ].
 Qed.
