@@ -43,6 +43,12 @@ the Coq proof assistant.
   	     subfolder (PDF and Coq structure). Contains examples of
   	     H-VHDL designs in the `hvhdl` subfolder.
 
+- **ProofVerif.org** : Emacs "org mode" file describing the progression of the mechanization
+  		       of the proof of correctness for the HILECOP model-to-text transformation.
+
+- **Proof.pdf** : (Barebone) paper version of the proof of correctness for the
+    		  HILECOP model-to-text transformation.
+
 ## Building the project
 
 ### Pre-requisites

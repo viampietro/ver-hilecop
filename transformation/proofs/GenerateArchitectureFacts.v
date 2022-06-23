@@ -17,6 +17,7 @@ Require Import hvhdl.WellDefinedDesign.
 Require Import hvhdl.proofs.AbstractSyntaxFacts.
 
 Require Import transformation.Sitpn2HVhdl.
+Require Import transformation.Sitpn2HVhdlUtils.
 Require Import transformation.proofs.SInvTactics.
 
 (** ** Facts about the generation of PDIs *)
@@ -52,9 +53,11 @@ Section GenPDIsFacts.
     forall sitpn (x y : P sitpn) s,
       Peq x y ->
       ((exists id__p g__p i__p o__p,
-           InA Pkeq (x, id__p) (p2pdi (γ s)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s))
+           InA Pkeq (x, id__p) (p2pdi (γ s))
+           /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s))
        <-> (exists id__p g__p i__p o__p,
-               InA Pkeq (y, id__p) (p2pdi (γ s)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s))).
+               InA Pkeq (y, id__p) (p2pdi (γ s))
+               /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s))).
   Proof.
     intros; split;
       (edestruct 1 as (id__p, (g__p, (i__p, (o__p, (InA_a, InCs_)))));
@@ -62,7 +65,8 @@ Section GenPDIsFacts.
   Qed.
   
   Lemma gen_pdi_pdi_ex :
-    forall sitpn (n : nat) (a : P sitpn) (s1 : Sitpn2HVhdlState sitpn) (x : unit) (s2 : Sitpn2HVhdlState sitpn),
+    forall sitpn (n : nat) (a : P sitpn) (s1 : Sitpn2HVhdlState sitpn)
+           (x : unit) (s2 : Sitpn2HVhdlState sitpn),
       generate_pdi a n s1 = OK x s2 ->
       exists id__p g__p i__p o__p,
         InA Pkeq (a, id__p) (p2pdi (γ s2)) /\ InCs (cs_comp id__p Petri.place_id g__p i__p o__p) (beh s2).
@@ -147,8 +151,10 @@ Section GenTDIsFacts.
       build_tdi t tinfo s = OK v s' ->
       nextid s <= nextid s'.
   Proof. intros; pattern s, s'; solve_sinv_pattern.
-         all: try (unfold Transitive; intros; lia).
-         cbn; minv EQ2; auto.
+         match goal with
+         | EQ: _ _ = OK _ _ |- _ =>
+             cbn; minv EQ; auto
+         end.
   Qed.
   
   (** *** Facts about the [generate_tdis] function *)
@@ -216,40 +222,53 @@ Section GenArchiFacts.
       (forall id__c, In id__c (get_cids (beh s')) -> id__c < nextid s') /\ NoDup (get_cids (beh s')).
   Proof.
     intros *; intros H Pstart; generalize Pstart; pattern s, s'; solve_sinv_pattern.
+    (* Solves nextid subgoals. *)
+    all: try (match goal with
+              | [ EQ: _ = OK _ ?s  |- (_) _ ?s ] =>
+                  cbn; minv EQ; destruct 1;
+                  (split; [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ])
+              end).
     (* new tdi in beh *)
-    cbn; minv EQ4; minv EQ8.
-    destruct 1 as [ Inlt4 NoDup4 ]; split; rewrite get_cids_app; cbn.
-    destruct 1 as [ eq_idc | ]; [ rewrite <- eq_idc | eauto ].
-    shelf_state EQ6; unfold lt.
-    change (S (nextid s6)) with (nextid s2).
-    eapply build_tdi_inv_inc_nextid; eauto.
-    constructor; eauto.
-    rewrite <- (build_tdi_inv_beh EQ6); simpl.
-    intros In6; apply (Nat.lt_irrefl (nextid s6)).
-    eapply (proj1 (P1 P0)); eauto.
-    (* get_nextid *)
-    cbn; minv EQ10; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
-    (* get_nextid *)
-    cbn; minv EQ4; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    - cbn; match_and_minv constr:(@get_nextid sitpn); match_and_minv constr:(@OK).
+      destruct 1 as [ Inlt4 NoDup4 ]; split; rewrite get_cids_app; cbn.
+      destruct 1 as [ eq_idc | ]; [ rewrite <- eq_idc | eauto ].
+      match goal with
+      | H: build_tdi _ _ _ = _ |- _ => shelf_state H; unfold lt
+      end.
+      match goal with
+      | [ s := _ : Sitpn2HVhdlState _ |- S (nextid ?s') <= _ ] =>
+          change (S (nextid s')) with (nextid s)
+      end.
+      eapply build_tdi_inv_inc_nextid; eauto.
+      constructor; eauto.
+      let build_tdi_eq := (get_meq build_tdi) in
+      rewrite <- (build_tdi_inv_beh build_tdi_eq); simpl.
+      match goal with
+      |  |- ~In ?ns _ => intros In6; apply (Nat.lt_irrefl ns)
+      end;
+      eapply (proj1 (P1 P0)); eauto.
+      
     (* new pdi in beh *)
-    cbn; minv EQ4; minv EQ8.
-    destruct 1 as [ Inlt4 NoDup4 ]; split; rewrite get_cids_app; cbn.
-    destruct 1 as [ eq_idc | ]; [ rewrite <- eq_idc | eauto ].
-    shelf_state EQ6; unfold lt.
-    change (S (nextid s6)) with (nextid s2).
-    eapply build_pdi_inv_inc_nextid; eauto.
-    constructor; eauto.
-    rewrite <- (build_pdi_inv_beh EQ6); simpl.
-    intros In6; apply (Nat.lt_irrefl (nextid s6)).
-    eapply (proj1 (P0 P)); eauto.
-    (* get_nextid *)
-    cbn; minv EQ14; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
-    (* get_nextid *)
-    cbn; minv EQ4; destruct 1; split;
-      [ intros; eapply Nat.lt_lt_succ_r; eauto | assumption ].
+    - let EQ_get_nextid := get_meq (@get_nextid sitpn) in
+      let EQ_OK := get_meq (@OK (Sitpn2HVhdlState sitpn)) in
+      cbn; minv EQ_get_nextid; minv EQ_OK.
+      destruct 1 as [ Inlt4 NoDup4 ]; split; rewrite get_cids_app; cbn.
+      destruct 1 as [ eq_idc | ]; [ rewrite <- eq_idc | eauto ].
+      match goal with
+      | H: build_pdi _ _ _ _ = _ |- _ => shelf_state H; unfold lt
+      end.
+      match goal with
+      | [ s := _ : Sitpn2HVhdlState _ |- S (nextid ?s') <= _ ] =>
+          change (S (nextid s')) with (nextid s)
+      end.
+      eapply build_pdi_inv_inc_nextid; eauto.
+      constructor; eauto.
+      let EQ_build_pdi := get_meq build_pdi in
+      rewrite <- (build_pdi_inv_beh EQ_build_pdi); simpl.
+      match goal with
+      |  |- ~In ?ns _ =>
+           intros In6; apply (Nat.lt_irrefl ns)
+      end; eapply (proj1 (P0 P)); eauto.
   Qed.
   
   Lemma gen_archi_nodup_cids :

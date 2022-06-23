@@ -13,22 +13,23 @@ Require Import common.proofs.StateAndErrorMonadTactics.
 Require Import sitpn.SitpnLib.
 
 Require Import hvhdl.HVhdlCoreLib.
+Require Import hvhdl.HVhdlElaborationLib.
+Require Import hvhdl.HVhdlHilecopLib.
+Require Import hvhdl.HVhdlSimulationLib.
+Require Import hvhdl.proofs.WellDefinedDesignFacts.
 (* Require Import hvhdl.proofs.HVhdlCoreFactsLib. *)
 (* Require Import hvhdl.proofs.HVhdlCoreTacticsLib. *)
-Require Import hvhdl.HVhdlElaborationLib.
 (* Require Import hvhdl.proofs.HVhdlElaborationFactsLib. *)
-Require Import hvhdl.HVhdlHilecopLib.
 (* Require Import hvhdl.HVhdlHilecopFactsLib. *)
-Require Import hvhdl.HVhdlSimulationLib.
 (* Require Import hvhdl.proofs.HVhdlSimulationFactsLib. *)
-(* Require Import hvhdl.proofs.WellDefinedDesignFacts. *)
+
 (* Require Import hvhdl.proofs.DesignElaborationFacts. *)
 (* Require Import hvhdl.proofs.PElaborationFacts. *)
 (* Require Import hvhdl.proofs.PInitializationFacts. *)
 
 Require Import transformation.Sitpn2HVhdl.
-(* Require Import transformation.proofs.GenerateHVhdlFacts. *)
-(* Require Import transformation.proofs.GenerateInfosFacts. *)
+Require Import transformation.proofs.GenerateHVhdlFacts.
+Require Import transformation.proofs.GenerateInfosFacts.
 
 Require Import soundness.SemanticPreservationDefs.
 
@@ -62,18 +63,18 @@ Lemma init_states_eq_marking :
          [s_marking] at state [σ__p]. *)
       MapsTo Place.s_marking (Vnat (M (s0 sitpn) p)) (sstore σ__p0).
 Proof.
-  (* intros. *)
+  intros.
 
-  (* (* Builds the premises of the [init_s_marking_eq_nat] lemma. *) *)
+  (* Builds the premises of the [init_s_marking_eq_nat] lemma. *)
   
-  (* (* Builds [comp(id__p', "place", g__p, i__p, o__p) ∈ (behavior d)] *) *)
-  (* edestruct @sitpn2hvhdl_pdi_ex with (sitpn := sitpn) (p := p) *)
-  (*   as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto. *)
+  (* Builds [comp(id__p', "place", g__p, i__p, o__p) ∈ (behavior d)] *)
+  edestruct @sitpn2hvhdl_pdi_ex with (sitpn := sitpn) (p := p)
+    as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
-  (* (* Builds [compids] and [AreCsCompIds (behavior d) compids] *) *)
-  (* destruct (AreCsCompIds_ex (behavior d)) as (compids, HAreCsCompIds). *)
+  (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
+  (* destruct (AreCsCompIds_ex (AbstractSyntax.beh d)) as (compids, HAreCsCompIds). *)
 
-  (* (* Builds [id__p' ∈ Comps(Δ)] *) *)
+  (* Builds [id__p' ∈ Comps(Δ)] *)
   (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto. *)
 
   (* (* Builds [id__p' ∈ (cstore σ__e)] *) *)
@@ -85,8 +86,8 @@ Proof.
   (* (* Builds proof that [ipm] is well-formed *) *)
   (* edestruct @elab_ValidIPM as (formals, (ListIPM_ipm, CheckFormals_ipm)); eauto. *)
   
-  (* (* To prove [σ__p0("s_marking") = M0(p)] *) *)
-  (* eapply init_s_marking_eq_nat; eauto. *)
+  (* To prove [σ__p0("s_marking") = M0(p)] *)
+  eapply init_s_marking_eq_nat; eauto.
   
   (* (* 6 subgoals left. *) *)
 

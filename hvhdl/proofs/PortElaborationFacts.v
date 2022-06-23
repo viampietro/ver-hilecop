@@ -82,23 +82,6 @@ Proof.
   apply IHEPorts; eauto with hvhdl.
 Qed.
 
-Lemma EPort_inv_events :
-  forall {Δ σ pd Δ' σ'},
-    EPort Δ σ pd Δ' σ' ->
-    NatSet.Equal (events σ) (events σ').
-Proof. induction 1; auto with set. Qed.
-
-Lemma EPorts_inv_events :
-  forall Δ σ ports Δ' σ',
-    EPorts Δ σ ports Δ' σ' ->
-    NatSet.Equal (events σ) (events σ').
-Proof.
-  induction 1; auto with set.
-  transitivity (events σ'); [
-    eapply EPort_inv_events; eauto
-  | auto].
-Qed.
-
 Lemma EPort_inv_Δ :
   forall Δ σ pd Δ' σ' id sobj,
     EPort Δ σ pd Δ' σ' ->
@@ -129,7 +112,7 @@ Lemma EPort_input :
   forall {Δ σ Δ' σ' id τ},
     EPort Δ σ (pdecl_in id τ) Δ' σ' ->
     InputOf Δ' id.
-Proof. inversion 1; exists t0; auto with mapsto. Qed.
+Proof. inversion 1; exists t0; cbn; auto with mapsto. Qed.
 
 Lemma EPorts_input :
   forall {Δ σ ports Δ' σ' id τ},
@@ -227,7 +210,7 @@ Lemma EPort_inv_Δ_if_not_port :
       MapsTo id sobj Δ' <-> MapsTo id sobj Δ.
 Proof.
   split; [ | eapply EPort_inv_Δ; eauto].
-  induction H.
+  induction H; cbn.
   all :
     destruct (Nat.eq_dec id0 id) as [eq_ | neq_];
     [ rewrite eq_; intros; exfalso;

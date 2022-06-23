@@ -148,3 +148,39 @@ Ltac shelf_state H :=
   | _ ?st = OK _ _ =>
     simpl in H; let s := fresh "s" in set (s := st) in *
   end.
+
+(* Looks for an hypothesis of type [f x0 ... x__n = OK _ _], i.e. the
+   result of a monadic function call, in the proof context where the
+   [x__i] are [_] placeholders and applies the [minv] to the hypothesis
+   if found. *)
+
+Ltac get_meq f :=
+  match goal with
+  | [ H: f _ = OK _ _ |- _ ] => H
+  | [ H: f _ _ = OK _ _ |- _ ] => H
+  | [ H: f _ _ _ = OK _ _ |- _ ] => H
+  | [ H: f _ _ _ _ = OK _ _ |- _ ] => H
+  | [ H: f _ _ _ _ _ = OK _ _ |- _ ] => H
+  | _ => fail "No monadic call" f "found" 
+  end.
+
+Ltac match_and_minv f :=
+  let EQ := get_meq f in minv EQ.
+
+(** Monads for tests *)
+
+Definition NatMon A := @Mon nat A.
+
+Definition natmonad_add (n : nat) : NatMon unit := fun s => OK tt (n + s).
+Definition natmonad_sub (n : nat) : NatMon unit := fun s => OK tt (n - s).
+
+Goal forall v s1 s2,
+    (do v1 <- Ret 0; do v2 <- Ret 1; do _ <- natmonad_sub 2; natmonad_add 3) s1 = OK v s2 ->
+    v = tt.
+  intros.
+  match_and_minv (@Bind nat nat).
+  reflexivity.
+Qed.
+
+  
+  

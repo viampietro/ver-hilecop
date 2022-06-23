@@ -170,9 +170,7 @@ Ltac gen_eq_cstate_from_IMDS Heq :=
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
     MapsTo_σ: MapsTo ?id__c ?σ__c (cstore ?σ),
-    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m),
-    nIn_ev': ~NatSet.In ?id__c (events ?σ'),
-    nIn_ev'' : ~NatSet.In ?id__c (events ?σ'')        
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m)
     |- _
   ] =>
     assert (Heq : σ__c = σ__mc) by (eapply MapsTo_fun; eauto;
@@ -181,8 +179,7 @@ Ltac gen_eq_cstate_from_IMDS Heq :=
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
     MapsTo_σ': MapsTo ?id__c ?σ__c (cstore ?σ'),
-    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m),
-    In_ev': NatSet.In ?id__c (events ?σ')
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m)
     |- _
   ] =>
     assert (Heq : σ__c = σ__mc)
@@ -192,8 +189,7 @@ Ltac gen_eq_cstate_from_IMDS Heq :=
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
     MapsTo_σ'': MapsTo ?id__c ?σ__c (cstore ?σ''),
-    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m),
-    In_ev'': NatSet.In ?id__c (events ?σ'')
+    MapsTo_σ__m: MapsTo ?id__c ?σ__mc (cstore ?σ__m)
     |- _
   ] =>
     assert (Heq : σ__c = σ__mc)
@@ -207,9 +203,7 @@ Ltac gen_eq_val_from_IMDS Heq :=
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
     MapsTo_σ: MapsTo ?id ?v (sstore ?σ),
-    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m),
-    nIn_ev': ~NatSet.In ?id (events ?σ'),
-    nIn_ev'' : ~NatSet.In ?id (events ?σ'')        
+    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m)
     |- _
   ] =>
     assert (Heq : v = v__m) by (eapply MapsTo_fun; eauto;
@@ -218,8 +212,7 @@ Ltac gen_eq_val_from_IMDS Heq :=
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
     MapsTo_σ': MapsTo ?id ?v' (sstore ?σ'),
-    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m),
-    In_ev': NatSet.In ?id (events ?σ')
+    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m)
     |- _
   ] =>
     assert (Heq : v' = v__m)
@@ -229,8 +222,7 @@ Ltac gen_eq_val_from_IMDS Heq :=
   | [
     IMDS: IsMergedDState ?σ ?σ' ?σ'' ?σ__m,
     MapsTo_σ'': MapsTo ?id ?v'' (sstore ?σ''),
-    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m),
-    In_ev'': NatSet.In ?id (events ?σ'')
+    MapsTo_σ__m: MapsTo ?id ?v__m (sstore ?σ__m)
     |- _
   ] =>
     assert (Heq : v'' = v__m)

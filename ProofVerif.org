@@ -2,27 +2,27 @@
 
 * TODO Behavior Preservation [0%]
 ** TODO Similar Initial States [16%]
-*** TODO [#B] Initial States Equal Marking (InitialStates.v) [91%]
+*** TODO [#B] Initial States Equal Marking (InitialStates.v) [83%]
 **** DONE NoDupA_fs_eqk_eqv (SetoidListFacts) [100%] 
 ***** DONE InA_setv
 ***** DONE getv_idle
-**** DONE sitpn2hvhdl_pci_ex (GenerateHVhdlFacts) [100%]
+**** DONE sitpn2hvhdl_pdi_ex (GenerateHVhdlFacts) [100%]
 ***** DONE gen_sitpn_infos_sil_lofPs
-***** DONE gen_archi_pci_ex
-****** DONE gen_pcis_pci_ex
+***** DONE gen_archi_pdi_ex
+****** DONE gen_pdis_pdi_ex
 ******* DONE iter_prop_A_state
-******* DONE pci_ex_Peq_equiv
-******* DONE gen_pci_pci_ex
-******* DONE gen_pci_pci_ex_inv
-******** DONE build_pci_inv_state_beh
-******** DONE build_pci_inv_state_gamma
+******* DONE pdi_ex_Peq_equiv
+******* DONE gen_pdi_pdi_ex
+******* DONE gen_pdi_pdi_ex_inv
+******** DONE build_pdi_inv_state_beh
+******** DONE build_pdi_inv_state_gamma
 ******* DONE SIL_forall_A
-****** DONE gen_tcis_t_comp_ex (GenerateArchitectureInvs)
-***** DONE gen_inter_pci_ex (GenerateInterconnectionsFacts)
-****** DONE conn_to_input_tcis_inv_beh 
-****** DONE conn_to_input_tcis_inv_γ
-****** DONE put_comp_pci_ex
-******* DONE put_comp_aux_pci_ex (Sitpn2HVhdlUtilsFacts)
+****** DONE gen_tdis_t_comp_ex (GenerateArchitectureInvs)
+***** DONE gen_inter_pdi_ex (GenerateInterconnectionsFacts)
+****** DONE conn_to_input_tdis_inv_beh 
+****** DONE conn_to_input_tdis_inv_γ
+****** DONE put_comp_pdi_ex
+******* DONE put_comp_aux_pdi_ex (Sitpn2HVhdlUtilsFacts)
 ******** DONE put_comp_aux_inv_state
 ******** DONE InCs_NoDup_comp_eq (AbstractSyntaxFacts)
 ********* DONE get_cids_InCs (AbstractSyntaxFacts)
@@ -36,16 +36,16 @@
 ********* DONE get_comp_aux_not_InCs
 ********* DONE get_cids_In_ex
 ******** DONE put_comp_aux_cid_In_cstmt
-****** DONE conn_to_output_tcis_nodup_cids (GenerateInterconnectionsInvs)
-****** DONE conn_to_output_tcis_comp_ex (GenerateInterconnectionsInvs)
+****** DONE conn_to_output_tdis_nodup_cids (GenerateInterconnectionsInvs)
+****** DONE conn_to_output_tdis_comp_ex (GenerateInterconnectionsInvs)
 ******* DONE get_comp_uniq_comp
 ******** DONE get_comp_aux_uniq_comp
-****** DONE conn_to_output_tcis_pci_ex_inv (GenerateInterconnectionsInvs)
+****** DONE conn_to_output_tdis_pdi_ex_inv (GenerateInterconnectionsInvs)
 ***** DONE gen_archi_nodup_cids (GenerateArchitectureFacts)
-****** DONE build_pci_inv_inc_nextid (GenerateArchitectureFacts)
-****** DONE build_tci_inv_inc_nextid (GenerateArchitectureFacts)
-***** DONE gen_ports_pci_ex
-****** DONE gen_cports_pci_ex
+****** DONE build_pdi_inv_inc_nextid (GenerateArchitectureFacts)
+****** DONE build_tdi_inv_inc_nextid (GenerateArchitectureFacts)
+***** DONE gen_ports_pdi_ex
+****** DONE gen_cports_pdi_ex
 **** DONE sitpn2hvhdl_nodup_p2pcomp (GenerateHVhdlFacts) [100%]
 ***** DONE gen_comp_insts_nodup_p2pcomp [100%]
 ****** DONE iter_gen_pcomp_inst_nodup_p2pcomp [100%]
@@ -70,7 +70,7 @@
 ****** DONE gen_cports_inv_p2pcomp
 ***** DONE lofPs invariant for arch and ports, and SIL lofPs for infos.
 **** DONE AreCsCompIds_ex (WellDefinedDesignFacts)
-**** DONE elab_compid_in_comps (DesignElaborationFacts.v)
+**** TODO elab_compid_in_comps (DesignElaborationFacts.v)
 **** DONE elab_compid_in_compstore (DesignElaborationFacts.v)
 **** DONE elab_nodup_compids (DesignElaborationFacts.v)
 ***** DONE ebeh_nodup_compids
@@ -212,9 +212,9 @@
 ******* DONE iter_gen_tcomp_inst_nodup_t2tcomp (Generatehvhdlinvs)
 ***** DONE gen_ports_inv_t2tcomp (Generateportsinvs)
 *** TODO Initial States Equal Reset Orders [26%]
-**** DONE elab_TCI_Δ_in_arcs_nb_1 (TElaborationFacts)
-**** DONE elab_TCI_σ_rt (TElaborationFacts)
-***** DONE ebeh_TCI_σ_rt
+**** DONE elab_TDI_Δ_in_arcs_nb_1 (TElaborationFacts)
+**** DONE elab_TDI_σ_rt (TElaborationFacts)
+***** DONE ebeh_TDI_σ_rt
 ****** DONE elab_T_σ_rt
 **** DONE init_maps_sstore_of_comp (InitializationFacts)
 ***** DONE vruninit_maps_sstore_of_comp (Initializationfacts)
@@ -231,8 +231,8 @@
 ******* DONE vcomb_maps_sstore 
 ******* DONE vcomb_compid_in_events_comp_in_cs
 ******* DONE vcomb_is_compof_if_in_cs
-**** DONE elab_TCI_Δ_rt (TElaborationfacts)
-***** DONE ebeh_TCI_Δ_rt
+**** DONE elab_TDI_Δ_rt (TElaborationfacts)
+***** DONE ebeh_TDI_Δ_rt
 ****** DONE elab_T_Δ_rt
 ******* DONE eports_T_Δ_rt
 **** DONE elab_well_typed_values_in_sstore_of_comp (Designelaborationfacts)
@@ -252,29 +252,29 @@
 ******* DONE mapop_inv_well_typed_values_in_sstore (Portmapevaluationfacts)
 ****** DONE mapip_inv_well_typed_values_in_sstore (PortMapevaluationfacts)
 ***** DONE stab_inv_well_typed_values_in_sstore_of_comp (StabilizeFacts)
-**** TODO init_TCI_s_rtc_eq_bprod_of_rt (TInitializationFacts)
-***** TODO vruninit_TCI_s_rtc_eq_bprod_of_rt (TInitializationfacts)
+**** TODO init_TDI_s_rtc_eq_bprod_of_rt (TInitializationFacts)
+***** TODO vruninit_TDI_s_rtc_eq_bprod_of_rt (TInitializationfacts)
 ****** TODO vruninit_T_s_rtc_eq_bprod_of_rt (TInitializationfacts)
-***** TODO stab_TCI_s_rtc_eq_bprod_of_rt (TStabilizefacts)
+***** TODO stab_TDI_s_rtc_eq_bprod_of_rt (TStabilizefacts)
 **** TODO PInputsOf_ex (SitpnSemanticsFacts)
-**** TODO init_TCI_eval_rt_0 (TInitializationfacts)
+**** TODO init_TDI_eval_rt_0 (TInitializationfacts)
 **** TODO sitpn2hvhdl_emp_pinputs_rt (Generatehvhdlfacts)
 **** TODO sitpn2hvhdl_emp_pinputs_in_arcs_nb (Generatehvhdlfacts)
 **** TODO elab_wf_gmap_expr (DesignElaborationfacts)
-**** TODO elab_TCI_Δ_in_arcs_nb_2 (TElaborationfacts)
+**** TODO elab_TDI_Δ_in_arcs_nb_2 (TElaborationfacts)
 **** TODO BProd_aofv_false (SemanticalDomainsFacts)
 **** TODO TOutputsOf_ex (Sitpnsemanticsfacts)
 **** TODO sitpn2hvhdl_connect_rtt_rt (Generatehvhdlfacts)
 **** TODO sitpn2hvhdl_nemp_pinputs_in_arcs_nb (Generatehvhdlfacts)
-**** TODO init_TCI_eval_rt_i (TInitializationfacts)
+**** TODO init_TDI_eval_rt_i (TInitializationfacts)
 **** DONE init_maps_compstore_id (Initializationfacts)
-**** TODO elab_PCI_σ_rtt (PElaborationfacts)
-**** TODO elab_PCI_Δ_out_arcs_nb_1 (PElaborationfacts)
-**** TODO elab_PCI_Δ_rtt (PElaborationfacts)
-**** TODO init_PCI_eval_rtt_i (PInitializationfacts)
-**** TODO init_PCI_rtt_eq_false (PInitializationfacts)
+**** TODO elab_PDI_σ_rtt (PElaborationfacts)
+**** TODO elab_PDI_Δ_out_arcs_nb_1 (PElaborationfacts)
+**** TODO elab_PDI_Δ_rtt (PElaborationfacts)
+**** TODO init_PDI_eval_rtt_i (PInitializationfacts)
+**** TODO init_PDI_rtt_eq_false (PInitializationfacts)
 **** TODO sitpn2hvhdl_nemp_toutputs_out_arcs_nb (Generatehvhdlfacts)
-**** TODO elab_PCI_Δ_out_arcs_nb_2 (PElaborationfacts)
+**** TODO elab_PDI_Δ_out_arcs_nb_2 (PElaborationfacts)
 *** TODO Initial States Equal Conditions
 *** TODO Initial States Equal Actions
 *** TODO Initial States Equal Functions

@@ -173,7 +173,7 @@ Proof.
   induction beh.
 
   (* CASE simple Process *)
-  - exists [cs_ps id__p sl vars stmt]; auto.
+  - exists [cs_ps id__p vars body]; auto.
 
   (* CASE simple Component Instance *)
   - exists [cs_comp id__c id__e g i o]; auto.
