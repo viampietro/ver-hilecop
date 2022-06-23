@@ -72,10 +72,10 @@ Proof.
     as (id__p', (g__p, (i__p, (o__p, (Hγ, Hincs_comp))))); eauto.
   
   (* Builds [compids] and [AreCsCompIds (behavior d) compids] *)
-  destruct (AreCsCompIds_ex (AbstractSyntax.beh d)) as (compids, HAreCsCompIds).
+  (* destruct (AreCsCompIds_ex (AbstractSyntax.beh d)) as (compids, HAreCsCompIds). *)
 
   (* Builds [id__p' ∈ Comps(Δ)] *)
-  edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto.
+  (* edestruct @elab_compid_in_comps with (D__s := hdstore) as (Δ__p, MapsTo_Δ__p); eauto. *)
 
   (* (* Builds [id__p' ∈ (cstore σ__e)] *) *)
   (* edestruct @elab_compid_in_cstore with (D__s := hdstore) as (σ__pe, MapsTo_σ__pe); eauto. *)
