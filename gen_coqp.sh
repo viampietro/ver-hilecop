@@ -13,6 +13,8 @@ EOF
 # project.
 
 PROOF_FILES_PATTERN="\(.*/proofs/.*\|.*/behavior-preservation/.*\)"
+
+# Files to be excluded from the _CoqProject file.
 EXCLUDED_FILES_PATTERN="\(./hvhdl/SynchronousEvaluation.v\|./hvhdl/CombinationalEvaluation.v\)"
 
 # Parsing the command options.
@@ -44,7 +46,7 @@ if [ -e _CoqProject ]; then
 fi
 
 # Mapping physical directory to logical Coq directory through the "-R"
-# option, and adds the mappings to the _CoqProject.
+# option, and adds the mappings to the _CoqProject file.
 
 echo "-R common/ hilecop.common
 -R sitpn/ hilecop.sitpn
@@ -63,8 +65,7 @@ echo "-R common/ hilecop.common
 find . -name *.v -type f ! -regex "$PROOF_FILES_PATTERN" \
      ! -regex ".*/\..+" \
      ! -regex "$EXCLUDED_FILES_PATTERN" \
-     ! -regex ".*/test/.*" \
-     ! -regex "./common/DFMapWeakList.v" >> _CoqProject
+     ! -regex ".*/test/.*" >> _CoqProject
 
 
 
